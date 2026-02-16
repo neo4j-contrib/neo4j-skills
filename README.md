@@ -14,6 +14,18 @@ Skills follow a progressive disclosure pattern, loading only what's needed to mi
 
 ## Available Skills
 
+### neo4j-cli-tools-skill
+
+Comprehensive guidance for Neo4j command-line tools including neo4j-admin, cypher-shell, aura-cli, and neo4j-mcp.
+
+**Use this skill when:**
+- Setting up or configuring Neo4j databases via command line
+- Running administrative tasks with neo4j-admin
+- Executing Cypher queries from the command line
+- Managing Neo4j Aura cloud instances
+- Setting up the Neo4j MCP server for AI agents
+- Troubleshooting Neo4j CLI tool issues
+
 ### neo4j-migration-skill
 
 Assists with upgrading Neo4j drivers to new major versions.
