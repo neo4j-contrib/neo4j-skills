@@ -41,9 +41,43 @@ Assists with upgrading Cypher queries to newer Neo4j versions.
 - Migrating databases from Neo4j 4.x or 5.x to 2025.x or 2026.x
 - Updating Cypher queries to a newer major Neo4j version
 
+## Installation
+
+### Using npx skills (Recommended)
+
+The easiest way to install these skills is using the skills package:
+
+```bash
+# Install all Neo4j skills
+npx skills add neo4j-contrib/neo4j-skills
+
+# Or install individual skills
+npx skills add neo4j-contrib/neo4j-skills/neo4j-cypher-skill
+npx skills add neo4j-contrib/neo4j-skills/neo4j-migration-skill
+npx skills add neo4j-contrib/neo4j-skills/neo4j-cli-tools-skill
+```
+
+The skills package will automatically detect your AI agent (Claude Code, Cursor, Cline, etc.) and install the skills in the appropriate location.
+
+### Manual Installation
+
+#### For Claude Code:
+```bash
+# Clone the repository
+git clone https://github.com/neo4j-contrib/neo4j-skills.git
+
+# Symlink or copy skills to Claude's skills directory
+ln -s $(pwd)/neo4j-skills/neo4j-cypher-skill ~/.claude/skills/
+ln -s $(pwd)/neo4j-skills/neo4j-migration-skill ~/.claude/skills/
+ln -s $(pwd)/neo4j-skills/neo4j-cli-tools-skill ~/.claude/skills/
+```
+
+#### For other agents:
+Point your AI agent to this repository or add the skill directories to your agent's skills path. Most agents support the [Agent Skills specification](https://agentskills.io/specification).
+
 ## Usage
 
-To use these skills with a compatible AI agent (such as Claude), simply point the agent to this repository or add the skill directory to your agent's skills path.
+Once installed, the skills are automatically available to your AI agent. Simply describe your Neo4j-related task, and the agent will activate the appropriate skill when needed.
 
 ## Resources
 
