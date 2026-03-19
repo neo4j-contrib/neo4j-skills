@@ -140,3 +140,34 @@ Key Decisions:
 - List comprehension included as a note (not a function, but commonly confused)
 
 Next Task: task-006 (Generate cypher25-indexes.md)
+
+================================================================================
+TASK-006: Generate L3 reference file: cypher25-indexes.md
+Date: 2026-03-20T02:00:00Z
+================================================================================
+Summary: Manually authored a curated cypher25-indexes.md reference file covering
+all required content within ~1100 tokens (well within the 2000-token budget).
+Chose manual curation over raw extraction (same rationale as task-004, task-005):
+source docs are verbose with execution plans, example output tables, and narrative.
+The curated file covers all acceptance criteria: index type selection table with
+all 5 types (RANGE, TEXT, POINT, FULLTEXT, VECTOR) + LOOKUP, SEARCH clause syntax
+for vector indexes (Cypher 25, Neo4j 2026.01+), fulltext query via procedure
+(SEARCH is vector-only in this release), and all USING hint forms.
+
+Files Changed:
+- neo4j-cypher-authoring-skill/references/cypher25-indexes.md (created)
+- .plans/tasks-agent-cypher-authoring-skill.yml (task-006 status → completed)
+
+Key Decisions:
+- SEARCH clause covers vector-only in Neo4j 2026.01 (Preview); fulltext still
+  uses db.index.fulltext.queryNodes() procedure — documented both paths clearly
+- Added LOOKUP index type to the selection table (bonus, useful for agents)
+- Included "Rule" callout under index selection table for quick decision guidance
+- Documented all USING hint forms: INDEX, TEXT INDEX, POINT INDEX, RANGE INDEX,
+  INDEX SEEK, and SCAN
+- Legacy procedure syntax (db.index.vector.queryNodes) included alongside SEARCH
+  clause for backward compat coverage
+- SEARCH WHERE subclause (vector search with filters) documented — important for
+  production use with multi-property filtering
+
+Next Task: task-007 (Generate cypher25-subqueries.md)
