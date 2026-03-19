@@ -27,14 +27,14 @@ tasks:
       recording neo4j version, cypher version, submodule commit SHAs, and
       generation date. Create the references/ subdirectory skeleton. This
       establishes the target layout before content is generated.
-    status: pending
+    status: completed
     dependencies:
       - task-001
     acceptance_criteria:
       - "neo4j-cypher-authoring-skill/VERSION file exists with all required fields: neo4j, cypher, docs-cypher-sha, docs-cheat-sheet-sha, generated"
       - "neo4j-cypher-authoring-skill/references/ directory exists"
       - "VERSION file SHA values match current submodule HEAD commits"
-    completed_at: null
+    completed_at: "2026-03-19T23:46:00Z"
 
   - id: task-003
     title: "Build scripts/extract-references.py extraction script"
