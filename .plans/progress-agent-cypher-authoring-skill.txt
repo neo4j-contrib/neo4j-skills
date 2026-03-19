@@ -1,0 +1,35 @@
+================================================================================
+TASK-001: Verify and convert docs-cypher and docs-cheat-sheet to git submodules
+Date: 2026-03-19T22:45:00Z
+================================================================================
+
+Summary:
+Both docs-cypher and docs-cheat-sheet directories already existed as cloned git
+repos with full history and remote origins pointing to the official neo4j GitHub
+repos. Checked out each repo at the latest Neo4j 25/2026.x release tag, then
+used `git submodule add --force` to register each as a submodule in the parent
+repo. The .gitmodules file was created automatically.
+
+Upstream URLs confirmed:
+- docs-cypher:       git@github.com:neo4j/docs-cypher.git  → pinned to 2026.01.0 (SHA: 238ab12a)
+- docs-cheat-sheet:  git@github.com:neo4j/docs-cheat-sheet.git → pinned to 2026.02.0 (SHA: e11fe2f2)
+
+Tag naming convention: YYYY.MM.PATCH (e.g. 2026.01.0, 2026.02.0)
+
+All acceptance criteria verified:
+- .gitmodules created with correct entries and upstream URLs
+- git submodule status shows both at pinned tags
+- git submodule update --init --recursive succeeds
+- Asciidoc source files accessible at same paths
+
+Files Changed:
+- .gitmodules (created — registers both submodules)
+- docs-cypher (converted from untracked dir to submodule pointer at 2026.01.0)
+- docs-cheat-sheet (converted from untracked dir to submodule pointer at 2026.02.0)
+
+Key Decisions:
+- Pinned docs-cypher to 2026.01.0 (latest available 2026.x release tag)
+- Pinned docs-cheat-sheet to 2026.02.0 (latest available 2026.x release tag)
+- Used git@github.com: URLs (SSH) to match existing repo convention
+
+Next Task: task-002 (Create VERSION file and skill directory structure) and task-003 (Build extract-references.py) — both depend on task-001 and can be started

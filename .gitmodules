@@ -1,0 +1,6 @@
+[submodule "docs-cypher"]
+	path = docs-cypher
+	url = git@github.com:neo4j/docs-cypher.git
+[submodule "docs-cheat-sheet"]
+	path = docs-cheat-sheet
+	url = git@github.com:neo4j/docs-cheat-sheet.git

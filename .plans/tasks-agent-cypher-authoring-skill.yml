@@ -1,0 +1,369 @@
+feature: agent-cypher-authoring-skill
+prd: ./prd-agent-cypher-authoring-skill.md
+created_at: 2026-03-19T00:00:00Z
+updated_at: 2026-03-19T00:00:00Z
+
+tasks:
+  - id: task-001
+    title: "Verify and convert docs-cypher and docs-cheat-sheet to git submodules"
+    description: |
+      Confirm the exact upstream GitHub repository URLs for docs-cypher and
+      docs-cheat-sheet, determine the correct tag naming convention, then convert
+      both plain directories to git submodules pinned to the current Neo4j 25 /
+      2026.x release tag. Update .gitmodules and commit the submodule pointers.
+    status: completed
+    dependencies: []
+    acceptance_criteria:
+      - ".gitmodules exists with entries for docs-cypher and docs-cheat-sheet pointing to verified upstream URLs"
+      - "git submodule status shows both submodules at a pinned Neo4j 25/2026.x tag commit"
+      - "git submodule update --init --recursive succeeds in a clean checkout"
+      - "Existing asciidoc source files remain accessible at the same paths after conversion"
+    completed_at: "2026-03-19T22:45:00Z"
+
+  - id: task-002
+    title: "Create VERSION file and skill directory structure"
+    description: |
+      Create the neo4j-cypher-authoring-skill/ directory with a VERSION file
+      recording neo4j version, cypher version, submodule commit SHAs, and
+      generation date. Create the references/ subdirectory skeleton. This
+      establishes the target layout before content is generated.
+    status: pending
+    dependencies:
+      - task-001
+    acceptance_criteria:
+      - "neo4j-cypher-authoring-skill/VERSION file exists with all required fields: neo4j, cypher, docs-cypher-sha, docs-cheat-sheet-sha, generated"
+      - "neo4j-cypher-authoring-skill/references/ directory exists"
+      - "VERSION file SHA values match current submodule HEAD commits"
+    completed_at: null
+
+  - id: task-003
+    title: "Build scripts/extract-references.py extraction script"
+    description: |
+      Write the Python extraction script that reads asciidoc source files from
+      docs-cypher/ and docs-cheat-sheet/, strips asciidoc markup, applies the
+      GQL exclusion filter (LET, FINISH, FILTER, NEXT, INSERT), enforces a
+      per-file token budget via --max-tokens, detects missing expected sections
+      with WARNING notices, and writes Source header + clean Markdown to the
+      output directory. Supports --dry-run mode.
+    status: pending
+    dependencies:
+      - task-001
+    acceptance_criteria:
+      - "Script accepts --cypher-src, --cheat-src, --out, --exclude, --max-tokens, --dry-run flags"
+      - "Running with --dry-run exits 0 and prints planned output files without writing"
+      - "Output files contain > Source: {repo}@{sha} generated: {date} header"
+      - "None of LET / FINISH / FILTER / NEXT / INSERT appear in any generated output file"
+      - "When an expected section heading is absent from source, output contains WARNING: section not found and script writes to stderr"
+      - "Each output file is within the --max-tokens budget (default 2000)"
+    completed_at: null
+
+  - id: task-004
+    title: "Generate L3 reference file: cypher25-patterns.md"
+    description: |
+      Run the extraction script for the patterns reference, covering quantified
+      path expressions, variable-length patterns, shortest paths, non-linear
+      patterns, match modes (DIFFERENT RELATIONSHIPS, REPEATABLE ELEMENTS, ANY,
+      ALL), and path pattern expressions. Review and adjust output for quality.
+    status: pending
+    dependencies:
+      - task-003
+    acceptance_criteria:
+      - "references/cypher25-patterns.md exists with Source header at correct SHA"
+      - "File contains QPE syntax table covering {m,n}, +, and * forms"
+      - "File contains all four match mode variants with semantic descriptions"
+      - "File is ≤ 2,000 tokens"
+      - "No GQL-excluded clause content present"
+    completed_at: null
+
+  - id: task-005
+    title: "Generate L3 reference file: cypher25-functions.md"
+    description: |
+      Run the extraction script for the functions reference, merging aggregating,
+      list, string, temporal, spatial, vector, mathematical, predicate, and scalar
+      function content from both docs-cypher and docs-cheat-sheet sources. Focus
+      on function signatures, return types, null behavior, and one example each.
+    status: pending
+    dependencies:
+      - task-003
+    acceptance_criteria:
+      - "references/cypher25-functions.md exists with Source header"
+      - "File covers all function categories: aggregating, list, string, temporal, spatial, vector, math"
+      - "Null behavior is documented for at least aggregating and string functions"
+      - "File is ≤ 2,000 tokens"
+    completed_at: null
+
+  - id: task-006
+    title: "Generate L3 reference file: cypher25-indexes.md"
+    description: |
+      Run the extraction script for the indexes reference, covering fulltext and
+      vector index query syntax, the SEARCH clause, search-performance index
+      operations, and query planner hints. Include the index type selection table
+      (RANGE/TEXT/POINT/FULLTEXT/VECTOR) mapping predicates to required index types.
+    status: pending
+    dependencies:
+      - task-003
+    acceptance_criteria:
+      - "references/cypher25-indexes.md exists with Source header"
+      - "Index type selection table present mapping all 5 index types to their query predicates"
+      - "SEARCH clause syntax for both vector and fulltext is present"
+      - "USING INDEX and USING TEXT INDEX hint syntax is documented"
+      - "File is ≤ 2,000 tokens"
+    completed_at: null
+
+  - id: task-007
+    title: "Generate L3 reference file: cypher25-subqueries.md"
+    description: |
+      Run the extraction script for the subqueries reference, covering CALL
+      subqueries, correlated subquery scope rules, CALL IN TRANSACTIONS batching
+      syntax, and COUNT / COLLECT / EXISTS subquery forms. Distinguish subquery
+      forms from their function equivalents (COUNT {} vs count()).
+    status: pending
+    dependencies:
+      - task-003
+    acceptance_criteria:
+      - "references/cypher25-subqueries.md exists with Source header"
+      - "CALL { ... } IN TRANSACTIONS OF N ROWS syntax is present"
+      - "Scope rules for correlated subqueries are documented"
+      - "COUNT {} vs count() distinction is explicit"
+      - "File is ≤ 2,000 tokens"
+    completed_at: null
+
+  - id: task-008
+    title: "Generate L3 reference file: cypher25-types-and-nulls.md"
+    description: |
+      Run the extraction script for the types and nulls reference, covering null
+      propagation rules, IS NULL / IS NOT NULL guards, coalesce(), type casting
+      functions (toInteger, toString, toFloat, toBoolean, date, datetime), and
+      type predicate expressions (IS :: INTEGER, IS :: STRING?). This file
+      prevents the most common autonomous agent runtime failures.
+    status: pending
+    dependencies:
+      - task-003
+    acceptance_criteria:
+      - "references/cypher25-types-and-nulls.md exists with Source header"
+      - "Null propagation rules documented: null in arithmetic → null, null in comparison → null"
+      - "All major casting functions listed with signatures"
+      - "Type predicate expression syntax (IS :: TYPE) documented"
+      - "File is ≤ 2,000 tokens"
+    completed_at: null
+
+  - id: task-009
+    title: "Generate L3 reference file: cypher-style-guide.md"
+    description: |
+      Run the extraction script for the style guide reference, drawing from
+      styleguide.adoc and syntax/naming.adoc and syntax/keywords.adoc. Cover
+      keyword casing (UPPERCASE clauses, camelCase functions), label naming
+      (PascalCase), relationship type naming (SCREAMING_SNAKE_CASE), property
+      naming (camelCase), and indentation conventions.
+    status: pending
+    dependencies:
+      - task-003
+    acceptance_criteria:
+      - "references/cypher-style-guide.md exists with Source header"
+      - "Naming conventions for labels, relationship types, and properties are explicit"
+      - "Keyword casing rules documented with examples"
+      - "File is ≤ 2,000 tokens"
+    completed_at: null
+
+  - id: task-010
+    title: "Author SKILL.md (L2) — autonomous operation core"
+    description: |
+      Write the SKILL.md file for neo4j-cypher-authoring-skill following the
+      section budget from the PRD (≤300 lines / ≤2,500 tokens). Must include all
+      required sections: frontmatter, disambiguation, autonomous operation protocol,
+      version pragma, schema-first protocol with APOC detection, parameter
+      discipline, core pattern cheat sheet (MERGE, QPE, WITH, WHEN, SEARCH),
+      deprecated syntax table, FOREACH/UNWIND rule, USE clause, decision tree,
+      EXPLAIN/PROFILE validation loop, failure recovery, and WebFetch escalation.
+    status: pending
+    dependencies:
+      - task-004
+      - task-005
+      - task-006
+      - task-007
+      - task-008
+      - task-009
+    acceptance_criteria:
+      - "SKILL.md frontmatter name is neo4j-cypher-authoring-skill, description is ≤ 1,024 chars, allowed-tools includes WebFetch"
+      - "SKILL.md body is ≤ 300 lines"
+      - "All 13 sections from the PRD section budget are present"
+      - "QPE syntax examples use {m,n} / + / * forms, not deprecated [:REL*] forms"
+      - "Schema inspection section shows APOC detection query and both APOC/fallback paths"
+      - "Decision tree maps each query type to the correct L3 reference file"
+      - "PROFILE section documents all four metrics: dbHits, rows, allocatedMemory, elapsedTimeMs"
+    completed_at: null
+
+  - id: task-011
+    title: "Build scripts/extract-changelog.py changelog parser"
+    description: |
+      Write the Python script that parses deprecations-additions-removals-
+      compatibility.adoc from the docs-cypher submodule and emits a Markdown
+      summary of new additions, deprecations, and removals. Used by the GH Action
+      to auto-populate PR bodies so reviewers can quickly assess skill impact.
+    status: pending
+    dependencies:
+      - task-001
+    acceptance_criteria:
+      - "Script accepts --src (adoc file path) and --out (markdown output path) flags"
+      - "Output contains separate sections for Additions, Deprecations, and Removals"
+      - "Script exits 0 even when sections are empty (not all releases have all three)"
+      - "Running against current docs-cypher submodule produces non-empty valid Markdown"
+    completed_at: null
+
+  - id: task-012
+    title: "Create GH Action: update-cypher-skill.yml"
+    description: |
+      Write the GitHub Actions workflow that runs monthly (and on manual dispatch),
+      detects new upstream tag versions by comparing the latest submodule tag to the
+      current VERSION file, updates submodules, reruns the extraction script,
+      updates VERSION, generates a changelog summary, diffs for content changes, and
+      creates a PR. Adds a breaking-change label when WARNING notices are found in
+      output files.
+    status: pending
+    dependencies:
+      - task-003
+      - task-011
+    acceptance_criteria:
+      - ".github/workflows/update-cypher-skill.yml exists and passes yamllint"
+      - "Workflow has schedule trigger (1st of month) and workflow_dispatch with optional target_tag input"
+      - "Workflow skips PR creation when no content changes are detected"
+      - "PR body includes diff stat, changelog summary, and review checklist"
+      - "breaking-change label is added to PR when any reference file contains WARNING: section not found"
+      - "Workflow does not auto-merge — PR requires human review"
+    completed_at: null
+
+  - id: task-013
+    title: "Create GH Action: test-cypher-skill.yml"
+    description: |
+      Write the GitHub Actions workflow that triggers on PRs touching the
+      neo4j-cypher-authoring-skill/ directory. Runs the test harness runner against
+      the companies test database using repo secrets for connection credentials and
+      the Anthropic API key. Uploads test result artifacts and fails the PR check
+      if any FAIL-grade gates are triggered.
+    status: pending
+    dependencies:
+      - task-012
+    acceptance_criteria:
+      - ".github/workflows/test-cypher-skill.yml exists and passes yamllint"
+      - "Workflow triggers on pull_request paths: neo4j-cypher-authoring-skill/**"
+      - "Workflow reads NEO4J_URI, NEO4J_USERNAME, NEO4J_PASSWORD, ANTHROPIC_API_KEY from secrets"
+      - "Test result Markdown is uploaded as a workflow artifact"
+      - "Workflow exits non-zero when any test case receives a FAIL verdict"
+    completed_at: null
+
+  - id: task-014
+    title: "Build tests/harness/validator.py validation rules"
+    description: |
+      Write the validator module containing deprecated operator lists, deprecated
+      Cypher syntax regex patterns, CYPHER 25 pragma check, and the four-gate
+      validation logic (syntax via EXPLAIN, correctness via row count, quality via
+      plan + regex, performance via PROFILE). Includes the deprecated_operators.json
+      file with known deprecated plan operators for the current Neo4j version.
+    status: pending
+    dependencies:
+      - task-002
+    acceptance_criteria:
+      - "validator.py implements all four gates as documented in the PRD"
+      - "deprecated_operators.json exists with at least VarLengthExpand(Pruning) and RelationshipCountFromCountStore"
+      - "Deprecated syntax regex catches [:REL*], shortestPath(), and allShortestPaths() patterns"
+      - "PROFILE metrics extracted: totalDbHits, totalAllocatedMemory, elapsedTimeMs, totalRows"
+      - "Write query tests execute inside an explicit transaction that is always rolled back"
+    completed_at: null
+
+  - id: task-015
+    title: "Build tests/harness/runner.py test executor"
+    description: |
+      Write the main test runner that loads test case YAML files, submits each
+      question to Claude Code headless with the skill loaded, extracts the first
+      Cypher code block from the response, passes the query through all four
+      validator gates, and records pass/warn/fail verdicts with reasons. Supports
+      filtering by difficulty and domain.
+    status: pending
+    dependencies:
+      - task-014
+    acceptance_criteria:
+      - "runner.py accepts --cases (directory or file), --skill (skill name/path), --report (output path) flags"
+      - "Runner extracts Cypher from first ```cypher block in model response"
+      - "Each test case records: verdict (PASS/WARN/FAIL), gate that failed, generated Cypher, metrics"
+      - "Runner exits with code 0 (all pass), 1 (any FAIL), or 2 (any WARN, no FAIL)"
+      - "Dry-run mode (--dry-run) validates YAML structure without executing queries"
+    completed_at: null
+
+  - id: task-016
+    title: "Build tests/harness/reporter.py result reporter"
+    description: |
+      Write the reporter module that takes runner output and produces a Markdown
+      report with: overall pass/warn/fail counts, per-difficulty pass rates, a
+      results table with verdict and key metrics per test case, db-hits summary
+      statistics, and a failure analysis section grouping failures by gate and
+      pattern.
+    status: pending
+    dependencies:
+      - task-015
+    acceptance_criteria:
+      - "Reporter generates valid Markdown to the specified output path"
+      - "Report includes overall pass rate and per-difficulty breakdown"
+      - "Report includes db-hits min/median/max per difficulty level"
+      - "Failure analysis section groups failures by gate (1–4) with failing query excerpts"
+      - "Report is self-contained — readable without running the harness again"
+    completed_at: null
+
+  - id: task-017
+    title: "Build tests/harness/generator.py question generator"
+    description: |
+      Write the question generator that connects to a Neo4j database, runs schema
+      inspection, samples property values using COLLECT subquery with LIMIT 100
+      (not collect()[..N]), infers property semantics, calls the Claude API to
+      generate questions at four difficulty tiers, auto-executes candidate Cypher
+      to capture PROFILE baselines, applies tolerance multipliers, and writes YAML
+      test stubs to tests/cases/{domain}-generated.yml for human review.
+    status: pending
+    dependencies:
+      - task-014
+    acceptance_criteria:
+      - "Generator connects to Neo4j using NEO4J_URI / NEO4J_USERNAME / NEO4J_PASSWORD env vars"
+      - "Property sampling uses COLLECT { MATCH ... RETURN DISTINCT ... LIMIT 100 } subquery form"
+      - "Inferred semantics (uuid, range, enum, score, freetext, sparse) are included as comments in YAML stubs"
+      - "Each stub captures baseline metrics: observed_count, observed_db_hits, observed_memory_bytes, observed_runtime_ms"
+      - "Tolerance-multiplied thresholds are pre-populated: max_db_hits = observed × 3, etc."
+      - "Output is written to tests/cases/{domain}-generated.yml, not tests/cases/{domain}.yml (requires human promotion)"
+    completed_at: null
+
+  - id: task-018
+    title: "Create initial test cases for companies database (basic + intermediate)"
+    description: |
+      Run the question generator against the companies demo database
+      (demo.neo4jlabs.com) to produce generated stubs, then manually review and
+      promote 10 basic and 10 intermediate test cases to tests/cases/companies.yml.
+      Verify each case has non-zero baseline results and sensible thresholds.
+    status: pending
+    dependencies:
+      - task-017
+    acceptance_criteria:
+      - "tests/cases/companies.yml contains ≥ 10 basic and ≥ 10 intermediate test cases"
+      - "All cases have non-null min_results ≥ 1 (verified by running candidate Cypher)"
+      - "All cases have observed baseline metrics populated (db_hits, memory, runtime)"
+      - "At least one case exercises each of: MATCH, MERGE, aggregation, relationship traversal"
+      - "tests/cases/companies-generated.yml is gitignored or clearly marked as not-yet-reviewed"
+    completed_at: null
+
+  - id: task-019
+    title: "Create advanced + complex test cases and run full harness validation"
+    description: |
+      Generate and promote 10 advanced and 5 complex test cases for the companies
+      database covering QPEs, SEARCH (vector/fulltext), CALL subqueries, and
+      multi-pattern traversals. Run the complete test harness against the final
+      SKILL.md and verify pass rates meet PRD thresholds. Produce the first
+      baseline report.
+    status: pending
+    dependencies:
+      - task-010
+      - task-018
+    acceptance_criteria:
+      - "tests/cases/companies.yml contains ≥ 10 advanced and ≥ 5 complex test cases"
+      - "At least one advanced case uses QPE syntax ({m,n} or +)"
+      - "At least one advanced case uses SEARCH clause with vector or fulltext index"
+      - "At least one complex case uses CALL subquery or CALL IN TRANSACTIONS"
+      - "Harness run produces ≥ 90% pass rate on basic, ≥ 80% on intermediate, ≥ 70% on advanced"
+      - "Baseline report saved to tests/results/ and committed"
+    completed_at: null

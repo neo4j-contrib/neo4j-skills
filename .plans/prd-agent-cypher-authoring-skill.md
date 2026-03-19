@@ -1,0 +1,340 @@
+# PRD: neo4j-cypher-authoring-skill
+
+**Status**: Draft
+**Author**: Design session 2026-03-19
+**Target**: Autonomous AI agents writing Cypher for Neo4j 2025.x / 2026.x
+
+---
+
+## Overview
+
+A new Agent Skill that enables autonomous AI agents to write, optimize, and validate Cypher 25 queries for Neo4j 2025.x and 2026.x databases. No such skill currently exists — the existing `neo4j-cypher-skill` covers only migration (upgrading 4.x/5.x queries).
+
+Without this skill agents produce:
+- Queries missing the `CYPHER 25` version pragma, causing unintended Cypher 5 execution
+- Full label scans and Cartesian products from skipping schema inspection
+- Incorrect quantified path expression syntax (too new for model training data)
+- `MERGE` without `ON CREATE SET` / `ON MATCH SET`, corrupting data on re-runs
+- Inline literals instead of `$params`, breaking plan caching and introducing injection risk
+- Silent failures on 0-result queries with no recovery logic
+
+The skill follows the Agent Skills progressive disclosure model (L1 metadata → L2 SKILL.md → L3 reference files → WebFetch escalation) and includes a companion test harness that validates output against real Neo4j databases.
+
+---
+
+## Goals
+
+1. Produce correct, index-aware Cypher 25 queries on first attempt for the common 80% case
+2. Self-validate via `EXPLAIN` / `PROFILE` and recover from performance issues without human input
+3. Apply schema-first discipline (inspect before writing) as a mandatory, non-skippable protocol
+4. Cover all Cypher 25 syntax: SEARCH, MATCH modes, WHEN, quantified path expressions, subqueries
+5. Enforce `$param` discipline (never inline literals) for plan caching and injection safety
+6. Provide 5-tier knowledge escalation: training data → L2 inline → L3 references → manual clause pages → full cheat sheet
+7. Stay maintainable: L3 reference files auto-regenerated from upstream asciidoc on each Neo4j release via GH Action
+8. Be testable: a companion test harness validates skill output against real Neo4j databases
+
+---
+
+## Non-Goals
+
+- Driver code generation → covered by `neo4j-migration-skill`
+- Database administration (SHOW DATABASES, ALTER USER, privileges) → covered by `neo4j-cli-tools-skill`
+- Cypher 4.x / 5.x migration → covered by `neo4j-cypher-skill`
+
+### Excluded GQL Clauses
+
+The following GQL-influenced clauses are excluded from all skill content — they are syntactic rewrites that add confusion without value:
+
+| Excluded | Pure Cypher Equivalent |
+|---|---|
+| `INSERT` | `CREATE` |
+| `FILTER` | `WHERE` |
+| `FINISH` | `RETURN` (without output) |
+| `LET` | `WITH` (variable assignment) |
+| `NEXT` | Sequential composed queries |
+
+Kept GQL-origin features (add real value, not just renames): `WHEN` (conditional dispatch), `SEARCH` clause (vector/fulltext), MATCH modes (`DIFFERENT RELATIONSHIPS`, `REPEATABLE ELEMENTS`, `ANY`, `ALL`), quantified path expressions (`{m,n}`, `+`, `*`).
+
+---
+
+## Requirements
+
+### Functional Requirements
+
+- REQ-F-001: SKILL.md must always instruct agents to emit `CYPHER 25` as the first token of every generated query
+- REQ-F-002: SKILL.md must define a mandatory schema-first protocol — agents must inspect schema before writing any MATCH clause using: `db.schema.visualization()`, `SHOW INDEXES`, `SHOW CONSTRAINTS`, and either `apoc.meta.schema()` (preferred, fast) or `db.schema.nodeTypeProperties()` + `db.schema.relTypeProperties()` (fallback when APOC absent); APOC availability detected via `SHOW PROCEDURES WHERE name = 'apoc.meta.schema'`
+- REQ-F-003: SKILL.md must enforce `$param` syntax for all predicates and MERGE keys — never inline string or integer literals (exception: LIMIT with literal integer)
+- REQ-F-004: SKILL.md must define a self-validation loop: generate → `EXPLAIN` (check for AllNodesScan / CartesianProduct) → rewrite if needed → `PROFILE` (record dbHits, rows, allocatedMemory, elapsedTimeMs)
+- REQ-F-005: SKILL.md must define failure recovery decision trees for: 0-result queries, TypeErrors, and query timeouts — no human escalation required
+- REQ-F-006: SKILL.md must include inline core patterns for: MERGE safety (`ON CREATE SET` / `ON MATCH SET`), quantified path expressions, WITH cardinality reset, WHEN conditional queries, SEARCH clause (vector + fulltext)
+- REQ-F-007: SKILL.md must include a deprecated syntax → Cypher 25 preferred mapping table covering: old variable-length paths (`[:REL*1..5]` → `{1,5}`), `shortestPath()` → `SHORTEST 1`, `allShortestPaths()` → `ALL SHORTEST`
+- REQ-F-008: SKILL.md must include a query construction decision tree that selects the correct L3 reference file based on query type
+- REQ-F-009: SKILL.md must include WebFetch escalation logic with specific manual page URL patterns and the cheat sheet URL
+- REQ-F-010: SKILL.md must include `FOREACH` vs `UNWIND` decision rule and brief `USE` clause guidance for multi-database routing
+- REQ-F-011: Six L3 reference files must be created, each generated from upstream asciidoc sources: `cypher25-patterns.md`, `cypher25-functions.md`, `cypher25-indexes.md`, `cypher25-subqueries.md`, `cypher25-types-and-nulls.md`, `cypher-style-guide.md`
+- REQ-F-012: `cypher25-indexes.md` must include an index type selection table mapping query predicates to required index types (RANGE, TEXT, POINT, FULLTEXT, VECTOR)
+- REQ-F-013: `cypher25-types-and-nulls.md` must cover null propagation rules, explicit null guards, type casting functions, and type predicate expressions
+- REQ-F-014: An extraction script (`scripts/extract-references.py`) must generate all L3 files from `docs-cypher/` and `docs-cheat-sheet/` with configurable GQL exclusion list, max-tokens enforcement per file, and detection of missing expected sections
+- REQ-F-015: `docs-cypher/` and `docs-cheat-sheet/` must be converted from plain directories to git submodules, pinned to the current Neo4j 25 / 2026.x release tag
+- REQ-F-016: A GH Action (`.github/workflows/update-cypher-skill.yml`) must run monthly, detect upstream doc changes, regenerate L3 files, update the `VERSION` file, and create a PR with diff stat, changelog summary, and a `breaking-change` label when expected sections are missing
+- REQ-F-017: A test harness (`tests/harness/`) must validate skill output against real Neo4j databases with four gates: syntax (EXPLAIN), correctness (row count), quality (deprecated operator / syntax detection), and performance (PROFILE metrics)
+- REQ-F-018: A question generator (`tests/harness/generator.py`) must sample property values using `COLLECT { MATCH ... RETURN DISTINCT ... LIMIT 100 }` subqueries (not `collect()[..N]`), infer property semantics, generate questions via Claude API, auto-execute candidate Cypher to capture observed baselines, and produce YAML test stubs with tolerance-multiplied thresholds for human review
+- REQ-F-019: A `VERSION` file at the skill root must record neo4j version, cypher version, submodule commit SHAs, and generation date; updated by the GH Action on each release
+
+### Non-Functional Requirements
+
+- REQ-NF-001: SKILL.md body must be ≤ 300 lines / ≤ 2,500 tokens (Agent Skills L2 budget)
+- REQ-NF-002: Each L3 reference file must be ≤ 2,000 tokens (enforced by extraction script `--max-tokens` flag)
+- REQ-NF-003: `description` frontmatter field must be ≤ 1,024 characters and follow the "what + when + keywords" third-person pattern
+- REQ-NF-004: ≥ 90% of basic-difficulty test cases must pass on first attempt
+- REQ-NF-005: ≥ 80% of intermediate-difficulty test cases must pass on first attempt
+- REQ-NF-006: ≥ 70% of advanced-difficulty test cases must pass on first attempt
+- REQ-NF-007: 0% of passing queries may use deprecated Cypher syntax (`[:REL*`, `shortestPath()`, `allShortestPaths()`)
+- REQ-NF-008: 100% of generated queries must include the `CYPHER 25` version pragma
+- REQ-NF-009: Performance Gate 4 hard-fail thresholds: dbHits > expected × 10, allocatedMemory > expected × 5
+
+---
+
+## Technical Considerations
+
+### Skill Architecture (Progressive Disclosure)
+
+```
+L1  name + description (~100 tokens) — always in memory for skill selection
+    ↓ triggered
+L2  SKILL.md body (≤300 lines / ≤2,500 tokens) — loaded on every trigger
+    ↓ conditional on query type
+L3  references/*.md (≤2,000 tokens each) — loaded only when task requires it
+    ↓ conditional on edge cases
+L3b WebFetch: cypher-manual/25/{clause}/ — specific clause semantics
+L3c WebFetch: cypher-cheat-sheet/25/all/ — full syntax overview (~12,000 words)
+```
+
+### SKILL.md Frontmatter
+
+```yaml
+---
+name: neo4j-cypher-authoring-skill
+description: Generates, optimizes, and validates Cypher 25 queries for Neo4j 2025.x
+  and 2026.x. Use when writing new Cypher queries, optimizing slow queries, graph
+  pattern matching, vector or fulltext search, subqueries, batch writes, or building
+  queries for autonomous agents. Covers MATCH, MERGE, CREATE, WITH, RETURN, CALL,
+  UNWIND, FOREACH, LOAD CSV, SEARCH, expressions, functions, indexes, and subqueries.
+  Not for driver migration or database administration.
+allowed-tools: WebFetch
+compatibility: Neo4j >= 2025.01; Cypher 25
+---
+```
+
+### SKILL.md Section Budget (L2)
+
+| Section | Lines | Purpose |
+|---|---|---|
+| When NOT to use this skill | 5 | Disambiguation |
+| Autonomous Operation Protocol | 20 | Non-negotiable defaults |
+| Cypher 25 Version Pragma | 10 | Always emit; CYPHER 5 compat use case |
+| Schema-First Protocol | 30 | 5 inspection queries + APOC detection |
+| Parameter Discipline | 10 | $param always; why |
+| Core Pattern Cheat Sheet | 80 | MERGE, QPE, WITH, WHEN, SEARCH |
+| Deprecated Syntax → Preferred | 15 | Old → new mapping table |
+| FOREACH vs UNWIND | 10 | Decision rule |
+| USE clause | 8 | Multi-database routing |
+| Query Construction Decision Tree | 25 | Drives L3 selection |
+| EXPLAIN / PROFILE Validation Loop | 30 | dbHits, rows, memory, time |
+| Failure Recovery Patterns | 40 | 0-results, TypeError, timeout |
+| WebFetch Escalation | 20 | Which URL, when |
+| **Total** | **~303** | At budget |
+
+### Schema Inspection Protocol
+
+```cypher
+-- 1. Graph topology
+CALL db.schema.visualization() YIELD nodes, relationships RETURN nodes, relationships;
+
+-- 2. Available indexes
+SHOW INDEXES YIELD name, type, labelsOrTypes, properties, state
+WHERE state = 'ONLINE' RETURN name, type, labelsOrTypes, properties;
+
+-- 3. Constraints
+SHOW CONSTRAINTS YIELD name, type, labelsOrTypes, properties
+RETURN name, type, labelsOrTypes, properties;
+
+-- 4/5. Property names + types — APOC preferred (fast on large graphs)
+-- Detection (never throws):
+SHOW PROCEDURES WHERE name = 'apoc.meta.schema'
+YIELD name RETURN count(name) > 0 AS apocAvailable;
+
+-- Preferred (APOC available):
+CALL apoc.meta.schema() YIELD value RETURN value;
+
+-- Fallback (no APOC — slow on large graphs):
+CALL db.schema.nodeTypeProperties()
+YIELD nodeLabels, propertyName, propertyTypes, mandatory
+RETURN nodeLabels, propertyName, propertyTypes, mandatory;
+
+CALL db.schema.relTypeProperties()
+YIELD relType, propertyName, propertyTypes, mandatory
+RETURN relType, propertyName, propertyTypes, mandatory;
+```
+
+### L3 Reference Files
+
+| File | When Loaded | Key Sources |
+|---|---|---|
+| `cypher25-patterns.md` | Variable-length paths, QPEs, match modes | `patterns/` adocs |
+| `cypher25-functions.md` | Aggregation, list, string, temporal, spatial, vector | `functions/` adocs |
+| `cypher25-indexes.md` | SEARCH clause, vector/fulltext, index hints | `indexes/` + `planning-and-tuning/` adocs |
+| `cypher25-subqueries.md` | CALL subqueries, IN TRANSACTIONS, COUNT/COLLECT/EXISTS | `subqueries/` adocs |
+| `cypher25-types-and-nulls.md` | Type errors, null propagation, casting | `values-and-types/` adocs |
+| `cypher-style-guide.md` | Final output formatting, naming conventions | `styleguide.adoc`, `syntax/naming.adoc` |
+
+Index type selection table (included in `cypher25-indexes.md`):
+
+| Query predicate | Index type |
+|---|---|
+| `n.prop = $val`, `IN $list` | RANGE |
+| `STARTS WITH`, `CONTAINS`, `ENDS WITH` | TEXT |
+| `point.distance(...)` | POINT |
+| `SEARCH ... USING FULLTEXT INDEX` | FULLTEXT |
+| `SEARCH ... USING VECTOR INDEX` | VECTOR |
+
+### WebFetch Escalation
+
+| Trigger | URL |
+|---|---|
+| Specific clause semantics | `https://neo4j.com/docs/cypher-manual/25/clauses/{clause}/` |
+| Function signatures | `https://neo4j.com/docs/cypher-manual/25/functions/{type}/` |
+| Path query edge cases | `https://neo4j.com/docs/cypher-manual/25/patterns/` |
+| Full syntax overview | `https://neo4j.com/docs/cypher-cheat-sheet/25/all/` |
+
+High-priority pages: `merge/`, `with/`, `call-subquery/`, `search/`, `aggregating/`, `use/`
+
+### PROFILE Metrics (Gate 4)
+
+```
+dbHits            — storage engine calls (WARN > expected, FAIL > expected × 10)
+rows              — actual processed rows per operator (reliable; use over EXPLAIN estimates)
+allocatedMemory   — bytes (WARN > 100MB, FAIL > expected × 5)
+elapsedTimeMs     — wall time (WARN > expected, guidance only — CI environments vary)
+```
+
+### Git Submodules
+
+| Local path | Upstream (verify before adding) | Tracks |
+|---|---|---|
+| `docs-cypher/` | `neo4j/docs-cypher-manual` | Neo4j 25 / 2026.x tag |
+| `docs-cheat-sheet/` | `neo4j/docs-cypher-cheat-sheet` | Neo4j 25 / 2026.x tag |
+
+### GH Action Design
+
+Trigger: monthly schedule (`cron: '0 8 1 * *'`) + manual dispatch with optional `target_tag` input.
+
+Steps: checkout with submodules → detect latest tag → update submodules → run extraction script → detect missing sections → update VERSION → generate changelog summary → diff check → create PR with diff stat + changelog + `breaking-change` label if any WARNING notices found.
+
+PR is created but **never auto-merged** — human must review content correctness.
+
+### Test Harness Architecture
+
+**Gate sequence per test case:**
+```
+Gate 1: Syntax       EXPLAIN {query}    → CypherSyntaxError = FAIL
+Gate 2: Correctness  Execute            → rows < min_results = FAIL
+Gate 3: Quality      Parse EXPLAIN plan → deprecated operators / syntax = FAIL
+                                        → missing CYPHER 25 pragma = WARN
+Gate 4: Performance  PROFILE            → dbHits, rows, allocatedMemory, elapsedTimeMs
+                                        → WARN / FAIL per threshold
+```
+
+Write queries execute in an explicit transaction that is always rolled back for test isolation.
+
+**Question generator property sampling** (uses COLLECT subquery with LIMIT — stops early, does not build full list before slicing):
+
+```cypher
+MATCH (n:Organization)
+RETURN 'Organization' AS label, 'name' AS property,
+       COLLECT { MATCH (m:Organization)
+                 WHERE m.name IS NOT NULL
+                 RETURN DISTINCT m.name LIMIT 100 } AS samples,
+       count { (m:Organization) WHERE m.name IS NOT NULL } AS nonNullCount
+```
+
+Inferred semantics from samples drive question generation:
+- UUID → equality only; integer range → range queries; float 0–1 → threshold; low-cardinality string → IN list; free text → fulltext/CONTAINS; high null rate → IS NOT NULL guards.
+
+**Test case baselines** auto-captured at generation time via PROFILE on candidate Cypher, stored with tolerance multipliers: result count ×[0.5, 10], dbHits ×3, memory ×3, runtime ×5.
+
+### File Layout
+
+```
+neo4j-cypher-authoring-skill/
+├── SKILL.md                            # L2: ≤300 lines
+├── VERSION                             # Version metadata
+└── references/
+    ├── cypher25-patterns.md            # L3: QPEs, paths, match modes
+    ├── cypher25-functions.md           # L3: aggregating, list, string, temporal, spatial, vector
+    ├── cypher25-indexes.md             # L3: fulltext/vector, index types, hints
+    ├── cypher25-subqueries.md          # L3: CALL, IN TRANSACTIONS, COUNT/COLLECT/EXISTS
+    ├── cypher25-types-and-nulls.md     # L3: null propagation, casting, type predicates
+    └── cypher-style-guide.md           # L3: naming, casing, formatting
+
+scripts/
+├── extract-references.py               # Asciidoc → Markdown L3 generation
+├── extract-changelog.py                # Changelog parser for PR body
+└── requirements.txt
+
+tests/
+├── harness/
+│   ├── runner.py                       # Main test executor
+│   ├── generator.py                    # Question generation + baseline capture
+│   ├── validator.py                    # Cypher execution + validation rules
+│   ├── reporter.py                     # Markdown / HTML report output
+│   └── deprecated_operators.json       # Maintained per Neo4j release
+├── cases/
+│   ├── companies.yml                   # Test cases for companies KG
+│   └── {domain}.yml
+└── results/                            # Gitignored test run outputs
+
+.github/workflows/
+├── update-cypher-skill.yml             # Monthly update + PR
+└── test-cypher-skill.yml               # PR gate: run test harness
+
+docs-cypher/                            # git submodule
+docs-cheat-sheet/                       # git submodule
+```
+
+---
+
+## Acceptance Criteria
+
+- [ ] Autonomous agent using only this skill produces `CYPHER 25`-prefixed queries without human prompting
+- [ ] Schema inspection protocol runs before any MATCH clause; falls back gracefully when no DB access
+- [ ] ≥ 90% basic, ≥ 80% intermediate, ≥ 70% advanced test cases pass in the test harness
+- [ ] 0% of passing queries use deprecated syntax (`[:REL*`, `shortestPath()`, `allShortestPaths()`)
+- [ ] GH Action creates a valid PR with diff stat and changelog when submodule content changes; adds `breaking-change` label when expected sections are missing
+- [ ] Extraction script runs with `--dry-run` and exits 0 on current submodule content
+- [ ] Each L3 reference file includes `> Source:` header with version + commit SHA and is ≤ 2,000 tokens
+
+---
+
+## Out of Scope
+
+| Feature | Reason |
+|---|---|
+| GQL clauses: LET, FINISH, FILTER, NEXT, INSERT | Syntactic rewrites — confusing without added value |
+| Admin Cypher: SHOW DATABASES, ALTER USER, privileges | Covered by neo4j-cli-tools-skill |
+| Driver API code | Covered by neo4j-migration-skill |
+| Cypher 4.x / 5.x migration guidance | Covered by neo4j-cypher-skill |
+| Auto-merging the GH Action PR | Human review gate required for content correctness |
+| Full Cypher manual inlined as L2 | 291k words violates L2 token budget; use WebFetch escalation |
+
+---
+
+## Open Questions
+
+1. **Upstream submodule URLs**: Verify exact GitHub org/repo for `docs-cypher` and `docs-cheat-sheet` before `git submodule add` (likely `neo4j/docs-cypher-manual` and `neo4j/docs-cypher-cheat-sheet`).
+2. **Tag naming convention**: Do upstream repos tag by Neo4j version (`2026.02`), Cypher version (`25`), or branch-per-version? Determines tag-detection logic in the GH Action.
+3. **GH Action secrets**: Is `GITHUB_TOKEN` sufficient for submodule access to public upstream repos, or is a PAT needed?
+4. **Test database secrets**: `companies` demo DB is public (no secrets). Additional databases need a decision on secret storage (repo secrets vs secrets manager).
+5. **Claude Code headless invocation**: Confirm exact CLI pattern for skill-scoped execution in the test runner.
+6. **`deprecated_operators.json` maintenance**: Manually updated per release, or auto-generated by `extract-changelog.py`?
+7. **Extraction script language**: Python assumed — confirm vs Node.js (a `package.json` exists in `docs-cheat-sheet/`).
