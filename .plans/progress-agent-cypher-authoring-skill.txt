@@ -84,3 +84,32 @@ Key Decisions:
 - EXTRACTION_CONFIGS defines 6 output files mapping to source asciidoc files
 
 Next Task: task-004 (Generate cypher25-patterns.md) — depends on task-003
+
+================================================================================
+TASK-004: Generate L3 reference file: cypher25-patterns.md
+Date: 2026-03-20T00:45:00Z
+================================================================================
+Summary: Manually authored a curated cypher25-patterns.md reference file rather
+than using raw extraction script output, which was too verbose (setup queries,
+narrative prose) and hit the token budget before covering all required sections.
+The curated file covers all acceptance criteria within ~1125 tokens (well under
+the 2000-token budget): QPE syntax table ({m,n}, {n}, {m,}, +, *), quantified
+relationships, group variables, SHORTEST/ALL SHORTEST/SHORTEST k GROUPS/ANY
+shortest path keywords, DIFFERENT RELATIONSHIPS and REPEATABLE ELEMENTS match
+modes with warnings, non-linear patterns (equijoins, graph patterns), path
+pattern expressions, and a deprecated syntax table.
+
+Files Changed:
+- neo4j-cypher-authoring-skill/references/cypher25-patterns.md (modified — replaced auto-extracted with curated content)
+- .plans/tasks-agent-cypher-authoring-skill.yml (task-004 status → completed)
+
+Key Decisions:
+- Chose manual curation over raw extraction: source docs are too verbose with
+  setup examples for a ≤2000-token reference; extraction script better suited
+  for cheat-sheet sources which are already concise
+- Included deprecated syntax table directly in patterns file (shortestPath(),
+  allShortestPaths(), [:REL*]) for easy cross-reference
+- REPEATABLE ELEMENTS bounded quantifier requirement documented with error code
+- DIFFERENT RELATIONSHIPS keyword availability (since Neo4j 2025.06) noted
+
+Next Task: task-005 (Generate cypher25-functions.md)

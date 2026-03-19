@@ -1,7 +1,7 @@
 feature: agent-cypher-authoring-skill
 prd: ./prd-agent-cypher-authoring-skill.md
 created_at: 2026-03-19T00:00:00Z
-updated_at: 2026-03-19T00:00:00Z
+updated_at: 2026-03-20T00:00:00Z
 
 tasks:
   - id: task-001
@@ -64,7 +64,7 @@ tasks:
       path expressions, variable-length patterns, shortest paths, non-linear
       patterns, match modes (DIFFERENT RELATIONSHIPS, REPEATABLE ELEMENTS, ANY,
       ALL), and path pattern expressions. Review and adjust output for quality.
-    status: pending
+    status: completed
     dependencies:
       - task-003
     acceptance_criteria:
@@ -73,7 +73,7 @@ tasks:
       - "File contains all four match mode variants with semantic descriptions"
       - "File is ≤ 2,000 tokens"
       - "No GQL-excluded clause content present"
-    completed_at: null
+    completed_at: "2026-03-20T00:45:00Z"
 
   - id: task-005
     title: "Generate L3 reference file: cypher25-functions.md"
@@ -366,4 +366,67 @@ tasks:
       - "At least one complex case uses CALL subquery or CALL IN TRANSACTIONS"
       - "Harness run produces ≥ 90% pass rate on basic, ≥ 80% on intermediate, ≥ 70% on advanced"
       - "Baseline report saved to tests/results/ and committed"
+    completed_at: null
+
+  - id: task-020
+    title: "Update SKILL.md WebFetch section to frame fetching as proactive"
+    description: |
+      Amend task-010's SKILL.md output (or update the authored SKILL.md if already
+      written) so the WebFetch Escalation section explicitly instructs online agents
+      that fetching Neo4j Cypher docs is always available and should be used
+      proactively — not as a last resort. Must note that L3 reference files are
+      token-budget-truncated (≤2,000 tokens) and WebFetch provides the full content.
+      Add this framing before the URL escalation table.
+    status: pending
+    dependencies:
+      - task-010
+    acceptance_criteria:
+      - "SKILL.md WebFetch section opens with an explicit statement that WebFetch is always available for online agents"
+      - "Section explicitly mentions L3 token-budget truncation as the reason to prefer WebFetch for complete content"
+      - "Framing uses positive language (proactive, first-class) not negative (last resort, fallback)"
+      - "SKILL.md body remains ≤ 300 lines after the addition"
+    completed_at: null
+
+  - id: task-021
+    title: "Build tests/harness/exporter.py training dataset YAML exporter"
+    description: |
+      Write the exporter module that reads completed runner output and writes YAML
+      training records for every test case that passed all four validation gates.
+      Each record must include: id, question, database, neo4j_version, schema_context
+      (labels, relationship_types, indexes), property_samples (with inferred_semantic
+      and non_null_count), cypher (the validated query), and metadata (difficulty,
+      tags, db_hits, allocated_memory_bytes, runtime_ms, passed_gates, generated_at).
+      Appends to tests/dataset/{domain}.yml without overwriting existing records.
+    status: pending
+    dependencies:
+      - task-016
+    acceptance_criteria:
+      - "exporter.py accepts --input (runner JSON output), --domain, --output-dir flags"
+      - "Only records where passed_gates contains all four gates are exported"
+      - "Each exported record contains all required fields per REQ-F-021"
+      - "Re-running exporter on the same input does not produce duplicate records (dedup by id)"
+      - "Output YAML is valid and human-readable with correct indentation"
+      - "tests/dataset/ directory is created if it does not exist"
+    completed_at: null
+
+  - id: task-022
+    title: "Build scripts/to_jsonl.py YAML dataset → JSONL converter"
+    description: |
+      Write the converter script that reads one or more YAML training dataset files
+      from tests/dataset/ and writes JSONL output with one line per record. Each
+      line is a JSON object with a messages array containing three entries: system
+      (skill instructions summary), user (database name + schema context + question),
+      and assistant (validated Cypher query). Supports filtering by difficulty and
+      tags. Output is compatible with Anthropic and OpenAI fine-tuning APIs.
+    status: pending
+    dependencies:
+      - task-021
+    acceptance_criteria:
+      - "Script accepts --input (YAML file or directory), --output (JSONL path), --difficulty, --tags flags"
+      - "Each output line is valid JSON with messages array containing system/user/assistant roles"
+      - "System message contains a concise summary of the skill's Cypher authoring instructions"
+      - "User message includes database name, schema context summary, and the original question"
+      - "Assistant message contains only the validated Cypher query"
+      - "Running on tests/dataset/companies.yml produces valid JSONL parseable by json.loads()"
+      - "Filtering by --difficulty basic produces only basic-difficulty records"
     completed_at: null
