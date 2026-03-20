@@ -351,3 +351,42 @@ Key Decisions:
 
 Next Task: task-012 (Create GH Action: update-cypher-skill.yml) — depends on
 task-003 and task-011 (now complete). task-020 and task-023 also available.
+
+================================================================================
+TASK-012: Create GH Action: update-cypher-skill.yml
+Date: 2026-03-20T15:00:00Z
+================================================================================
+
+Summary:
+Created .github/workflows/update-cypher-skill.yml — the monthly automation
+workflow that detects new upstream submodule tags, updates pins, regenerates
+L3 reference drafts, updates the VERSION file, generates a changelog summary,
+detects content changes, checks for breaking changes (WARNING notices), and
+opens a PR for human review. Also created .yamllint config with line-length
+relaxed to 160 chars (GitHub Actions expressions legitimately exceed 80 chars).
+yamllint passes with zero warnings/errors.
+
+Files Changed:
+- .github/workflows/update-cypher-skill.yml (created)
+- .yamllint (created — yamllint config for the repo)
+- .plans/tasks-agent-cypher-authoring-skill.yml (task-012 status → completed)
+
+Key Decisions:
+- Two-stage version check: (1) has_update flag when tags differ, (2) has_changes
+  flag when git diff shows actual file changes. Both gates required to create PR.
+  This prevents spurious PRs when a tag bump produces identical reference content.
+- target_tag workflow_dispatch input applies to BOTH submodules (simplest API for
+  manual trigger). If per-submodule control is needed, can split into two inputs.
+- breaking-change detection: grep -rq "WARNING: section not found" in
+  references/ — matches the exact string the extract-references.py script emits.
+- Labels: always adds `skill-update`; conditionally adds `breaking-change`.
+  Labels must already exist in the GitHub repo (not auto-created by the workflow).
+- No auto-merge: workflow creates the PR then stops. Human approval required.
+- VERSION file is regenerated using a heredoc with current tag/SHA/date values.
+- Changelog --since arg uses the OLD cypher tag so only new-release entries appear.
+- .yamllint: line-length max 160 (warning), truthy allows 'on'/'off' for schedule
+  trigger, document-start disabled (no --- needed for GH Action files).
+
+Next Task: task-013 (Create GH Action: test-cypher-skill.yml) — depends on task-012.
+Also available: task-014 (validator.py), task-020 (SKILL.md WebFetch framing — may
+already be done), task-023 (references/README.md).

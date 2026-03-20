@@ -1,0 +1,292 @@
+name: Update Cypher Skill
+
+on:
+  schedule:
+    # Run at 06:00 UTC on the 1st of every month
+    - cron: '0 6 1 * *'
+  workflow_dispatch:
+    inputs:
+      target_tag:
+        description: 'Pin submodules to this tag (e.g. 2026.02.0). Leave blank to use latest tag from each repo.'
+        required: false
+        default: ''
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository (with submodules)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # -----------------------------------------------------------------------
+      # Determine the latest available tag for each submodule
+      # -----------------------------------------------------------------------
+      - name: Determine target tags
+        id: tags
+        run: |
+          TARGET_TAG="${{ github.event.inputs.target_tag }}"
+
+          if [ -n "$TARGET_TAG" ]; then
+            echo "docs_cypher_tag=$TARGET_TAG" >> "$GITHUB_OUTPUT"
+            echo "docs_cheat_sheet_tag=$TARGET_TAG" >> "$GITHUB_OUTPUT"
+            echo "Using manually supplied tag: $TARGET_TAG"
+          else
+            # Fetch all tags from each submodule remote and pick the latest YYYY.MM.PATCH tag
+            CYPHER_TAG=$(
+              git -C docs-cypher fetch --tags --quiet 2>/dev/null || true
+              git -C docs-cypher tag --list '[0-9][0-9][0-9][0-9].[0-9][0-9].[0-9]*' \
+                | sort -V | tail -1
+            )
+            CHEAT_TAG=$(
+              git -C docs-cheat-sheet fetch --tags --quiet 2>/dev/null || true
+              git -C docs-cheat-sheet tag --list '[0-9][0-9][0-9][0-9].[0-9][0-9].[0-9]*' \
+                | sort -V | tail -1
+            )
+            echo "docs_cypher_tag=$CYPHER_TAG" >> "$GITHUB_OUTPUT"
+            echo "docs_cheat_sheet_tag=$CHEAT_TAG" >> "$GITHUB_OUTPUT"
+            echo "Latest docs-cypher tag:      $CYPHER_TAG"
+            echo "Latest docs-cheat-sheet tag: $CHEAT_TAG"
+          fi
+
+      # -----------------------------------------------------------------------
+      # Read current pinned versions from VERSION file
+      # -----------------------------------------------------------------------
+      - name: Read current VERSION
+        id: current
+        run: |
+          CYPHER_CURRENT=$(grep '^docs-cypher-tag:' neo4j-cypher-authoring-skill/VERSION \
+            | sed 's/docs-cypher-tag: *"\(.*\)"/\1/')
+          CHEAT_CURRENT=$(grep '^docs-cheat-sheet-tag:' neo4j-cypher-authoring-skill/VERSION \
+            | sed 's/docs-cheat-sheet-tag: *"\(.*\)"/\1/')
+          echo "docs_cypher_current=$CYPHER_CURRENT" >> "$GITHUB_OUTPUT"
+          echo "docs_cheat_sheet_current=$CHEAT_CURRENT" >> "$GITHUB_OUTPUT"
+          echo "Current docs-cypher tag:      $CYPHER_CURRENT"
+          echo "Current docs-cheat-sheet tag: $CHEAT_CURRENT"
+
+      # -----------------------------------------------------------------------
+      # Check whether an update is available
+      # -----------------------------------------------------------------------
+      - name: Check for version changes
+        id: version_check
+        run: |
+          CYPHER_NEW="${{ steps.tags.outputs.docs_cypher_tag }}"
+          CYPHER_OLD="${{ steps.current.outputs.docs_cypher_current }}"
+          CHEAT_NEW="${{ steps.tags.outputs.docs_cheat_sheet_tag }}"
+          CHEAT_OLD="${{ steps.current.outputs.docs_cheat_sheet_current }}"
+
+          if [ "$CYPHER_NEW" = "$CYPHER_OLD" ] && [ "$CHEAT_NEW" = "$CHEAT_OLD" ]; then
+            echo "No new submodule tags — skipping update."
+            echo "has_update=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Update available: docs-cypher $CYPHER_OLD → $CYPHER_NEW  |  docs-cheat-sheet $CHEAT_OLD → $CHEAT_NEW"
+            echo "has_update=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # -----------------------------------------------------------------------
+      # Pin submodules to target tags
+      # -----------------------------------------------------------------------
+      - name: Pin submodules to target tags
+        if: steps.version_check.outputs.has_update == 'true'
+        run: |
+          git -C docs-cypher checkout "${{ steps.tags.outputs.docs_cypher_tag }}"
+          git -C docs-cheat-sheet checkout "${{ steps.tags.outputs.docs_cheat_sheet_tag }}"
+
+      # -----------------------------------------------------------------------
+      # Re-run extraction script to regenerate L3 reference drafts
+      # -----------------------------------------------------------------------
+      - name: Regenerate L3 reference files
+        if: steps.version_check.outputs.has_update == 'true'
+        run: |
+          python3 scripts/extract-references.py \
+            --cypher-src docs-cypher/modules/ROOT/pages \
+            --cheat-src docs-cheat-sheet/modules/ROOT/pages \
+            --out neo4j-cypher-authoring-skill/references \
+            --exclude LET,FINISH,FILTER,NEXT,INSERT \
+            --max-tokens 2000
+        continue-on-error: false
+
+      # -----------------------------------------------------------------------
+      # Update the VERSION file
+      # -----------------------------------------------------------------------
+      - name: Update VERSION file
+        if: steps.version_check.outputs.has_update == 'true'
+        run: |
+          CYPHER_SHA=$(git -C docs-cypher rev-parse HEAD)
+          CHEAT_SHA=$(git -C docs-cheat-sheet rev-parse HEAD)
+          TODAY=$(date -u +%Y-%m-%d)
+
+          cat > neo4j-cypher-authoring-skill/VERSION <<EOF
+          neo4j: "25"
+          cypher: "25"
+          docs-cypher-tag: "${{ steps.tags.outputs.docs_cypher_tag }}"
+          docs-cypher-sha: "$CYPHER_SHA"
+          docs-cheat-sheet-tag: "${{ steps.tags.outputs.docs_cheat_sheet_tag }}"
+          docs-cheat-sheet-sha: "$CHEAT_SHA"
+          generated: "$TODAY"
+          EOF
+
+      # -----------------------------------------------------------------------
+      # Generate changelog summary
+      # -----------------------------------------------------------------------
+      - name: Generate changelog summary
+        if: steps.version_check.outputs.has_update == 'true'
+        run: |
+          python3 scripts/extract-changelog.py \
+            --src docs-cypher/modules/ROOT/pages/deprecations-additions-removals-compatibility.adoc \
+            --out /tmp/changelog-summary.md \
+            --since "${{ steps.current.outputs.docs_cypher_current }}"
+
+      # -----------------------------------------------------------------------
+      # Check whether any L3 content actually changed
+      # -----------------------------------------------------------------------
+      - name: Detect content changes
+        if: steps.version_check.outputs.has_update == 'true'
+        id: content_check
+        run: |
+          git add neo4j-cypher-authoring-skill/ docs-cypher docs-cheat-sheet
+
+          DIFF_STAT=$(git diff --cached --stat)
+          if [ -z "$DIFF_STAT" ]; then
+            echo "No content changes detected — skipping PR creation."
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Content changes detected:"
+            echo "$DIFF_STAT"
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+            echo "$DIFF_STAT" > /tmp/diff-stat.txt
+          fi
+
+      # -----------------------------------------------------------------------
+      # Detect breaking changes (WARNING: section not found in any L3 file)
+      # -----------------------------------------------------------------------
+      - name: Check for breaking changes
+        if: >
+          steps.version_check.outputs.has_update == 'true' &&
+          steps.content_check.outputs.has_changes == 'true'
+        id: breaking
+        run: |
+          if grep -rq "WARNING: section not found" neo4j-cypher-authoring-skill/references/; then
+            echo "Breaking changes detected (WARNING notices found in L3 files)."
+            echo "is_breaking=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No breaking changes."
+            echo "is_breaking=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # -----------------------------------------------------------------------
+      # Create branch and commit
+      # -----------------------------------------------------------------------
+      - name: Configure git identity
+        if: >
+          steps.version_check.outputs.has_update == 'true' &&
+          steps.content_check.outputs.has_changes == 'true'
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Create update branch and commit
+        if: >
+          steps.version_check.outputs.has_update == 'true' &&
+          steps.content_check.outputs.has_changes == 'true'
+        id: branch
+        run: |
+          CYPHER_NEW="${{ steps.tags.outputs.docs_cypher_tag }}"
+          CHEAT_NEW="${{ steps.tags.outputs.docs_cheat_sheet_tag }}"
+          BRANCH="update/cypher-skill-${CYPHER_NEW}"
+
+          git checkout -b "$BRANCH"
+          git commit -m "chore: update neo4j-cypher-authoring-skill to docs-cypher ${CYPHER_NEW} / docs-cheat-sheet ${CHEAT_NEW}
+
+          - Bumped docs-cypher submodule: ${{ steps.current.outputs.docs_cypher_current }} → ${CYPHER_NEW}
+          - Bumped docs-cheat-sheet submodule: ${{ steps.current.outputs.docs_cheat_sheet_current }} → ${CHEAT_NEW}
+          - Regenerated L3 reference drafts
+          - Updated VERSION file"
+
+          git push origin "$BRANCH"
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+
+      # -----------------------------------------------------------------------
+      # Assemble PR body
+      # -----------------------------------------------------------------------
+      - name: Build PR body
+        if: >
+          steps.version_check.outputs.has_update == 'true' &&
+          steps.content_check.outputs.has_changes == 'true'
+        id: pr_body
+        run: |
+          CYPHER_OLD="${{ steps.current.outputs.docs_cypher_current }}"
+          CYPHER_NEW="${{ steps.tags.outputs.docs_cypher_tag }}"
+          CHEAT_OLD="${{ steps.current.outputs.docs_cheat_sheet_current }}"
+          CHEAT_NEW="${{ steps.tags.outputs.docs_cheat_sheet_tag }}"
+
+          DIFF_STAT=$(cat /tmp/diff-stat.txt 2>/dev/null || echo "_No diff stat available._")
+          CHANGELOG=$(cat /tmp/changelog-summary.md 2>/dev/null || echo "_Changelog unavailable._")
+
+          # Write multi-line body to a file to avoid shell quoting issues
+          cat > /tmp/pr-body.md <<EOF
+          ## Cypher Skill Update
+
+          | | Current | New |
+          |---|---|---|
+          | docs-cypher | \`$CYPHER_OLD\` | \`$CYPHER_NEW\` |
+          | docs-cheat-sheet | \`$CHEAT_OLD\` | \`$CHEAT_NEW\` |
+
+          ## Diff Stat
+
+          \`\`\`
+          $DIFF_STAT
+          \`\`\`
+
+          ## Changelog (since $CYPHER_OLD)
+
+          $CHANGELOG
+
+          ## Review Checklist
+
+          - [ ] Skim the diff on each changed L3 reference file for accuracy
+          - [ ] Verify that any WARNING notices reflect genuinely missing sections (not rename/restructure)
+          - [ ] Run the test harness locally if available: \`python tests/harness/runner.py\`
+          - [ ] Check SKILL.md is still accurate (deprecated syntax table, WebFetch URLs)
+          - [ ] Approve and merge when satisfied — **do not auto-merge**
+          EOF
+
+          echo "body_file=/tmp/pr-body.md" >> "$GITHUB_OUTPUT"
+
+      # -----------------------------------------------------------------------
+      # Create the PR
+      # -----------------------------------------------------------------------
+      - name: Create pull request
+        if: >
+          steps.version_check.outputs.has_update == 'true' &&
+          steps.content_check.outputs.has_changes == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          CYPHER_NEW="${{ steps.tags.outputs.docs_cypher_tag }}"
+          CHEAT_NEW="${{ steps.tags.outputs.docs_cheat_sheet_tag }}"
+          BRANCH="${{ steps.branch.outputs.branch }}"
+
+          LABELS="skill-update"
+          if [ "${{ steps.breaking.outputs.is_breaking }}" = "true" ]; then
+            LABELS="$LABELS,breaking-change"
+          fi
+
+          gh pr create \
+            --title "chore: update cypher skill to docs-cypher ${CYPHER_NEW} / docs-cheat-sheet ${CHEAT_NEW}" \
+            --body-file /tmp/pr-body.md \
+            --head "$BRANCH" \
+            --base main \
+            --label "$LABELS"

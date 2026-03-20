@@ -80,6 +80,15 @@ The script generates **first drafts** for L3 reference files (not final output).
 
 **GH Action update workflow:** When bumping a submodule pin (e.g., docs-cypher 2026.01.0 → 2026.02.0), run `python3 scripts/extract-references.py` to regenerate all L3 drafts, inspect `git diff` on the generated files, manually curate any sections that degraded, and commit. No diff-based update plan needed — full regeneration is idempotent and fast.
 
+## GH Actions Notes
+
+- `.yamllint` config in repo root with `line-length: max: 160` is needed — GH Actions `${{ expressions }}` routinely exceed 80 chars.
+- Two-gate PR creation: `has_update` (tags differ) + `has_changes` (git diff non-empty). Both required to avoid spurious PRs.
+- `breaking-change` label must be pre-created in the GitHub repo; the workflow won't auto-create it.
+- `workflow_dispatch` `target_tag` input applies to both submodules. Use the same version tag for both unless you need independent control.
+- Changelog `--since` arg should be the OLD (current) tag, not the new one, so only new-release entries appear in the PR body.
+- heredoc in a GH Actions `run:` block works for VERSION file rewrite — use `<<EOF` / `EOF` with `cat >` to avoid quoting issues.
+
 ## Changelog Parser Notes (extract-changelog.py)
 
 - AsciiDoc table rows are `a|` (feature cell with code) then `|` (details cell). Together they form ONE entry — do NOT flush on `|`, only on next `a|`.
