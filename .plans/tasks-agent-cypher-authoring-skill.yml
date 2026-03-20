@@ -320,7 +320,7 @@ tasks:
       generate questions at four difficulty tiers, auto-executes candidate Cypher
       to capture PROFILE baselines, applies tolerance multipliers, and writes YAML
       test stubs to tests/cases/{domain}-generated.yml for human review.
-    status: pending
+    status: completed
     dependencies:
       - task-014
     acceptance_criteria:
@@ -330,7 +330,7 @@ tasks:
       - "Each stub captures baseline metrics: observed_count, observed_db_hits, observed_memory_bytes, observed_runtime_ms"
       - "Tolerance-multiplied thresholds are pre-populated: max_db_hits = observed × 3, etc."
       - "Output is written to tests/cases/{domain}-generated.yml, not tests/cases/{domain}.yml (requires human promotion)"
-    completed_at: null
+    completed_at: "2026-03-20T20:30:00Z"
 
   - id: task-018
     title: "Create initial test cases for companies database (basic + intermediate)"

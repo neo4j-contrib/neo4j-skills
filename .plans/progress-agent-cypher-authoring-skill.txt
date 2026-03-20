@@ -563,3 +563,50 @@ Key Decisions:
 Next Task: task-017 (Build tests/harness/generator.py) or task-021 (exporter.py)
 — both depend on completed tasks.
 
+================================================================================
+TASK-017: Build tests/harness/generator.py question generator
+Date: 2026-03-20T20:30:00Z
+================================================================================
+
+Summary:
+Created tests/harness/generator.py — the full question generation pipeline for
+the Cypher test harness. Connects to Neo4j, inspects schema, samples property
+values using the COLLECT subquery form, infers property semantics, calls Claude
+to generate questions at four difficulty tiers, profiles candidate Cypher to
+capture baselines, applies tolerance multipliers, and writes YAML stubs.
+
+Pipeline stages:
+1. Schema inspection: labels, rel types, indexes, node/rel properties
+2. Property sampling: COLLECT { MATCH ... RETURN DISTINCT ... LIMIT 100 } form
+3. Semantic inference: uuid | range | enum | score | freetext | sparse | unknown
+4. Schema context build: compact string for Claude prompt (labels, indexes, props+sem)
+5. Claude invocation: per-difficulty question generation via claude --print
+6. Baseline capture: PROFILE candidate Cypher → observed_count/db_hits/memory/runtime
+7. Threshold computation: x3 for db_hits/memory, x5 for runtime
+8. YAML stub output: tests/cases/{domain}-generated.yml with promotion instructions
+
+Files Changed:
+- tests/harness/generator.py (created)
+- .plans/tasks-agent-cypher-authoring-skill.yml (task-017 status → completed)
+
+Key Decisions:
+- COLLECT subquery form used as mandated (not collect()[..N])
+- Sparse check runs before samples check (low-ratio properties may have empty
+  sample list if the sampling subquery filters them out)
+- Name-based hinting (freetext/score keywords) runs BEFORE enum fallback so
+  well-named properties like 'summary', 'sentiment' get correct semantics
+  regardless of sample cardinality
+- inferred_semantics written as a structured dict field (not YAML comments) since
+  pyyaml cannot write per-key comments; the field is equally visible for human review
+- Output to {domain}-generated.yml with clear preamble comments explaining promotion
+  steps; NOT {domain}.yml to enforce human review gate
+- Tolerance multipliers: x3 for db_hits and memory (query plan can vary by 3x
+  across different data distributions), x5 for runtime (CI timing variability)
+- PROFILE query uses _profile_query() helper that imports validator.extract_profile_metrics
+  for consistent metrics extraction with the rest of the harness
+- Dry-run mode inspects schema and prints plan but skips Claude invocation and
+  all file writes — safe for testing connectivity without spending API credits
+
+Next Task: task-018 (Create initial test cases — depends on task-017) or
+task-021 (exporter.py — depends on task-016, now available)
+

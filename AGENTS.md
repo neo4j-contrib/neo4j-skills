@@ -139,6 +139,18 @@ The script generates **first drafts** for L3 reference files (not final output).
 - `_truncate()` escapes `|` chars in question text to prevent Markdown table breakage.
 - Smoke tests: `uv run python3 tests/harness/reporter.py` (no DB or Claude needed).
 
+## Generator Notes (tests/harness/generator.py)
+
+- CLI: `uv run python3 tests/harness/generator.py --domain companies --database companies --output-dir tests/cases/ [--dry-run]`
+- Property sampling uses `COLLECT { MATCH (m:\`Label\`) WHERE m.\`prop\` IS NOT NULL RETURN DISTINCT m.\`prop\` LIMIT 100 } AS samples` — this is the correct Cypher 25 form (not `collect()[..N]`).
+- Semantic inference priority: sparse check first (runs before empty-samples check) → uuid (regex) → freetext (long text) → score (float in [-1,1]) → range (high-cardinality numeric) → name-based hinting (freetext/score keywords before enum fallback) → enum (low-cardinality) → unknown.
+- Name-based hinting runs BEFORE enum fallback — properties named `summary`, `description`, `sentiment` get correct semantics regardless of sample cardinality. Only `id`/`key` name hints come after enum to avoid false positives.
+- `inferred_semantics` written as a structured dict field (not YAML comments) — pyyaml cannot write per-key comments; the field achieves the same goal for human reviewers.
+- Output: `tests/cases/{domain}-generated.yml` — never `{domain}.yml`. Requires explicit human promotion step.
+- Tolerance multipliers: `max_db_hits = observed × 3`, `max_allocated_memory_bytes = observed × 3`, `max_runtime_ms = observed × 5` (runtime has 5× because CI timing variability is high).
+- Dry-run skips Claude calls and all file writes. Use it to verify schema connectivity and inspect what would be generated.
+- Generator imports `extract_profile_metrics` from validator.py at runtime (not at module level) so it works from both `tests/harness/` and repo root paths.
+
 ## SKILL.md Authoring Notes
 
 - SKILL.md line budget is 300 lines (not 300 non-blank lines). Inline `CYPHER 25` on the same line as each query to save ~10 lines in the Schema-First Protocol section.
