@@ -315,3 +315,39 @@ Key Decisions:
 
 Next Task: task-011 (Build scripts/extract-changelog.py) or task-020 (Update
 SKILL.md WebFetch section — depends on task-010, may be mergeable here)
+
+================================================================================
+TASK-011: Build scripts/extract-changelog.py changelog parser
+Date: 2026-03-20T14:30:00Z
+================================================================================
+
+Summary:
+Created scripts/extract-changelog.py — a Python script that parses the
+deprecations-additions-removals-compatibility.adoc file from the docs-cypher
+submodule and emits a structured Markdown changelog summary with three sections:
+Additions, Deprecations, and Removals. Exits 0 in all success cases (including
+when sections are empty). Supports --since VERSION for filtering to specific
+releases (used by the GH Action to show only what changed in the new version).
+
+Running against current docs-cypher submodule: 90 entries total (73 additions,
+1 deprecation, 16 removals) across Neo4j 2025.06 through 2026.01.
+
+Files Changed:
+- scripts/extract-changelog.py (created)
+- .plans/tasks-agent-cypher-authoring-skill.yml (task-011 status → completed)
+
+Key Decisions:
+- AsciiDoc table structure: `a|` starts feature cell (code blocks), `|` starts
+  details cell (description). Both cells together form ONE changelog entry.
+  The `a|` cell only flushes the previous row on the NEXT `a|` occurrence, not
+  on `|` (details cell).
+- Source blocks with non-cypher language (e.g. [source, csv]) are skipped;
+  only `[source, cypher]` and `[source, role=noheader]` are extracted.
+- Dedup logic: entries where details text is a strict prefix of another entry
+  in the same version group are suppressed (source doc occasionally has
+  both a short summary and a longer explanation as separate table rows).
+- --since flag filters BOTH the rendered output and the summary count message.
+- [[anchor]] inline anchors stripped from clean_text to prevent leakthrough.
+
+Next Task: task-012 (Create GH Action: update-cypher-skill.yml) — depends on
+task-003 and task-011 (now complete). task-020 and task-023 also available.

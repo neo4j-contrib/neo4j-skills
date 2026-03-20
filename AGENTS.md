@@ -57,6 +57,7 @@ No build/test system exists yet (test harness is a future task). Once tests/harn
 
 - `scripts/extract-references.py` — extract asciidoc → Markdown for L3 reference files. Run with `--dry-run` to preview without writing.
 - `scripts/test-extract-references.py` — test suite for extract-references.py. Run from repo root: `python3 scripts/test-extract-references.py`
+- `scripts/extract-changelog.py` — parse `deprecations-additions-removals-compatibility.adoc` → Markdown changelog. Usage: `python3 scripts/extract-changelog.py --src docs-cypher/modules/ROOT/pages/deprecations-additions-removals-compatibility.adoc --out path/changelog.md [--since 2026.01]`
 
 ### extract-references.py — Hybrid Workflow
 
@@ -78,6 +79,13 @@ The script generates **first drafts** for L3 reference files (not final output).
 **Config ordering:** Put cheat-sheet inline sources first in EXTRACTION_CONFIGS so truncation preserves the most concise content.
 
 **GH Action update workflow:** When bumping a submodule pin (e.g., docs-cypher 2026.01.0 → 2026.02.0), run `python3 scripts/extract-references.py` to regenerate all L3 drafts, inspect `git diff` on the generated files, manually curate any sections that degraded, and commit. No diff-based update plan needed — full regeneration is idempotent and fast.
+
+## Changelog Parser Notes (extract-changelog.py)
+
+- AsciiDoc table rows are `a|` (feature cell with code) then `|` (details cell). Together they form ONE entry — do NOT flush on `|`, only on next `a|`.
+- Only `[source, cypher]` and `[source, role=noheader]` blocks are extracted; `[source, csv]`, `[source, javascript]` etc. are skipped but still consumed.
+- `--since VERSION` filters rendered output AND the summary count. Useful in GH Actions to report only what changed in the new submodule pin.
+- Empty sections correctly render `_No entries._` (not missing or crash).
 
 ## SKILL.md Authoring Notes
 

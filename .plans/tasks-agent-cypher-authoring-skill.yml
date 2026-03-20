@@ -203,7 +203,7 @@ tasks:
       compatibility.adoc from the docs-cypher submodule and emits a Markdown
       summary of new additions, deprecations, and removals. Used by the GH Action
       to auto-populate PR bodies so reviewers can quickly assess skill impact.
-    status: pending
+    status: completed
     dependencies:
       - task-001
     acceptance_criteria:
@@ -211,7 +211,7 @@ tasks:
       - "Output contains separate sections for Additions, Deprecations, and Removals"
       - "Script exits 0 even when sections are empty (not all releases have all three)"
       - "Running against current docs-cypher submodule produces non-empty valid Markdown"
-    completed_at: null
+    completed_at: "2026-03-20T14:30:00Z"
 
   - id: task-012
     title: "Create GH Action: update-cypher-skill.yml"
