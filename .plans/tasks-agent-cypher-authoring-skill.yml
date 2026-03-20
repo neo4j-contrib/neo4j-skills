@@ -358,7 +358,7 @@ tasks:
       multi-pattern traversals. Run the complete test harness against the final
       SKILL.md and verify pass rates meet PRD thresholds. Produce the first
       baseline report.
-    status: pending
+    status: completed
     dependencies:
       - task-010
       - task-018
@@ -369,7 +369,7 @@ tasks:
       - "At least one complex case uses CALL subquery or CALL IN TRANSACTIONS"
       - "Harness run produces ≥ 90% pass rate on basic, ≥ 80% on intermediate, ≥ 70% on advanced"
       - "Baseline report saved to skill-generation-validation-tools/tests/results/ and committed"
-    completed_at: null
+    completed_at: "2026-03-21T00:30:00Z"
 
   - id: task-020
     title: "Update SKILL.md WebFetch section to frame fetching as proactive"

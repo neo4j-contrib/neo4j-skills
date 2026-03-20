@@ -1,0 +1,522 @@
+{
+  "run_id": "run-20260320T162017",
+  "started_at": "2026-03-20T16:20:17.537323+00:00",
+  "completed_at": "2026-03-20T16:28:09.407787+00:00",
+  "skill": "neo4j-cypher-authoring-skill",
+  "summary": {
+    "total": 10,
+    "passed": 8,
+    "warned": 1,
+    "failed": 1,
+    "pass_rate": 0.8
+  },
+  "cases": [
+    {
+      "case_id": "companies-advanced-001",
+      "question": "Using a quantified path expression with the {1,2} quantifier, find all organizations reachable from 'Blackstone' through 1 to 2 HAS_SUBSIDIARY hops. Use a literal string match. Return distinct organization names, limited to 20.",
+      "difficulty": "advanced",
+      "tags": [
+        "qpe",
+        "quantified-path",
+        "relationship",
+        "traversal"
+      ],
+      "verdict": "PASS",
+      "failed_gate": null,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (root:Organization {name: 'Blackstone'})-[:HAS_SUBSIDIARY]-{1,2}(org:Organization)\nRETURN DISTINCT org.name AS name\nLIMIT 20",
+      "metrics": {
+        "totalDbHits": null,
+        "totalAllocatedMemory": null,
+        "elapsedTimeMs": 258.65916698239744,
+        "totalRows": null
+      },
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "PASS",
+          "reason": "EXPLAIN succeeded",
+          "details": {}
+        },
+        {
+          "gate": 2,
+          "verdict": "PASS",
+          "reason": "Returned 20 rows (min: 1)",
+          "details": {}
+        },
+        {
+          "gate": 3,
+          "verdict": "PASS",
+          "reason": "No deprecated syntax or operators detected",
+          "details": {}
+        },
+        {
+          "gate": 4,
+          "verdict": "PASS",
+          "reason": "Performance within thresholds (dbHits=None, memory=None bytes)",
+          "details": {
+            "totalDbHits": null,
+            "totalAllocatedMemory": null,
+            "elapsedTimeMs": 258.65916698239744,
+            "totalRows": null
+          }
+        }
+      ],
+      "error": null,
+      "duration_s": 6.95
+    },
+    {
+      "case_id": "companies-advanced-002",
+      "question": "Using a quantified path expression with the {1,} quantifier (one or more hops), find any organization reachable from 'Blackstone' through one or more HAS_SUBSIDIARY relationships (any depth). Use a literal string match. Return a count of distinct reachable organizations.",
+      "difficulty": "advanced",
+      "tags": [
+        "qpe",
+        "quantified-path",
+        "unbounded-quantifier",
+        "relationship"
+      ],
+      "verdict": "PASS",
+      "failed_gate": null,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (root:Organization {name: 'Blackstone'})-[:HAS_SUBSIDIARY]-{1,}(org:Organization)\nRETURN count(DISTINCT org) AS reachableCount",
+      "metrics": {
+        "totalDbHits": null,
+        "totalAllocatedMemory": null,
+        "elapsedTimeMs": 332.76154194027185,
+        "totalRows": null
+      },
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "PASS",
+          "reason": "EXPLAIN succeeded",
+          "details": {}
+        },
+        {
+          "gate": 2,
+          "verdict": "PASS",
+          "reason": "Returned 1 rows (min: 1)",
+          "details": {}
+        },
+        {
+          "gate": 3,
+          "verdict": "PASS",
+          "reason": "No deprecated syntax or operators detected",
+          "details": {}
+        },
+        {
+          "gate": 4,
+          "verdict": "PASS",
+          "reason": "Performance within thresholds (dbHits=None, memory=None bytes)",
+          "details": {
+            "totalDbHits": null,
+            "totalAllocatedMemory": null,
+            "elapsedTimeMs": 332.76154194027185,
+            "totalRows": null
+          }
+        }
+      ],
+      "error": null,
+      "duration_s": 8.378
+    },
+    {
+      "case_id": "companies-advanced-003",
+      "question": "Find the top 5 organizations with the most total connections (counting all relationship types combined: HAS_SUBSIDIARY, MENTIONS, HAS_CATEGORY). Use pattern: MATCH (o:Organization)-[r]-() to count all relationship instances. Return organization name and total degree count, ordered by degree descending.",
+      "difficulty": "advanced",
+      "tags": [
+        "match",
+        "aggregation",
+        "degree",
+        "relationship"
+      ],
+      "verdict": "PASS",
+      "failed_gate": null,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (o:Organization)-[r]-()\nRETURN o.name AS organization, count(r) AS degree\nORDER BY degree DESC\nLIMIT 5",
+      "metrics": {
+        "totalDbHits": null,
+        "totalAllocatedMemory": null,
+        "elapsedTimeMs": 539.9019999895245,
+        "totalRows": null
+      },
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "PASS",
+          "reason": "EXPLAIN succeeded",
+          "details": {}
+        },
+        {
+          "gate": 2,
+          "verdict": "PASS",
+          "reason": "Returned 5 rows (min: 5)",
+          "details": {}
+        },
+        {
+          "gate": 3,
+          "verdict": "PASS",
+          "reason": "No deprecated syntax or operators detected",
+          "details": {}
+        },
+        {
+          "gate": 4,
+          "verdict": "PASS",
+          "reason": "Performance within thresholds (dbHits=None, memory=None bytes)",
+          "details": {
+            "totalDbHits": null,
+            "totalAllocatedMemory": null,
+            "elapsedTimeMs": 539.9019999895245,
+            "totalRows": null
+          }
+        }
+      ],
+      "error": null,
+      "duration_s": 4.846
+    },
+    {
+      "case_id": "companies-advanced-004",
+      "question": "Use the db.index.vector.queryNodes procedure to perform a vector similarity search on the 'news' vector index. Find the 5 Chunk nodes most similar to a random query vector (use a list of 1536 identical values of 0.1 as the query vector, passed as a literal list in the query). Return the chunk text and the similarity score.",
+      "difficulty": "advanced",
+      "tags": [
+        "vector",
+        "index",
+        "similarity",
+        "procedure"
+      ],
+      "verdict": "FAIL",
+      "failed_gate": null,
+      "warned_gate": null,
+      "generated_cypher": "",
+      "metrics": {},
+      "gate_details": [],
+      "error": "Claude invocation failed: Claude invocation timed out after 90s",
+      "duration_s": 90.028
+    },
+    {
+      "case_id": "companies-advanced-005",
+      "question": "Use the db.index.fulltext.queryNodes procedure to search the 'entity' fulltext index for organizations whose name matches 'Amazon'. Then for each matching organization, use a CALL subquery to collect the titles of all articles mentioning it. Return organization name and list of article titles.",
+      "difficulty": "advanced",
+      "tags": [
+        "fulltext",
+        "index",
+        "search",
+        "call-subquery",
+        "procedure"
+      ],
+      "verdict": "PASS",
+      "failed_gate": null,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nCALL db.index.fulltext.queryNodes('entity', 'Amazon') YIELD node AS org, score\nWHERE org:Organization\nCALL (org) {\n  MATCH (org)<-[:MENTIONS]-(a:Article)\n  RETURN collect(a.title) AS articleTitles\n}\nRETURN org.name AS organizationName, articleTitles\nORDER BY score DESC",
+      "metrics": {
+        "totalDbHits": null,
+        "totalAllocatedMemory": null,
+        "elapsedTimeMs": 350.2825000323355,
+        "totalRows": null
+      },
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "PASS",
+          "reason": "EXPLAIN succeeded",
+          "details": {}
+        },
+        {
+          "gate": 2,
+          "verdict": "PASS",
+          "reason": "Returned 53 rows (min: 1)",
+          "details": {}
+        },
+        {
+          "gate": 3,
+          "verdict": "PASS",
+          "reason": "No deprecated syntax or operators detected",
+          "details": {}
+        },
+        {
+          "gate": 4,
+          "verdict": "PASS",
+          "reason": "Performance within thresholds (dbHits=None, memory=None bytes)",
+          "details": {
+            "totalDbHits": null,
+            "totalAllocatedMemory": null,
+            "elapsedTimeMs": 350.2825000323355,
+            "totalRows": null
+          }
+        }
+      ],
+      "error": null,
+      "duration_s": 10.747
+    },
+    {
+      "case_id": "companies-advanced-006",
+      "question": "Use a CALL subquery to compute per-organization metrics for the top 20 most-mentioned organizations: inside the CALL, compute the count of direct subsidiaries. Outside, also compute the average article sentiment. Return organizations with their subsidiary count and avg sentiment, ordered by avg sentiment ascending.",
+      "difficulty": "advanced",
+      "tags": [
+        "call-subquery",
+        "aggregation",
+        "relationship",
+        "sentiment"
+      ],
+      "verdict": "PASS",
+      "failed_gate": null,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (o:Organization)<-[:MENTIONS]-(a:Article)\nWITH o, count(a) AS mentionCount, avg(a.sentiment) AS avgSentiment\nORDER BY mentionCount DESC\nLIMIT 20\nCALL (o) {\n  MATCH (o)<-[:HAS_SUBSIDIARY]-(sub:Organization)\n  RETURN count(sub) AS subsidiaryCount\n}\nRETURN o.name AS organization, subsidiaryCount, avgSentiment\nORDER BY avgSentiment ASC",
+      "metrics": {
+        "totalDbHits": null,
+        "totalAllocatedMemory": null,
+        "elapsedTimeMs": 526.2672919780016,
+        "totalRows": null
+      },
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "PASS",
+          "reason": "EXPLAIN succeeded",
+          "details": {}
+        },
+        {
+          "gate": 2,
+          "verdict": "PASS",
+          "reason": "Returned 20 rows (min: 1)",
+          "details": {}
+        },
+        {
+          "gate": 3,
+          "verdict": "PASS",
+          "reason": "No deprecated syntax or operators detected",
+          "details": {}
+        },
+        {
+          "gate": 4,
+          "verdict": "PASS",
+          "reason": "Performance within thresholds (dbHits=None, memory=None bytes)",
+          "details": {
+            "totalDbHits": null,
+            "totalAllocatedMemory": null,
+            "elapsedTimeMs": 526.2672919780016,
+            "totalRows": null
+          }
+        }
+      ],
+      "error": null,
+      "duration_s": 10.252
+    },
+    {
+      "case_id": "companies-advanced-007",
+      "question": "Find organizations that appear together in articles with both positive sentiment (>0.3) AND negative sentiment (<-0.3) \u2014 i.e., the same two organizations are co-mentioned in at least one positive article and at least one negative article. Return the organization pair and counts for each sentiment type. Limit to 10 pairs.",
+      "difficulty": "advanced",
+      "tags": [
+        "match",
+        "aggregation",
+        "co-occurrence",
+        "filter",
+        "sentiment",
+        "count-subquery"
+      ],
+      "verdict": "PASS",
+      "failed_gate": null,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (o1:Organization)<-[:MENTIONS]-(a:Article)-[:MENTIONS]->(o2:Organization)\nWHERE o1.name < o2.name\nWITH o1, o2,\n     COUNT { MATCH (o1)<-[:MENTIONS]-(pos:Article)-[:MENTIONS]->(o2) WHERE pos.sentiment > 0.3 } AS posCount,\n     COUNT { MATCH (o1)<-[:MENTIONS]-(neg:Article)-[:MENTIONS]->(o2) WHERE neg.sentiment < -0.3 } AS negCount\nWHERE posCount > 0 AND negCount > 0\nRETURN o1.name AS org1, o2.name AS org2, posCount, negCount\nORDER BY posCount + negCount DESC\nLIMIT 10",
+      "metrics": {
+        "totalDbHits": null,
+        "totalAllocatedMemory": null,
+        "elapsedTimeMs": 49628.607999999076,
+        "totalRows": null
+      },
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "PASS",
+          "reason": "EXPLAIN succeeded",
+          "details": {}
+        },
+        {
+          "gate": 2,
+          "verdict": "PASS",
+          "reason": "Returned 10 rows (min: 1)",
+          "details": {}
+        },
+        {
+          "gate": 3,
+          "verdict": "PASS",
+          "reason": "No deprecated syntax or operators detected",
+          "details": {}
+        },
+        {
+          "gate": 4,
+          "verdict": "PASS",
+          "reason": "Performance within thresholds (dbHits=None, memory=None bytes)",
+          "details": {
+            "totalDbHits": null,
+            "totalAllocatedMemory": null,
+            "elapsedTimeMs": 49628.607999999076,
+            "totalRows": null
+          }
+        }
+      ],
+      "error": null,
+      "duration_s": 106.132
+    },
+    {
+      "case_id": "companies-advanced-008",
+      "question": "Use COUNT subquery expressions to find organizations where the number of articles mentioning them is greater than the number of their direct subsidiaries. Return the organization name, article count, and subsidiary count. Limit to 10 results.",
+      "difficulty": "advanced",
+      "tags": [
+        "count-subquery",
+        "aggregation",
+        "relationship",
+        "filter"
+      ],
+      "verdict": "PASS",
+      "failed_gate": null,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (o:Organization)\nWITH o,\n     COUNT { (o)<-[:MENTIONS]-(:Article) } AS articleCount,\n     COUNT { (o)-[:HAS_SUBSIDIARY]->(:Organization) } AS subsidiaryCount\nWHERE articleCount > subsidiaryCount\nRETURN o.name AS organization, articleCount, subsidiaryCount\nORDER BY articleCount DESC\nLIMIT 10",
+      "metrics": {
+        "totalDbHits": null,
+        "totalAllocatedMemory": null,
+        "elapsedTimeMs": 458.4234580397606,
+        "totalRows": null
+      },
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "PASS",
+          "reason": "EXPLAIN succeeded",
+          "details": {}
+        },
+        {
+          "gate": 2,
+          "verdict": "PASS",
+          "reason": "Returned 10 rows (min: 1)",
+          "details": {}
+        },
+        {
+          "gate": 3,
+          "verdict": "PASS",
+          "reason": "No deprecated syntax or operators detected",
+          "details": {}
+        },
+        {
+          "gate": 4,
+          "verdict": "PASS",
+          "reason": "Performance within thresholds (dbHits=None, memory=None bytes)",
+          "details": {
+            "totalDbHits": null,
+            "totalAllocatedMemory": null,
+            "elapsedTimeMs": 458.4234580397606,
+            "totalRows": null
+          }
+        }
+      ],
+      "error": null,
+      "duration_s": 6.285
+    },
+    {
+      "case_id": "companies-advanced-009",
+      "question": "Find organizations linked to the same HAS_CATEGORY target node AND both mentioned in the same article. Traverse: (o1)-[:HAS_CATEGORY]->(cat)<-[:HAS_CATEGORY]-(o2) and (a)-[:MENTIONS]->(o1), (a)-[:MENTIONS]->(o2). Return category name, organization pair names, and co-mention count. Limit to 10.",
+      "difficulty": "advanced",
+      "tags": [
+        "match",
+        "multi-pattern",
+        "relationship",
+        "aggregation",
+        "category"
+      ],
+      "verdict": "WARN",
+      "failed_gate": null,
+      "warned_gate": 4,
+      "generated_cypher": "CYPHER 25\nMATCH (o1:Organization)-[:HAS_CATEGORY]->(cat)<-[:HAS_CATEGORY]-(o2:Organization)\nWHERE elementId(o1) < elementId(o2)\nMATCH (a:Article)-[:MENTIONS]->(o1)\nMATCH (a)-[:MENTIONS]->(o2)\nWITH cat.name AS category, o1.name AS org1, o2.name AS org2, count(DISTINCT a) AS coMentionCount\nRETURN category, org1, org2, coMentionCount\nORDER BY coMentionCount DESC\nLIMIT 10",
+      "metrics": {
+        "totalDbHits": null,
+        "totalAllocatedMemory": null,
+        "elapsedTimeMs": 112479.3243331369,
+        "totalRows": null
+      },
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "PASS",
+          "reason": "EXPLAIN succeeded",
+          "details": {}
+        },
+        {
+          "gate": 2,
+          "verdict": "PASS",
+          "reason": "Returned 10 rows (min: 1)",
+          "details": {}
+        },
+        {
+          "gate": 3,
+          "verdict": "PASS",
+          "reason": "No deprecated syntax or operators detected",
+          "details": {}
+        },
+        {
+          "gate": 4,
+          "verdict": "WARN",
+          "reason": "elapsedTimeMs 112479 ms exceeds warning threshold 30000 ms (CI timing guidance only)",
+          "details": {
+            "elapsedTimeMs": 112479.3243331369,
+            "max_runtime_ms": 30000
+          }
+        }
+      ],
+      "error": null,
+      "duration_s": 221.956
+    },
+    {
+      "case_id": "companies-advanced-010",
+      "question": "Using COLLECT subquery expressions, for each organization return: its name, a collected list of its subsidiary names (via HAS_SUBSIDIARY), and a collected list of distinct category names (via HAS_CATEGORY). Filter to organizations that have at least 1 subsidiary. Return ordered by organization name, limit to 20.",
+      "difficulty": "advanced",
+      "tags": [
+        "collect-subquery",
+        "aggregation",
+        "relationship",
+        "list"
+      ],
+      "verdict": "PASS",
+      "failed_gate": null,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (o:Organization)\nWHERE EXISTS { (o)-[:HAS_SUBSIDIARY]->() }\nRETURN o.name AS organization,\n       COLLECT { MATCH (o)-[:HAS_SUBSIDIARY]->(s:Organization) RETURN s.name } AS subsidiaries,\n       COLLECT { MATCH (o)-[:HAS_CATEGORY]->(c:Category) RETURN DISTINCT c.name } AS categories\nORDER BY organization\nLIMIT 20",
+      "metrics": {
+        "totalDbHits": null,
+        "totalAllocatedMemory": null,
+        "elapsedTimeMs": 403.9488749112934,
+        "totalRows": null
+      },
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "PASS",
+          "reason": "EXPLAIN succeeded",
+          "details": {}
+        },
+        {
+          "gate": 2,
+          "verdict": "PASS",
+          "reason": "Returned 20 rows (min: 1)",
+          "details": {}
+        },
+        {
+          "gate": 3,
+          "verdict": "PASS",
+          "reason": "No deprecated syntax or operators detected",
+          "details": {}
+        },
+        {
+          "gate": 4,
+          "verdict": "PASS",
+          "reason": "Performance within thresholds (dbHits=None, memory=None bytes)",
+          "details": {
+            "totalDbHits": null,
+            "totalAllocatedMemory": null,
+            "elapsedTimeMs": 403.9488749112934,
+            "totalRows": null
+          }
+        }
+      ],
+      "error": null,
+      "duration_s": 6.294
+    }
+  ]
+}

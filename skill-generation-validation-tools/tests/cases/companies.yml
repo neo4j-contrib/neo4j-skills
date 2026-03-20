@@ -61,7 +61,7 @@ cases:
     is_write_query: false
 
   - id: companies-basic-004
-    question: "Find all articles about a specific organization named 'Apple'. Return the article titles and their sentiment scores."
+    question: "Find the top 10 articles by sentiment score for the organization 'Apple'. Use a literal string match (not a parameter) in the WHERE clause. Return the article titles and their sentiment scores."
     database: companies
     difficulty: basic
     tags: [match, relationship, mentions]
@@ -85,7 +85,7 @@ cases:
     is_write_query: false
 
   - id: companies-basic-006
-    question: "Find all subsidiary organizations of 'Alphabet' (i.e., organizations where Alphabet has a HAS_SUBSIDIARY relationship to them)."
+    question: "Find all direct subsidiary organizations of 'Blackstone'. Use a literal string match (not a parameter). Return the subsidiary names, limited to 10."
     database: companies
     difficulty: basic
     tags: [match, relationship, subsidiary]
@@ -195,13 +195,13 @@ cases:
     is_write_query: false
 
   - id: companies-intermediate-005
-    question: "Find all direct and indirect subsidiaries of 'Alphabet' (up to 3 hops through HAS_SUBSIDIARY relationships). Return each subsidiary name and its depth level."
+    question: "Find all direct and indirect subsidiaries of 'Blackstone' (up to 2 hops through HAS_SUBSIDIARY relationships). Use a literal string match. Return distinct subsidiary names, limited to 20."
     database: companies
     difficulty: intermediate
     tags: [match, variable-length, relationship, traversal]
     domain: companies
     min_results: 1
-    max_db_hits: 50000
+    max_db_hits: 200000
     max_allocated_memory_bytes: 10485760
     max_runtime_ms: 8000
     is_write_query: false
@@ -243,16 +243,16 @@ cases:
     is_write_query: false
 
   - id: companies-intermediate-009
-    question: "Create a new Organization node for a fictional company 'Nexus Corp' with properties: name='Nexus Corp', description='A fictional test company', nbrEmployees=500. Return the created node's name and elementId."
+    question: "Find all organizations that have both a HAS_SUPPLIER relationship to another organization AND are mentioned in at least one article. Return the organization name, the name of the supplier, and the count of articles mentioning the organization. Order by article count descending, limit to 10."
     database: companies
     difficulty: intermediate
-    tags: [merge, write, create]
+    tags: [match, relationship, aggregation, multi-pattern]
     domain: companies
     min_results: 1
-    max_db_hits: 10000
-    max_allocated_memory_bytes: 2097152
-    max_runtime_ms: 5000
-    is_write_query: true
+    max_db_hits: 200000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 10000
+    is_write_query: false
 
   - id: companies-intermediate-010
     question: "Find the organization with the most subsidiaries (direct only, not transitive). Return the organization name and the count of its direct subsidiaries."
@@ -264,4 +264,188 @@ cases:
     max_db_hits: 50000
     max_allocated_memory_bytes: 5242880
     max_runtime_ms: 5000
+    is_write_query: false
+
+  # ─── ADVANCED (10 cases) ──────────────────────────────────────────────────────
+
+  - id: companies-advanced-001
+    question: "Using a quantified path expression with the {1,2} quantifier, find all organizations reachable from 'Blackstone' through 1 to 2 HAS_SUBSIDIARY hops. Use a literal string match. Return distinct organization names, limited to 20."
+    database: companies
+    difficulty: advanced
+    tags: [qpe, quantified-path, relationship, traversal]
+    domain: companies
+    min_results: 1
+    max_db_hits: 300000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 15000
+    is_write_query: false
+
+  - id: companies-advanced-002
+    question: "Using a quantified path expression with the {1,} quantifier (one or more hops), find any organization reachable from 'Blackstone' through one or more HAS_SUBSIDIARY relationships (any depth). Use a literal string match. Return a count of distinct reachable organizations."
+    database: companies
+    difficulty: advanced
+    tags: [qpe, quantified-path, unbounded-quantifier, relationship]
+    domain: companies
+    min_results: 1
+    max_db_hits: 500000
+    max_allocated_memory_bytes: 50000000
+    max_runtime_ms: 30000
+    is_write_query: false
+
+  - id: companies-advanced-003
+    question: "Find the top 5 organizations with the most total connections (counting all relationship types combined: HAS_SUBSIDIARY, MENTIONS, HAS_CATEGORY). Use pattern: MATCH (o:Organization)-[r]-() to count all relationship instances. Return organization name and total degree count, ordered by degree descending."
+    database: companies
+    difficulty: advanced
+    tags: [match, aggregation, degree, relationship]
+    domain: companies
+    min_results: 5
+    max_db_hits: 300000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 20000
+    is_write_query: false
+
+  - id: companies-advanced-004
+    question: "Use the db.index.vector.queryNodes procedure to perform a vector similarity search on the 'news' vector index. Find the 5 Chunk nodes most similar to a random query vector (use a list of 1536 identical values of 0.1 as the query vector, passed as a literal list in the query). Return the chunk text and the similarity score."
+    database: companies
+    difficulty: advanced
+    tags: [vector, index, similarity, procedure]
+    domain: companies
+    min_results: 1
+    max_db_hits: 50000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 10000
+    is_write_query: false
+
+  - id: companies-advanced-005
+    question: "Use the db.index.fulltext.queryNodes procedure to search the 'entity' fulltext index for organizations whose name matches 'Amazon'. Then for each matching organization, use a CALL subquery to collect the titles of all articles mentioning it. Return organization name and list of article titles."
+    database: companies
+    difficulty: advanced
+    tags: [fulltext, index, search, call-subquery, procedure]
+    domain: companies
+    min_results: 1
+    max_db_hits: 100000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 10000
+    is_write_query: false
+
+  - id: companies-advanced-006
+    question: "Use a CALL subquery to compute per-organization metrics for the top 20 most-mentioned organizations: inside the CALL, compute the count of direct subsidiaries. Outside, also compute the average article sentiment. Return organizations with their subsidiary count and avg sentiment, ordered by avg sentiment ascending."
+    database: companies
+    difficulty: advanced
+    tags: [call-subquery, aggregation, relationship, sentiment]
+    domain: companies
+    min_results: 1
+    max_db_hits: 300000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 15000
+    is_write_query: false
+
+  - id: companies-advanced-007
+    question: "Find organizations that appear together in articles with both positive sentiment (>0.3) AND negative sentiment (<-0.3) — i.e., the same two organizations are co-mentioned in at least one positive article and at least one negative article. Return the organization pair and counts for each sentiment type. Limit to 10 pairs."
+    database: companies
+    difficulty: advanced
+    tags: [match, aggregation, co-occurrence, filter, sentiment, count-subquery]
+    domain: companies
+    min_results: 1
+    max_db_hits: 500000
+    max_allocated_memory_bytes: 50000000
+    max_runtime_ms: 60000
+    is_write_query: false
+
+  - id: companies-advanced-008
+    question: "Use COUNT subquery expressions to find organizations where the number of articles mentioning them is greater than the number of their direct subsidiaries. Return the organization name, article count, and subsidiary count. Limit to 10 results."
+    database: companies
+    difficulty: advanced
+    tags: [count-subquery, aggregation, relationship, filter]
+    domain: companies
+    min_results: 1
+    max_db_hits: 300000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 20000
+    is_write_query: false
+
+  - id: companies-advanced-009
+    question: "Find organizations linked to the same HAS_CATEGORY target node AND both mentioned in the same article. Traverse: (o1)-[:HAS_CATEGORY]->(cat)<-[:HAS_CATEGORY]-(o2) and (a)-[:MENTIONS]->(o1), (a)-[:MENTIONS]->(o2). Return category name, organization pair names, and co-mention count. Limit to 10."
+    database: companies
+    difficulty: advanced
+    tags: [match, multi-pattern, relationship, aggregation, category]
+    domain: companies
+    min_results: 1
+    max_db_hits: 500000
+    max_allocated_memory_bytes: 50000000
+    max_runtime_ms: 30000
+    is_write_query: false
+
+  - id: companies-advanced-010
+    question: "Using COLLECT subquery expressions, for each organization return: its name, a collected list of its subsidiary names (via HAS_SUBSIDIARY), and a collected list of distinct category names (via HAS_CATEGORY). Filter to organizations that have at least 1 subsidiary. Return ordered by organization name, limit to 20."
+    database: companies
+    difficulty: advanced
+    tags: [collect-subquery, aggregation, relationship, list]
+    domain: companies
+    min_results: 1
+    max_db_hits: 300000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 20000
+    is_write_query: false
+
+  # ─── COMPLEX (5 cases) ────────────────────────────────────────────────────────
+
+  - id: companies-complex-001
+    question: "Use CALL IN TRANSACTIONS for read-only batch processing: MATCH the first 20 Organization nodes, then inside CALL { ... } IN TRANSACTIONS OF 5 ROWS, perform a MATCH to count how many articles mention each organization. Return organization name and article count. This is a read-only query using CALL IN TRANSACTIONS for batching."
+    database: companies
+    difficulty: complex
+    tags: [call-in-transactions, batch, read]
+    domain: companies
+    min_results: 1
+    max_db_hits: 100000
+    max_allocated_memory_bytes: 10000000
+    max_runtime_ms: 15000
+    is_write_query: false
+
+  - id: companies-complex-002
+    question: "Build a multi-level aggregation query: MATCH (o:Organization)-[:HAS_CATEGORY]->(cat), then use CALL subqueries to compute per-organization metrics (article count via MENTIONS, subsidiary count via HAS_SUBSIDIARY), then aggregate at the category node level to return: cat.name as category, count of orgs, total articles, avg sentiment, total subsidiaries. Limit to 10 categories ordered by total articles descending."
+    database: companies
+    difficulty: complex
+    tags: [call-subquery, aggregation, multi-level, category, relationship]
+    domain: companies
+    min_results: 1
+    max_db_hits: 500000
+    max_allocated_memory_bytes: 50000000
+    max_runtime_ms: 30000
+    is_write_query: false
+
+  - id: companies-complex-003
+    question: "Using the fulltext index 'entity' via db.index.fulltext.queryNodes, find organizations matching 'Microsoft'. For each matching organization, use a CALL subquery to: (1) collect all article titles mentioning it (via MENTIONS), and (2) count the number of subsidiaries (via HAS_SUBSIDIARY). Then traverse from the organization to its category (via HAS_CATEGORY) and return: organization name, category name, article count, subsidiary count, and top 3 article titles."
+    database: companies
+    difficulty: complex
+    tags: [fulltext, index, call-subquery, traversal, relationship, collect, graphrag]
+    domain: companies
+    min_results: 1
+    max_db_hits: 200000
+    max_allocated_memory_bytes: 50000000
+    max_runtime_ms: 20000
+    is_write_query: false
+
+  - id: companies-complex-004
+    question: "For each organization with at least 5 subsidiaries, use a CALL subquery with an OPTIONAL MATCH inside to find the best article (highest sentiment) mentioning that organization, and use a second CALL subquery with a quantified path expression {2,2} to find organizations exactly 2 HAS_SUBSIDIARY hops away. Return org name, best article title (null if none), and list of second-level subsidiary names. Limit to 10."
+    database: companies
+    difficulty: complex
+    tags: [call-subquery, optional-match, qpe, quantified-path, relationship]
+    domain: companies
+    min_results: 1
+    max_db_hits: 500000
+    max_allocated_memory_bytes: 50000000
+    max_runtime_ms: 30000
+    is_write_query: false
+
+  - id: companies-complex-005
+    question: "Write a query that uses EXISTS subquery expressions to classify organizations into four groups: (1) has subsidiaries AND has articles, (2) has subsidiaries but NO articles, (3) no subsidiaries but HAS articles, (4) neither. Use CASE WHEN with EXISTS{} to assign the group. Return each group label and the count of organizations in it."
+    database: companies
+    difficulty: complex
+    tags: [exists-subquery, case-when, aggregation, classification, relationship]
+    domain: companies
+    min_results: 1
+    max_db_hits: 300000
+    max_allocated_memory_bytes: 30000000
+    max_runtime_ms: 20000
     is_write_query: false

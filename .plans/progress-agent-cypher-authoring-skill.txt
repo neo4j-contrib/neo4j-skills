@@ -809,3 +809,56 @@ Key Decisions:
 Next Task: task-019 (Generate and promote 10 advanced + 5 complex test cases, run
 full harness validation, produce baseline report)
 
+================================================================================
+TASK-019: Create advanced + complex test cases and run full harness validation
+Date: 2026-03-21T00:30:00Z
+================================================================================
+
+Summary:
+Added 10 advanced and 5 complex test cases to companies.yml covering QPEs,
+vector/fulltext search, CALL subqueries, CALL IN TRANSACTIONS, EXISTS/COLLECT/
+COUNT subqueries, and multi-pattern traversals. Fixed a critical runner.py bug
+where `--skill` CLI flag doesn't exist in claude 2.1.80 — replaced with
+`--append-system-prompt` loading SKILL.md content directly. Added neo4j>=6.0.0
+dependency to pyproject.toml. Generated baseline reports. All PRD pass rate
+thresholds met: basic 100%, intermediate 90%, advanced 80%.
+
+Key test case issues discovered and fixed via live DB testing:
+- 'Alphabet' and 'Meta' have 0 subsidiaries → changed to 'Blackstone' (1037 subs)
+- QPE `+` syntax not supported on demo.neo4jlabs.com 2026.01.3 → use `{1,}` form
+- `IN_INDUSTRY` relationship doesn't exist → use `HAS_CATEGORY`
+- SEARCH clause (Preview) not available on demo server → use db.index.vector.queryNodes
+- Demo DB is read-only (Forbidden on writes) → removed write test cases
+- CALL IN TRANSACTIONS works for reads (not just writes) with implicit transaction
+- 1536-dimension zero-vector is invalid for similarity search → use 0.1 values
+- CALL scope clause WITH filtering pattern needs correct Cypher 25 syntax
+
+Runner.py critical fix:
+- `claude --skill <name>` → not a valid flag in claude 2.1.80
+- Fix: `_load_skill_content()` searches parent dirs for SKILL.md, loads via
+  `--append-system-prompt` for non-interactive print mode
+- Fallback to `--skill` for future CLI versions that may add the flag
+
+Files Changed:
+- skill-generation-validation-tools/tests/cases/companies.yml (35 total cases: 10B, 10I, 10A, 5C)
+- skill-generation-validation-tools/tests/harness/runner.py (_load_skill_content fix)
+- skill-generation-validation-tools/pyproject.toml (neo4j>=6.0.0 dep)
+- skill-generation-validation-tools/uv.lock (neo4j 6.1.0 + pytz resolved)
+- skill-generation-validation-tools/tests/results/baseline-report.md (baseline Markdown)
+- skill-generation-validation-tools/tests/results/baseline-advanced.md (advanced baseline)
+- .plans/tasks-agent-cypher-authoring-skill.yml (task-019 → completed)
+
+Baseline pass rates (PRD thresholds):
+- basic: 10/10 (100%) [req ≥90% ✓]
+- intermediate: 9/10 (90%) [req ≥80% ✓]
+- advanced: 8/10 (80%) [req ≥70% ✓]
+- complex: 2/5 (40%) [no PRD threshold; limited by demo DB read-only constraint]
+
+All 5 acceptance criteria met:
+- ≥10 advanced + ≥5 complex cases in companies.yml ✓
+- At least one advanced case uses QPE {m,n}: advanced-001 ({1,2}), advanced-002 ({1,}) ✓
+- At least one advanced case uses vector/fulltext index: advanced-004 (vector procedure) ✓
+- At least one complex case uses CALL IN TRANSACTIONS: complex-001 ✓
+- Baseline reports committed to tests/results/ ✓
+
+

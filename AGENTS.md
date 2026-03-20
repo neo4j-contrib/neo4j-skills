@@ -43,6 +43,8 @@
 - `vector()` constructor is new in Neo4j 2025.10; `vector.similarity.cosine()` and `vector.similarity.euclidean()` existed before.
 - Aggregating functions: `collect(null)` → `[]` (empty list), `count(null)` → `0`, `sum(null)` → `0`; all others → `null` when all inputs are null.
 - `SEARCH` clause (Neo4j 2026.01+, Preview) is **vector-only** — fulltext indexes still use `db.index.fulltext.queryNodes()` procedure. The SEARCH clause does not cover fulltext indexes.
+- demo.neo4jlabs.com/companies DB constraints: (1) read-only — write queries (MERGE/CREATE/SET) fail with `Security.Forbidden`; (2) QPE `+` syntax not supported (use `{1,}` instead); (3) SEARCH clause not available (Preview, not enabled); (4) zero-vector invalid for similarity search (use non-zero values like 0.1). Relationship types available: HAS_SUBSIDIARY, HAS_SUPPLIER, HAS_BOARD_MEMBER, HAS_PARENT, HAS_CHILD, HAS_CATEGORY, HAS_CEO, HAS_INVESTOR, HAS_COMPETITOR, IN_CITY, IN_COUNTRY, MENTIONS, HAS_CHUNK. No `IN_INDUSTRY` rel type. Organizations with most subsidiaries: Blackstone (1037), Comcast (908), Viacom (531).
+- Test case authoring rule: never use `$param` parameters in test questions for the harness — the harness does not inject runtime parameters. Use literal values or ask the model to use literals.
 - Vector index `OPTIONS` map is **mandatory** — `vector.dimensions` and `vector.similarity_function` are required at creation time.
 - `USING INDEX SEEK` forces index seek (not scan); `USING SCAN` forces label scan with no index — opposite of intent, so use `USING SCAN` only to deliberately avoid indexes.
 - Index `state` values: `ONLINE` (usable), `POPULATING` (building — check `populationPercent`), `FAILED`.
@@ -112,12 +114,14 @@ The script generates **first drafts** for L3 reference files (not final output).
 
 ## Runner Notes (tests/harness/runner.py)
 
-- Claude headless invocation: `claude --skill <name> --print --output-format text` with prompt on stdin.
+- Claude headless invocation: `claude --skill <name>` does NOT exist in claude 2.1.80. Runner uses `--append-system-prompt` with SKILL.md content loaded via `_load_skill_content()`. The `--skill` flag is a fallback for future CLI versions.
+- `_load_skill_content(skill_name)` searches: cwd/skill_name/SKILL.md, repo_root/skill_name/SKILL.md, repo_root/neo4j-{name}-skill/SKILL.md, one level up from _REPO_ROOT (which is the skill-generation-validation-tools dir). `_REPO_ROOT.parent` is the actual git repo root.
 - Cypher extraction: regex ```` ```(?:cypher|CYPHER)\s*\n(.*?)``` ```` with DOTALL — matches both casings.
 - Dry-run (`--dry-run`): validates YAML structure (required fields, duplicate IDs, valid difficulty) without executing queries or invoking Claude. Exits 0 on valid YAML.
 - Exit codes: 0 = all PASS, 1 = any FAIL, 2 = any WARN (no FAIL).
 - TestCaseResult fields: verdict, failed_gate, warned_gate, generated_cypher, metrics, gate_details, error (runner-level), duration_s.
 - pyyaml is a required dep (added to pyproject.toml) — needed in CI runner context, not just dev.
+- neo4j driver is a required dep (added to pyproject.toml) — `neo4j>=6.0.0` for the harness.
 - Neo4j driver lazy-imported at runtime — dry-run and YAML validation work without the neo4j package.
 - Test case YAML key: `cases:` (list); each entry needs `id`, `question`; optional `database`, `difficulty`, `tags`, `domain`, `min_results`, `max_db_hits`, `max_allocated_memory_bytes`, `max_runtime_ms`, `is_write_query`.
 

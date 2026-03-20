@@ -1,0 +1,538 @@
+{
+  "run_id": "run-20260320T170626",
+  "started_at": "2026-03-20T17:06:26.869883+00:00",
+  "completed_at": "2026-03-20T17:07:32.235178+00:00",
+  "skill": "neo4j-cypher-authoring-skill",
+  "summary": {
+    "total": 10,
+    "passed": 9,
+    "warned": 0,
+    "failed": 1,
+    "pass_rate": 0.9
+  },
+  "cases": [
+    {
+      "case_id": "companies-intermediate-001",
+      "question": "Find all organizations that are mentioned in articles with highly negative sentiment (sentiment < -0.5). Return each organization name and the count of such articles mentioning it, ordered by count descending.",
+      "difficulty": "intermediate",
+      "tags": [
+        "match",
+        "filter",
+        "aggregation",
+        "relationship",
+        "sentiment"
+      ],
+      "verdict": "PASS",
+      "failed_gate": null,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (a:Article)-[:MENTIONS]->(org:Organization)\nWHERE a.sentiment < -0.5\nRETURN org.name AS organization, count(a) AS negativeArticleCount\nORDER BY negativeArticleCount DESC",
+      "metrics": {
+        "totalDbHits": null,
+        "totalAllocatedMemory": null,
+        "elapsedTimeMs": 529.418374877423,
+        "totalRows": null
+      },
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "PASS",
+          "reason": "EXPLAIN succeeded",
+          "details": {}
+        },
+        {
+          "gate": 2,
+          "verdict": "PASS",
+          "reason": "Returned 1877 rows (min: 1)",
+          "details": {}
+        },
+        {
+          "gate": 3,
+          "verdict": "PASS",
+          "reason": "No deprecated syntax or operators detected",
+          "details": {}
+        },
+        {
+          "gate": 4,
+          "verdict": "PASS",
+          "reason": "Performance within thresholds (dbHits=None, memory=None bytes)",
+          "details": {
+            "totalDbHits": null,
+            "totalAllocatedMemory": null,
+            "elapsedTimeMs": 529.418374877423,
+            "totalRows": null
+          }
+        }
+      ],
+      "error": null,
+      "duration_s": 7.685
+    },
+    {
+      "case_id": "companies-intermediate-002",
+      "question": "Find pairs of organizations that are both mentioned in the same article. Return the two organization names and the number of articles they co-appear in, ordered by co-appearance count descending, limited to 10 pairs.",
+      "difficulty": "intermediate",
+      "tags": [
+        "match",
+        "aggregation",
+        "co-occurrence",
+        "relationship",
+        "limit"
+      ],
+      "verdict": "PASS",
+      "failed_gate": null,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (a:Article)-[:MENTIONS]->(o1:Organization),\n      (a:Article)-[:MENTIONS]->(o2:Organization)\nWHERE o1.name < o2.name\nWITH o1.name AS org1, o2.name AS org2, count(DISTINCT a) AS coAppearances\nRETURN org1, org2, coAppearances\nORDER BY coAppearances DESC\nLIMIT 10",
+      "metrics": {
+        "totalDbHits": null,
+        "totalAllocatedMemory": null,
+        "elapsedTimeMs": 1301.903541898355,
+        "totalRows": null
+      },
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "PASS",
+          "reason": "EXPLAIN succeeded",
+          "details": {}
+        },
+        {
+          "gate": 2,
+          "verdict": "PASS",
+          "reason": "Returned 10 rows (min: 1)",
+          "details": {}
+        },
+        {
+          "gate": 3,
+          "verdict": "PASS",
+          "reason": "No deprecated syntax or operators detected",
+          "details": {}
+        },
+        {
+          "gate": 4,
+          "verdict": "PASS",
+          "reason": "Performance within thresholds (dbHits=None, memory=None bytes)",
+          "details": {
+            "totalDbHits": null,
+            "totalAllocatedMemory": null,
+            "elapsedTimeMs": 1301.903541898355,
+            "totalRows": null
+          }
+        }
+      ],
+      "error": null,
+      "duration_s": 7.431
+    },
+    {
+      "case_id": "companies-intermediate-003",
+      "question": "For each top-level organization (not a subsidiary), return its name and the average sentiment of all articles that mention it. Only include organizations with at least 3 articles. Order by average sentiment ascending.",
+      "difficulty": "intermediate",
+      "tags": [
+        "match",
+        "aggregation",
+        "filter",
+        "having",
+        "not-exists",
+        "sentiment"
+      ],
+      "verdict": "PASS",
+      "failed_gate": null,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (o:Organization)\nWHERE NOT EXISTS { (o)<-[:HAS_SUBSIDIARY]-() }\nMATCH (o)<-[:MENTIONS]-(a:Article)\nWITH o, avg(a.sentiment) AS avgSentiment, count(a) AS articleCount\nWHERE articleCount >= 3\nRETURN o.name AS organization, avgSentiment\nORDER BY avgSentiment ASC",
+      "metrics": {
+        "totalDbHits": null,
+        "totalAllocatedMemory": null,
+        "elapsedTimeMs": 1287.96145808883,
+        "totalRows": null
+      },
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "PASS",
+          "reason": "EXPLAIN succeeded",
+          "details": {}
+        },
+        {
+          "gate": 2,
+          "verdict": "PASS",
+          "reason": "Returned 6258 rows (min: 1)",
+          "details": {}
+        },
+        {
+          "gate": 3,
+          "verdict": "PASS",
+          "reason": "No deprecated syntax or operators detected",
+          "details": {}
+        },
+        {
+          "gate": 4,
+          "verdict": "PASS",
+          "reason": "Performance within thresholds (dbHits=None, memory=None bytes)",
+          "details": {
+            "totalDbHits": null,
+            "totalAllocatedMemory": null,
+            "elapsedTimeMs": 1287.96145808883,
+            "totalRows": null
+          }
+        }
+      ],
+      "error": null,
+      "duration_s": 8.39
+    },
+    {
+      "case_id": "companies-intermediate-004",
+      "question": "Search for organizations by name using the fulltext index. Find all organizations whose name contains 'tech' (case-insensitive). Return name and description.",
+      "difficulty": "intermediate",
+      "tags": [
+        "fulltext",
+        "index",
+        "search",
+        "procedure"
+      ],
+      "verdict": "PASS",
+      "failed_gate": null,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nCALL db.index.fulltext.queryNodes('entity', 'tech') YIELD node, score\nWHERE node:Organization\nRETURN node.name AS name, node.description AS description\nORDER BY score DESC",
+      "metrics": {
+        "totalDbHits": null,
+        "totalAllocatedMemory": null,
+        "elapsedTimeMs": 284.26483389921486,
+        "totalRows": null
+      },
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "PASS",
+          "reason": "EXPLAIN succeeded",
+          "details": {}
+        },
+        {
+          "gate": 2,
+          "verdict": "PASS",
+          "reason": "Returned 75 rows (min: 1)",
+          "details": {}
+        },
+        {
+          "gate": 3,
+          "verdict": "PASS",
+          "reason": "No deprecated syntax or operators detected",
+          "details": {}
+        },
+        {
+          "gate": 4,
+          "verdict": "PASS",
+          "reason": "Performance within thresholds (dbHits=None, memory=None bytes)",
+          "details": {
+            "totalDbHits": null,
+            "totalAllocatedMemory": null,
+            "elapsedTimeMs": 284.26483389921486,
+            "totalRows": null
+          }
+        }
+      ],
+      "error": null,
+      "duration_s": 4.342
+    },
+    {
+      "case_id": "companies-intermediate-005",
+      "question": "Find all direct and indirect subsidiaries of 'Blackstone' (up to 2 hops through HAS_SUBSIDIARY relationships). Use a literal string match. Return distinct subsidiary names, limited to 20.",
+      "difficulty": "intermediate",
+      "tags": [
+        "match",
+        "variable-length",
+        "relationship",
+        "traversal"
+      ],
+      "verdict": "PASS",
+      "failed_gate": null,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (:Organization {name: 'Blackstone'})-[:HAS_SUBSIDIARY]-{1,2}(sub:Organization)\nRETURN DISTINCT sub.name AS subsidiaryName\nLIMIT 20",
+      "metrics": {
+        "totalDbHits": null,
+        "totalAllocatedMemory": null,
+        "elapsedTimeMs": 245.1770408079028,
+        "totalRows": null
+      },
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "PASS",
+          "reason": "EXPLAIN succeeded",
+          "details": {}
+        },
+        {
+          "gate": 2,
+          "verdict": "PASS",
+          "reason": "Returned 20 rows (min: 1)",
+          "details": {}
+        },
+        {
+          "gate": 3,
+          "verdict": "PASS",
+          "reason": "No deprecated syntax or operators detected",
+          "details": {}
+        },
+        {
+          "gate": 4,
+          "verdict": "PASS",
+          "reason": "Performance within thresholds (dbHits=None, memory=None bytes)",
+          "details": {
+            "totalDbHits": null,
+            "totalAllocatedMemory": null,
+            "elapsedTimeMs": 245.1770408079028,
+            "totalRows": null
+          }
+        }
+      ],
+      "error": null,
+      "duration_s": 4.452
+    },
+    {
+      "case_id": "companies-intermediate-006",
+      "question": "Use a CALL subquery to find, for each of the top 5 most-mentioned organizations, the title and sentiment of their most recent article (highest sentiment). Return organization name, article title, and sentiment.",
+      "difficulty": "intermediate",
+      "tags": [
+        "call-subquery",
+        "aggregation",
+        "relationship",
+        "limit"
+      ],
+      "verdict": "PASS",
+      "failed_gate": null,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (org:Organization)<-[:MENTIONS]-(a:Article)\nWITH org, count(a) AS mentionCount\nORDER BY mentionCount DESC\nLIMIT 5\nCALL (org) {\n  MATCH (org)<-[:MENTIONS]-(a:Article)\n  RETURN a.title AS articleTitle, a.sentiment AS sentiment\n  ORDER BY a.sentiment DESC\n  LIMIT 1\n}\nRETURN org.name AS organization, articleTitle, sentiment\nORDER BY sentiment DESC",
+      "metrics": {
+        "totalDbHits": null,
+        "totalAllocatedMemory": null,
+        "elapsedTimeMs": 415.28000007383525,
+        "totalRows": null
+      },
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "PASS",
+          "reason": "EXPLAIN succeeded",
+          "details": {}
+        },
+        {
+          "gate": 2,
+          "verdict": "PASS",
+          "reason": "Returned 5 rows (min: 1)",
+          "details": {}
+        },
+        {
+          "gate": 3,
+          "verdict": "PASS",
+          "reason": "No deprecated syntax or operators detected",
+          "details": {}
+        },
+        {
+          "gate": 4,
+          "verdict": "PASS",
+          "reason": "Performance within thresholds (dbHits=None, memory=None bytes)",
+          "details": {
+            "totalDbHits": null,
+            "totalAllocatedMemory": null,
+            "elapsedTimeMs": 415.28000007383525,
+            "totalRows": null
+          }
+        }
+      ],
+      "error": null,
+      "duration_s": 6.042
+    },
+    {
+      "case_id": "companies-intermediate-007",
+      "question": "Count the total number of Chunk nodes linked to articles that mention organizations in the database. Return the count.",
+      "difficulty": "intermediate",
+      "tags": [
+        "match",
+        "aggregation",
+        "multi-hop",
+        "relationship"
+      ],
+      "verdict": "PASS",
+      "failed_gate": null,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (org:Organization)<-[:MENTIONS]-(a:Article)-[:HAS_CHUNK]->(c:Chunk)\nRETURN count(DISTINCT c) AS totalChunks",
+      "metrics": {
+        "totalDbHits": null,
+        "totalAllocatedMemory": null,
+        "elapsedTimeMs": 513.2556250318885,
+        "totalRows": null
+      },
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "PASS",
+          "reason": "EXPLAIN succeeded",
+          "details": {}
+        },
+        {
+          "gate": 2,
+          "verdict": "PASS",
+          "reason": "Returned 1 rows (min: 1)",
+          "details": {}
+        },
+        {
+          "gate": 3,
+          "verdict": "PASS",
+          "reason": "No deprecated syntax or operators detected",
+          "details": {}
+        },
+        {
+          "gate": 4,
+          "verdict": "PASS",
+          "reason": "Performance within thresholds (dbHits=None, memory=None bytes)",
+          "details": {
+            "totalDbHits": null,
+            "totalAllocatedMemory": null,
+            "elapsedTimeMs": 513.2556250318885,
+            "totalRows": null
+          }
+        }
+      ],
+      "error": null,
+      "duration_s": 11.531
+    },
+    {
+      "case_id": "companies-intermediate-008",
+      "question": "Find organizations that have at least one subsidiary AND are mentioned in at least one article. Return their name and the count of subsidiaries, ordered by subsidiary count descending.",
+      "difficulty": "intermediate",
+      "tags": [
+        "match",
+        "aggregation",
+        "filter",
+        "relationship",
+        "having"
+      ],
+      "verdict": "PASS",
+      "failed_gate": null,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (org:Organization)-[:HAS_SUBSIDIARY]->(sub:Organization)\nWITH org, count(sub) AS subsidiaryCount\nWHERE EXISTS { MATCH (org)<-[:MENTIONS]-(:Article) }\nRETURN org.name AS name, subsidiaryCount\nORDER BY subsidiaryCount DESC",
+      "metrics": {
+        "totalDbHits": null,
+        "totalAllocatedMemory": null,
+        "elapsedTimeMs": 521.6164169833064,
+        "totalRows": null
+      },
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "PASS",
+          "reason": "EXPLAIN succeeded",
+          "details": {}
+        },
+        {
+          "gate": 2,
+          "verdict": "PASS",
+          "reason": "Returned 1214 rows (min: 1)",
+          "details": {}
+        },
+        {
+          "gate": 3,
+          "verdict": "PASS",
+          "reason": "No deprecated syntax or operators detected",
+          "details": {}
+        },
+        {
+          "gate": 4,
+          "verdict": "PASS",
+          "reason": "Performance within thresholds (dbHits=None, memory=None bytes)",
+          "details": {
+            "totalDbHits": null,
+            "totalAllocatedMemory": null,
+            "elapsedTimeMs": 521.6164169833064,
+            "totalRows": null
+          }
+        }
+      ],
+      "error": null,
+      "duration_s": 5.364
+    },
+    {
+      "case_id": "companies-intermediate-009",
+      "question": "Write the correct MERGE pattern for upserting an Organization by name. Use MERGE (o:Organization {name: 'Nexus Corp'}) with ON CREATE SET and ON MATCH SET to set nbrEmployees = 500 in both cases. Return o.name and elementId(o). Note: this demonstrates the MERGE pattern \u2014 the harness validates syntax (Gate 1) but the demo DB is read-only so Gate 2 may be skipped.",
+      "difficulty": "intermediate",
+      "tags": [
+        "merge",
+        "write-pattern",
+        "syntax"
+      ],
+      "verdict": "FAIL",
+      "failed_gate": 2,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMERGE (o:Organization {name: 'Nexus Corp'})\nON CREATE SET o.nbrEmployees = 500\nON MATCH SET o.nbrEmployees = 500\nRETURN o.name, elementId(o)",
+      "metrics": {},
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "PASS",
+          "reason": "EXPLAIN succeeded",
+          "details": {}
+        },
+        {
+          "gate": 2,
+          "verdict": "FAIL",
+          "reason": "Execution error: {neo4j_code: Neo.ClientError.Security.Forbidden} {message: Create node with labels 'Organization' on database 'companies' is not allowed for user 'companies' with roles [PUBLIC, companies].} {gql_status: 42NFF} {gql_status_description: error: syntax error or access rule violation - permission/access denied. Access denied, see the security logs for details.}",
+          "details": {}
+        }
+      ],
+      "error": null,
+      "duration_s": 3.707
+    },
+    {
+      "case_id": "companies-intermediate-010",
+      "question": "Find the organization with the most subsidiaries (direct only, not transitive). Return the organization name and the count of its direct subsidiaries.",
+      "difficulty": "intermediate",
+      "tags": [
+        "match",
+        "aggregation",
+        "relationship",
+        "order-by",
+        "limit"
+      ],
+      "verdict": "PASS",
+      "failed_gate": null,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (parent:Organization)-[:HAS_SUBSIDIARY]->(subsidiary:Organization)\nRETURN parent.name AS organization, count(subsidiary) AS subsidiaryCount\nORDER BY subsidiaryCount DESC\nLIMIT 1",
+      "metrics": {
+        "totalDbHits": null,
+        "totalAllocatedMemory": null,
+        "elapsedTimeMs": 284.2110001947731,
+        "totalRows": null
+      },
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "PASS",
+          "reason": "EXPLAIN succeeded",
+          "details": {}
+        },
+        {
+          "gate": 2,
+          "verdict": "PASS",
+          "reason": "Returned 1 rows (min: 1)",
+          "details": {}
+        },
+        {
+          "gate": 3,
+          "verdict": "PASS",
+          "reason": "No deprecated syntax or operators detected",
+          "details": {}
+        },
+        {
+          "gate": 4,
+          "verdict": "PASS",
+          "reason": "Performance within thresholds (dbHits=None, memory=None bytes)",
+          "details": {
+            "totalDbHits": null,
+            "totalAllocatedMemory": null,
+            "elapsedTimeMs": 284.2110001947731,
+            "totalRows": null
+          }
+        }
+      ],
+      "error": null,
+      "duration_s": 6.419
+    }
+  ]
+}

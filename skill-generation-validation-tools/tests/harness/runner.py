@@ -255,6 +255,33 @@ def _build_claude_prompt(tc: TestCase) -> str:
     return "\n".join(lines)
 
 
+def _load_skill_content(skill_name: str) -> Optional[str]:
+    """
+    Load SKILL.md content for the given skill name or path.
+
+    Searches:
+    1. Relative path: <skill_name>/SKILL.md  (from repo root)
+    2. Skill directory convention: neo4j-<skill_name>-skill/SKILL.md
+    3. Absolute path if provided
+
+    Returns the content string, or None if not found.
+    """
+    # _REPO_ROOT is skill-generation-validation-tools/; skills live one level up
+    _GIT_ROOT = _REPO_ROOT.parent
+    candidates = [
+        Path(skill_name) / "SKILL.md",
+        _REPO_ROOT / skill_name / "SKILL.md",
+        _REPO_ROOT / f"neo4j-{skill_name}-skill" / "SKILL.md",
+        _GIT_ROOT / skill_name / "SKILL.md",
+        _GIT_ROOT / f"neo4j-{skill_name}-skill" / "SKILL.md",
+        Path(skill_name + "/SKILL.md"),
+    ]
+    for p in candidates:
+        if p.exists():
+            return p.read_text()
+    return None
+
+
 def invoke_claude(
     prompt: str,
     skill_name: str,
@@ -264,20 +291,31 @@ def invoke_claude(
     """
     Invoke Claude Code headless and return (response_text, error_message).
 
-    Uses `claude --skill {skill_name} --print` to run in non-interactive mode.
-    The skill is loaded via the --skill flag, which tells Claude Code to read
-    the named skill's SKILL.md into context before processing the prompt.
+    Loads the skill's SKILL.md and appends it as a system prompt via
+    --append-system-prompt. Falls back to --skill flag if SKILL.md cannot
+    be found (for forward compatibility when --skill is implemented).
 
     Returns:
         (response_text, None) on success
         ("", error_message) on failure
     """
-    cmd = [
-        "claude",
-        "--skill", skill_name,
-        "--print",
-        "--output-format", "text",
-    ]
+    skill_content = _load_skill_content(skill_name)
+
+    if skill_content:
+        cmd = [
+            "claude",
+            "--append-system-prompt", skill_content,
+            "--print",
+            "--output-format", "text",
+        ]
+    else:
+        # Fallback: try --skill flag (may work in newer CLI versions)
+        cmd = [
+            "claude",
+            "--skill", skill_name,
+            "--print",
+            "--output-format", "text",
+        ]
 
     try:
         result = subprocess.run(
