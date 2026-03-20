@@ -244,3 +244,42 @@ Key Decisions:
 - type predicate NOT NULL nullability constraint for Closed Dynamic Unions documented
 
 Next Task: task-009 (Generate cypher-style-guide.md)
+
+================================================================================
+TASK-009: Generate L3 reference file: cypher-style-guide.md
+Date: 2026-03-20T05:00:00Z
+================================================================================
+
+Summary:
+Manually authored a curated cypher-style-guide.md reference file at the
+references/ root (cross-cutting, not under read/write/schema). Replaced the
+auto-generated draft which was truncated mid-way through the keyword list and
+used a poor structure (dumping entire keyword alphabetical list rather than
+organizing by usage). The curated file covers all acceptance criteria in ~1144
+tokens (well within the 2000-token budget).
+
+Content covers: naming conventions table (labels/PascalCase, rel types/
+SCREAMING_SNAKE_CASE, properties/camelCase, variables, parameters, functions),
+casing rules table with code examples (UPPERCASE keywords, camelCase functions,
+lowercase null/true/false, single-quoted strings), indentation and line break
+rules (one clause per line, 2-space indent for ON CREATE/MATCH, 80-char soft
+limit, ORDER BY/LIMIT on own lines, subquery formatting), spacing rules table
+(operators, patterns, label predicates, maps, function calls, subqueries),
+pattern authoring best practices (anonymous nodes, chaining, anchor nodes,
+left-to-right preference), and string quoting rules.
+
+Files Changed:
+- neo4j-cypher-authoring-skill/references/cypher-style-guide.md (replaced auto-draft with curated content)
+- .plans/tasks-agent-cypher-authoring-skill.yml (task-009 status → completed)
+
+Key Decisions:
+- Chose manual curation over auto-extraction (same rationale as tasks 004-008):
+  auto-draft truncated mid-keyword-list and had poor structure for agent use
+- Dropped the full keyword list entirely — agents need keyword *casing rules*
+  (all UPPERCASE), not a 400-item alphabetical enumeration
+- Added Casing Rules table with token-type → case mapping for quick agent lookup
+- Naming conventions table is the densest possible format: 6 rows, 3 columns,
+  example for every row
+- String quoting section added (relevant to both naming and meta-character rules)
+
+Next Task: task-010 (Author SKILL.md)

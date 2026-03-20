@@ -156,7 +156,7 @@ tasks:
       keyword casing (UPPERCASE clauses, camelCase functions), label naming
       (PascalCase), relationship type naming (SCREAMING_SNAKE_CASE), property
       naming (camelCase), and indentation conventions.
-    status: pending
+    status: completed
     dependencies:
       - task-003
     acceptance_criteria:
@@ -164,7 +164,7 @@ tasks:
       - "Naming conventions for labels, relationship types, and properties are explicit"
       - "Keyword casing rules documented with examples"
       - "File is ≤ 2,000 tokens"
-    completed_at: null
+    completed_at: "2026-03-20T05:00:00Z"
 
   - id: task-010
     title: "Author SKILL.md (L2) — autonomous operation core"
