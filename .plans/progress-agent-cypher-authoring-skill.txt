@@ -610,3 +610,39 @@ Key Decisions:
 Next Task: task-018 (Create initial test cases — depends on task-017) or
 task-021 (exporter.py — depends on task-016, now available)
 
+================================================================================
+TASK-021: Build tests/harness/exporter.py training dataset YAML exporter
+Date: 2026-03-20T21:30:00Z
+================================================================================
+Summary: Created tests/harness/exporter.py — the YAML training dataset exporter
+for the Cypher test harness. Reads runner JSON output, filters to cases that passed
+all four validation gates, builds structured training records (REQ-F-021 schema),
+and appends to dataset/{domain}.yml with deduplication by id. All five acceptance
+criteria verified via inline smoke tests (5 test groups, all PASS).
+
+Key design decisions:
+- WARN verdict cases with all 4 gate_details present are exported (WARN ≠ FAIL).
+- Schema context and property_samples are optional (--schema flag); set to null
+  when absent to keep exporter functional without generator output.
+- property_samples strips raw sample values — only inferred_semantic and
+  non_null_count are exported (keeps dataset compact and non-PII).
+- Dedup uses a set of existing record IDs loaded from the output file before
+  writing; concurrent writes are not supported (no locking needed for batch use).
+- Output uses yaml.dump with default_flow_style=False for human-readable YAML.
+- Output directory is created with mkdir(parents=True, exist_ok=True).
+- Direct invocation with no args runs smoke tests (same pattern as reporter.py).
+
+Files Changed:
+- skill-generation-validation-tools/tests/harness/exporter.py (created)
+- .plans/tasks-agent-cypher-authoring-skill.yml (task-021 status → completed)
+
+Key Decisions:
+- Schema input is optional: accepts --schema JSON file or exports with null fields
+- WARN cases export because all four gates ran (gate 4 WARN = slow but correct)
+- Dedup strategy: load existing IDs into a set before merging, skip if already present
+- No new dependencies added (pyyaml already in pyproject.toml)
+
+Next Task: task-022 (to_jsonl.py YAML → JSONL converter — depends on task-021)
+or task-023 (references/README.md — depends on task-010, now available)
+or task-020 (SKILL.md WebFetch framing — may already be satisfied per AGENTS.md)
+

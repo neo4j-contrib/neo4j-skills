@@ -153,6 +153,17 @@ The script generates **first drafts** for L3 reference files (not final output).
 - Dry-run skips Claude calls and all file writes. Use it to verify schema connectivity and inspect what would be generated.
 - Generator imports `extract_profile_metrics` from validator.py at runtime (not at module level) so it works from both `tests/harness/` and repo root paths.
 
+## Exporter Notes (tests/harness/exporter.py)
+
+- CLI: `uv run python3 tests/harness/exporter.py --input run.json --domain companies --output-dir tests/dataset/ [--schema schema.json] [--dry-run]`
+- Smoke tests: direct invocation with no args (`uv run python3 tests/harness/exporter.py`).
+- WARN cases with all four gate_details present ARE exported — WARN ≠ FAIL; the query is valid but slow.
+- `--schema` accepts a JSON file with keys: `labels`, `relationship_types`, `indexes`, `property_samples`. Optional — fields are `null` if absent.
+- `property_samples` strips raw sample values on export — only `inferred_semantic` and `non_null_count` are written (keeps dataset compact, avoids leaking PII values).
+- Dedup: loads existing record IDs into a set before appending. Safe for sequential re-runs; does not lock the file.
+- `tests/dataset/{domain}.yml` uses a top-level `records:` key (list of record dicts).
+- `passed_gates` field is a sorted list of gate numbers (e.g. `[1, 2, 3, 4]`).
+
 ## SKILL.md Authoring Notes
 
 - SKILL.md line budget is 300 lines (not 300 non-blank lines). Inline `CYPHER 25` on the same line as each query to save ~10 lines in the Schema-First Protocol section.

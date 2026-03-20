@@ -400,7 +400,7 @@ tasks:
       and non_null_count), cypher (the validated query), and metadata (difficulty,
       tags, db_hits, allocated_memory_bytes, runtime_ms, passed_gates, generated_at).
       Appends to skill-generation-validation-tools/tests/dataset/{domain}.yml without overwriting existing records.
-    status: pending
+    status: completed
     dependencies:
       - task-016
     acceptance_criteria:
@@ -410,7 +410,7 @@ tasks:
       - "Re-running exporter on the same input does not produce duplicate records (dedup by id)"
       - "Output YAML is valid and human-readable with correct indentation"
       - "skill-generation-validation-tools/tests/dataset/ directory is created if it does not exist"
-    completed_at: null
+    completed_at: "2026-03-20T21:30:00Z"
 
   - id: task-022
     title: "Build skill-generation-validation-tools/scripts/to_jsonl.py YAML dataset → JSONL converter"
