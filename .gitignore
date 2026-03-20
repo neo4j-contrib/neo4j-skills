@@ -1,3 +1,6 @@
+# Test harness — generated stubs (require human promotion before use)
+skill-generation-validation-tools/tests/cases/*-generated.yml
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]

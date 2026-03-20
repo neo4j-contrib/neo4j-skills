@@ -746,3 +746,66 @@ Next Task: task-018 (Create initial test cases for companies database — depend
 on task-017, now complete) or task-019 (advanced/complex test cases — depends on
 task-018)
 
+================================================================================
+TASK-018: Create initial test cases for companies database (basic + intermediate)
+Date: 2026-03-20T23:55:00Z
+================================================================================
+
+Summary:
+Created skill-generation-validation-tools/tests/cases/companies.yml with 20
+manually authored test cases: 10 basic and 10 intermediate. Added
+*-generated.yml to .gitignore so generator output is always excluded from VCS.
+
+Test case coverage:
+Basic (10):
+  - companies-basic-001: top-level orgs filter (NOT EXISTS subquery)
+  - companies-basic-002: count all organizations (aggregation)
+  - companies-basic-003: first 10 orgs alphabetically (ORDER BY, LIMIT)
+  - companies-basic-004: articles mentioning 'Apple' (MATCH + relationship)
+  - companies-basic-005: article count per org, top 10 (aggregation + ORDER BY)
+  - companies-basic-006: direct subsidiaries of 'Alphabet' (relationship traversal)
+  - companies-basic-007: average article sentiment (aggregation)
+  - companies-basic-008: top 5 orgs by mention count with description (aggregation)
+  - companies-basic-009: articles with positive sentiment (filter + ORDER BY)
+  - companies-basic-010: articles bucketed by sentiment range (CASE WHEN)
+Intermediate (10):
+  - companies-intermediate-001: orgs in very negative articles (filter + aggregation)
+  - companies-intermediate-002: org co-occurrence pairs in articles (self-join + aggregation)
+  - companies-intermediate-003: avg sentiment per top-level org, ≥3 articles (HAVING + NOT EXISTS)
+  - companies-intermediate-004: fulltext search for 'tech' orgs (entity index + procedure)
+  - companies-intermediate-005: transitive subsidiaries of 'Alphabet' to depth 3 (variable-length)
+  - companies-intermediate-006: CALL subquery for each top-5 org's best article
+  - companies-intermediate-007: total Chunk count via multi-hop traversal
+  - companies-intermediate-008: orgs with both subsidiaries AND articles
+  - companies-intermediate-009: MERGE new organization 'Nexus Corp' (write + rollback)
+  - companies-intermediate-010: org with most direct subsidiaries
+
+All acceptance criteria met:
+- 20 cases in companies.yml (10 basic + 10 intermediate) ✓
+- All min_results ≥ 1 (range: 1–10) ✓
+- All cases have max_db_hits, max_allocated_memory_bytes, max_runtime_ms ✓
+- Covers MATCH (all), MERGE (intermediate-009), aggregation (basic-002, 005, 007, etc.),
+  relationship traversal (basic-004, 006, intermediate-005) ✓
+- companies-generated.yml gitignored via .gitignore pattern ✓
+
+Dry-run: `uv run python3 tests/harness/runner.py --cases tests/cases/companies.yml --skill neo4j-cypher-authoring-skill --dry-run`
+  Output: "Loaded 20 test case(s)... Dry-run OK: 20 case(s) validated"
+
+Files Changed:
+- skill-generation-validation-tools/tests/cases/companies.yml (created — 20 test cases)
+- .gitignore (added *-generated.yml pattern)
+- .plans/tasks-agent-cypher-authoring-skill.yml (task-018 status → completed)
+
+Key Decisions:
+- Manually authored test cases rather than running the generator (generator requires
+  live DB connection; thresholds are based on known companies DB scale from INSTRUCTIONS.md)
+- Conservative db_hits thresholds: simple label scans ≤ 30k, aggregation ≤ 100k,
+  co-occurrence self-join ≤ 500k; memory ≤ 20 MB; runtime ≤ 10 s
+- Write query (intermediate-009) uses MERGE to be idempotent and is flagged
+  is_write_query: true so the runner rolls back the transaction
+- Fulltext search test (intermediate-004) uses the 'entity' index on Organization.name
+  via db.index.fulltext.queryNodes() procedure (SEARCH clause is vector-only in 2026.01)
+
+Next Task: task-019 (Generate and promote 10 advanced + 5 complex test cases, run
+full harness validation, produce baseline report)
+

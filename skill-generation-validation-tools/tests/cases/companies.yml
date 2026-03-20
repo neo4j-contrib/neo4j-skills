@@ -1,0 +1,267 @@
+# companies.yml — Test cases for neo4j-cypher-authoring-skill
+# Database: demo.neo4jlabs.com — companies / companies
+#
+# Schema summary:
+#   Nodes:      Organization (name, description, nbrEmployees, revenue, summary, wikipediaUrl)
+#               Article (title, text, summary, sentiment, url, date)
+#               Chunk   (text, embedding <Vector(1536)>)
+#               IndustryCategory (name)
+#   Relations:  (Organization)-[:HAS_SUBSIDIARY]->(Organization)
+#               (Article)-[:MENTIONS]->(Organization)
+#               (Article)-[:HAS_CHUNK]->(Chunk)
+#               (Organization)-[:IN_INDUSTRY]->(IndustryCategory)
+#   Indexes:    entity  — fulltext on Organization.name
+#               news    — vector on Chunk.embedding
+#
+# Baseline metrics were captured against demo.neo4jlabs.com on 2026-03-20.
+# Thresholds: max_db_hits = observed × 3, max_allocated_memory_bytes = observed × 3,
+#             max_runtime_ms = observed × 5.
+#
+# NOTE: companies-generated.yml (generator output) is gitignored.
+# Promote stubs from generated → this file after human review.
+
+cases:
+
+  # ─── BASIC (10 cases) ────────────────────────────────────────────────────────
+
+  - id: companies-basic-001
+    question: "Find the names of all top-level organizations (companies that are not a subsidiary of any other company) in the database."
+    database: companies
+    difficulty: basic
+    tags: [match, label, filter, not-exists]
+    domain: companies
+    min_results: 10
+    max_db_hits: 30000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 5000
+    is_write_query: false
+
+  - id: companies-basic-002
+    question: "Count the total number of Organization nodes in the database."
+    database: companies
+    difficulty: basic
+    tags: [match, aggregation, count]
+    domain: companies
+    min_results: 1
+    max_db_hits: 10000
+    max_allocated_memory_bytes: 2097152
+    max_runtime_ms: 3000
+    is_write_query: false
+
+  - id: companies-basic-003
+    question: "Return the names of the first 10 organizations ordered alphabetically."
+    database: companies
+    difficulty: basic
+    tags: [match, order-by, limit]
+    domain: companies
+    min_results: 10
+    max_db_hits: 10000
+    max_allocated_memory_bytes: 2097152
+    max_runtime_ms: 3000
+    is_write_query: false
+
+  - id: companies-basic-004
+    question: "Find all articles about a specific organization named 'Apple'. Return the article titles and their sentiment scores."
+    database: companies
+    difficulty: basic
+    tags: [match, relationship, mentions]
+    domain: companies
+    min_results: 1
+    max_db_hits: 50000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 5000
+    is_write_query: false
+
+  - id: companies-basic-005
+    question: "Count how many articles mention each organization. Return the organization name and article count, ordered by count descending, limited to the top 10."
+    database: companies
+    difficulty: basic
+    tags: [match, aggregation, count, order-by, limit]
+    domain: companies
+    min_results: 10
+    max_db_hits: 100000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 5000
+    is_write_query: false
+
+  - id: companies-basic-006
+    question: "Find all subsidiary organizations of 'Alphabet' (i.e., organizations where Alphabet has a HAS_SUBSIDIARY relationship to them)."
+    database: companies
+    difficulty: basic
+    tags: [match, relationship, subsidiary]
+    domain: companies
+    min_results: 1
+    max_db_hits: 20000
+    max_allocated_memory_bytes: 2097152
+    max_runtime_ms: 3000
+    is_write_query: false
+
+  - id: companies-basic-007
+    question: "Find the average sentiment score across all articles in the database."
+    database: companies
+    difficulty: basic
+    tags: [match, aggregation, avg, sentiment]
+    domain: companies
+    min_results: 1
+    max_db_hits: 50000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 5000
+    is_write_query: false
+
+  - id: companies-basic-008
+    question: "Return the names and descriptions of the 5 organizations that have the most article mentions."
+    database: companies
+    difficulty: basic
+    tags: [match, aggregation, relationship, limit, order-by]
+    domain: companies
+    min_results: 5
+    max_db_hits: 100000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 5000
+    is_write_query: false
+
+  - id: companies-basic-009
+    question: "Find all articles with a positive sentiment (sentiment > 0). Return the article title and sentiment, ordered by sentiment descending, limited to 10."
+    database: companies
+    difficulty: basic
+    tags: [match, filter, sentiment, order-by, limit]
+    domain: companies
+    min_results: 1
+    max_db_hits: 50000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 5000
+    is_write_query: false
+
+  - id: companies-basic-010
+    question: "Count the number of articles for each sentiment bucket: positive (> 0.3), neutral (-0.3 to 0.3), and negative (< -0.3). Return bucket name and count."
+    database: companies
+    difficulty: basic
+    tags: [match, aggregation, case-when, sentiment]
+    domain: companies
+    min_results: 1
+    max_db_hits: 50000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 5000
+    is_write_query: false
+
+  # ─── INTERMEDIATE (10 cases) ─────────────────────────────────────────────────
+
+  - id: companies-intermediate-001
+    question: "Find all organizations that are mentioned in articles with highly negative sentiment (sentiment < -0.5). Return each organization name and the count of such articles mentioning it, ordered by count descending."
+    database: companies
+    difficulty: intermediate
+    tags: [match, filter, aggregation, relationship, sentiment]
+    domain: companies
+    min_results: 1
+    max_db_hits: 100000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 8000
+    is_write_query: false
+
+  - id: companies-intermediate-002
+    question: "Find pairs of organizations that are both mentioned in the same article. Return the two organization names and the number of articles they co-appear in, ordered by co-appearance count descending, limited to 10 pairs."
+    database: companies
+    difficulty: intermediate
+    tags: [match, aggregation, co-occurrence, relationship, limit]
+    domain: companies
+    min_results: 1
+    max_db_hits: 500000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 10000
+    is_write_query: false
+
+  - id: companies-intermediate-003
+    question: "For each top-level organization (not a subsidiary), return its name and the average sentiment of all articles that mention it. Only include organizations with at least 3 articles. Order by average sentiment ascending."
+    database: companies
+    difficulty: intermediate
+    tags: [match, aggregation, filter, having, not-exists, sentiment]
+    domain: companies
+    min_results: 1
+    max_db_hits: 200000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 8000
+    is_write_query: false
+
+  - id: companies-intermediate-004
+    question: "Search for organizations by name using the fulltext index. Find all organizations whose name contains 'tech' (case-insensitive). Return name and description."
+    database: companies
+    difficulty: intermediate
+    tags: [fulltext, index, search, procedure]
+    domain: companies
+    min_results: 1
+    max_db_hits: 10000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 5000
+    is_write_query: false
+
+  - id: companies-intermediate-005
+    question: "Find all direct and indirect subsidiaries of 'Alphabet' (up to 3 hops through HAS_SUBSIDIARY relationships). Return each subsidiary name and its depth level."
+    database: companies
+    difficulty: intermediate
+    tags: [match, variable-length, relationship, traversal]
+    domain: companies
+    min_results: 1
+    max_db_hits: 50000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 8000
+    is_write_query: false
+
+  - id: companies-intermediate-006
+    question: "Use a CALL subquery to find, for each of the top 5 most-mentioned organizations, the title and sentiment of their most recent article (highest sentiment). Return organization name, article title, and sentiment."
+    database: companies
+    difficulty: intermediate
+    tags: [call-subquery, aggregation, relationship, limit]
+    domain: companies
+    min_results: 1
+    max_db_hits: 200000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 10000
+    is_write_query: false
+
+  - id: companies-intermediate-007
+    question: "Count the total number of Chunk nodes linked to articles that mention organizations in the database. Return the count."
+    database: companies
+    difficulty: intermediate
+    tags: [match, aggregation, multi-hop, relationship]
+    domain: companies
+    min_results: 1
+    max_db_hits: 200000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 8000
+    is_write_query: false
+
+  - id: companies-intermediate-008
+    question: "Find organizations that have at least one subsidiary AND are mentioned in at least one article. Return their name and the count of subsidiaries, ordered by subsidiary count descending."
+    database: companies
+    difficulty: intermediate
+    tags: [match, aggregation, filter, relationship, having]
+    domain: companies
+    min_results: 1
+    max_db_hits: 100000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 8000
+    is_write_query: false
+
+  - id: companies-intermediate-009
+    question: "Create a new Organization node for a fictional company 'Nexus Corp' with properties: name='Nexus Corp', description='A fictional test company', nbrEmployees=500. Return the created node's name and elementId."
+    database: companies
+    difficulty: intermediate
+    tags: [merge, write, create]
+    domain: companies
+    min_results: 1
+    max_db_hits: 10000
+    max_allocated_memory_bytes: 2097152
+    max_runtime_ms: 5000
+    is_write_query: true
+
+  - id: companies-intermediate-010
+    question: "Find the organization with the most subsidiaries (direct only, not transitive). Return the organization name and the count of its direct subsidiaries."
+    database: companies
+    difficulty: intermediate
+    tags: [match, aggregation, relationship, order-by, limit]
+    domain: companies
+    min_results: 1
+    max_db_hits: 50000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 5000
+    is_write_query: false

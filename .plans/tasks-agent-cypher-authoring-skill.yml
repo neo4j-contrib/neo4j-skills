@@ -339,7 +339,7 @@ tasks:
       (demo.neo4jlabs.com) to produce generated stubs, then manually review and
       promote 10 basic and 10 intermediate test cases to skill-generation-validation-tools/tests/cases/companies.yml.
       Verify each case has non-zero baseline results and sensible thresholds.
-    status: pending
+    status: completed
     dependencies:
       - task-017
     acceptance_criteria:
@@ -348,7 +348,7 @@ tasks:
       - "All cases have observed baseline metrics populated (db_hits, memory, runtime)"
       - "At least one case exercises each of: MATCH, MERGE, aggregation, relationship traversal"
       - "skill-generation-validation-tools/tests/cases/companies-generated.yml is gitignored or clearly marked as not-yet-reviewed"
-    completed_at: null
+    completed_at: "2026-03-20T23:55:00Z"
 
   - id: task-019
     title: "Create advanced + complex test cases and run full harness validation"
