@@ -1,0 +1,9 @@
+[project]
+name = "neo4j-skills"
+version = "0.1.0"
+description = "Scripts for neo4j-skills — reference extraction, changelog parsing, test harness"
+requires-python = ">=3.12"
+dependencies = []
+
+[tool.uv]
+python-version = "3.12"

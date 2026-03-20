@@ -32,6 +32,9 @@ The skill follows the Agent Skills progressive disclosure model (L1 metadata →
 6. Provide 5-tier knowledge escalation: training data → L2 inline → L3 references → manual clause pages → full cheat sheet
 7. Stay maintainable: L3 reference files auto-regenerated from upstream asciidoc on each Neo4j release via GH Action
 8. Be testable: a companion test harness validates skill output against real Neo4j databases
+9. Generate a reusable training dataset from validated queries: human-readable YAML records pairing questions with verified Cypher, schema context, and performance metadata — usable for fine-tuning, few-shot prompting, and as an example store
+10. WebFetch to Neo4j Cypher docs is always available to online agents — SKILL.md must frame it as a proactive first-class option, not a last resort, especially when L3 reference files are token-budget-truncated
+11. Enable early pre-filtering: SKILL.md must categorize query patterns into READ / WRITE / ADMIN buckets so agents can determine at L2 which L3 folder is relevant, loading only the files they need rather than all of them
 
 ---
 
@@ -80,6 +83,11 @@ Kept GQL-origin features (add real value, not just renames): `WHEN` (conditional
 - REQ-F-017: A test harness (`tests/harness/`) must validate skill output against real Neo4j databases with four gates: syntax (EXPLAIN), correctness (row count), quality (deprecated operator / syntax detection), and performance (PROFILE metrics)
 - REQ-F-018: A question generator (`tests/harness/generator.py`) must sample property values using `COLLECT { MATCH ... RETURN DISTINCT ... LIMIT 100 }` subqueries (not `collect()[..N]`), infer property semantics, generate questions via Claude API, auto-execute candidate Cypher to capture observed baselines, and produce YAML test stubs with tolerance-multiplied thresholds for human review
 - REQ-F-019: A `VERSION` file at the skill root must record neo4j version, cypher version, submodule commit SHAs, and generation date; updated by the GH Action on each release
+- REQ-F-020: SKILL.md must explicitly instruct online agents that WebFetch to Neo4j Cypher docs is always available and should be used proactively — not just as a last resort — framing it as a first-class knowledge source at the same level as L3 reference files; the instruction must note that L3 files may be token-budget-truncated and WebFetch fills the gap
+- REQ-F-021: A training dataset exporter (`tests/harness/exporter.py`) must write YAML records for every test case that passes all four validation gates; each record must include: `id`, `question`, `database`, `neo4j_version`, `schema_context` (full schema inspection output), `property_samples` (sampled values per label/property), `cypher` (the validated query), and `metadata` (difficulty, tags, db_hits, allocated_memory_bytes, runtime_ms, passed_gates)
+- REQ-F-022: A converter script (`scripts/to_jsonl.py`) must transform the YAML training dataset into JSONL format compatible with Anthropic and OpenAI fine-tuning APIs, with each line containing a system/user/assistant message triple where: system = skill instructions, user = question + schema context, assistant = validated Cypher query
+- REQ-F-023: SKILL.md must include an explicit READ / WRITE / SCHEMA / ADMIN query categorization section in the Query Construction Decision Tree, defining: READ (MATCH, OPTIONAL MATCH, CALL subqueries, WITH, RETURN, aggregations, COLLECT/COUNT/EXISTS subquery expressions, SEARCH), WRITE (CREATE, MERGE, SET, REMOVE, DELETE, DETACH DELETE, CALL IN TRANSACTIONS, FOREACH, LOAD CSV), SCHEMA (CREATE/DROP INDEX, CREATE/DROP CONSTRAINT, SHOW INDEXES, SHOW CONSTRAINTS, SHOW PROCEDURES), ADMIN (CREATE/DROP DATABASE, ALTER USER, roles/privileges, SHOW TRANSACTIONS, SHOW SERVERS). The section must instruct agents to determine the category first and then load only the relevant L3 references folder, not all files
+- REQ-F-024: The L3 reference file folder structure must enforce the four-way split: `references/read/` for read-only query constructs, `references/write/` for write/mutation constructs, `references/schema/` for index/constraint/DDL schema operations, `references/admin/` for database administration (users, roles, databases, transactions), and `references/` root for cross-cutting guides (e.g. style-guide). When a topic spans categories (e.g. CALL subquery for reads vs CALL IN TRANSACTIONS for writes), files must be split and placed in the correct folder. This structure must be documented in `references/README.md`
 
 ### Non-Functional Requirements
 
@@ -92,6 +100,7 @@ Kept GQL-origin features (add real value, not just renames): `WHEN` (conditional
 - REQ-NF-007: 0% of passing queries may use deprecated Cypher syntax (`[:REL*`, `shortestPath()`, `allShortestPaths()`)
 - REQ-NF-008: 100% of generated queries must include the `CYPHER 25` version pragma
 - REQ-NF-009: Performance Gate 4 hard-fail thresholds: dbHits > expected × 10, allocatedMemory > expected × 5
+- REQ-NF-010: Training dataset YAML records must conform to a defined schema; each record is self-contained (no external references needed to use it for prompting or fine-tuning)
 
 ---
 
@@ -179,14 +188,19 @@ RETURN relType, propertyName, propertyTypes, mandatory;
 
 ### L3 Reference Files
 
-| File | When Loaded | Key Sources |
-|---|---|---|
-| `cypher25-patterns.md` | Variable-length paths, QPEs, match modes | `patterns/` adocs |
-| `cypher25-functions.md` | Aggregation, list, string, temporal, spatial, vector | `functions/` adocs |
-| `cypher25-indexes.md` | SEARCH clause, vector/fulltext, index hints | `indexes/` + `planning-and-tuning/` adocs |
-| `cypher25-subqueries.md` | CALL subqueries, IN TRANSACTIONS, COUNT/COLLECT/EXISTS | `subqueries/` adocs |
-| `cypher25-types-and-nulls.md` | Type errors, null propagation, casting | `values-and-types/` adocs |
-| `cypher-style-guide.md` | Final output formatting, naming conventions | `styleguide.adoc`, `syntax/naming.adoc` |
+Files are organized by query category — agents should pre-filter at L2 to load only the relevant folder.
+
+| Folder | File | When Loaded | Key Sources |
+|---|---|---|---|
+| `read/` | `cypher25-patterns.md` | Variable-length paths, QPEs, match modes | `patterns/` adocs |
+| `read/` | `cypher25-functions.md` | Aggregation, list, string, temporal, spatial, vector | `functions/` adocs |
+| `read/` | `cypher25-subqueries.md` | CALL subqueries, COUNT/COLLECT/EXISTS, scope rules | `subqueries/` adocs |
+| `read/` | `cypher25-types-and-nulls.md` | Type errors, null propagation, casting, type predicates | `values-and-types/` adocs |
+| `write/` | `cypher25-call-in-transactions.md` | CALL IN TRANSACTIONS batching, ON ERROR, concurrency | `subqueries/subqueries-in-transactions.adoc` |
+| `schema/` | `cypher25-indexes.md` | SEARCH clause, vector/fulltext, index hints | `indexes/` adocs |
+| (root) | `cypher-style-guide.md` | Final output formatting, naming conventions (all categories) | `styleguide.adoc`, `syntax/naming.adoc` |
+
+The split between `read/cypher25-subqueries.md` (CALL subquery, COUNT{}, COLLECT{}, EXISTS{}) and `write/cypher25-call-in-transactions.md` (CALL { ... } IN TRANSACTIONS) is deliberate — the former is a read-pattern expression, the latter is a write batching primitive.
 
 Index type selection table (included in `cypher25-indexes.md`):
 
@@ -263,24 +277,95 @@ Inferred semantics from samples drive question generation:
 
 **Test case baselines** auto-captured at generation time via PROFILE on candidate Cypher, stored with tolerance multipliers: result count ×[0.5, 10], dbHits ×3, memory ×3, runtime ×5.
 
+### WebFetch as First-Class Knowledge Source
+
+SKILL.md must frame WebFetch as a proactive option, not a fallback. The instruction in the WebFetch Escalation section must read:
+
+> **WebFetch is always available for online agents.** Do not wait until L3 reference files are insufficient — fetch Neo4j docs pages proactively whenever a query involves syntax you are not fully certain about. L3 reference files are token-budget-truncated (≤2,000 tokens each); the full docs pages contain the complete picture.
+
+The section budget for WebFetch Escalation (20 lines) must include this framing up front before the URL table.
+
+### Training Dataset
+
+Every test case that passes all four validation gates is exported as a YAML training record. Format:
+
+```yaml
+# tests/dataset/companies.yml  (one file per database domain)
+records:
+  - id: "companies-TC001-20260319"
+    question: "Find the names of the first 10 organizations in the graph"
+    database: companies
+    neo4j_version: "2026.02"
+    schema_context:
+      labels: [Organization, Article, Chunk, Person]
+      relationship_types: [MENTIONS, HAS_CHUNK, ACTED_IN]
+      indexes:
+        - {name: entity, type: FULLTEXT, labels: [Organization], properties: [name]}
+        - {name: news, type: VECTOR, labels: [Chunk], properties: [embedding]}
+    property_samples:
+      Organization.name:
+        samples: ["Neo4j", "Google", "Microsoft"]
+        inferred_semantic: freetext
+        non_null_count: 4821
+      Organization.id:
+        samples: ["neo4j", "google", "microsoft"]
+        inferred_semantic: enum
+        non_null_count: 4821
+    cypher: |
+      CYPHER 25
+      MATCH (o:Organization)
+      RETURN o.name AS name
+      LIMIT 10
+    metadata:
+      difficulty: basic
+      tags: [match, labels, return, limit]
+      db_hits: 42
+      allocated_memory_bytes: 8192
+      runtime_ms: 3
+      passed_gates: [syntax, correctness, quality, performance]
+      generated_at: "2026-03-19T22:45:00Z"
+```
+
+The YAML dataset serves three purposes:
+1. **Fine-tuning source**: convert to JSONL via `scripts/to_jsonl.py`
+2. **Few-shot example store**: retrieve by difficulty/tags for prompt augmentation
+3. **Regression baseline**: re-run queries against future Neo4j versions to detect regressions
+
+JSONL output format (per record, one line):
+```json
+{
+  "messages": [
+    {"role": "system", "content": "<skill instructions summary>"},
+    {"role": "user", "content": "Database: companies\nSchema: ...\nQuestion: Find the names of the first 10 organizations"},
+    {"role": "assistant", "content": "CYPHER 25\nMATCH (o:Organization)\nRETURN o.name AS name\nLIMIT 10"}
+  ]
+}
+```
+
 ### File Layout
 
 ```
 neo4j-cypher-authoring-skill/
-├── SKILL.md                            # L2: ≤300 lines
-├── VERSION                             # Version metadata
+├── SKILL.md                                   # L2: ≤300 lines
+├── VERSION                                    # Version metadata
 └── references/
-    ├── cypher25-patterns.md            # L3: QPEs, paths, match modes
-    ├── cypher25-functions.md           # L3: aggregating, list, string, temporal, spatial, vector
-    ├── cypher25-indexes.md             # L3: fulltext/vector, index types, hints
-    ├── cypher25-subqueries.md          # L3: CALL, IN TRANSACTIONS, COUNT/COLLECT/EXISTS
-    ├── cypher25-types-and-nulls.md     # L3: null propagation, casting, type predicates
-    └── cypher-style-guide.md           # L3: naming, casing, formatting
+    ├── README.md                              # Folder structure guide + category definitions
+    ├── cypher-style-guide.md                  # L3: naming, casing, formatting (cross-cutting)
+    ├── read/
+    │   ├── cypher25-patterns.md               # L3: QPEs, paths, match modes
+    │   ├── cypher25-functions.md              # L3: aggregating, list, string, temporal, spatial, vector
+    │   ├── cypher25-subqueries.md             # L3: CALL subquery, COUNT{}, COLLECT{}, EXISTS{}
+    │   └── cypher25-types-and-nulls.md        # L3: null propagation, casting, type predicates
+    ├── write/
+    │   └── cypher25-call-in-transactions.md   # L3: CALL IN TRANSACTIONS, batching, ON ERROR
+    ├── schema/
+    │   └── cypher25-indexes.md                # L3: fulltext/vector, index types, hints
+    └── admin/                                 # L3: database admin (users, roles, databases, transactions)
 
 scripts/
 ├── extract-references.py               # Asciidoc → Markdown L3 generation
 ├── extract-changelog.py                # Changelog parser for PR body
-└── requirements.txt
+pyproject.toml                          # uv project descriptor (no runtime deps)
 
 tests/
 ├── harness/
@@ -288,11 +373,21 @@ tests/
 │   ├── generator.py                    # Question generation + baseline capture
 │   ├── validator.py                    # Cypher execution + validation rules
 │   ├── reporter.py                     # Markdown / HTML report output
+│   ├── exporter.py                     # Training dataset YAML exporter (REQ-F-021)
 │   └── deprecated_operators.json       # Maintained per Neo4j release
 ├── cases/
 │   ├── companies.yml                   # Test cases for companies KG
 │   └── {domain}.yml
+├── dataset/
+│   ├── companies.yml                   # Validated training records (YAML)
+│   └── {domain}.yml
 └── results/                            # Gitignored test run outputs
+
+scripts/
+├── extract-references.py               # Asciidoc → Markdown L3 generation
+├── extract-changelog.py                # Changelog parser for PR body
+├── to_jsonl.py                         # YAML dataset → JSONL fine-tuning converter (REQ-F-022)
+└── requirements.txt
 
 .github/workflows/
 ├── update-cypher-skill.yml             # Monthly update + PR
@@ -313,6 +408,12 @@ docs-cheat-sheet/                       # git submodule
 - [ ] GH Action creates a valid PR with diff stat and changelog when submodule content changes; adds `breaking-change` label when expected sections are missing
 - [ ] Extraction script runs with `--dry-run` and exits 0 on current submodule content
 - [ ] Each L3 reference file includes `> Source:` header with version + commit SHA and is ≤ 2,000 tokens
+- [ ] SKILL.md WebFetch section frames fetching as proactive and first-class, explicitly noting L3 truncation
+- [ ] Training dataset exporter writes YAML records for all gate-passing test cases with required fields
+- [ ] `scripts/to_jsonl.py` converts YAML dataset to valid JSONL with system/user/assistant triples
+- [ ] Running the full test harness on companies DB produces ≥ 1 training record in `tests/dataset/companies.yml`
+- [ ] SKILL.md query decision tree includes READ / WRITE / SCHEMA / ADMIN categorization with explicit folder routing (`references/read/`, `references/write/`, `references/schema/`, `references/admin/`)
+- [ ] `references/README.md` exists documenting the folder structure, category definitions, and the CALL subquery vs CALL IN TRANSACTIONS split rationale
 
 ---
 

@@ -438,17 +438,19 @@ tasks:
     title: "Create references/README.md documenting L3 folder structure and routing"
     description: |
       Create neo4j-cypher-authoring-skill/references/README.md documenting the
-      three-folder structure (read/, write/, schema/), category definitions for
-      READ/WRITE/ADMIN queries, which files belong in each folder, and the rationale
-      for splitting CALL subquery (read/) from CALL IN TRANSACTIONS (write/).
+      four-folder structure (read/, write/, schema/, admin/), category definitions for
+      READ/WRITE/SCHEMA/ADMIN queries, which files belong in each folder, and the rationale
+      for splitting CALL subquery (read/) from CALL IN TRANSACTIONS (write/) and
+      schema DDL (schema/) from database admin (admin/).
       This file is referenced by SKILL.md's decision tree to orient agents before
       they load L3 files.
     status: pending
     dependencies:
       - task-010
     acceptance_criteria:
-      - "references/README.md exists with READ/WRITE/ADMIN category definitions"
-      - "Each folder (read/, write/, schema/) is listed with its current files and load conditions"
+      - "references/README.md exists with READ/WRITE/SCHEMA/ADMIN category definitions"
+      - "Each folder (read/, write/, schema/, admin/) is listed with its current files and load conditions"
       - "CALL subquery vs CALL IN TRANSACTIONS split rationale is documented"
+      - "SCHEMA (indexes/constraints/DDL) vs ADMIN (databases, users, roles, transactions) distinction is documented"
       - "New L3 file placement guidance states: files spanning categories must be split"
     completed_at: null

@@ -10,6 +10,8 @@ Usage:
     --out neo4j-cypher-authoring-skill/references \
     [--exclude LET,FINISH,FILTER,NEXT,INSERT] \
     [--max-tokens 2000] \
+    [--skip-preamble] \
+    [--max-code-blocks 3] \
     [--dry-run]
 """
 
@@ -61,62 +63,238 @@ def get_git_remote_url(path: Path) -> str:
         return str(path)
 
 
-def adoc_to_markdown(text: str, gql_exclude: list[str]) -> str:
+# ---------------------------------------------------------------------------
+# Include directive resolution
+# ---------------------------------------------------------------------------
+
+
+def _resolve_include_path(
+    raw_path: str,
+    current_file: Path,
+    cypher_src: Path,
+    cheat_src: Path,
+) -> Optional[Path]:
+    """
+    Resolve an include:: path to a local file path.
+
+    Handles:
+    - {attr}/docs-cypher/.../modules/ROOT/pages/PATH → cypher_src/PATH
+    - {attr}/docs-cheat-sheet/.../modules/ROOT/pages/PATH → cheat_src/PATH
+    - relative/path.adoc → resolved relative to current_file
+    - http:// paths → not resolvable, returns None
+    """
+    if raw_path.startswith("http"):
+        return None
+
+    # Attribute-substituted paths containing known repo names
+    if "docs-cypher" in raw_path:
+        m = re.search(r"modules/ROOT/pages/(.+)", raw_path)
+        if m:
+            return cypher_src / m.group(1)
+
+    if "docs-cheat-sheet" in raw_path:
+        m = re.search(r"modules/ROOT/pages/(.+)", raw_path)
+        if m:
+            return cheat_src / m.group(1)
+
+    # Unresolvable attribute-based paths
+    if "{" in raw_path:
+        return None
+
+    # Relative path — resolve from current file's directory
+    return current_file.parent / raw_path
+
+
+def _extract_tag(text: str, tag: str) -> str:
+    """
+    Extract content between // tag::TAG[] and // end::TAG[] markers.
+    Returns all matching tagged regions concatenated (a file may have multiple).
+    """
+    start_pat = re.compile(r"//\s*tag::" + re.escape(tag) + r"\[\]")
+    end_pat = re.compile(r"//\s*end::" + re.escape(tag) + r"\[\]")
+
+    lines = text.splitlines(keepends=True)
+    in_tag = False
+    result: list[str] = []
+
+    for line in lines:
+        if start_pat.search(line):
+            in_tag = True
+            continue
+        if end_pat.search(line):
+            in_tag = False
+            continue
+        if in_tag:
+            result.append(line)
+
+    return "".join(result)
+
+
+def resolve_includes(
+    text: str,
+    current_file: Path,
+    cypher_src: Path,
+    cheat_src: Path,
+    depth: int = 0,
+    max_depth: int = 3,
+) -> str:
+    """
+    Inline all resolvable include:: directives in asciidoc text.
+
+    Unresolvable includes (external URLs, unknown attributes) are left as-is
+    and will be stripped later by adoc_to_markdown.
+    """
+    if depth > max_depth:
+        return text
+
+    lines = text.splitlines(keepends=True)
+    result: list[str] = []
+
+    for line in lines:
+        m = re.match(r"^include::([^\[]+)\[([^\]]*)\]", line.strip())
+        if not m:
+            result.append(line)
+            continue
+
+        raw_path = m.group(1)
+        attrs_str = m.group(2)
+
+        # Parse optional tag attribute
+        tag_m = re.search(r"tag=([\w.-]+)", attrs_str)
+        tag = tag_m.group(1) if tag_m else None
+
+        # Resolve to a local path
+        resolved = _resolve_include_path(raw_path, current_file, cypher_src, cheat_src)
+        if resolved is None or not resolved.exists():
+            result.append(line)  # leave unresolvable; stripped later
+            continue
+
+        try:
+            included_text = resolved.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            result.append(line)
+            continue
+
+        if tag:
+            included_text = _extract_tag(included_text, tag)
+            if not included_text.strip():
+                continue  # tag not found or empty — skip silently
+
+        # Recursively resolve nested includes
+        included_text = resolve_includes(
+            included_text, resolved, cypher_src, cheat_src, depth + 1, max_depth
+        )
+
+        result.append(included_text)
+        if not included_text.endswith("\n"):
+            result.append("\n")
+
+    return "".join(result)
+
+
+def adoc_to_markdown(
+    text: str,
+    gql_exclude: list[str],
+    skip_preamble: bool = False,
+    max_code_blocks: int = 0,
+) -> str:
     """
     Convert asciidoc text to clean Markdown.
 
     Transformations applied:
+    - Strip //// comment blocks entirely
+    - Skip [source, ..., role=test-setup] blocks (setup CREATE graphs)
+    - Skip tables preceded by [role="queryresult"...] annotations
     - Strip :description: / :table-caption!: / include:: directives
     - Convert = / == / === headings to # / ## / ###
     - Convert [source, cypher] blocks to ```cypher fenced blocks
     - Convert [source, *] blocks to generic ``` fenced blocks
+    - Strip [source, ..., role=test-setup] blocks entirely
     - Strip .Details / .Bad / .Good / .Example label lines
     - Strip [TIP] / [NOTE] / [IMPORTANT] / [WARNING] admonition markers
+    - Strip [.description], [.label--*] and other dot-notation annotations
     - Strip image:: lines
     - Strip xref:: / link: inline references (keep link text)
     - Strip [appendix] / [[anchor]] / role= directives
-    - Convert |=== tables to simple Markdown tables
+    - Convert |=== tables to simple Markdown tables (skip queryresult tables)
     - Strip lines containing GQL-excluded clause keywords as standalone terms
+    - skip_preamble: if True, skip all lines before the first heading
+    - max_code_blocks: if > 0, emit at most this many code blocks per file
     """
     lines = text.splitlines()
     output_lines: list[str] = []
     i = 0
+
+    # Source block state
     in_source_block = False
-    pending_source_lang = ""  # set when we see [source, lang] before ----
+    pending_source_lang = ""     # set when we see [source, lang] before ----
+    skip_next_block = False      # set when role=test-setup detected
+    skipping_block = False       # True while inside a block we're skipping
+    code_block_count = 0         # count of code blocks emitted
+
+    # Table state
     in_table = False
     table_rows: list[list[str]] = []
+    skip_next_table = False      # set when [role="queryresult"...] detected
+    skipping_table = False       # True while inside a table we're skipping
+
+    # Comment block state (////...////)
+    in_comment_block = False
+
+    # Preamble state: skip non-heading content before the first level-2+ heading (==)
+    # The document title (= ...) is level 1 and is treated as metadata, not a section.
+    seen_first_section = False  # True once we hit a level >= 2 heading (==, ===, ====)
 
     while i < len(lines):
         line = lines[i]
 
+        # --- Asciidoc comment blocks (////) — skip entirely ---
+        if line.strip() == "////":
+            in_comment_block = not in_comment_block
+            i += 1
+            continue
+        if in_comment_block:
+            i += 1
+            continue
+
         # --- Delimited source blocks ---
         if line.strip() == "----":
             if not in_source_block:
-                lang = pending_source_lang
-                pending_source_lang = ""
                 in_source_block = True
-                output_lines.append(f"```{lang}")
+                # Check if we should skip (test-setup or over code block limit)
+                over_limit = max_code_blocks > 0 and code_block_count >= max_code_blocks
+                skipping_block = skip_next_block or over_limit
+                skip_next_block = False
+                if not skipping_block:
+                    lang = pending_source_lang
+                    output_lines.append(f"```{lang}")
+                    code_block_count += 1
+                pending_source_lang = ""
             else:
                 in_source_block = False
-                output_lines.append("```")
+                if not skipping_block:
+                    output_lines.append("```")
+                skipping_block = False
             i += 1
             continue
 
         if in_source_block:
-            output_lines.append(line)
+            if not skipping_block:
+                output_lines.append(line)
             i += 1
             continue
 
-        # --- Table blocks ---
-        if line.strip() == "|===":
+        # --- Table blocks (|=== or |====) ---
+        if re.match(r"^\|={3,}$", line.strip()):
             if not in_table:
                 in_table = True
                 table_rows = []
-                table_header_done = False
+                skipping_table = skip_next_table
+                skip_next_table = False
             else:
-                # End of table — render as Markdown
+                # End of table — render as Markdown (unless skipping)
                 in_table = False
-                if table_rows:
+                if not skipping_table and table_rows:
                     # Filter out empty rows and separator rows
                     filtered = [r for r in table_rows if any(c.strip() for c in r)]
                     if filtered:
@@ -131,20 +309,25 @@ def adoc_to_markdown(text: str, gql_exclude: list[str]) -> str:
                         for row in padded[1:]:
                             output_lines.append("| " + " | ".join(row) + " |")
                         output_lines.append("")
+                skipping_table = False
             i += 1
             continue
 
         if in_table:
-            # Parse a table row: lines starting with | or multi-cell lines
-            if line.strip().startswith("|"):
-                # Could be `| cell1 | cell2 | cell3` or just `| cell1`
-                cells = line.strip().split("|")
-                cells = [c.strip() for c in cells if c.strip()]
-                # Strip adoc formatting in cells
-                cells = [_clean_inline(c) for c in cells]
-                if cells:
-                    table_rows.append(cells)
-            # else: skip continuation lines inside table
+            if not skipping_table:
+                # Parse a table row: lines starting with | or multi-cell lines
+                if line.strip().startswith("|"):
+                    cells = line.strip().split("|")
+                    cells = [c.strip() for c in cells if c.strip()]
+                    cells = [_clean_inline(c) for c in cells]
+                    if cells:
+                        table_rows.append(cells)
+            # else: skip continuation lines inside table (or skip entire table)
+            i += 1
+            continue
+
+        # --- Strip asciidoc tag markers (// tag::name[] and // end::name[]) ---
+        if re.match(r"^//\s*(tag|end)::", line.strip()):
             i += 1
             continue
 
@@ -160,8 +343,19 @@ def adoc_to_markdown(text: str, gql_exclude: list[str]) -> str:
             i += 1
             continue
 
-        # --- Skip .Label lines (e.g. .Details, .Bad, .Good) ---
-        if re.match(r"^\.[A-Z][a-zA-Z ]*$", line.strip()):
+        # --- Skip .Label / .Title lines (both simple and complex) ---
+        # Matches: .Result, .Example, .Good, .Bad, .Click to read more..., etc.
+        if re.match(r"^\.[A-Za-z]", line.strip()) and not line.strip().startswith("...."):
+            i += 1
+            continue
+
+        # --- Strip [.xxx] dot-notation block annotations (e.g. [.description]) ---
+        if re.match(r"^\[\.\w", line.strip()):
+            i += 1
+            continue
+
+        # --- Strip [%xxx] Asciidoc special block attributes (e.g. [%collapsible]) ---
+        if re.match(r"^\[%", line.strip()):
             i += 1
             continue
 
@@ -174,14 +368,25 @@ def adoc_to_markdown(text: str, gql_exclude: list[str]) -> str:
                 pending_source_lang = candidate
             else:
                 pending_source_lang = ""
+            # Flag test-setup or queryresult blocks to be skipped
+            if "role=test-setup" in line or "queryresult" in line.lower():
+                skip_next_block = True  # for source blocks
+                skip_next_table = True  # for table blocks (queryresult uses |===)
             i += 1
             continue
         if re.match(r"^\[(TIP|NOTE|IMPORTANT|WARNING|CAUTION)", line.strip(), re.IGNORECASE):
             i += 1
             continue
 
-        # --- Skip role= lines and ====  block delimiters ---
-        if line.strip() == "====" or re.match(r"^\[role=", line.strip()):
+        # --- Skip role=, options=, cols= block attributes and ==== delimiters ---
+        stripped = line.strip()
+        is_block_delimiter = re.match(r"^={4,}$", stripped)  # ==== or =====
+        is_role_attr = re.match(r"^\[role=", stripped)
+        is_options_attr = re.match(r"^\[options=", stripped)
+        if is_block_delimiter or is_role_attr or is_options_attr:
+            # Track queryresult tables so we can skip them
+            if "queryresult" in line.lower():
+                skip_next_table = True
             i += 1
             continue
 
@@ -189,6 +394,8 @@ def adoc_to_markdown(text: str, gql_exclude: list[str]) -> str:
         heading_match = re.match(r"^(={1,4})\s+(.+)$", line)
         if heading_match:
             level = len(heading_match.group(1))
+            if level >= 2:
+                seen_first_section = True
             title = _clean_inline(heading_match.group(2))
             md_heading = "#" * level + " " + title
             # Apply GQL exclusion to headings
@@ -196,6 +403,11 @@ def adoc_to_markdown(text: str, gql_exclude: list[str]) -> str:
                 i += 1
                 continue
             output_lines.append(md_heading)
+            i += 1
+            continue
+
+        # --- Preamble skipping: skip non-heading content before first level-2+ section ---
+        if skip_preamble and not seen_first_section:
             i += 1
             continue
 
@@ -289,15 +501,25 @@ def extract_file(
     gql_exclude: list[str],
     max_tokens: int,
     expected_sections: Optional[list[str]] = None,
+    skip_preamble: bool = False,
+    max_code_blocks: int = 0,
+    cypher_src: Optional[Path] = None,
+    cheat_src: Optional[Path] = None,
 ) -> tuple[str, list[str]]:
     """
-    Read an asciidoc file, convert to Markdown, check for expected sections.
+    Read an asciidoc file, resolve include:: directives, convert to Markdown,
+    and check for expected sections.
 
     Returns (markdown_content, warnings_list).
     """
     warnings = []
     raw = src_path.read_text(encoding="utf-8")
-    md = adoc_to_markdown(raw, gql_exclude)
+
+    # Inline include:: directives before processing
+    if cypher_src is not None and cheat_src is not None:
+        raw = resolve_includes(raw, src_path, cypher_src, cheat_src)
+
+    md = adoc_to_markdown(raw, gql_exclude, skip_preamble=skip_preamble, max_code_blocks=max_code_blocks)
 
     # Check for expected sections
     if expected_sections:
@@ -338,195 +560,235 @@ def build_source_header(
 # Main extraction configurations
 # ---------------------------------------------------------------------------
 
-# Each entry: output_filename, list of (src_root_key, relative_path, expected_sections)
+# Each source entry supports optional per-source overrides:
+#   skip_preamble: bool  — skip lines before first heading in this file
+#   max_code_blocks: int — max code blocks to emit from this file (0 = unlimited)
+#
+# Convention: cheat-sheet inline sources come first (most concise);
+# docs-cypher sources follow for depth. Include-based cheat files contribute
+# nothing (include:: is stripped) so they are omitted or listed last.
+
 EXTRACTION_CONFIGS = [
     {
-        "output": "cypher25-patterns.md",
+        "output": "read/cypher25-patterns.md",
         "sources": [
+            # Cheat-sheet inline sources first (concise reference tables)
+            {
+                "root": "cheat",
+                "path": "quantified-path-patterns.adoc",
+                "sections": [],
+                "skip_preamble": False,
+                "max_code_blocks": 0,
+            },
+            # docs-cypher sources for depth; skip verbose preamble + limit examples
             {
                 "root": "cypher",
                 "path": "patterns/variable-length-patterns.adoc",
                 "sections": ["Quantified path patterns"],
+                "skip_preamble": True,
+                "max_code_blocks": 2,
             },
             {
                 "root": "cypher",
                 "path": "patterns/shortest-paths.adoc",
                 "sections": [],
+                "skip_preamble": True,
+                "max_code_blocks": 2,
             },
             {
                 "root": "cypher",
                 "path": "patterns/non-linear-patterns.adoc",
                 "sections": [],
+                "skip_preamble": True,
+                "max_code_blocks": 2,
             },
             {
                 "root": "cypher",
                 "path": "patterns/match-modes.adoc",
                 "sections": ["DIFFERENT RELATIONSHIPS", "REPEATABLE ELEMENTS"],
+                "skip_preamble": True,
+                "max_code_blocks": 2,
             },
+            # path-pattern-expressions uses include:: in cheat-sheet — use cypher src
             {
-                "root": "cheat",
-                "path": "quantified-path-patterns.adoc",
+                "root": "cypher",
+                "path": "patterns/variable-length-patterns.adoc",
                 "sections": [],
-            },
-            {
-                "root": "cheat",
-                "path": "path-pattern-expressions.adoc",
-                "sections": [],
+                "skip_preamble": True,
+                "max_code_blocks": 1,
             },
         ],
     },
     {
-        "output": "cypher25-functions.md",
+        "output": "read/cypher25-functions.md",
         "sources": [
+            # docs-cypher sources (cheat-sheet function files all use include::)
             {
                 "root": "cypher",
                 "path": "functions/aggregating.adoc",
                 "sections": ["avg()", "count()", "sum()"],
+                "skip_preamble": True,
+                "max_code_blocks": 2,
             },
             {
                 "root": "cypher",
                 "path": "functions/list.adoc",
                 "sections": [],
+                "skip_preamble": True,
+                "max_code_blocks": 1,
             },
             {
                 "root": "cypher",
                 "path": "functions/string.adoc",
                 "sections": [],
+                "skip_preamble": True,
+                "max_code_blocks": 1,
             },
             {
                 "root": "cypher",
                 "path": "functions/scalar.adoc",
                 "sections": [],
+                "skip_preamble": True,
+                "max_code_blocks": 1,
             },
             {
                 "root": "cypher",
                 "path": "functions/predicate.adoc",
                 "sections": [],
+                "skip_preamble": True,
+                "max_code_blocks": 1,
             },
             {
                 "root": "cypher",
                 "path": "functions/vector.adoc",
                 "sections": [],
+                "skip_preamble": True,
+                "max_code_blocks": 2,
             },
             {
-                "root": "cheat",
-                "path": "temporal-functions.adoc",
+                "root": "cypher",
+                "path": "functions/mathematical-numeric.adoc",
                 "sections": [],
-            },
-            {
-                "root": "cheat",
-                "path": "spatial-functions.adoc",
-                "sections": [],
-            },
-            {
-                "root": "cheat",
-                "path": "mathematical-functions-numeric.adoc",
-                "sections": [],
+                "skip_preamble": True,
+                "max_code_blocks": 1,
             },
         ],
     },
     {
-        "output": "cypher25-indexes.md",
+        "output": "schema/cypher25-indexes.md",
         "sources": [
-            {
-                "root": "cypher",
-                "path": "indexes/semantic-indexes/vector-indexes.adoc",
-                "sections": [],
-            },
-            {
-                "root": "cypher",
-                "path": "indexes/semantic-indexes/full-text-indexes.adoc",
-                "sections": [],
-            },
-            {
-                "root": "cypher",
-                "path": "indexes/syntax.adoc",
-                "sections": [],
-            },
+            # Cheat-sheet inline sources first (concise, no preamble)
             {
                 "root": "cheat",
                 "path": "vector-index.adoc",
                 "sections": [],
+                "skip_preamble": False,
+                "max_code_blocks": 0,
             },
             {
                 "root": "cheat",
                 "path": "full-text-index.adoc",
                 "sections": [],
+                "skip_preamble": False,
+                "max_code_blocks": 0,
             },
             {
                 "root": "cheat",
                 "path": "search-performance-index.adoc",
                 "sections": [],
+                "skip_preamble": False,
+                "max_code_blocks": 0,
+            },
+            # docs-cypher for syntax details
+            {
+                "root": "cypher",
+                "path": "indexes/syntax.adoc",
+                "sections": [],
+                "skip_preamble": True,
+                "max_code_blocks": 2,
+            },
+            {
+                "root": "cypher",
+                "path": "indexes/semantic-indexes/vector-indexes.adoc",
+                "sections": [],
+                "skip_preamble": True,
+                "max_code_blocks": 2,
+            },
+            {
+                "root": "cypher",
+                "path": "indexes/semantic-indexes/full-text-indexes.adoc",
+                "sections": [],
+                "skip_preamble": True,
+                "max_code_blocks": 2,
             },
         ],
     },
     {
-        "output": "cypher25-subqueries.md",
+        "output": "read/cypher25-subqueries.md",
         "sources": [
+            # Cheat-sheet inline source first (covers COUNT, EXISTS, COLLECT concisely)
+            {
+                "root": "cheat",
+                "path": "subqueries-collect-count-exists.adoc",
+                "sections": [],
+                "skip_preamble": False,
+                "max_code_blocks": 0,
+            },
+            # docs-cypher for CALL and CALL IN TRANSACTIONS (cheat uses include::)
             {
                 "root": "cypher",
                 "path": "subqueries/call-subquery.adoc",
                 "sections": ["Correlated subqueries"],
+                "skip_preamble": True,
+                "max_code_blocks": 3,
             },
             {
                 "root": "cypher",
                 "path": "subqueries/subqueries-in-transactions.adoc",
                 "sections": ["CALL IN TRANSACTIONS"],
-            },
-            {
-                "root": "cypher",
-                "path": "subqueries/count.adoc",
-                "sections": [],
-            },
-            {
-                "root": "cypher",
-                "path": "subqueries/collect.adoc",
-                "sections": [],
+                "skip_preamble": True,
+                "max_code_blocks": 2,
             },
             {
                 "root": "cypher",
                 "path": "subqueries/existential.adoc",
                 "sections": [],
-            },
-            {
-                "root": "cheat",
-                "path": "subqueries-call.adoc",
-                "sections": [],
-            },
-            {
-                "root": "cheat",
-                "path": "subqueries-call-in-transactions.adoc",
-                "sections": [],
-            },
-            {
-                "root": "cheat",
-                "path": "subqueries-collect-count-exists.adoc",
-                "sections": [],
+                "skip_preamble": True,
+                "max_code_blocks": 2,
             },
         ],
     },
     {
-        "output": "cypher25-types-and-nulls.md",
+        "output": "read/cypher25-types-and-nulls.md",
         "sources": [
+            # type-predicate-expressions uses include:: in cheat-sheet — use cypher src
             {
                 "root": "cypher",
                 "path": "values-and-types/working-with-null.adoc",
                 "sections": [],
+                "skip_preamble": True,
+                "max_code_blocks": 3,
             },
             {
                 "root": "cypher",
                 "path": "values-and-types/casting-data.adoc",
                 "sections": [],
+                "skip_preamble": True,
+                "max_code_blocks": 2,
             },
             {
                 "root": "cypher",
                 "path": "values-and-types/property-structural-constructed.adoc",
                 "sections": [],
+                "skip_preamble": True,
+                "max_code_blocks": 2,
             },
             {
-                "root": "cheat",
-                "path": "type-predicate-expressions.adoc",
+                "root": "cypher",
+                "path": "expressions/predicates/type-predicate-expressions.adoc",
                 "sections": [],
+                "skip_preamble": True,
+                "max_code_blocks": 2,
             },
         ],
     },
@@ -537,16 +799,35 @@ EXTRACTION_CONFIGS = [
                 "root": "cypher",
                 "path": "styleguide.adoc",
                 "sections": ["General recommendations", "Indentation"],
+                "skip_preamble": True,
+                "max_code_blocks": 4,
             },
             {
                 "root": "cypher",
                 "path": "syntax/naming.adoc",
                 "sections": [],
+                "skip_preamble": True,
+                "max_code_blocks": 2,
             },
             {
                 "root": "cypher",
                 "path": "syntax/keywords.adoc",
                 "sections": [],
+                "skip_preamble": True,
+                "max_code_blocks": 1,
+            },
+        ],
+    },
+    {
+        "output": "write/cypher25-call-in-transactions.md",
+        "sources": [
+            # docs-cypher is the primary source (cheat-sheet uses include:: here)
+            {
+                "root": "cypher",
+                "path": "subqueries/subqueries-in-transactions.adoc",
+                "sections": ["CALL IN TRANSACTIONS"],
+                "skip_preamble": True,
+                "max_code_blocks": 4,
             },
         ],
     },
@@ -589,6 +870,18 @@ def parse_args() -> argparse.Namespace:
         help="Maximum tokens per output file (default: 2000)",
     )
     parser.add_argument(
+        "--skip-preamble",
+        action="store_true",
+        default=False,
+        help="Skip content before first heading in each source file (global default; per-source config takes precedence)",
+    )
+    parser.add_argument(
+        "--max-code-blocks",
+        type=int,
+        default=0,
+        help="Global default max code blocks per source file, 0=unlimited (per-source config takes precedence)",
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Print planned output files without writing",
@@ -611,6 +904,8 @@ def main() -> int:
     max_tokens = args.max_tokens
     dry_run = args.dry_run
     only_filter = set(args.only.split(",")) if args.only else None
+    global_skip_preamble = args.skip_preamble
+    global_max_code_blocks = args.max_code_blocks
 
     # Validate source directories
     if not cypher_src.is_dir():
@@ -667,13 +962,14 @@ def main() -> int:
             root_key = source["root"]
             rel_path = source["path"]
             expected = source.get("sections", [])
+            # Per-source options fall back to global CLI defaults
+            src_skip_preamble = source.get("skip_preamble", global_skip_preamble)
+            src_max_code_blocks = source.get("max_code_blocks", global_max_code_blocks)
 
             if root_key == "cypher":
                 src_file = cypher_src / rel_path
-                repo_label = f"neo4j/docs-cypher@{cypher_sha[:8]}"
             else:
                 src_file = cheat_src / rel_path
-                repo_label = f"neo4j/docs-cheat-sheet@{cheat_sha[:8]}"
 
             if not src_file.exists():
                 msg = f"WARNING: source file not found: {src_file}"
@@ -683,7 +979,14 @@ def main() -> int:
 
             all_source_files.append(f"{rel_path} ({root_key})")
             md_content, warnings = extract_file(
-                src_file, gql_exclude, max_tokens * 2, expected
+                src_file,
+                gql_exclude,
+                max_tokens * 2,
+                expected,
+                skip_preamble=src_skip_preamble,
+                max_code_blocks=src_max_code_blocks,
+                cypher_src=cypher_src,
+                cheat_src=cheat_src,
             )
             file_warnings.extend(warnings)
             all_sections.append(md_content.strip())
@@ -705,8 +1008,9 @@ def main() -> int:
             file_warnings.append(msg)
             print(msg, file=sys.stderr)
 
-        # Write output
+        # Write output (output_name may include subdirectory, e.g. read/cypher25-subqueries.md)
         out_path = out_dir / output_name
+        out_path.parent.mkdir(parents=True, exist_ok=True)
         out_path.write_text(full_content, encoding="utf-8")
 
         token_est = estimate_tokens(full_content)

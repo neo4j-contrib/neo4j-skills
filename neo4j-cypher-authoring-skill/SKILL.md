@@ -13,7 +13,7 @@ compatibility: Neo4j >= 2025.01; Cypher 25
 ## When NOT to Use This Skill
 
 - **Driver code** → use `neo4j-migration-skill`
-- **DB administration** (SHOW DATABASES, ALTER USER, privileges) → use `neo4j-cli-tools-skill`
+- **DB administration** (CREATE DATABASE, ALTER USER, roles, privileges, SHOW SERVERS) → use `neo4j-cli-tools-skill`
 - **Cypher 4.x / 5.x migration** → use `neo4j-cypher-skill`
 - **GQL-only clauses**: never emit `LET`, `FINISH`, `FILTER`, `NEXT`, `INSERT` — use `WITH`, `RETURN`, `WHERE`, `CREATE`
 
@@ -211,7 +211,8 @@ CYPHER 25 USE myDatabase MATCH (n:Person) RETURN n.name LIMIT 5;
 |---|---|---|
 | **READ** | MATCH, OPTIONAL MATCH, CALL subquery, WITH, RETURN, COUNT{}/COLLECT{}/EXISTS{}, SEARCH | `references/read/` |
 | **WRITE** | CREATE, MERGE, SET, REMOVE, DELETE, DETACH DELETE, CALL IN TRANSACTIONS, FOREACH, LOAD CSV | `references/write/` |
-| **ADMIN** | CREATE/DROP INDEX, CREATE/DROP CONSTRAINT, SHOW INDEXES, SHOW CONSTRAINTS, db.schema.* | `references/schema/` |
+| **SCHEMA** | CREATE/DROP INDEX, CREATE/DROP CONSTRAINT, SHOW INDEXES, SHOW CONSTRAINTS, SHOW PROCEDURES | `references/schema/` |
+| **ADMIN** | CREATE/DROP DATABASE, ALTER USER, roles/privileges, SHOW TRANSACTIONS, SHOW SERVERS | `references/admin/` |
 
 **Step 2 — Load only the relevant L3 file(s):**
 

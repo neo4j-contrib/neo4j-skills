@@ -26,10 +26,14 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
         with:
           python-version: '3.12'
+          enable-cache: true
+
+      - name: Create virtual environment
+        run: uv venv
 
       # -----------------------------------------------------------------------
       # Determine the latest available tag for each submodule
@@ -110,7 +114,7 @@ jobs:
       - name: Regenerate L3 reference files
         if: steps.version_check.outputs.has_update == 'true'
         run: |
-          python3 scripts/extract-references.py \
+          uv run python3 scripts/extract-references.py \
             --cypher-src docs-cypher/modules/ROOT/pages \
             --cheat-src docs-cheat-sheet/modules/ROOT/pages \
             --out neo4j-cypher-authoring-skill/references \
@@ -144,7 +148,7 @@ jobs:
       - name: Generate changelog summary
         if: steps.version_check.outputs.has_update == 'true'
         run: |
-          python3 scripts/extract-changelog.py \
+          uv run python3 scripts/extract-changelog.py \
             --src docs-cypher/modules/ROOT/pages/deprecations-additions-removals-compatibility.adoc \
             --out /tmp/changelog-summary.md \
             --since "${{ steps.current.outputs.docs_cypher_current }}"

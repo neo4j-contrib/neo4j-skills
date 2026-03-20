@@ -12,7 +12,8 @@ No build/test system exists yet (test harness is a future task). Once tests/harn
 - L3 reference files live in `neo4j-cypher-authoring-skill/references/` organized by category:
   - `references/read/` — patterns, functions, read subqueries (COUNT/COLLECT/EXISTS/CALL), types-and-nulls
   - `references/write/` — CALL IN TRANSACTIONS, bulk writes
-  - `references/schema/` — indexes, constraints, DDL
+  - `references/schema/` — indexes, constraints, DDL (SHOW INDEXES, SHOW CONSTRAINTS, SHOW PROCEDURES)
+  - `references/admin/` — database admin: users, roles, privileges, CREATE/DROP DATABASE, SHOW TRANSACTIONS, SHOW SERVERS
   - `references/` root — style-guide (cross-cutting)
 - Scripts live in `scripts/`
 - Test harness lives in `tests/harness/`, test cases in `tests/cases/`
@@ -29,6 +30,7 @@ No build/test system exists yet (test harness is a future task). Once tests/harn
 - Both docs repos were originally plain cloned directories (untracked). Used `git submodule add --force` to convert without losing data.
 - docs-cheat-sheet is on a newer tag (2026.02.0) than docs-cypher (2026.01.0) — update both together when pinning to new releases.
 - GQL-excluded clauses: LET, FINISH, FILTER, NEXT, INSERT — strip these from all L3 reference files.
+- SCHEMA vs ADMIN split: `schema/` = indexes/constraints/DDL/SHOW PROCEDURES; `admin/` = databases, users, roles, privileges, SHOW TRANSACTIONS, SHOW SERVERS. Don't conflate them.
 - CYPHER 25 pragma: every generated query must begin with `CYPHER 25`.
 - Asciidoc `[source, role=noheader]` has no language tag — guard against capturing `role` as the language identifier.
 - Asciidoc source block language tracking: set `pending_source_lang` when `[source, lang]` is seen, consume it when `----` is encountered (not via lookback into output_lines).
@@ -53,11 +55,17 @@ No build/test system exists yet (test harness is a future task). Once tests/harn
 - `null = null` → `null` (not `true`); `null <> null` → `null`. Always use `IS NULL` / `IS NOT NULL`.
 - Style guide keyword list (keywords.adoc) is 400 items — useless for agents. What agents need: UPPERCASE for clauses/operators, camelCase for functions, lowercase for `null`/`true`/`false`. Document this as a casing rules table, not a keyword enumeration.
 
+## Python / uv
+
+- Project uses **uv** for venv and script execution. `pyproject.toml` at repo root (no runtime deps — stdlib only scripts).
+- Local dev: `uv venv && uv run python3 scripts/extract-references.py ...`
+- GH Actions: `astral-sh/setup-uv@v5` installs uv on the runner (does NOT rely on runner image having uv pre-installed); then `uv venv && uv run python3 scripts/...`
+
 ## Scripts
 
 - `scripts/extract-references.py` — extract asciidoc → Markdown for L3 reference files. Run with `--dry-run` to preview without writing.
-- `scripts/test-extract-references.py` — test suite for extract-references.py. Run from repo root: `python3 scripts/test-extract-references.py`
-- `scripts/extract-changelog.py` — parse `deprecations-additions-removals-compatibility.adoc` → Markdown changelog. Usage: `python3 scripts/extract-changelog.py --src docs-cypher/modules/ROOT/pages/deprecations-additions-removals-compatibility.adoc --out path/changelog.md [--since 2026.01]`
+- `scripts/test-extract-references.py` — test suite for extract-references.py. Run from repo root: `uv run python3 scripts/test-extract-references.py`
+- `scripts/extract-changelog.py` — parse `deprecations-additions-removals-compatibility.adoc` → Markdown changelog. Usage: `uv run python3 scripts/extract-changelog.py --src docs-cypher/modules/ROOT/pages/deprecations-additions-removals-compatibility.adoc --out path/changelog.md [--since 2026.01]`
 
 ### extract-references.py — Hybrid Workflow
 
