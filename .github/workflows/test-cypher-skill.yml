@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       cases_path:
-        description: 'Path to test cases directory or file (default: tests/cases/)'
+        description: 'Path to test cases directory or file (default: skill-generation-validation-tools/tests/cases/)'
         required: false
-        default: 'tests/cases/'
+        default: 'skill-generation-validation-tools/tests/cases/'
       difficulty:
         description: 'Filter by difficulty: basic, intermediate, advanced, complex (leave blank for all)'
         required: false
@@ -36,6 +36,7 @@ jobs:
 
       - name: Create virtual environment
         run: uv venv
+        working-directory: skill-generation-validation-tools
 
       # -----------------------------------------------------------------------
       # Verify test harness exists (harness may not yet be built)
@@ -43,12 +44,12 @@ jobs:
       - name: Check harness availability
         id: harness_check
         run: |
-          if [ -f "tests/harness/runner.py" ]; then
+          if [ -f "skill-generation-validation-tools/tests/harness/runner.py" ]; then
             echo "harness_available=true" >> "$GITHUB_OUTPUT"
             echo "Test harness found."
           else
             echo "harness_available=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::tests/harness/runner.py not found — skipping execution tests."
+            echo "::warning::skill-generation-validation-tools/tests/harness/runner.py not found — skipping execution tests."
             echo "Once the test harness is built (task-015), this workflow will run live tests."
           fi
 
@@ -104,7 +105,7 @@ jobs:
       - name: Check test case files
         id: cases_check
         run: |
-          CASES_PATH="${{ github.event.inputs.cases_path || 'tests/cases/' }}"
+          CASES_PATH="${{ github.event.inputs.cases_path || 'skill-generation-validation-tools/tests/cases/' }}"
           if [ -d "$CASES_PATH" ] && [ "$(ls -A "$CASES_PATH" 2>/dev/null)" ]; then
             CASE_COUNT=$(find "$CASES_PATH" -name "*.yml" | wc -l)
             echo "Found $CASE_COUNT YAML file(s) in $CASES_PATH"
@@ -131,9 +132,9 @@ jobs:
           NEO4J_PASSWORD: ${{ secrets.NEO4J_PASSWORD }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
-          CASES_PATH="${{ github.event.inputs.cases_path || 'tests/cases/' }}"
-          REPORT_PATH="tests/results/report-${{ github.run_id }}.md"
-          mkdir -p tests/results
+          CASES_PATH="${{ github.event.inputs.cases_path || 'skill-generation-validation-tools/tests/cases/' }}"
+          REPORT_PATH="skill-generation-validation-tools/tests/results/report-${{ github.run_id }}.md"
+          mkdir -p skill-generation-validation-tools/tests/results
 
           DIFFICULTY_FLAG=""
           if [ -n "${{ github.event.inputs.difficulty }}" ]; then
@@ -142,7 +143,7 @@ jobs:
 
           # runner.py exits: 0 = all pass, 1 = any FAIL, 2 = any WARN no FAIL
           set +e
-          uv run python3 tests/harness/runner.py \
+          uv run --project skill-generation-validation-tools python3 skill-generation-validation-tools/tests/harness/runner.py \
             --cases "$CASES_PATH" \
             --skill neo4j-cypher-authoring-skill \
             --report "$REPORT_PATH" \
@@ -163,15 +164,15 @@ jobs:
           steps.cases_check.outputs.cases_available != 'true'
         id: placeholder_report
         run: |
-          REPORT_PATH="tests/results/report-${{ github.run_id }}.md"
-          mkdir -p tests/results
+          REPORT_PATH="skill-generation-validation-tools/tests/results/report-${{ github.run_id }}.md"
+          mkdir -p skill-generation-validation-tools/tests/results
 
           cat > "$REPORT_PATH" <<'EOF'
           # Cypher Skill Test Report
 
           **Status**: Harness not yet available
 
-          The test harness (`tests/harness/runner.py`) has not been built yet.
+          The test harness (`skill-generation-validation-tools/tests/harness/runner.py`) has not been built yet.
           Structural checks (SKILL.md line budget, L3 reference file presence) passed.
 
           Once the test harness is built (see task-015), this workflow will execute

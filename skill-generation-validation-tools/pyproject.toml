@@ -8,4 +8,4 @@ dependencies = [
 ]
 
 [tool.uv]
-python-version = "3.12"
+required-version = ">=0.5"

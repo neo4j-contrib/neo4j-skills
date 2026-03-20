@@ -34,6 +34,7 @@ jobs:
 
       - name: Create virtual environment
         run: uv venv
+        working-directory: skill-generation-validation-tools
 
       # -----------------------------------------------------------------------
       # Determine the latest available tag for each submodule
@@ -114,7 +115,7 @@ jobs:
       - name: Regenerate L3 reference files
         if: steps.version_check.outputs.has_update == 'true'
         run: |
-          uv run python3 scripts/extract-references.py \
+          uv run --project skill-generation-validation-tools python3 skill-generation-validation-tools/scripts/extract-references.py \
             --cypher-src docs-cypher/modules/ROOT/pages \
             --cheat-src docs-cheat-sheet/modules/ROOT/pages \
             --out neo4j-cypher-authoring-skill/references \
@@ -148,7 +149,7 @@ jobs:
       - name: Generate changelog summary
         if: steps.version_check.outputs.has_update == 'true'
         run: |
-          uv run python3 scripts/extract-changelog.py \
+          uv run --project skill-generation-validation-tools python3 skill-generation-validation-tools/scripts/extract-changelog.py \
             --src docs-cypher/modules/ROOT/pages/deprecations-additions-removals-compatibility.adoc \
             --out /tmp/changelog-summary.md \
             --since "${{ steps.current.outputs.docs_cypher_current }}"

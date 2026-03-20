@@ -37,7 +37,7 @@ tasks:
     completed_at: "2026-03-19T23:46:00Z"
 
   - id: task-003
-    title: "Build scripts/extract-references.py extraction script"
+    title: "Build skill-generation-validation-tools/scripts/extract-references.py extraction script"
     description: |
       Write the Python extraction script that reads asciidoc source files from
       docs-cypher/ and docs-cheat-sheet/, strips asciidoc markup, applies the
@@ -197,7 +197,7 @@ tasks:
     completed_at: "2026-03-20T13:00:00Z"
 
   - id: task-011
-    title: "Build scripts/extract-changelog.py changelog parser"
+    title: "Build skill-generation-validation-tools/scripts/extract-changelog.py changelog parser"
     description: |
       Write the Python script that parses deprecations-additions-removals-
       compatibility.adoc from the docs-cypher submodule and emits a Markdown
@@ -255,7 +255,7 @@ tasks:
     completed_at: "2026-03-20T16:00:00Z"
 
   - id: task-014
-    title: "Build tests/harness/validator.py validation rules"
+    title: "Build skill-generation-validation-tools/tests/harness/validator.py validation rules"
     description: |
       Write the validator module containing deprecated operator lists, deprecated
       Cypher syntax regex patterns, CYPHER 25 pragma check, and the four-gate
@@ -274,7 +274,7 @@ tasks:
     completed_at: "2026-03-20T17:30:00Z"
 
   - id: task-015
-    title: "Build tests/harness/runner.py test executor"
+    title: "Build skill-generation-validation-tools/skill-generation-validation-tools/tests/harness/runner.py test executor"
     description: |
       Write the main test runner that loads test case YAML files, submits each
       question to Claude Code headless with the skill loaded, extracts the first
@@ -293,7 +293,7 @@ tasks:
     completed_at: "2026-03-20T18:00:00Z"
 
   - id: task-016
-    title: "Build tests/harness/reporter.py result reporter"
+    title: "Build skill-generation-validation-tools/tests/harness/reporter.py result reporter"
     description: |
       Write the reporter module that takes runner output and produces a Markdown
       report with: overall pass/warn/fail counts, per-difficulty pass rates, a
@@ -312,14 +312,14 @@ tasks:
     completed_at: "2026-03-20T19:00:00Z"
 
   - id: task-017
-    title: "Build tests/harness/generator.py question generator"
+    title: "Build skill-generation-validation-tools/tests/harness/generator.py question generator"
     description: |
       Write the question generator that connects to a Neo4j database, runs schema
       inspection, samples property values using COLLECT subquery with LIMIT 100
       (not collect()[..N]), infers property semantics, calls the Claude API to
       generate questions at four difficulty tiers, auto-executes candidate Cypher
       to capture PROFILE baselines, applies tolerance multipliers, and writes YAML
-      test stubs to tests/cases/{domain}-generated.yml for human review.
+      test stubs to skill-generation-validation-tools/tests/cases/{domain}-generated.yml for human review.
     status: completed
     dependencies:
       - task-014
@@ -329,7 +329,7 @@ tasks:
       - "Inferred semantics (uuid, range, enum, score, freetext, sparse) are included as comments in YAML stubs"
       - "Each stub captures baseline metrics: observed_count, observed_db_hits, observed_memory_bytes, observed_runtime_ms"
       - "Tolerance-multiplied thresholds are pre-populated: max_db_hits = observed × 3, etc."
-      - "Output is written to tests/cases/{domain}-generated.yml, not tests/cases/{domain}.yml (requires human promotion)"
+      - "Output is written to skill-generation-validation-tools/tests/cases/{domain}-generated.yml, not skill-generation-validation-tools/tests/cases/{domain}.yml (requires human promotion)"
     completed_at: "2026-03-20T20:30:00Z"
 
   - id: task-018
@@ -337,17 +337,17 @@ tasks:
     description: |
       Run the question generator against the companies demo database
       (demo.neo4jlabs.com) to produce generated stubs, then manually review and
-      promote 10 basic and 10 intermediate test cases to tests/cases/companies.yml.
+      promote 10 basic and 10 intermediate test cases to skill-generation-validation-tools/tests/cases/companies.yml.
       Verify each case has non-zero baseline results and sensible thresholds.
     status: pending
     dependencies:
       - task-017
     acceptance_criteria:
-      - "tests/cases/companies.yml contains ≥ 10 basic and ≥ 10 intermediate test cases"
+      - "skill-generation-validation-tools/tests/cases/companies.yml contains ≥ 10 basic and ≥ 10 intermediate test cases"
       - "All cases have non-null min_results ≥ 1 (verified by running candidate Cypher)"
       - "All cases have observed baseline metrics populated (db_hits, memory, runtime)"
       - "At least one case exercises each of: MATCH, MERGE, aggregation, relationship traversal"
-      - "tests/cases/companies-generated.yml is gitignored or clearly marked as not-yet-reviewed"
+      - "skill-generation-validation-tools/tests/cases/companies-generated.yml is gitignored or clearly marked as not-yet-reviewed"
     completed_at: null
 
   - id: task-019
@@ -363,12 +363,12 @@ tasks:
       - task-010
       - task-018
     acceptance_criteria:
-      - "tests/cases/companies.yml contains ≥ 10 advanced and ≥ 5 complex test cases"
+      - "skill-generation-validation-tools/tests/cases/companies.yml contains ≥ 10 advanced and ≥ 5 complex test cases"
       - "At least one advanced case uses QPE syntax ({m,n} or +)"
       - "At least one advanced case uses SEARCH clause with vector or fulltext index"
       - "At least one complex case uses CALL subquery or CALL IN TRANSACTIONS"
       - "Harness run produces ≥ 90% pass rate on basic, ≥ 80% on intermediate, ≥ 70% on advanced"
-      - "Baseline report saved to tests/results/ and committed"
+      - "Baseline report saved to skill-generation-validation-tools/tests/results/ and committed"
     completed_at: null
 
   - id: task-020
@@ -391,7 +391,7 @@ tasks:
     completed_at: null
 
   - id: task-021
-    title: "Build tests/harness/exporter.py training dataset YAML exporter"
+    title: "Build skill-generation-validation-tools/tests/harness/exporter.py training dataset YAML exporter"
     description: |
       Write the exporter module that reads completed runner output and writes YAML
       training records for every test case that passed all four validation gates.
@@ -399,7 +399,7 @@ tasks:
       (labels, relationship_types, indexes), property_samples (with inferred_semantic
       and non_null_count), cypher (the validated query), and metadata (difficulty,
       tags, db_hits, allocated_memory_bytes, runtime_ms, passed_gates, generated_at).
-      Appends to tests/dataset/{domain}.yml without overwriting existing records.
+      Appends to skill-generation-validation-tools/tests/dataset/{domain}.yml without overwriting existing records.
     status: pending
     dependencies:
       - task-016
@@ -409,14 +409,14 @@ tasks:
       - "Each exported record contains all required fields per REQ-F-021"
       - "Re-running exporter on the same input does not produce duplicate records (dedup by id)"
       - "Output YAML is valid and human-readable with correct indentation"
-      - "tests/dataset/ directory is created if it does not exist"
+      - "skill-generation-validation-tools/tests/dataset/ directory is created if it does not exist"
     completed_at: null
 
   - id: task-022
-    title: "Build scripts/to_jsonl.py YAML dataset → JSONL converter"
+    title: "Build skill-generation-validation-tools/scripts/to_jsonl.py YAML dataset → JSONL converter"
     description: |
       Write the converter script that reads one or more YAML training dataset files
-      from tests/dataset/ and writes JSONL output with one line per record. Each
+      from skill-generation-validation-tools/tests/dataset/ and writes JSONL output with one line per record. Each
       line is a JSON object with a messages array containing three entries: system
       (skill instructions summary), user (database name + schema context + question),
       and assistant (validated Cypher query). Supports filtering by difficulty and
@@ -430,7 +430,7 @@ tasks:
       - "System message contains a concise summary of the skill's Cypher authoring instructions"
       - "User message includes database name, schema context summary, and the original question"
       - "Assistant message contains only the validated Cypher query"
-      - "Running on tests/dataset/companies.yml produces valid JSONL parseable by json.loads()"
+      - "Running on skill-generation-validation-tools/tests/dataset/companies.yml produces valid JSONL parseable by json.loads()"
       - "Filtering by --difficulty basic produces only basic-difficulty records"
     completed_at: null
 

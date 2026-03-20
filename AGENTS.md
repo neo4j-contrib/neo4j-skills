@@ -2,8 +2,8 @@
 
 ## Feedback Commands
 
-No build/test system exists yet (test harness is a future task). Once tests/harness/ is built:
-- Run tests: `python tests/harness/runner.py --cases tests/cases/ --skill neo4j-cypher-authoring-skill`
+- Run extraction tests: `cd skill-generation-validation-tools && uv run python3 scripts/test-extract-references.py`
+- Run harness (once built): `uv run --project skill-generation-validation-tools python3 skill-generation-validation-tools/tests/harness/runner.py --cases skill-generation-validation-tools/tests/cases/ --skill neo4j-cypher-authoring-skill`
 - Lint YAML: `yamllint .github/workflows/`
 
 ## Conventions
@@ -15,8 +15,8 @@ No build/test system exists yet (test harness is a future task). Once tests/harn
   - `references/schema/` — indexes, constraints, DDL (SHOW INDEXES, SHOW CONSTRAINTS, SHOW PROCEDURES)
   - `references/admin/` — database admin: users, roles, privileges, CREATE/DROP DATABASE, SHOW TRANSACTIONS, SHOW SERVERS
   - `references/` root — style-guide (cross-cutting)
-- Scripts live in `scripts/`
-- Test harness lives in `tests/harness/`, test cases in `tests/cases/`
+- Generation/validation tools live in `skill-generation-validation-tools/` (scripts/, tests/, pyproject.toml)
+- Test harness: `skill-generation-validation-tools/tests/harness/`, test cases: `skill-generation-validation-tools/tests/cases/`
 
 ## Submodule Notes
 
@@ -57,15 +57,17 @@ No build/test system exists yet (test harness is a future task). Once tests/harn
 
 ## Python / uv
 
-- Project uses **uv** for venv and script execution. `pyproject.toml` at repo root (no runtime deps — stdlib only scripts).
-- Local dev: `uv venv && uv run python3 scripts/extract-references.py ...`
-- GH Actions: `astral-sh/setup-uv@v5` installs uv on the runner (does NOT rely on runner image having uv pre-installed); then `uv venv && uv run python3 scripts/...`
+- All generation/validation tools live in `skill-generation-validation-tools/` — kept outside `neo4j-cypher-authoring-skill/` so they don't pollute the installed skill.
+- `pyproject.toml` lives in `skill-generation-validation-tools/` (not repo root).
+- Local dev: `cd skill-generation-validation-tools && uv venv && uv run python3 scripts/extract-references.py ...`
+- From repo root: `uv run --project skill-generation-validation-tools python3 skill-generation-validation-tools/scripts/...`
+- GH Actions: `working-directory: skill-generation-validation-tools` for `uv venv`; script calls use `uv run --project skill-generation-validation-tools python3 skill-generation-validation-tools/...`
 
 ## Scripts
 
-- `scripts/extract-references.py` — extract asciidoc → Markdown for L3 reference files. Run with `--dry-run` to preview without writing.
-- `scripts/test-extract-references.py` — test suite for extract-references.py. Run from repo root: `uv run python3 scripts/test-extract-references.py`
-- `scripts/extract-changelog.py` — parse `deprecations-additions-removals-compatibility.adoc` → Markdown changelog. Usage: `uv run python3 scripts/extract-changelog.py --src docs-cypher/modules/ROOT/pages/deprecations-additions-removals-compatibility.adoc --out path/changelog.md [--since 2026.01]`
+- `skill-generation-validation-tools/scripts/extract-references.py` — extract asciidoc → Markdown for L3 reference files. Run with `--dry-run` to preview without writing.
+- `skill-generation-validation-tools/scripts/test-extract-references.py` — test suite. Run from the tools dir: `uv run python3 scripts/test-extract-references.py`
+- `skill-generation-validation-tools/scripts/extract-changelog.py` — parse changelog adoc → Markdown. Usage: `uv run python3 scripts/extract-changelog.py --src ../../docs-cypher/modules/ROOT/pages/deprecations-additions-removals-compatibility.adoc --out path/changelog.md [--since 2026.01]`
 
 ### extract-references.py — Hybrid Workflow
 

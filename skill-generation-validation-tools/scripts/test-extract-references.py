@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Tests for extract-references.py
-Run from the repo root: python3 scripts/test-extract-references.py
+Run from skill-generation-validation-tools/: uv run python3 scripts/test-extract-references.py
 """
 import importlib.util
 import os
@@ -9,15 +9,20 @@ import sys
 import tempfile
 from pathlib import Path
 
+# Resolve paths relative to this file's location so the test can run from any CWD
+TOOLS_DIR = Path(__file__).parent.parent  # skill-generation-validation-tools/
+REPO_ROOT = TOOLS_DIR.parent              # repo root
+
 # Load module under test
-spec = importlib.util.spec_from_file_location("extract", "scripts/extract-references.py")
+spec = importlib.util.spec_from_file_location("extract", TOOLS_DIR / "scripts/extract-references.py")
 mod = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(mod)
 
-REPO_ROOT = Path(".")
 CYPHER_SRC = REPO_ROOT / "docs-cypher/modules/ROOT/pages"
 CHEAT_SRC = REPO_ROOT / "docs-cheat-sheet/modules/ROOT/pages"
 GQL_EXCLUDE = ["LET", "FINISH", "FILTER", "NEXT", "INSERT"]
+SCRIPT = TOOLS_DIR / "scripts/extract-references.py"
+SRC_FLAGS = f"--cypher-src {CYPHER_SRC} --cheat-src {CHEAT_SRC}"
 
 failures = []
 
@@ -37,7 +42,7 @@ print("\n--- Test 1: dry-run mode ---")
 with tempfile.TemporaryDirectory() as tmpdir:
     out_dir = Path(tmpdir) / "refs"
     rc = os.system(
-        f"python3 scripts/extract-references.py --dry-run --out {out_dir} > /dev/null 2>&1"
+        f"python3 {SCRIPT} {SRC_FLAGS} --dry-run --out {out_dir} > /dev/null 2>&1"
     )
     check("dry-run exits 0", rc == 0)
     check("dry-run does not create output dir", not out_dir.exists())
@@ -50,7 +55,7 @@ print("\n--- Test 2: Source header ---")
 with tempfile.TemporaryDirectory() as tmpdir:
     out_dir = Path(tmpdir) / "refs"
     os.system(
-        f"python3 scripts/extract-references.py --only read/cypher25-patterns.md --out {out_dir} > /dev/null 2>&1"
+        f"python3 {SCRIPT} {SRC_FLAGS} --only read/cypher25-patterns.md --out {out_dir} > /dev/null 2>&1"
     )
     out_file = out_dir / "read" / "cypher25-patterns.md"
     check("output file created", out_file.exists())
@@ -118,7 +123,7 @@ print("\n--- Test 5: Token budget ---")
 with tempfile.TemporaryDirectory() as tmpdir:
     out_dir = Path(tmpdir) / "refs"
     os.system(
-        f"python3 scripts/extract-references.py --max-tokens 2000 --out {out_dir} > /dev/null 2>&1"
+        f"python3 {SCRIPT} {SRC_FLAGS} --max-tokens 2000 --out {out_dir} > /dev/null 2>&1"
     )
     over_budget = []
     for md_file in out_dir.rglob("*.md"):  # rglob to find files in subdirectories
@@ -159,7 +164,7 @@ check("noheader fence has no 'role' tag", "```role" not in result)
 # Test 7: flags accepted (CLI help)
 # ---------------------------------------------------------------------------
 print("\n--- Test 7: CLI flags accepted ---")
-rc = os.system("python3 scripts/extract-references.py --help > /dev/null 2>&1")
+rc = os.system(f"python3 {SCRIPT} --help > /dev/null 2>&1")
 check("--help exits 0", rc == 0)
 
 
@@ -392,7 +397,7 @@ check("text after tags preserved", "Some text after" in result)
 # Test 15: new CLI flags accepted
 # ---------------------------------------------------------------------------
 print("\n--- Test 15: new CLI flags ---")
-rc = os.system("python3 scripts/extract-references.py --skip-preamble --max-code-blocks 3 --dry-run > /dev/null 2>&1")
+rc = os.system(f"python3 {SCRIPT} {SRC_FLAGS} --skip-preamble --max-code-blocks 3 --dry-run > /dev/null 2>&1")
 check("--skip-preamble --max-code-blocks accepted", rc == 0)
 
 

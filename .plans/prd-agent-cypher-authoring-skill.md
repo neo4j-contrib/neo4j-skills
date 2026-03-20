@@ -77,15 +77,15 @@ Kept GQL-origin features (add real value, not just renames): `WHEN` (conditional
 - REQ-F-011: Six L3 reference files must be created, each generated from upstream asciidoc sources: `cypher25-patterns.md`, `cypher25-functions.md`, `cypher25-indexes.md`, `cypher25-subqueries.md`, `cypher25-types-and-nulls.md`, `cypher-style-guide.md`
 - REQ-F-012: `cypher25-indexes.md` must include an index type selection table mapping query predicates to required index types (RANGE, TEXT, POINT, FULLTEXT, VECTOR)
 - REQ-F-013: `cypher25-types-and-nulls.md` must cover null propagation rules, explicit null guards, type casting functions, and type predicate expressions
-- REQ-F-014: An extraction script (`scripts/extract-references.py`) must generate all L3 files from `docs-cypher/` and `docs-cheat-sheet/` with configurable GQL exclusion list, max-tokens enforcement per file, and detection of missing expected sections
+- REQ-F-014: An extraction script (`skill-generation-validation-tools/scripts/extract-references.py`) must generate all L3 files from `docs-cypher/` and `docs-cheat-sheet/` with configurable GQL exclusion list, max-tokens enforcement per file, and detection of missing expected sections
 - REQ-F-015: `docs-cypher/` and `docs-cheat-sheet/` must be converted from plain directories to git submodules, pinned to the current Neo4j 25 / 2026.x release tag
 - REQ-F-016: A GH Action (`.github/workflows/update-cypher-skill.yml`) must run monthly, detect upstream doc changes, regenerate L3 files, update the `VERSION` file, and create a PR with diff stat, changelog summary, and a `breaking-change` label when expected sections are missing
-- REQ-F-017: A test harness (`tests/harness/`) must validate skill output against real Neo4j databases with four gates: syntax (EXPLAIN), correctness (row count), quality (deprecated operator / syntax detection), and performance (PROFILE metrics)
-- REQ-F-018: A question generator (`tests/harness/generator.py`) must sample property values using `COLLECT { MATCH ... RETURN DISTINCT ... LIMIT 100 }` subqueries (not `collect()[..N]`), infer property semantics, generate questions via Claude API, auto-execute candidate Cypher to capture observed baselines, and produce YAML test stubs with tolerance-multiplied thresholds for human review
+- REQ-F-017: A test harness (`skill-generation-validation-tools/tests/harness/`) must validate skill output against real Neo4j databases with four gates: syntax (EXPLAIN), correctness (row count), quality (deprecated operator / syntax detection), and performance (PROFILE metrics)
+- REQ-F-018: A question generator (`skill-generation-validation-tools/tests/harness/generator.py`) must sample property values using `COLLECT { MATCH ... RETURN DISTINCT ... LIMIT 100 }` subqueries (not `collect()[..N]`), infer property semantics, generate questions via Claude API, auto-execute candidate Cypher to capture observed baselines, and produce YAML test stubs with tolerance-multiplied thresholds for human review
 - REQ-F-019: A `VERSION` file at the skill root must record neo4j version, cypher version, submodule commit SHAs, and generation date; updated by the GH Action on each release
 - REQ-F-020: SKILL.md must explicitly instruct online agents that WebFetch to Neo4j Cypher docs is always available and should be used proactively — not just as a last resort — framing it as a first-class knowledge source at the same level as L3 reference files; the instruction must note that L3 files may be token-budget-truncated and WebFetch fills the gap
-- REQ-F-021: A training dataset exporter (`tests/harness/exporter.py`) must write YAML records for every test case that passes all four validation gates; each record must include: `id`, `question`, `database`, `neo4j_version`, `schema_context` (full schema inspection output), `property_samples` (sampled values per label/property), `cypher` (the validated query), and `metadata` (difficulty, tags, db_hits, allocated_memory_bytes, runtime_ms, passed_gates)
-- REQ-F-022: A converter script (`scripts/to_jsonl.py`) must transform the YAML training dataset into JSONL format compatible with Anthropic and OpenAI fine-tuning APIs, with each line containing a system/user/assistant message triple where: system = skill instructions, user = question + schema context, assistant = validated Cypher query
+- REQ-F-021: A training dataset exporter (`skill-generation-validation-tools/tests/harness/exporter.py`) must write YAML records for every test case that passes all four validation gates; each record must include: `id`, `question`, `database`, `neo4j_version`, `schema_context` (full schema inspection output), `property_samples` (sampled values per label/property), `cypher` (the validated query), and `metadata` (difficulty, tags, db_hits, allocated_memory_bytes, runtime_ms, passed_gates)
+- REQ-F-022: A converter script (`skill-generation-validation-tools/scripts/to_jsonl.py`) must transform the YAML training dataset into JSONL format compatible with Anthropic and OpenAI fine-tuning APIs, with each line containing a system/user/assistant message triple where: system = skill instructions, user = question + schema context, assistant = validated Cypher query
 - REQ-F-023: SKILL.md must include an explicit READ / WRITE / SCHEMA / ADMIN query categorization section in the Query Construction Decision Tree, defining: READ (MATCH, OPTIONAL MATCH, CALL subqueries, WITH, RETURN, aggregations, COLLECT/COUNT/EXISTS subquery expressions, SEARCH), WRITE (CREATE, MERGE, SET, REMOVE, DELETE, DETACH DELETE, CALL IN TRANSACTIONS, FOREACH, LOAD CSV), SCHEMA (CREATE/DROP INDEX, CREATE/DROP CONSTRAINT, SHOW INDEXES, SHOW CONSTRAINTS, SHOW PROCEDURES), ADMIN (CREATE/DROP DATABASE, ALTER USER, roles/privileges, SHOW TRANSACTIONS, SHOW SERVERS). The section must instruct agents to determine the category first and then load only the relevant L3 references folder, not all files
 - REQ-F-024: The L3 reference file folder structure must enforce the four-way split: `references/read/` for read-only query constructs, `references/write/` for write/mutation constructs, `references/schema/` for index/constraint/DDL schema operations, `references/admin/` for database administration (users, roles, databases, transactions), and `references/` root for cross-cutting guides (e.g. style-guide). When a topic spans categories (e.g. CALL subquery for reads vs CALL IN TRANSACTIONS for writes), files must be split and placed in the correct folder. This structure must be documented in `references/README.md`
 
@@ -290,7 +290,7 @@ The section budget for WebFetch Escalation (20 lines) must include this framing 
 Every test case that passes all four validation gates is exported as a YAML training record. Format:
 
 ```yaml
-# tests/dataset/companies.yml  (one file per database domain)
+# skill-generation-validation-tools/tests/dataset/companies.yml  (one file per database domain)
 records:
   - id: "companies-TC001-20260319"
     question: "Find the names of the first 10 organizations in the graph"
@@ -327,7 +327,7 @@ records:
 ```
 
 The YAML dataset serves three purposes:
-1. **Fine-tuning source**: convert to JSONL via `scripts/to_jsonl.py`
+1. **Fine-tuning source**: convert to JSONL via `skill-generation-validation-tools/scripts/to_jsonl.py`
 2. **Few-shot example store**: retrieve by difficulty/tags for prompt augmentation
 3. **Regression baseline**: re-run queries against future Neo4j versions to detect regressions
 
@@ -362,32 +362,29 @@ neo4j-cypher-authoring-skill/
     │   └── cypher25-indexes.md                # L3: fulltext/vector, index types, hints
     └── admin/                                 # L3: database admin (users, roles, databases, transactions)
 
-scripts/
-├── extract-references.py               # Asciidoc → Markdown L3 generation
-├── extract-changelog.py                # Changelog parser for PR body
-pyproject.toml                          # uv project descriptor (no runtime deps)
-
-tests/
-├── harness/
-│   ├── runner.py                       # Main test executor
-│   ├── generator.py                    # Question generation + baseline capture
-│   ├── validator.py                    # Cypher execution + validation rules
-│   ├── reporter.py                     # Markdown / HTML report output
-│   ├── exporter.py                     # Training dataset YAML exporter (REQ-F-021)
-│   └── deprecated_operators.json       # Maintained per Neo4j release
-├── cases/
-│   ├── companies.yml                   # Test cases for companies KG
-│   └── {domain}.yml
-├── dataset/
-│   ├── companies.yml                   # Validated training records (YAML)
-│   └── {domain}.yml
-└── results/                            # Gitignored test run outputs
-
-scripts/
-├── extract-references.py               # Asciidoc → Markdown L3 generation
-├── extract-changelog.py                # Changelog parser for PR body
-├── to_jsonl.py                         # YAML dataset → JSONL fine-tuning converter (REQ-F-022)
-└── requirements.txt
+skill-generation-validation-tools/        # NOT part of the installable skill
+├── pyproject.toml                      # uv project descriptor (pyyaml dep)
+├── README.md                           # How to use these tools
+├── scripts/
+│   ├── extract-references.py           # Asciidoc → Markdown L3 generation
+│   ├── extract-changelog.py            # Changelog parser for PR body
+│   ├── to_jsonl.py                     # YAML dataset → JSONL fine-tuning converter (REQ-F-022)
+│   └── test-extract-references.py      # Test suite for extract-references.py
+└── tests/
+    ├── harness/
+    │   ├── runner.py                   # Main test executor
+    │   ├── generator.py                # Question generation + baseline capture
+    │   ├── validator.py                # Cypher execution + validation rules
+    │   ├── reporter.py                 # Markdown / HTML report output
+    │   ├── exporter.py                 # Training dataset YAML exporter (REQ-F-021)
+    │   └── deprecated_operators.json   # Maintained per Neo4j release
+    ├── cases/
+    │   ├── companies.yml               # Test cases for companies KG
+    │   └── {domain}.yml
+    ├── dataset/
+    │   ├── companies.yml               # Validated training records (YAML)
+    │   └── {domain}.yml
+    └── results/                        # Gitignored test run outputs
 
 .github/workflows/
 ├── update-cypher-skill.yml             # Monthly update + PR
@@ -410,8 +407,8 @@ docs-cheat-sheet/                       # git submodule
 - [ ] Each L3 reference file includes `> Source:` header with version + commit SHA and is ≤ 2,000 tokens
 - [ ] SKILL.md WebFetch section frames fetching as proactive and first-class, explicitly noting L3 truncation
 - [ ] Training dataset exporter writes YAML records for all gate-passing test cases with required fields
-- [ ] `scripts/to_jsonl.py` converts YAML dataset to valid JSONL with system/user/assistant triples
-- [ ] Running the full test harness on companies DB produces ≥ 1 training record in `tests/dataset/companies.yml`
+- [ ] `skill-generation-validation-tools/scripts/to_jsonl.py` converts YAML dataset to valid JSONL with system/user/assistant triples
+- [ ] Running the full test harness on companies DB produces ≥ 1 training record in `skill-generation-validation-tools/tests/dataset/companies.yml`
 - [ ] SKILL.md query decision tree includes READ / WRITE / SCHEMA / ADMIN categorization with explicit folder routing (`references/read/`, `references/write/`, `references/schema/`, `references/admin/`)
 - [ ] `references/README.md` exists documenting the folder structure, category definitions, and the CALL subquery vs CALL IN TRANSACTIONS split rationale
 
