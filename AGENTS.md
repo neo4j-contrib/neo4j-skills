@@ -108,6 +108,17 @@ The script generates **first drafts** for L3 reference files (not final output).
 - `--since VERSION` filters rendered output AND the summary count. Useful in GH Actions to report only what changed in the new submodule pin.
 - Empty sections correctly render `_No entries._` (not missing or crash).
 
+## Runner Notes (tests/harness/runner.py)
+
+- Claude headless invocation: `claude --skill <name> --print --output-format text` with prompt on stdin.
+- Cypher extraction: regex ```` ```(?:cypher|CYPHER)\s*\n(.*?)``` ```` with DOTALL — matches both casings.
+- Dry-run (`--dry-run`): validates YAML structure (required fields, duplicate IDs, valid difficulty) without executing queries or invoking Claude. Exits 0 on valid YAML.
+- Exit codes: 0 = all PASS, 1 = any FAIL, 2 = any WARN (no FAIL).
+- TestCaseResult fields: verdict, failed_gate, warned_gate, generated_cypher, metrics, gate_details, error (runner-level), duration_s.
+- pyyaml is a required dep (added to pyproject.toml) — needed in CI runner context, not just dev.
+- Neo4j driver lazy-imported at runtime — dry-run and YAML validation work without the neo4j package.
+- Test case YAML key: `cases:` (list); each entry needs `id`, `question`; optional `database`, `difficulty`, `tags`, `domain`, `min_results`, `max_db_hits`, `max_allocated_memory_bytes`, `max_runtime_ms`, `is_write_query`.
+
 ## Validator Notes (tests/harness/validator.py)
 
 - Gate 3 source checks (GQL-excluded clauses, deprecated syntax regexes) run BEFORE any DB execution. GQL-excluded clause FAIL exits early without touching the DB.

@@ -281,7 +281,7 @@ tasks:
       Cypher code block from the response, passes the query through all four
       validator gates, and records pass/warn/fail verdicts with reasons. Supports
       filtering by difficulty and domain.
-    status: pending
+    status: completed
     dependencies:
       - task-014
     acceptance_criteria:
@@ -290,7 +290,7 @@ tasks:
       - "Each test case records: verdict (PASS/WARN/FAIL), gate that failed, generated Cypher, metrics"
       - "Runner exits with code 0 (all pass), 1 (any FAIL), or 2 (any WARN, no FAIL)"
       - "Dry-run mode (--dry-run) validates YAML structure without executing queries"
-    completed_at: null
+    completed_at: "2026-03-20T18:00:00Z"
 
   - id: task-016
     title: "Build tests/harness/reporter.py result reporter"

@@ -487,3 +487,36 @@ Key Decisions:
   the line before, pragma stays first token).
 
 Next Task: task-015 (Build tests/harness/runner.py test executor)
+
+================================================================================
+TASK-015: Build tests/harness/runner.py test executor
+Date: 2026-03-20T18:00:00Z
+================================================================================
+
+Summary:
+Built the main test harness runner that loads test case YAML files, submits
+each question to Claude Code headless (via `claude --skill` CLI), extracts the
+first ```cypher block from the response, passes it through all four validator
+gates (from validator.py), and records PASS/WARN/FAIL verdicts. Added pyyaml
+as a project dependency in pyproject.toml.
+
+Files Changed:
+- tests/harness/runner.py (created)
+- pyproject.toml (added pyyaml>=6.0 dependency)
+- uv.lock (updated by uv sync)
+- .plans/tasks-agent-cypher-authoring-skill.yml (task-015 status → completed)
+
+Key Decisions:
+- Claude invocation uses `claude --skill <name> --print --output-format text`
+  with the question piped via stdin; captures stdout as the response.
+- Cypher extraction regex matches both ```cypher and ```CYPHER fence markers.
+- Dry-run mode validates YAML structure (required fields, duplicate IDs, valid
+  difficulty values) without touching Claude or Neo4j — exits 0 on success.
+- TestCaseResult captures: verdict, failed_gate, warned_gate, generated_cypher,
+  metrics dict, gate_details list, optional error, and duration_s.
+- RunReport.exit_code property: 0=all PASS, 1=any FAIL, 2=any WARN no FAIL.
+- Neo4j driver is lazy — imported at runtime so dry-run works without neo4j pkg.
+- pyyaml added to pyproject.toml (not just a dev dep) since runner.py is the
+  core harness used in CI.
+
+Next Task: task-016 (Build tests/harness/reporter.py result reporter)
