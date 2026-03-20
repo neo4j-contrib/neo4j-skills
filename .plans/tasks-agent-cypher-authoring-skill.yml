@@ -380,7 +380,7 @@ tasks:
       proactively — not as a last resort. Must note that L3 reference files are
       token-budget-truncated (≤2,000 tokens) and WebFetch provides the full content.
       Add this framing before the URL escalation table.
-    status: pending
+    status: completed
     dependencies:
       - task-010
     acceptance_criteria:
@@ -388,7 +388,7 @@ tasks:
       - "Section explicitly mentions L3 token-budget truncation as the reason to prefer WebFetch for complete content"
       - "Framing uses positive language (proactive, first-class) not negative (last resort, fallback)"
       - "SKILL.md body remains ≤ 300 lines after the addition"
-    completed_at: null
+    completed_at: "2026-03-20T22:30:00Z"
 
   - id: task-021
     title: "Build skill-generation-validation-tools/tests/harness/exporter.py training dataset YAML exporter"

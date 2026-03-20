@@ -680,3 +680,32 @@ Key Decisions:
 Next Task: task-023 (references/README.md — depends on task-010, now available)
 or task-020 (SKILL.md WebFetch framing — may already be done per AGENTS.md)
 
+================================================================================
+TASK-020: Update SKILL.md WebFetch section to frame fetching as proactive
+Date: 2026-03-20T22:30:00Z
+================================================================================
+
+Summary:
+Verified that all task-020 acceptance criteria were already satisfied by task-010's
+SKILL.md implementation. No code changes required. The WebFetch Escalation section
+(lines 288-299 of SKILL.md) already contains:
+- Explicit opening statement: "WebFetch is always available for online agents."
+- L3 token-budget truncation explanation: "L3 reference files are token-budget-truncated
+  (≤ 2,000 tokens each)"
+- Positive framing: "proactive, first-class knowledge source"
+SKILL.md is 299 lines (within the ≤ 300 line budget).
+
+AGENTS.md already documented this: "task-020 (WebFetch proactive framing) was folded
+into task-010's SKILL.md — the proactive framing is already present."
+
+Files Changed:
+- .plans/tasks-agent-cypher-authoring-skill.yml (task-020 status → completed)
+- .plans/progress-agent-cypher-authoring-skill.txt (this entry)
+
+Key Decisions:
+- No SKILL.md modifications needed — content was already correct from task-010
+- Marked as completed with verification rather than modification
+
+Next Task: task-023 (references/README.md — depends on task-010, now done)
+or task-018 (Create initial test cases for companies database)
+
