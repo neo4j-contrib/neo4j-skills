@@ -369,7 +369,7 @@ done < /tmp/neo4j-sessions.jsonl
 
 ## Cross-skill integration
 
-* **Neo4j MCP server**: If connected to the `news-graph-neo4j-database` MCP
+* **Neo4j MCP server**: If connected to the Neo4j MCP
   server (or similar), you can run Cypher queries directly via the MCP tools
   instead of cypher-shell. Use `read_neo4j_cypher` for search queries and
   `write_neo4j_cypher` for the load step.
