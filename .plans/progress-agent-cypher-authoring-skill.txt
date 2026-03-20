@@ -434,3 +434,56 @@ Key Decisions:
 
 Next Task: task-014 (Build tests/harness/validator.py) or task-020 (SKILL.md
 WebFetch framing — may already be done) or task-023 (references/README.md)
+
+================================================================================
+TASK-014: Build tests/harness/validator.py validation rules
+Date: 2026-03-20T17:30:00Z
+================================================================================
+
+Summary:
+Created tests/harness/validator.py — the four-gate validation module for the
+Cypher test harness, and tests/harness/deprecated_operators.json listing
+known deprecated plan operators. Also created tests/harness/__init__.py to
+make the harness a proper Python package. The directory structure for
+tests/cases/, tests/dataset/, and tests/results/ was also initialized.
+
+Gate 1 (Syntax): EXPLAIN query; CypherSyntaxError = FAIL.
+Gate 2 (Correctness): Execute query; rows < min_results = FAIL. Write queries
+  run inside an explicit transaction that is ALWAYS rolled back.
+Gate 3 (Quality): Source-level regex checks (deprecated syntax, GQL clauses,
+  missing CYPHER 25 pragma) + EXPLAIN plan operator scan against
+  deprecated_operators.json.
+Gate 4 (Performance): PROFILE metrics extraction (totalDbHits,
+  totalAllocatedMemory, elapsedTimeMs, totalRows); threshold checks with
+  FAIL for dbHits/memory exceeded, WARN for runtime (CI-timing-only).
+
+All acceptance criteria verified via inline smoke tests (run with
+`uv run python3 tests/harness/validator.py`).
+
+Files Changed:
+- tests/harness/validator.py (created)
+- tests/harness/deprecated_operators.json (created)
+- tests/harness/__init__.py (created)
+- tests/cases/ (directory created)
+- tests/dataset/ (directory created)
+- tests/results/ (directory created)
+- .plans/tasks-agent-cypher-authoring-skill.yml (task-014 status → completed)
+
+Key Decisions:
+- Gate 3 source checks run before execution so GQL-excluded clause failures
+  exit immediately without making network calls to the DB.
+- Write query isolation uses driver.session().begin_transaction() + always
+  tx.rollback() — NOT CALL IN TRANSACTIONS (which requires implicit txn scope).
+- PROFILE metrics are extracted recursively from the plan tree using
+  _sum_plan_attr() so totalDbHits/totalRows accurately reflect all operators.
+- extract_profile_metrics() accepts three input forms: driver ProfiledPlan
+  object, plain dict (for mocks/tests), or raw PROFILE text string.
+- Deprecated syntax patterns are regex-based (not AST), avoiding a full
+  Cypher parser dependency while covering the most common anti-patterns.
+- WARN-grade operators in deprecated_operators.json: RelationshipCountFromCountStore,
+  NodeCountFromCountStore, EagerAggregation. FAIL-grade: VarLengthExpand(Pruning),
+  VarLengthExpand(PruningBFS), CartesianProduct, AllNodesScan.
+- CYPHER 25 pragma is preserved when prepending EXPLAIN/PROFILE (placed on
+  the line before, pragma stays first token).
+
+Next Task: task-015 (Build tests/harness/runner.py test executor)

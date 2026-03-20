@@ -1,0 +1,47 @@
+{
+  "version": "neo4j-2026.01",
+  "description": "Deprecated plan operators detected in EXPLAIN output for Gate 3 quality validation. Updated per Neo4j release.",
+  "operators": [
+    {
+      "name": "VarLengthExpand(Pruning)",
+      "reason": "Produced by deprecated [:REL*] variable-length path syntax; replace with QPE {:m,n} form",
+      "severity": "FAIL"
+    },
+    {
+      "name": "VarLengthExpand(PruningBFS)",
+      "reason": "Produced by deprecated shortestPath() / allShortestPaths() functions; replace with SHORTEST / ALL SHORTEST",
+      "severity": "FAIL"
+    },
+    {
+      "name": "RelationshipCountFromCountStore",
+      "reason": "Triggered by count(()-[:REL]-()) which is deprecated; use COUNT { MATCH ()-[:REL]-() } subquery form",
+      "severity": "WARN"
+    },
+    {
+      "name": "NodeCountFromCountStore",
+      "reason": "Triggered by count(n) pattern which is deprecated in some contexts; use COUNT { MATCH (n) } if needed",
+      "severity": "WARN"
+    },
+    {
+      "name": "EagerAggregation",
+      "reason": "May indicate unintended Cartesian product before aggregation — inspect query for missing join predicates",
+      "severity": "WARN"
+    },
+    {
+      "name": "CartesianProduct",
+      "reason": "Unconstrained cross-join of two or more node sets; add WHERE predicate to relate them or use CALL subquery",
+      "severity": "FAIL"
+    },
+    {
+      "name": "AllNodesScan",
+      "reason": "Full graph scan — no label or index predicate on this node; add label and ensure index exists",
+      "severity": "FAIL"
+    }
+  ],
+  "notes": [
+    "Operator names are matched case-insensitively as substrings of the EXPLAIN plan text.",
+    "FAIL-grade operators cause a Gate 3 FAIL; WARN-grade operators cause a Gate 3 WARN.",
+    "AllNodesScan and CartesianProduct are not deprecated per se but indicate fundamental query authoring errors.",
+    "Source: Neo4j query plan documentation and observed plan operator names in Neo4j 2025.x / 2026.x."
+  ]
+}

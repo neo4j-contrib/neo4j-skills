@@ -262,7 +262,7 @@ tasks:
       validation logic (syntax via EXPLAIN, correctness via row count, quality via
       plan + regex, performance via PROFILE). Includes the deprecated_operators.json
       file with known deprecated plan operators for the current Neo4j version.
-    status: pending
+    status: completed
     dependencies:
       - task-002
     acceptance_criteria:
@@ -271,7 +271,7 @@ tasks:
       - "Deprecated syntax regex catches [:REL*], shortestPath(), and allShortestPaths() patterns"
       - "PROFILE metrics extracted: totalDbHits, totalAllocatedMemory, elapsedTimeMs, totalRows"
       - "Write query tests execute inside an explicit transaction that is always rolled back"
-    completed_at: null
+    completed_at: "2026-03-20T17:30:00Z"
 
   - id: task-015
     title: "Build tests/harness/runner.py test executor"

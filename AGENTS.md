@@ -108,6 +108,16 @@ The script generates **first drafts** for L3 reference files (not final output).
 - `--since VERSION` filters rendered output AND the summary count. Useful in GH Actions to report only what changed in the new submodule pin.
 - Empty sections correctly render `_No entries._` (not missing or crash).
 
+## Validator Notes (tests/harness/validator.py)
+
+- Gate 3 source checks (GQL-excluded clauses, deprecated syntax regexes) run BEFORE any DB execution. GQL-excluded clause FAIL exits early without touching the DB.
+- Write query test isolation: `driver.session().begin_transaction()` → always `tx.rollback()`. NOT `CALL IN TRANSACTIONS` (that requires implicit txn scope, not allowed inside explicit BEGIN).
+- PROFILE metrics are extracted recursively from the plan tree (`_sum_plan_attr()`). The `GlobalMemory` value for `totalAllocatedMemory` lives in `plan.arguments['GlobalMemory']` on the root plan node only.
+- `extract_profile_metrics()` accepts: neo4j driver ProfiledPlan object, plain dict (for mocks), or raw PROFILE text string (heuristic parse). Supports all three for flexibility in tests.
+- CYPHER 25 pragma is preserved when prepending EXPLAIN/PROFILE: pragma stays as the first token, EXPLAIN/PROFILE is inserted on the next line.
+- `_prepend_explain()` / `_prepend_profile()` handle both `CYPHER 25\nQUERY` and plain `QUERY` forms.
+- Smoke tests run with: `uv run python3 tests/harness/validator.py` (no DB connection needed).
+
 ## SKILL.md Authoring Notes
 
 - SKILL.md line budget is 300 lines (not 300 non-blank lines). Inline `CYPHER 25` on the same line as each query to save ~10 lines in the Schema-First Protocol section.
