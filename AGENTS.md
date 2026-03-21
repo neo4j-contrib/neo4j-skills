@@ -42,8 +42,9 @@
 - `id()` is deprecated — prefer `elementId()` which returns a `STRING` stable only within a single transaction.
 - `vector()` constructor is new in Neo4j 2025.10; `vector.similarity.cosine()` and `vector.similarity.euclidean()` existed before.
 - Aggregating functions: `collect(null)` → `[]` (empty list), `count(null)` → `0`, `sum(null)` → `0`; all others → `null` when all inputs are null.
-- `SEARCH` clause (Neo4j 2026.01+, Preview) is **vector-only** — fulltext indexes still use `db.index.fulltext.queryNodes()` procedure. The SEARCH clause does not cover fulltext indexes.
-- demo.neo4jlabs.com/companies DB constraints: (1) read-only — write queries (MERGE/CREATE/SET) fail with `Security.Forbidden`; (2) QPE `+` syntax not supported (use `{1,}` instead); (3) SEARCH clause not available (Preview, not enabled); (4) zero-vector invalid for similarity search (use non-zero values like 0.1). Relationship types available: HAS_SUBSIDIARY, HAS_SUPPLIER, HAS_BOARD_MEMBER, HAS_PARENT, HAS_CHILD, HAS_CATEGORY, HAS_CEO, HAS_INVESTOR, HAS_COMPETITOR, IN_CITY, IN_COUNTRY, MENTIONS, HAS_CHUNK. No `IN_INDUSTRY` rel type. Organizations with most subsidiaries: Blackstone (1037), Comcast (908), Viacom (531).
+- `SEARCH` clause: **GA in Neo4j 2026.02.1** (was Preview in 2026.01). Vector-only — fulltext indexes still use `db.index.fulltext.queryNodes()` procedure. SEARCH clause does not cover fulltext indexes. Use SEARCH only against `bolt://localhost` (2026.02.1); demo.neo4jlabs.com is an older version without it.
+- demo.neo4jlabs.com/companies DB constraints: (1) read-only — write queries (MERGE/CREATE/SET) fail with `Security.Forbidden`; (2) QPE `+` syntax not supported (use `{1,}` instead); (3) SEARCH clause not available (older version); (4) zero-vector invalid for similarity search (use non-zero values like 0.1). Relationship types available: HAS_SUBSIDIARY, HAS_SUPPLIER, HAS_BOARD_MEMBER, HAS_PARENT, HAS_CHILD, HAS_CATEGORY, HAS_CEO, HAS_INVESTOR, HAS_COMPETITOR, IN_CITY, IN_COUNTRY, MENTIONS, HAS_CHUNK. No `IN_INDUSTRY` rel type. Organizations with most subsidiaries: Blackstone (1037), Comcast (908), Viacom (531).
+- bolt://localhost (neo4j/password, database=neo4j): ucfraud dataset, writeable, Neo4j 2026.02.1. Supports: write queries, CALL IN TRANSACTIONS, SEARCH clause (GA). Fulltext indexes: `customerNames` (Customer.name), `transactionTypes` (Transaction.type, Transaction.status).
 - demo.neo4jlabs.com/recommendations DB schema: Nodes: `Movie` (movieId, title, plot, released, imdbRating, url, poster, tmdbId, budget, revenue, runtime, imdbId, imdbVotes, languages, countries, `plotEmbedding` <Vector 1536>), `Person` (name, born, bio, url, poster, tmdbId, imdbId), `User` (userId, name), `Genre` (name). Relationships: `(User)-[:RATED {rating, timestamp}]->(Movie)`, `(Person)-[:ACTED_IN {role}]->(Movie)`, `(Person)-[:DIRECTED]->(Movie)`, `(Movie)-[:IN_GENRE]->(Genre)`. Indexes: `moviePlots` (vector on Movie.plotEmbedding, 1536 dims, cosine), `movieTitles` (fulltext on Movie.title). No WROTE/REVIEWED rel types — only RATED/ACTED_IN/DIRECTED/IN_GENRE. userId values are strings in queries. Tom Hanks and Kevin Bacon are both in the DB (Kevin Bacon connection problem is valid). 'The Matrix' exists as a movie node. Vector index name is `moviePlots` (NOT `news`). Fulltext index name is `movieTitles` (NOT `entity`).
 - Test case authoring rule: never use `$param` parameters in test questions for the harness — the harness does not inject runtime parameters. Use literal values or ask the model to use literals.
 - Vector index `OPTIONS` map is **mandatory** — `vector.dimensions` and `vector.similarity_function` are required at creation time.
@@ -187,6 +188,49 @@ The script generates **first drafts** for L3 reference files (not final output).
 - Dedup: loads existing record IDs into a set before appending. Safe for sequential re-runs; does not lock the file.
 - `tests/dataset/{domain}.yml` uses a top-level `records:` key (list of record dicts).
 - `passed_gates` field is a sorted list of gate numbers (e.g. `[1, 2, 3, 4]`).
+
+## Test Case Question Authoring
+
+Questions in domain YAML files must use **business language only** — as if asked by a fraud analyst, product manager, or data steward with no graph database knowledge.
+
+### Question Validation Checklist
+
+Before writing or accepting a `question` field, verify:
+
+```
+FAIL if the question contains any Cypher keyword: MATCH, RETURN, WITH, WHERE,
+  OPTIONAL, CALL, COLLECT, COUNT, EXISTS, UNION, SET, CYPHER, LIMIT, ORDER
+FAIL if it names a specific index ('moviePlots', 'entity', 'news', 'customerNames')
+FAIL if it references a graph procedure (db.index.*, db.index.vector.*)
+FAIL if it mentions node labels (Transaction, Customer, Movie, Organization)
+FAIL if it mentions relationship type names (ACTED_IN, HAS_SUBSIDIARY, SHARED_IDENTIFIERS)
+FAIL if it says "hops", "path expression", "quantified path", "traversal"
+FAIL if it mentions algorithm names (betweenness, Louvain — but "network influence score" OK)
+FAIL if it says "batch", "transactions of N rows", "CALL IN TRANSACTIONS"
+FAIL if it embeds a coding constraint ("use a literal string match")
+FAIL if it references internal field names (fraudFlag, louvainCommunity, pagerank as field)
+PASS if it could be asked verbatim by a business user with no DB knowledge
+PASS if thresholds are expressed in plain English ("at least 5", "more than 3")
+PASS if the output format is implied naturally ("show", "list", "how many", "rank")
+```
+
+### Domain Glossary
+
+**Fraud (`ucfraud`):** Transaction node → transaction; Account node → account; SHARED_IDENTIFIERS → shared personal details; `fraudFlag='True'` → flagged for fraud; `betweenness` → centrality / connections passing through; `louvainCommunity` → fraud network cluster; `pagerank` → network influence score; QPE `{2,4}` → two to four intermediate links; CALL IN TRANSACTIONS → process in small batches.
+
+**Recommendations (`recommendations`):** Movie node → movie/film; Person node → actor/director; ACTED_IN → appeared in; RATED → rated/reviewed; plotEmbedding → storyline; vector similarity → similar storylines; collaborative filtering → users with similar taste; QPE through co-stars → connected through shared cast members.
+
+**Companies (`companies`):** Organization node → company/firm; Article node → news article; Chunk node → article segment; HAS_SUBSIDIARY → owns/is parent of; MENTIONS → mentions/covers; `sentiment` → tone/coverage sentiment; fulltext index `entity` → company name search; QPE `{1,}` → at any depth in the ownership chain.
+
+### Difficulty ↔ Question Complexity
+
+| Difficulty | What the user asks | Cypher implication |
+|---|---|---|
+| basic | Simple lookups, counts, filters on one entity | Single MATCH, simple WHERE/RETURN |
+| intermediate | Cross-entity, comparisons, aggregations | 2-hop traversal, WITH + aggregation |
+| advanced | Pattern-based, "what if not", ranking within groups | OPTIONAL MATCH, COUNT/COLLECT subquery, fulltext |
+| complex | Multi-faceted, 3+ dimensions | CALL subquery, UNION, multi-step WITH |
+| expert | Deep network, similarity, path-finding | QPE, SHORTEST, ALL SHORTEST, vector index, CALL IN TRANSACTIONS |
 
 ## SKILL.md Authoring Notes
 

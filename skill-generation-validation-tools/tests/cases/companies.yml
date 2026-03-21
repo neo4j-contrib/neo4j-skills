@@ -25,7 +25,7 @@ cases:
   # ─── BASIC (10 cases) ────────────────────────────────────────────────────────
 
   - id: companies-basic-001
-    question: "Find the names of all top-level organizations (companies that are not a subsidiary of any other company) in the database."
+    question: "Which companies in our database are independent — not owned by or part of any other company?"
     database: companies
     difficulty: basic
     tags: [match, label, filter, not-exists]
@@ -37,7 +37,7 @@ cases:
     is_write_query: false
 
   - id: companies-basic-002
-    question: "Count the total number of Organization nodes in the database."
+    question: "How many companies are tracked in our database?"
     database: companies
     difficulty: basic
     tags: [match, aggregation, count]
@@ -49,7 +49,7 @@ cases:
     is_write_query: false
 
   - id: companies-basic-003
-    question: "Return the names of the first 10 organizations ordered alphabetically."
+    question: "List the first 10 companies in alphabetical order."
     database: companies
     difficulty: basic
     tags: [match, order-by, limit]
@@ -61,7 +61,7 @@ cases:
     is_write_query: false
 
   - id: companies-basic-004
-    question: "Find the top 10 articles by sentiment score for the organization 'Apple'. Use a literal string match (not a parameter) in the WHERE clause. Return the article titles and their sentiment scores."
+    question: "What are the most positively covered news articles mentioning Apple? Show the top 10 by sentiment score with their titles."
     database: companies
     difficulty: basic
     tags: [match, relationship, mentions]
@@ -73,7 +73,7 @@ cases:
     is_write_query: false
 
   - id: companies-basic-005
-    question: "Count how many articles mention each organization. Return the organization name and article count, ordered by count descending, limited to the top 10."
+    question: "Which companies get the most press coverage? Rank the top 10 by number of news articles mentioning them."
     database: companies
     difficulty: basic
     tags: [match, aggregation, count, order-by, limit]
@@ -85,7 +85,7 @@ cases:
     is_write_query: false
 
   - id: companies-basic-006
-    question: "Find all direct subsidiary organizations of 'Blackstone'. Use a literal string match (not a parameter). Return the subsidiary names, limited to 10."
+    question: "Which companies does Blackstone directly own? List up to 10 of its subsidiaries."
     database: companies
     difficulty: basic
     tags: [match, relationship, subsidiary]
@@ -97,7 +97,7 @@ cases:
     is_write_query: false
 
   - id: companies-basic-007
-    question: "Find the average sentiment score across all articles in the database."
+    question: "What is the average news sentiment score across all articles in our database?"
     database: companies
     difficulty: basic
     tags: [match, aggregation, avg, sentiment]
@@ -109,7 +109,7 @@ cases:
     is_write_query: false
 
   - id: companies-basic-008
-    question: "Return the names and descriptions of the 5 organizations that have the most article mentions."
+    question: "Which 5 companies are mentioned most frequently in the news? Show their names and a brief description."
     database: companies
     difficulty: basic
     tags: [match, aggregation, relationship, limit, order-by]
@@ -121,7 +121,7 @@ cases:
     is_write_query: false
 
   - id: companies-basic-009
-    question: "Find all articles with a positive sentiment (sentiment > 0). Return the article title and sentiment, ordered by sentiment descending, limited to 10."
+    question: "Show me the most positive news articles in our database — articles with a positive sentiment score. Return the top 10 by sentiment."
     database: companies
     difficulty: basic
     tags: [match, filter, sentiment, order-by, limit]
@@ -133,7 +133,7 @@ cases:
     is_write_query: false
 
   - id: companies-basic-010
-    question: "Count the number of articles for each sentiment bucket: positive (> 0.3), neutral (-0.3 to 0.3), and negative (< -0.3). Return bucket name and count."
+    question: "How many news articles in our database are positive, neutral, or negative in tone? Give me a breakdown by sentiment category."
     database: companies
     difficulty: basic
     tags: [match, aggregation, case-when, sentiment]
@@ -147,7 +147,7 @@ cases:
   # ─── INTERMEDIATE (10 cases) ─────────────────────────────────────────────────
 
   - id: companies-intermediate-001
-    question: "Find all organizations that are mentioned in articles with highly negative sentiment (sentiment < -0.5). Return each organization name and the count of such articles mentioning it, ordered by count descending."
+    question: "Which companies are attracting the most negative press coverage? Show those mentioned in strongly negative articles, along with how many such articles each has."
     database: companies
     difficulty: intermediate
     tags: [match, filter, aggregation, relationship, sentiment]
@@ -159,7 +159,7 @@ cases:
     is_write_query: false
 
   - id: companies-intermediate-002
-    question: "Find pairs of organizations that are both mentioned in the same article. Return the two organization names and the number of articles they co-appear in, ordered by co-appearance count descending, limited to 10 pairs."
+    question: "Which pairs of companies are most frequently mentioned together in the same news articles? Show the top 10 most co-covered pairs."
     database: companies
     difficulty: intermediate
     tags: [match, aggregation, co-occurrence, relationship, limit]
@@ -171,7 +171,7 @@ cases:
     is_write_query: false
 
   - id: companies-intermediate-003
-    question: "For each top-level organization (not a subsidiary), return its name and the average sentiment of all articles that mention it. Only include organizations with at least 3 articles. Order by average sentiment ascending."
+    question: "Among companies that are not subsidiaries of any other firm, which have the most negative media coverage on average? Only include companies with at least 3 articles."
     database: companies
     difficulty: intermediate
     tags: [match, aggregation, filter, having, not-exists, sentiment]
@@ -183,7 +183,7 @@ cases:
     is_write_query: false
 
   - id: companies-intermediate-004
-    question: "Search for organizations by name using the fulltext index. Find all organizations whose name contains 'tech' (case-insensitive). Return name and description."
+    question: "Search for companies with 'tech' in their name. What do they do?"
     database: companies
     difficulty: intermediate
     tags: [fulltext, index, search, procedure]
@@ -195,7 +195,7 @@ cases:
     is_write_query: false
 
   - id: companies-intermediate-005
-    question: "Find all direct and indirect subsidiaries of 'Blackstone' (up to 2 hops through HAS_SUBSIDIARY relationships). Use a literal string match. Return distinct subsidiary names, limited to 20."
+    question: "What companies does Blackstone own, including those owned through intermediary companies? Show up to two levels of ownership, returning up to 20 distinct names."
     database: companies
     difficulty: intermediate
     tags: [match, variable-length, relationship, traversal]
@@ -207,7 +207,7 @@ cases:
     is_write_query: false
 
   - id: companies-intermediate-006
-    question: "Use a CALL subquery to find, for each of the top 5 most-mentioned organizations, the title and sentiment of their most recent article (highest sentiment). Return organization name, article title, and sentiment."
+    question: "For the 5 most-covered companies in the news, what was the most positively-toned article written about each of them?"
     database: companies
     difficulty: intermediate
     tags: [call-subquery, aggregation, relationship, limit]
@@ -219,7 +219,7 @@ cases:
     is_write_query: false
 
   - id: companies-intermediate-007
-    question: "Count the total number of Chunk nodes linked to articles that mention organizations in the database. Return the count."
+    question: "How many news article segments are linked to articles that mention companies in our database?"
     database: companies
     difficulty: intermediate
     tags: [match, aggregation, multi-hop, relationship]
@@ -231,7 +231,7 @@ cases:
     is_write_query: false
 
   - id: companies-intermediate-008
-    question: "Find organizations that have at least one subsidiary AND are mentioned in at least one article. Return their name and the count of subsidiaries, ordered by subsidiary count descending."
+    question: "Which companies both have subsidiary businesses and appear in the news? Show their name and number of subsidiaries, ranked by size of their corporate family."
     database: companies
     difficulty: intermediate
     tags: [match, aggregation, filter, relationship, having]
@@ -243,7 +243,7 @@ cases:
     is_write_query: false
 
   - id: companies-intermediate-009
-    question: "Find all organizations that have both a HAS_SUPPLIER relationship to another organization AND are mentioned in at least one article. Return the organization name, the name of the supplier, and the count of articles mentioning the organization. Order by article count descending, limit to 10."
+    question: "Which companies have a supplier relationship with another company AND also appear in news coverage? Show the company, its supplier, and how many articles mention it. Return the top 10 by coverage."
     database: companies
     difficulty: intermediate
     tags: [match, relationship, aggregation, multi-pattern]
@@ -255,7 +255,7 @@ cases:
     is_write_query: false
 
   - id: companies-intermediate-010
-    question: "Find the organization with the most subsidiaries (direct only, not transitive). Return the organization name and the count of its direct subsidiaries."
+    question: "Which company has the most direct subsidiaries? Return its name and the count."
     database: companies
     difficulty: intermediate
     tags: [match, aggregation, relationship, order-by, limit]
@@ -269,7 +269,7 @@ cases:
   # ─── ADVANCED (10 cases) ──────────────────────────────────────────────────────
 
   - id: companies-advanced-001
-    question: "Using a quantified path expression with the {1,2} quantifier, find all organizations reachable from 'Blackstone' through 1 to 2 HAS_SUBSIDIARY hops. Use a literal string match. Return distinct organization names, limited to 20."
+    question: "What companies are within Blackstone's ownership structure — either directly owned or owned through one intermediary company? Return up to 20 distinct names."
     database: companies
     difficulty: advanced
     tags: [qpe, quantified-path, relationship, traversal]
@@ -281,7 +281,7 @@ cases:
     is_write_query: false
 
   - id: companies-advanced-002
-    question: "Using a quantified path expression with the {1,} quantifier (one or more hops), find any organization reachable from 'Blackstone' through one or more HAS_SUBSIDIARY relationships (any depth). Use a literal string match. Return a count of distinct reachable organizations."
+    question: "How large is Blackstone's full corporate family — counting every company it owns at any depth of the ownership chain?"
     database: companies
     difficulty: advanced
     tags: [qpe, quantified-path, unbounded-quantifier, relationship]
@@ -293,7 +293,7 @@ cases:
     is_write_query: false
 
   - id: companies-advanced-003
-    question: "Find the top 5 organizations with the most total connections (counting all relationship types combined: HAS_SUBSIDIARY, MENTIONS, HAS_CATEGORY). Use pattern: MATCH (o:Organization)-[r]-() to count all relationship instances. Return organization name and total degree count, ordered by degree descending."
+    question: "Which 5 companies have the most total connections in our database — counting ownership relationships, news mentions, and industry category links combined?"
     database: companies
     difficulty: advanced
     tags: [match, aggregation, degree, relationship]
@@ -305,7 +305,7 @@ cases:
     is_write_query: false
 
   - id: companies-advanced-004
-    question: "Use the db.index.vector.queryNodes procedure to perform a vector similarity search on the 'news' vector index. Find the 5 Chunk nodes most similar to a random query vector (use a list of 1536 identical values of 0.1 as the query vector, passed as a literal list in the query). Return the chunk text and the similarity score."
+    question: "Find the 5 news article segments most semantically relevant to a general business query. Return the segment text and how closely it matches."
     database: companies
     difficulty: advanced
     tags: [vector, index, similarity, procedure]
@@ -317,7 +317,7 @@ cases:
     is_write_query: false
 
   - id: companies-advanced-005
-    question: "Use the db.index.fulltext.queryNodes procedure to search the 'entity' fulltext index for organizations whose name matches 'Amazon'. Then for each matching organization, use a CALL subquery to collect the titles of all articles mentioning it. Return organization name and list of article titles."
+    question: "Search for companies named 'Amazon' and show all the news articles that mention each of them."
     database: companies
     difficulty: advanced
     tags: [fulltext, index, search, call-subquery, procedure]
@@ -329,7 +329,7 @@ cases:
     is_write_query: false
 
   - id: companies-advanced-006
-    question: "Use a CALL subquery to compute per-organization metrics for the top 20 most-mentioned organizations: inside the CALL, compute the count of direct subsidiaries. Outside, also compute the average article sentiment. Return organizations with their subsidiary count and avg sentiment, ordered by avg sentiment ascending."
+    question: "For the 20 most-covered companies in our news database, show how many subsidiaries each owns and what the average tone of their press coverage is. Rank by most negative coverage first."
     database: companies
     difficulty: advanced
     tags: [call-subquery, aggregation, relationship, sentiment]
@@ -341,7 +341,7 @@ cases:
     is_write_query: false
 
   - id: companies-advanced-007
-    question: "Find organizations that appear together in articles with both positive sentiment (>0.3) AND negative sentiment (<-0.3) — i.e., the same two organizations are co-mentioned in at least one positive article and at least one negative article. Return the organization pair and counts for each sentiment type. Limit to 10 pairs."
+    question: "Which company pairs appear in both positive and negative news stories? I'm looking for companies that generate mixed sentiment coverage together. Show the top 10 pairs."
     database: companies
     difficulty: advanced
     tags: [match, aggregation, co-occurrence, filter, sentiment, count-subquery]
@@ -353,7 +353,7 @@ cases:
     is_write_query: false
 
   - id: companies-advanced-008
-    question: "Use COUNT subquery expressions to find organizations where the number of articles mentioning them is greater than the number of their direct subsidiaries. Return the organization name, article count, and subsidiary count. Limit to 10 results."
+    question: "Which companies are talked about in the news more often than they have subsidiaries? Show up to 10 such companies with their article count and subsidiary count."
     database: companies
     difficulty: advanced
     tags: [count-subquery, aggregation, relationship, filter]
@@ -365,7 +365,7 @@ cases:
     is_write_query: false
 
   - id: companies-advanced-009
-    question: "Find organizations linked to the same HAS_CATEGORY target node AND both mentioned in the same article. Traverse: (o1)-[:HAS_CATEGORY]->(cat)<-[:HAS_CATEGORY]-(o2) and (a)-[:MENTIONS]->(o1), (a)-[:MENTIONS]->(o2). Return category name, organization pair names, and co-mention count. Limit to 10."
+    question: "Which pairs of companies in the same industry category are also covered together in the same news articles? Show the category, the company pair, and how often they appear together."
     database: companies
     difficulty: advanced
     tags: [match, multi-pattern, relationship, aggregation, category]
@@ -377,7 +377,7 @@ cases:
     is_write_query: false
 
   - id: companies-advanced-010
-    question: "Using COLLECT subquery expressions, for each organization return: its name, a collected list of its subsidiary names (via HAS_SUBSIDIARY), and a collected list of distinct category names (via HAS_CATEGORY). Filter to organizations that have at least 1 subsidiary. Return ordered by organization name, limit to 20."
+    question: "For companies that have at least one subsidiary, list each company's name alongside all the subsidiaries it directly owns and the industry categories it belongs to. Return up to 20 companies, ordered alphabetically."
     database: companies
     difficulty: advanced
     tags: [collect-subquery, aggregation, relationship, list]
@@ -391,7 +391,7 @@ cases:
   # ─── COMPLEX (5 cases) ────────────────────────────────────────────────────────
 
   - id: companies-complex-001
-    question: "Use CALL IN TRANSACTIONS for read-only batch processing: MATCH the first 20 Organization nodes, then inside CALL { ... } IN TRANSACTIONS OF 5 ROWS, perform a MATCH to count how many articles mention each organization. Return organization name and article count. This is a read-only query using CALL IN TRANSACTIONS for batching."
+    question: "For 20 companies in our database, how many news articles mention each of them? Process the results in small batches."
     database: companies
     difficulty: complex
     tags: [call-in-transactions, batch, read]
@@ -403,7 +403,7 @@ cases:
     is_write_query: false
 
   - id: companies-complex-002
-    question: "Build a multi-level aggregation query: MATCH (o:Organization)-[:HAS_CATEGORY]->(cat), then use CALL subqueries to compute per-organization metrics (article count via MENTIONS, subsidiary count via HAS_SUBSIDIARY), then aggregate at the category node level to return: cat.name as category, count of orgs, total articles, avg sentiment, total subsidiaries. Limit to 10 categories ordered by total articles descending."
+    question: "By industry category, give me a comprehensive picture: how many companies are in each category, how many news articles mention them in total, what is the average sentiment of that coverage, and how many subsidiaries exist across the group? Show the top 10 categories by total article count."
     database: companies
     difficulty: complex
     tags: [call-subquery, aggregation, multi-level, category, relationship]
@@ -415,7 +415,7 @@ cases:
     is_write_query: false
 
   - id: companies-complex-003
-    question: "Using the fulltext index 'entity' via db.index.fulltext.queryNodes, find organizations matching 'Microsoft'. For each matching organization, use a CALL subquery to: (1) collect all article titles mentioning it (via MENTIONS), and (2) count the number of subsidiaries (via HAS_SUBSIDIARY). Then traverse from the organization to its category (via HAS_CATEGORY) and return: organization name, category name, article count, subsidiary count, and top 3 article titles."
+    question: "Search for Microsoft in our company database. For each match, show its industry category, the top 3 news headlines about it, how many news articles mention it, and how many subsidiaries it has."
     database: companies
     difficulty: complex
     tags: [fulltext, index, call-subquery, traversal, relationship, collect, graphrag]
@@ -427,7 +427,7 @@ cases:
     is_write_query: false
 
   - id: companies-complex-004
-    question: "For each organization with at least 5 subsidiaries, use a CALL subquery with an OPTIONAL MATCH inside to find the best article (highest sentiment) mentioning that organization, and use a second CALL subquery with a quantified path expression {2,2} to find organizations exactly 2 HAS_SUBSIDIARY hops away. Return org name, best article title (null if none), and list of second-level subsidiary names. Limit to 10."
+    question: "For companies with at least 5 subsidiaries, show the most positively-covered news article about each (if any), and list the names of companies that sit two levels down in their ownership hierarchy. Return up to 10 companies."
     database: companies
     difficulty: complex
     tags: [call-subquery, optional-match, qpe, quantified-path, relationship]
@@ -439,7 +439,7 @@ cases:
     is_write_query: false
 
   - id: companies-complex-005
-    question: "Write a query that uses EXISTS subquery expressions to classify organizations into four groups: (1) has subsidiaries AND has articles, (2) has subsidiaries but NO articles, (3) no subsidiaries but HAS articles, (4) neither. Use CASE WHEN with EXISTS{} to assign the group. Return each group label and the count of organizations in it."
+    question: "Classify every company into one of four groups: those with both subsidiaries and press coverage, those with subsidiaries but no press coverage, those with press coverage but no subsidiaries, and those with neither. How many companies fall into each group?"
     database: companies
     difficulty: complex
     tags: [exists-subquery, case-when, aggregation, classification, relationship]

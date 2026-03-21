@@ -1003,3 +1003,34 @@ Files Changed:
 - .plans/tasks-agent-cypher-authoring-skill.yml (task-025 → completed)
 
 Next Task: task-026 (ucfraud domain test cases) or task-027 (expert tier full implementation)
+
+================================================================================
+TASK-026: Create ucfraud domain test cases + question rewrite integration
+Date: 2026-03-21T18:30:00Z
+================================================================================
+
+Summary:
+Created ucfraud.yml with 27 test cases (6 basic, 6 intermediate, 6 advanced,
+4 complex, 5 expert) against bolt://localhost (neo4j/password, database=neo4j).
+Then critically reviewed and integrated use-case-rewrite-and-eval.md by replacing
+all engineer-language questions across all 3 domain YAML files with business-
+language versions. Updated AGENTS.md with question authoring guidelines.
+
+Files Changed:
+- skill-generation-validation-tools/tests/cases/ucfraud.yml (created — 27 cases, then questions rewritten)
+- skill-generation-validation-tools/tests/results/ucfraud-baseline.json (created — 11/27 PASS baseline)
+- skill-generation-validation-tools/tests/cases/recommendations.yml (questions rewritten — 27 cases)
+- skill-generation-validation-tools/tests/cases/companies.yml (questions rewritten — 35 cases)
+- AGENTS.md (added question authoring guidelines, domain glossaries, SEARCH GA update, ucfraud DB info)
+
+Key Decisions:
+- ucfraud data lives in default `neo4j` database (not a `ucfraud` named database)
+- Created fulltext indexes customerNames/transactionTypes on local DB before authoring cases
+- Used db.index.fulltext.queryNodes() for complex/expert fulltext cases (SEARCH GA but behavior varies)
+- Baseline 11/27 PASS: basic 100%, intermediate 50%, advanced 33%, complex 0%, expert 0%
+  (Gate 2 failures: skill generates wrong rel types; Gate 1: QPE/SHORTEST/CALL IN TRANSACTIONS)
+- All question fields across companies.yml (35), recommendations.yml (27), ucfraud.yml (27)
+  rewritten to use business vocabulary only — no Cypher clauses, label names, relationship
+  types, index names, algorithm names, hop counts, or batch instructions
+
+Next Task: task-027 — Add expert tier to companies.yml + harness expert reporting

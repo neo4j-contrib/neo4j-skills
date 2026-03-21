@@ -518,7 +518,7 @@ tasks:
       TRANSACTIONS batch flagging. Expert cases must combine ring detection QPE with
       temporal filters or SHORTEST k enumeration. Save to tests/cases/ucfraud.yml
       and run the full harness to validate against the local DB.
-    status: in_progress
+    status: completed
     dependencies:
       - task-015
     acceptance_criteria:
@@ -531,7 +531,7 @@ tasks:
       - "Write-query cases (MERGE/SET/CALL IN TRANSACTIONS) are marked is_write_query: true"
       - "Harness run on ucfraud.yml completes against bolt://localhost without runner errors"
       - "Pass rate: ≥ 90% basic, ≥ 80% intermediate, ≥ 70% advanced"
-    completed_at: null
+    completed_at: "2026-03-21T18:30:00Z"
 
   - id: task-027
     title: "Add expert difficulty tier to all domains and extend companies.yml expert cases"

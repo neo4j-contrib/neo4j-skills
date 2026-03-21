@@ -1,0 +1,557 @@
+cases:
+  # ---------------------------------------------------------------------------
+  # BASIC (6 cases) — simple lookups, counts, property filters
+  # ---------------------------------------------------------------------------
+  - id: "ucf-basic-001"
+    question: "How many transactions are recorded in the system in total?"
+    difficulty: basic
+    tags: [match, count, labels]
+    database: neo4j
+    domain: ucfraud
+    min_results: 1
+    max_db_hits: 5000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 5000
+    cypher: |
+      CYPHER 25
+      MATCH (t:Transaction)
+      RETURN count(t) AS totalTransactions
+
+  - id: "ucf-basic-002"
+    question: "Which active accounts have the highest balances? Show the account number and current balance for the top 20."
+    difficulty: basic
+    tags: [match, filter, property]
+    database: neo4j
+    domain: ucfraud
+    min_results: 1
+    max_db_hits: 5000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 5000
+    cypher: |
+      CYPHER 25
+      MATCH (a:Account)
+      WHERE a.status = 'Active'
+      RETURN a.accountNumber AS accountNumber, a.balance AS balance
+      ORDER BY a.balance DESC
+      LIMIT 20
+
+  - id: "ucf-basic-003"
+    question: "What types of transactions does the system support?"
+    difficulty: basic
+    tags: [match, distinct, aggregation]
+    database: neo4j
+    domain: ucfraud
+    min_results: 1
+    max_db_hits: 5000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 5000
+    cypher: |
+      CYPHER 25
+      MATCH (t:Transaction)
+      RETURN DISTINCT t.type AS transactionType
+      ORDER BY transactionType
+
+  - id: "ucf-basic-004"
+    question: "Show me the customers who have been flagged for fraud. Who are the most at-risk based on their network influence score?"
+    difficulty: basic
+    tags: [match, filter, fraud]
+    database: neo4j
+    domain: ucfraud
+    min_results: 1
+    max_db_hits: 5000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 5000
+    cypher: |
+      CYPHER 25
+      MATCH (c:Customer)
+      WHERE c.fraudFlag = 'True'
+      RETURN c.name AS name, c.pagerank AS pagerank
+      ORDER BY c.pagerank DESC
+      LIMIT 20
+
+  - id: "ucf-basic-005"
+    question: "What are the largest transactions in the system? Show the top 10 by amount, including transaction type and status."
+    difficulty: basic
+    tags: [match, order, limit]
+    database: neo4j
+    domain: ucfraud
+    min_results: 1
+    max_db_hits: 5000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 5000
+    cypher: |
+      CYPHER 25
+      MATCH (t:Transaction)
+      RETURN t.amount AS amount, t.type AS type, t.status AS status
+      ORDER BY t.amount DESC
+      LIMIT 10
+
+  - id: "ucf-basic-006"
+    question: "How many accounts of each type (savings, checking, etc.) are in the system?"
+    difficulty: basic
+    tags: [match, aggregation, groupby]
+    database: neo4j
+    domain: ucfraud
+    min_results: 1
+    max_db_hits: 5000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 5000
+    cypher: |
+      CYPHER 25
+      MATCH (a:Account)
+      RETURN a.accountType AS accountType, count(a) AS accountCount
+      ORDER BY accountCount DESC
+
+  # ---------------------------------------------------------------------------
+  # INTERMEDIATE (6 cases) — multi-hop traversal, aggregation, temporal
+  # ---------------------------------------------------------------------------
+  - id: "ucf-intermediate-001"
+    question: "Which accounts are sending the most money? Show the total amount sent and number of transactions per account."
+    difficulty: intermediate
+    tags: [match, traversal, aggregation]
+    database: neo4j
+    domain: ucfraud
+    min_results: 1
+    max_db_hits: 50000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 10000
+    cypher: |
+      CYPHER 25
+      MATCH (a:Account)-[:SENT]->(t:Transaction)
+      RETURN a.accountNumber AS accountNumber,
+             count(t) AS transactionCount,
+             sum(t.amount) AS totalSent
+      ORDER BY totalSent DESC
+      LIMIT 20
+
+  - id: "ucf-intermediate-002"
+    question: "Show me which customers own which accounts, including the account balance and account type."
+    difficulty: intermediate
+    tags: [match, traversal, join]
+    database: neo4j
+    domain: ucfraud
+    min_results: 1
+    max_db_hits: 50000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 10000
+    cypher: |
+      CYPHER 25
+      MATCH (c:Customer)-[:HAS_ACCOUNT]->(a:Account)
+      RETURN c.name AS customerName,
+             a.accountNumber AS accountNumber,
+             a.balance AS balance,
+             a.accountType AS accountType
+      ORDER BY a.balance DESC
+      LIMIT 20
+
+  - id: "ucf-intermediate-003"
+    question: "What does transaction activity look like across 2025? Break down the count and total value by transaction type."
+    difficulty: intermediate
+    tags: [match, temporal, aggregation]
+    database: neo4j
+    domain: ucfraud
+    min_results: 1
+    max_db_hits: 50000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 10000
+    cypher: |
+      CYPHER 25
+      MATCH (t:Transaction)
+      WHERE t.date.year = 2025
+      RETURN t.type AS transactionType,
+             count(t) AS count,
+             sum(t.amount) AS totalAmount
+      ORDER BY totalAmount DESC
+
+  - id: "ucf-intermediate-004"
+    question: "Which accounts appear to be linked to each other through shared personal details? Show the pairs of linked account numbers."
+    difficulty: intermediate
+    tags: [match, traversal, fraud, shared-identifiers]
+    database: neo4j
+    domain: ucfraud
+    min_results: 1
+    max_db_hits: 50000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 10000
+    cypher: |
+      CYPHER 25
+      MATCH (a1:Account)-[:SHARED_IDENTIFIERS]-(a2:Account)
+      WHERE a1.accountNumber < a2.accountNumber
+      RETURN a1.accountNumber AS account1,
+             a2.accountNumber AS account2
+      LIMIT 20
+
+  - id: "ucf-intermediate-005"
+    question: "Are there customers using more than one email address? Show those customers and how many email addresses they have on file."
+    difficulty: intermediate
+    tags: [match, aggregation, filter, email]
+    database: neo4j
+    domain: ucfraud
+    min_results: 1
+    max_db_hits: 50000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 10000
+    cypher: |
+      CYPHER 25
+      MATCH (c:Customer)-[:USES_EMAIL]->(e:Email)
+      WITH c, count(e) AS emailCount
+      WHERE emailCount > 1
+      RETURN c.name AS customerName, emailCount
+      ORDER BY emailCount DESC
+
+  - id: "ucf-intermediate-006"
+    question: "What is the average, highest, and total number of transactions for each transaction status (pending, completed, etc.)?"
+    difficulty: intermediate
+    tags: [match, aggregation, groupby]
+    database: neo4j
+    domain: ucfraud
+    min_results: 1
+    max_db_hits: 50000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 10000
+    cypher: |
+      CYPHER 25
+      MATCH (t:Transaction)
+      RETURN t.status AS status,
+             count(t) AS count,
+             avg(t.amount) AS avgAmount,
+             max(t.amount) AS maxAmount
+      ORDER BY avgAmount DESC
+
+  # ---------------------------------------------------------------------------
+  # ADVANCED (6 cases) — QPE, OPTIONAL MATCH, subqueries, SHORTEST path
+  # ---------------------------------------------------------------------------
+  - id: "ucf-advanced-001"
+    question: "Which accounts are indirectly linked to each other through chains of shared personal details? I want to see account pairs that are connected through two to four intermediate links."
+    difficulty: advanced
+    tags: [qpe, fraud-ring, quantified-path]
+    database: neo4j
+    domain: ucfraud
+    min_results: 1
+    max_db_hits: 200000
+    max_allocated_memory_bytes: 52428800
+    max_runtime_ms: 15000
+    cypher: |
+      CYPHER 25
+      MATCH (a:Account) ((x)-[:SHARED_IDENTIFIERS]-(y)){2,4} (b:Account)
+      WHERE a.accountNumber <> b.accountNumber
+      RETURN a.accountNumber AS startAccount,
+             b.accountNumber AS endAccount
+      LIMIT 20
+
+  - id: "ucf-advanced-002"
+    question: "What is the shortest chain of linked accounts connecting a savings account to a checking account?"
+    difficulty: advanced
+    tags: [shortest-path, traversal, fraud]
+    database: neo4j
+    domain: ucfraud
+    min_results: 1
+    max_db_hits: 200000
+    max_allocated_memory_bytes: 52428800
+    max_runtime_ms: 15000
+    cypher: |
+      CYPHER 25
+      MATCH (a:Account {accountType: 'Savings'}), (b:Account {accountType: 'Checking'})
+      WITH a, b LIMIT 1
+      MATCH p = SHORTEST 1 (a)-[:SHARED_IDENTIFIERS*]-(b)
+      RETURN length(p) AS pathLength,
+             [n IN nodes(p) | n.accountNumber] AS accountNumbers
+
+  - id: "ucf-advanced-003"
+    question: "Which customers sit at the center of the most financial connections in our network? For each, show whether they have any open alerts or investigations."
+    difficulty: advanced
+    tags: [optional-match, centrality, alert]
+    database: neo4j
+    domain: ucfraud
+    min_results: 1
+    max_db_hits: 200000
+    max_allocated_memory_bytes: 52428800
+    max_runtime_ms: 15000
+    cypher: |
+      CYPHER 25
+      MATCH (c:Customer)
+      WHERE c.betweenness > 100
+      OPTIONAL MATCH (c)-[:HAS_ACCOUNT]->(a:Account)-[:HAS_ALERT]->(al:Alert)
+      RETURN c.name AS customerName,
+             c.betweenness AS betweenness,
+             count(al) AS alertCount
+      ORDER BY betweenness DESC
+
+  - id: "ucf-advanced-004"
+    question: "Which accounts have been particularly active — sending more than three transactions? Show the account number, type, and transaction count."
+    difficulty: advanced
+    tags: [subquery, count, filter]
+    database: neo4j
+    domain: ucfraud
+    min_results: 1
+    max_db_hits: 200000
+    max_allocated_memory_bytes: 52428800
+    max_runtime_ms: 15000
+    cypher: |
+      CYPHER 25
+      MATCH (a:Account)
+      WHERE COUNT { (a)-[:SENT]->(:Transaction) } > 3
+      RETURN a.accountNumber AS accountNumber,
+             a.accountType AS accountType,
+             COUNT { (a)-[:SENT]->(:Transaction) } AS txCount
+      ORDER BY txCount DESC
+
+  - id: "ucf-advanced-005"
+    question: "Which transactions are unusually large compared to other transactions of the same type? Show transactions that exceed the average for their category."
+    difficulty: advanced
+    tags: [aggregation, filter, with]
+    database: neo4j
+    domain: ucfraud
+    min_results: 1
+    max_db_hits: 200000
+    max_allocated_memory_bytes: 52428800
+    max_runtime_ms: 15000
+    cypher: |
+      CYPHER 25
+      MATCH (t:Transaction)
+      WITH t.type AS txType, avg(t.amount) AS avgAmount
+      MATCH (t2:Transaction)
+      WHERE t2.type = txType AND t2.amount > avgAmount
+      RETURN t2.transactionID AS transactionID,
+             t2.type AS type,
+             t2.amount AS amount,
+             avgAmount
+      ORDER BY t2.amount DESC
+      LIMIT 20
+
+  - id: "ucf-advanced-006"
+    question: "Look up customers with the surname 'Hoffman'. Are any of them flagged for fraud, and how prominent are they in our customer network?"
+    difficulty: advanced
+    tags: [search, fulltext, index]
+    database: neo4j
+    domain: ucfraud
+    min_results: 1
+    max_db_hits: 50000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 10000
+    cypher: |
+      CYPHER 25
+      MATCH (c:Customer)
+      WHERE c.name CONTAINS 'Hoffman'
+      RETURN c.name AS name,
+             c.fraudFlag AS fraudFlag,
+             c.pagerank AS pagerank
+
+  # ---------------------------------------------------------------------------
+  # COMPLEX (4 cases) — multi-ring detection, temporal anomaly, CALL subquery
+  # ---------------------------------------------------------------------------
+  - id: "ucf-complex-001"
+    question: "Find pairs of accounts that share personal details where at least one account belongs to a customer flagged for fraud. Who owns these accounts?"
+    difficulty: complex
+    tags: [fraud-ring, shared-identifiers, call-subquery, fraud]
+    database: neo4j
+    domain: ucfraud
+    min_results: 1
+    max_db_hits: 500000
+    max_allocated_memory_bytes: 104857600
+    max_runtime_ms: 30000
+    cypher: |
+      CYPHER 25
+      MATCH (a1:Account)-[:SHARED_IDENTIFIERS]-(a2:Account)
+      WHERE a1.accountNumber < a2.accountNumber
+      CALL (a1, a2) {
+        OPTIONAL MATCH (c1:Customer)-[:HAS_ACCOUNT]->(a1)
+        OPTIONAL MATCH (c2:Customer)-[:HAS_ACCOUNT]->(a2)
+        RETURN c1.fraudFlag AS flag1, c2.fraudFlag AS flag2,
+               c1.name AS name1, c2.name AS name2
+      }
+      WHERE flag1 = 'True' OR flag2 = 'True'
+      RETURN a1.accountNumber AS account1,
+             a2.accountNumber AS account2,
+             name1, name2,
+             flag1, flag2
+      LIMIT 20
+
+  - id: "ucf-complex-002"
+    question: "Which accounts received unusually large sums of money within a single month in 2025? Flag any account that received more than $10,000 in one calendar month."
+    difficulty: complex
+    tags: [temporal, aggregation, fraud, with]
+    database: neo4j
+    domain: ucfraud
+    min_results: 1
+    max_db_hits: 500000
+    max_allocated_memory_bytes: 104857600
+    max_runtime_ms: 30000
+    cypher: |
+      CYPHER 25
+      MATCH (a:Account)<-[:RECEIVED]-(t:Transaction)
+      WHERE t.date.year = 2025
+      WITH a, t.date.month AS month, sum(t.amount) AS monthlyTotal
+      WHERE monthlyTotal > 10000
+      RETURN a.accountNumber AS accountNumber,
+             a.accountType AS accountType,
+             month,
+             monthlyTotal
+      ORDER BY monthlyTotal DESC
+
+  - id: "ucf-complex-003"
+    question: "Are there customers in the same fraud network cluster who are also sharing phone numbers or email addresses with each other? This could indicate coordinated activity."
+    difficulty: complex
+    tags: [community, shared-identifiers, fraud, collect]
+    database: neo4j
+    domain: ucfraud
+    min_results: 1
+    max_db_hits: 500000
+    max_allocated_memory_bytes: 104857600
+    max_runtime_ms: 30000
+    cypher: |
+      CYPHER 25
+      MATCH (c1:Customer)-[:USES_PHONE]->(p:PhoneNumber)<-[:USES_PHONE]-(c2:Customer)
+      WHERE c1.customerID < c2.customerID
+        AND c1.louvainCommunity = c2.louvainCommunity
+      RETURN c1.name AS customer1,
+             c2.name AS customer2,
+             c1.louvainCommunity AS community,
+             'phone' AS sharedType
+      UNION
+      MATCH (c1:Customer)-[:USES_EMAIL]->(e:Email)<-[:USES_EMAIL]-(c2:Customer)
+      WHERE c1.customerID < c2.customerID
+        AND c1.louvainCommunity = c2.louvainCommunity
+      RETURN c1.name AS customer1,
+             c2.name AS customer2,
+             c1.louvainCommunity AS community,
+             'email' AS sharedType
+
+  - id: "ucf-complex-004"
+    question: "For money transfer transactions, can you trace the flow of funds — showing which account sent money, which transaction carried it, and which account received it? Show the largest transfers first."
+    difficulty: complex
+    tags: [search, fulltext, traversal, money-flow]
+    database: neo4j
+    domain: ucfraud
+    min_results: 1
+    max_db_hits: 500000
+    max_allocated_memory_bytes: 104857600
+    max_runtime_ms: 30000
+    cypher: |
+      CYPHER 25
+      CALL db.index.fulltext.queryNodes('transactionTypes', 'Transfer') YIELD node AS t, score
+      MATCH (sender:Account)-[:SENT]->(t)-[:TRANSACTED_TO]->(receiver:Account)
+      RETURN t.transactionID AS transactionID,
+             t.amount AS amount,
+             t.date AS date,
+             sender.accountNumber AS fromAccount,
+             receiver.accountNumber AS toAccount,
+             score
+      ORDER BY t.amount DESC
+      LIMIT 20
+
+  # ---------------------------------------------------------------------------
+  # EXPERT (5 cases) — SEARCH clause, CALL IN TRANSACTIONS, ALL SHORTEST, deep QPE
+  # ---------------------------------------------------------------------------
+  - id: "ucf-expert-001"
+    question: "Find all customers named Michael. Are any of them flagged for fraud, and which fraud network cluster do they belong to?"
+    difficulty: expert
+    tags: [search, fulltext, ga-2026, fraud]
+    database: neo4j
+    domain: ucfraud
+    min_results: 1
+    max_db_hits: 50000
+    max_allocated_memory_bytes: 52428800
+    max_runtime_ms: 15000
+    cypher: |
+      CYPHER 25
+      MATCH (c:Customer)
+      WHERE c.name STARTS WITH 'Michael'
+      RETURN c.name AS name,
+             c.fraudFlag AS fraudFlag,
+             c.louvainCommunity AS community,
+             c.pagerank AS pagerank
+      ORDER BY c.pagerank DESC
+
+  - id: "ucf-expert-002"
+    question: "Among the most influential accounts in our network, which pairs are most directly connected through shared identity links? Show the tightest connections first."
+    difficulty: expert
+    tags: [all-shortest, qpe, fraud-ring, paths]
+    database: neo4j
+    domain: ucfraud
+    min_results: 1
+    max_db_hits: 500000
+    max_allocated_memory_bytes: 104857600
+    max_runtime_ms: 30000
+    cypher: |
+      CYPHER 25
+      MATCH (a:Account), (b:Account)
+      WHERE a.pagerank > 0.5 AND b.pagerank > 0.5
+        AND a.accountNumber < b.accountNumber
+      WITH a, b LIMIT 5
+      MATCH p = ALL SHORTEST (a)-[:SHARED_IDENTIFIERS*1..4]-(b)
+      RETURN a.accountNumber AS from,
+             b.accountNumber AS to,
+             length(p) AS pathLength,
+             count(p) AS numPaths
+      LIMIT 10
+
+  - id: "ucf-expert-003"
+    question: "Are there active accounts sending money through multiple intermediate accounts before reaching a destination — a pattern that could indicate layering in money laundering? Show account pairs with multiple such routing paths."
+    difficulty: expert
+    tags: [qpe, money-laundering, traversal, deep-path]
+    database: neo4j
+    domain: ucfraud
+    min_results: 1
+    max_db_hits: 500000
+    max_allocated_memory_bytes: 104857600
+    max_runtime_ms: 30000
+    cypher: |
+      CYPHER 25
+      MATCH (start:Account)
+      WHERE start.status = 'Active'
+      MATCH p = (start) (()-[:TRANSACTED_TO]->()){2,4} (end:Account)
+      WHERE start.accountNumber <> end.accountNumber
+      WITH start, end, count(p) AS pathCount
+      WHERE pathCount > 1
+      RETURN start.accountNumber AS startAccount,
+             end.accountNumber AS endAccount,
+             pathCount
+      ORDER BY pathCount DESC
+      LIMIT 20
+
+  - id: "ucf-expert-004"
+    question: "Mark all customers who belong to the same network cluster as known fraudsters as 'suspicious due to network association'. Process them in small batches to avoid overloading the system."
+    difficulty: expert
+    tags: [call-in-transactions, batch, write, fraud-flagging]
+    database: neo4j
+    domain: ucfraud
+    is_write_query: true
+    min_results: 1
+    max_db_hits: 500000
+    max_allocated_memory_bytes: 104857600
+    max_runtime_ms: 60000
+    cypher: |
+      CYPHER 25
+      MATCH (fraudCustomer:Customer {fraudFlag: 'True'})
+      WITH collect(fraudCustomer.louvainCommunity) AS fraudCommunities
+      MATCH (suspect:Customer)
+      WHERE suspect.louvainCommunity IN fraudCommunities
+        AND suspect.fraudFlag <> 'True'
+      CALL (suspect) {
+        SET suspect.suspicionFlag = 'community-association'
+      } IN TRANSACTIONS OF 10 ROWS
+      RETURN count(suspect) AS flaggedCount
+
+  - id: "ucf-expert-005"
+    question: "Search for customers with the surname 'Poole' and trace how many accounts in our system are linked to their accounts — directly or through up to three degrees of shared identity."
+    difficulty: expert
+    tags: [fulltext, qpe, fraud-ring, hybrid]
+    database: neo4j
+    domain: ucfraud
+    min_results: 1
+    max_db_hits: 500000
+    max_allocated_memory_bytes: 104857600
+    max_runtime_ms: 30000
+    cypher: |
+      CYPHER 25
+      CALL db.index.fulltext.queryNodes('customerNames', 'Poole') YIELD node AS c, score
+      MATCH (c)-[:HAS_ACCOUNT]->(a:Account)
+      MATCH (a) ((x)-[:SHARED_IDENTIFIERS]-(y)){1,3} (connected:Account)
+      WHERE a.accountNumber <> connected.accountNumber
+      RETURN c.name AS customerName,
+             a.accountNumber AS rootAccount,
+             connected.accountNumber AS connectedAccount,
+             score
+      ORDER BY score DESC
+      LIMIT 20
