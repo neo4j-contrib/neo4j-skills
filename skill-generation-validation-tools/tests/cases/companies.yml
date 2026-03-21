@@ -505,3 +505,65 @@ cases:
     max_allocated_memory_bytes: 30000000
     max_runtime_ms: 20000
     is_write_query: false
+
+  # ─── EXPERT (5 cases) ────────────────────────────────────────────────────────
+
+  - id: companies-expert-001
+    question: "Find the 5 shortest ownership chains from Blackstone to any of its deepest subsidiaries — those that themselves own no further subsidiaries. Show each chain as an ordered list of company names."
+    database: companies
+    difficulty: expert
+    tags: [shortest-path, shortest-k, qpe, subsidiary, ownership-chain, path]
+    domain: companies
+    min_results: 1
+    max_db_hits: 2000000
+    max_allocated_memory_bytes: 100000000
+    max_runtime_ms: 60000
+    is_write_query: false
+
+  - id: companies-expert-002
+    question: "Find news articles about 'renewable energy' by searching article text for those keywords. For the top 10 most relevant results, also rank them by how closely the article content matches the topic by meaning — not just by keywords. Return the article titles ordered by a combined relevance score, highest first."
+    database: companies
+    difficulty: expert
+    tags: [fulltext, vector, hybrid-search, re-ranking, graphrag, semantic]
+    domain: companies
+    min_results: 1
+    max_db_hits: 500000
+    max_allocated_memory_bytes: 100000000
+    max_runtime_ms: 60000
+    is_write_query: false
+
+  - id: companies-expert-003
+    question: "Which companies have ownership chains of between 3 and 5 levels deep — meaning there is a path of exactly 3 to 5 intermediate ownership steps from a top-level parent down to them? List those companies and the length of their ownership chain. Limit to 20 results."
+    database: companies
+    difficulty: expert
+    tags: [qpe, quantified-path, bounded-quantifiers, ownership, subsidiary, depth]
+    domain: companies
+    min_results: 1
+    max_db_hits: 2000000
+    max_allocated_memory_bytes: 100000000
+    max_runtime_ms: 60000
+    is_write_query: false
+
+  - id: companies-expert-004
+    question: "Find all pairs of companies that are connected to each other through at most 2 intermediate ownership steps — that is, company A owns something that owns company B, or vice versa. Return the pair names and the length of the path between them. Limit to 25 results."
+    database: companies
+    difficulty: expert
+    tags: [qpe, quantified-path, bounded-quantifiers, subsidiary, relationship, path]
+    domain: companies
+    min_results: 1
+    max_db_hits: 5000000
+    max_allocated_memory_bytes: 200000000
+    max_runtime_ms: 60000
+    is_write_query: false
+
+  - id: companies-expert-005
+    question: "Enrich every company record in our database with its average news coverage sentiment score — if a company has no press mentions, default the score to 0. Update the records in groups of 500 at a time so the database is not overwhelmed, and skip any individual company that causes an error rather than aborting the whole operation."
+    database: companies
+    difficulty: expert
+    tags: [set, call-in-transactions, on-error-continue, write, aggregation]
+    domain: companies
+    min_results: 0
+    max_db_hits: null
+    max_allocated_memory_bytes: null
+    max_runtime_ms: null
+    is_write_query: true

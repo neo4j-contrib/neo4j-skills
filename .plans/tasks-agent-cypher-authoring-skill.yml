@@ -544,7 +544,7 @@ tasks:
       with ON ERROR CONTINUE for batch operations, ALL SHORTEST path enumeration over
       the subsidiary graph, and deeply nested QPE with {m,n} bounded quantifiers.
       Verify the harness reports an 'expert' tier in per-difficulty pass rate breakdown.
-    status: pending
+    status: completed
     dependencies:
       - task-019
       - task-025
@@ -556,7 +556,7 @@ tasks:
       - "At least one companies expert case uses ALL SHORTEST or SHORTEST k"
       - "At least one companies expert case uses CALL IN TRANSACTIONS with ON ERROR clause"
       - "Expert pass rate ≥ 60% across companies domain on first run"
-    completed_at: null
+    completed_at: "2026-03-21T23:00:00Z"
 
   - id: task-028
     title: "Run full harness across all 3 domains and generate improvement report"

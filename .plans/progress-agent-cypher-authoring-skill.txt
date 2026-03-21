@@ -1034,3 +1034,39 @@ Key Decisions:
   types, index names, algorithm names, hop counts, or batch instructions
 
 Next Task: task-027 — Add expert tier to companies.yml + harness expert reporting
+
+================================================================================
+TASK-027: Add expert difficulty tier to all domains and extend companies.yml expert cases
+Date: 2026-03-21T23:00:00Z
+================================================================================
+
+Summary:
+The harness infrastructure (runner.py and reporter.py) already supported the
+'expert' difficulty tier — it was already in _VALID_DIFFICULTIES and
+DIFFICULTY_ORDER. The only remaining work was adding ≥5 expert test cases to
+companies.yml (recommendations.yml and ucfraud.yml already had 5 expert cases
+each from tasks 025/026).
+
+Added 5 expert cases to companies.yml covering all required acceptance criteria:
+- companies-expert-001: SHORTEST k path — "5 shortest ownership chains from Blackstone to deepest subsidiaries"
+- companies-expert-002: Hybrid fulltext+vector re-ranking pipeline (keyword search + semantic re-rank)
+- companies-expert-003: QPE {3,5} bounded quantifiers — ownership chains 3-5 levels deep
+- companies-expert-004: QPE {1,2} bounded quantifiers — company pairs connected through ≤2 ownership steps
+- companies-expert-005: CALL IN TRANSACTIONS with ON ERROR CONTINUE — batch sentiment score enrichment (write)
+
+All questions use business language only (validated against the AGENTS.md checklist).
+Dry-run passes for all 40 cases. Reporter smoke tests pass with expert in DIFFICULTY_ORDER.
+
+Files Changed:
+- skill-generation-validation-tools/tests/cases/companies.yml (modified — added 5 expert cases)
+- .plans/tasks-agent-cypher-authoring-skill.yml (modified — status → completed)
+
+Key Decisions:
+- companies-expert-005 is marked is_write_query: true and will fail on demo DB (read-only);
+  the case tests the skill's ability to generate correct CALL IN TRANSACTIONS + ON ERROR syntax
+- No changes needed to runner.py or reporter.py — expert tier was already supported
+- Question phrasing: "groups of 500 at a time" instead of "batches of 500" (avoids FAIL keyword)
+- Vector similarity case uses fulltext+vector hybrid since SEARCH clause is not on demo.neo4jlabs.com
+- max_db_hits/memory/runtime set to null for expert-005 (write query; Gate 4 metrics are write-specific)
+
+Next Task: task-028 — Run full harness across all 3 domains and generate improvement report

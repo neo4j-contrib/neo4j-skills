@@ -237,6 +237,11 @@ PASS if the output format is implied naturally ("show", "list", "how many", "ran
 | complex | Multi-faceted, 3+ dimensions | CALL subquery, UNION, multi-step WITH |
 | expert | Deep network, similarity, path-finding | QPE, SHORTEST, ALL SHORTEST, vector index, CALL IN TRANSACTIONS |
 
+- Expert tier was already accepted in `_VALID_DIFFICULTIES` (runner.py) and `DIFFICULTY_ORDER` (reporter.py) from the start. Only data (test cases) needed adding.
+- Expert write cases (CALL IN TRANSACTIONS) on read-only demo DBs will always FAIL Gate 2 with Security.Forbidden — this is expected; the test validates syntax (Gate 1) not execution (Gate 2+).
+- Avoid the word "batch" in question text — use "groups of N at a time" instead.
+- "Full-text search" as a concept (not index name) is acceptable business language; "db.index.fulltext.queryNodes()" is not.
+
 ## SKILL.md Authoring Notes
 
 - SKILL.md line budget is 300 lines (not 300 non-blank lines). Inline `CYPHER 25` on the same line as each query to save ~10 lines in the Schema-First Protocol section.
