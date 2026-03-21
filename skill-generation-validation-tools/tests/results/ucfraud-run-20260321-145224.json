@@ -1,0 +1,701 @@
+{
+  "run_id": "run-20260321T135224",
+  "started_at": "2026-03-21T13:52:24.433141+00:00",
+  "completed_at": "2026-03-21T13:54:12.624563+00:00",
+  "skill": "neo4j-cypher-authoring-skill",
+  "summary": {
+    "total": 27,
+    "passed": 0,
+    "warned": 0,
+    "failed": 27,
+    "pass_rate": 0.0
+  },
+  "cases": [
+    {
+      "case_id": "ucf-basic-001",
+      "question": "How many transactions are recorded in the system in total?",
+      "difficulty": "basic",
+      "tags": [
+        "match",
+        "count",
+        "labels"
+      ],
+      "verdict": "FAIL",
+      "failed_gate": 1,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (t:Transaction)\nRETURN count(t) AS totalTransactions",
+      "metrics": {},
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "FAIL",
+          "reason": "Syntax error: {neo4j_code: Neo.ClientError.Security.AuthenticationRateLimit} {message: The client has provided incorrect authentication details too many times in a row.} {gql_status: 42NFF} {gql_status_description: error: syntax error or access rule violation - permission/access denied. Access denied, see the security logs for details.}",
+          "details": {}
+        }
+      ],
+      "error": null,
+      "duration_s": 3.989
+    },
+    {
+      "case_id": "ucf-basic-002",
+      "question": "Which active accounts have the highest balances? Show the account number and current balance for the top 20.",
+      "difficulty": "basic",
+      "tags": [
+        "match",
+        "filter",
+        "property"
+      ],
+      "verdict": "FAIL",
+      "failed_gate": 1,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (a:Account {status: 'Active'})\nRETURN a.accountNumber AS accountNumber, a.balance AS balance\nORDER BY balance DESC\nLIMIT 20",
+      "metrics": {},
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "FAIL",
+          "reason": "Syntax error: {neo4j_code: Neo.ClientError.Security.Unauthorized} {message: The client is unauthorized due to authentication failure.} {gql_status: 42NFF} {gql_status_description: error: syntax error or access rule violation - permission/access denied. Access denied, see the security logs for details.}",
+          "details": {}
+        }
+      ],
+      "error": null,
+      "duration_s": 4.899
+    },
+    {
+      "case_id": "ucf-basic-003",
+      "question": "What types of transactions does the system support?",
+      "difficulty": "basic",
+      "tags": [
+        "match",
+        "distinct",
+        "aggregation"
+      ],
+      "verdict": "FAIL",
+      "failed_gate": 1,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (t:Transaction)\nRETURN DISTINCT t.type AS transactionType\nORDER BY transactionType",
+      "metrics": {},
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "FAIL",
+          "reason": "Syntax error: {neo4j_code: Neo.ClientError.Security.AuthenticationRateLimit} {message: The client has provided incorrect authentication details too many times in a row.} {gql_status: 42NFF} {gql_status_description: error: syntax error or access rule violation - permission/access denied. Access denied, see the security logs for details.}",
+          "details": {}
+        }
+      ],
+      "error": null,
+      "duration_s": 6.298
+    },
+    {
+      "case_id": "ucf-basic-004",
+      "question": "Show me the customers who have been flagged for fraud. Who are the most at-risk based on their network influence score?",
+      "difficulty": "basic",
+      "tags": [
+        "match",
+        "filter",
+        "fraud"
+      ],
+      "verdict": "FAIL",
+      "failed_gate": 1,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (c:Customer)\nWHERE c.fraudFlag = 'True'\nRETURN c.customerID, c.name, c.pagerank, c.betweenness, c.louvainCommunity\nORDER BY c.pagerank DESC\nLIMIT 25",
+      "metrics": {},
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "FAIL",
+          "reason": "Syntax error: {neo4j_code: Neo.ClientError.Security.AuthenticationRateLimit} {message: The client has provided incorrect authentication details too many times in a row.} {gql_status: 42NFF} {gql_status_description: error: syntax error or access rule violation - permission/access denied. Access denied, see the security logs for details.}",
+          "details": {}
+        }
+      ],
+      "error": null,
+      "duration_s": 14.315
+    },
+    {
+      "case_id": "ucf-basic-005",
+      "question": "What are the largest transactions in the system? Show the top 10 by amount, including transaction type and status.",
+      "difficulty": "basic",
+      "tags": [
+        "match",
+        "order",
+        "limit"
+      ],
+      "verdict": "FAIL",
+      "failed_gate": 1,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (sender:Account)-[:SENT]->(t:Transaction)-[:RECEIVED]->(receiver:Account)\nRETURN t.transactionID, t.amount, t.type, t.status, t.date,\n       sender.accountNumber AS senderAccount,\n       receiver.accountNumber AS receiverAccount\nORDER BY t.amount DESC\nLIMIT 10",
+      "metrics": {},
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "FAIL",
+          "reason": "Syntax error: {neo4j_code: Neo.ClientError.Security.AuthenticationRateLimit} {message: The client has provided incorrect authentication details too many times in a row.} {gql_status: 42NFF} {gql_status_description: error: syntax error or access rule violation - permission/access denied. Access denied, see the security logs for details.}",
+          "details": {}
+        }
+      ],
+      "error": null,
+      "duration_s": 7.825
+    },
+    {
+      "case_id": "ucf-basic-006",
+      "question": "How many accounts of each type (savings, checking, etc.) are in the system?",
+      "difficulty": "basic",
+      "tags": [
+        "match",
+        "aggregation",
+        "groupby"
+      ],
+      "verdict": "FAIL",
+      "failed_gate": 1,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (a:Account)\nRETURN a.accountType AS accountType, count(a) AS accountCount\nORDER BY accountCount DESC",
+      "metrics": {},
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "FAIL",
+          "reason": "Syntax error: {neo4j_code: Neo.ClientError.Security.AuthenticationRateLimit} {message: The client has provided incorrect authentication details too many times in a row.} {gql_status: 42NFF} {gql_status_description: error: syntax error or access rule violation - permission/access denied. Access denied, see the security logs for details.}",
+          "details": {}
+        }
+      ],
+      "error": null,
+      "duration_s": 5.769
+    },
+    {
+      "case_id": "ucf-intermediate-001",
+      "question": "Which accounts are sending the most money? Show the total amount sent and number of transactions per account.",
+      "difficulty": "intermediate",
+      "tags": [
+        "match",
+        "traversal",
+        "aggregation"
+      ],
+      "verdict": "FAIL",
+      "failed_gate": 1,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (a:Account)-[:SENT]->(t:Transaction)\nRETURN a.accountID        AS accountID,\n       a.accountNumber    AS accountNumber,\n       a.accountType      AS accountType,\n       a.status           AS accountStatus,\n       count(t)           AS transactionCount,\n       round(sum(t.amount), 2) AS totalAmountSent\nORDER BY totalAmountSent DESC\nLIMIT 20",
+      "metrics": {},
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "FAIL",
+          "reason": "Syntax error: {neo4j_code: Neo.ClientError.Security.AuthenticationRateLimit} {message: The client has provided incorrect authentication details too many times in a row.} {gql_status: 42NFF} {gql_status_description: error: syntax error or access rule violation - permission/access denied. Access denied, see the security logs for details.}",
+          "details": {}
+        }
+      ],
+      "error": null,
+      "duration_s": 9.884
+    },
+    {
+      "case_id": "ucf-intermediate-002",
+      "question": "Show me which customers own which accounts, including the account balance and account type.",
+      "difficulty": "intermediate",
+      "tags": [
+        "match",
+        "traversal",
+        "join"
+      ],
+      "verdict": "FAIL",
+      "failed_gate": 1,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (c:Customer)-[:HAS_ACCOUNT]->(a:Account)\nRETURN c.name AS customer, c.customerID AS customerId,\n       a.accountID AS accountId, a.accountType AS accountType,\n       a.balance AS balance\nORDER BY c.name, a.accountType",
+      "metrics": {},
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "FAIL",
+          "reason": "Syntax error: {neo4j_code: Neo.ClientError.Security.AuthenticationRateLimit} {message: The client has provided incorrect authentication details too many times in a row.} {gql_status: 42NFF} {gql_status_description: error: syntax error or access rule violation - permission/access denied. Access denied, see the security logs for details.}",
+          "details": {}
+        }
+      ],
+      "error": null,
+      "duration_s": 6.649
+    },
+    {
+      "case_id": "ucf-intermediate-003",
+      "question": "What does transaction activity look like across 2025? Break down the count and total value by transaction type.",
+      "difficulty": "intermediate",
+      "tags": [
+        "match",
+        "temporal",
+        "aggregation"
+      ],
+      "verdict": "FAIL",
+      "failed_gate": 1,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (t:Transaction)\nWHERE t.date >= date('2025-01-01') AND t.date <= date('2025-12-31')\nRETURN t.type AS transactionType,\n       count(t) AS transactionCount,\n       round(sum(t.amount), 2) AS totalValue\nORDER BY totalValue DESC",
+      "metrics": {},
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "FAIL",
+          "reason": "Syntax error: {neo4j_code: Neo.ClientError.Security.AuthenticationRateLimit} {message: The client has provided incorrect authentication details too many times in a row.} {gql_status: 42NFF} {gql_status_description: error: syntax error or access rule violation - permission/access denied. Access denied, see the security logs for details.}",
+          "details": {}
+        }
+      ],
+      "error": null,
+      "duration_s": 9.773
+    },
+    {
+      "case_id": "ucf-intermediate-004",
+      "question": "Which accounts appear to be linked to each other through shared personal details? Show the pairs of linked account numbers.",
+      "difficulty": "intermediate",
+      "tags": [
+        "match",
+        "traversal",
+        "fraud",
+        "shared-identifiers"
+      ],
+      "verdict": "FAIL",
+      "failed_gate": 1,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (a:Account)-[:SHARED_IDENTIFIERS]->(b:Account)\nWHERE a.accountNumber < b.accountNumber\nRETURN a.accountNumber AS account1, b.accountNumber AS account2\nORDER BY account1, account2",
+      "metrics": {},
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "FAIL",
+          "reason": "Syntax error: {neo4j_code: Neo.ClientError.Security.AuthenticationRateLimit} {message: The client has provided incorrect authentication details too many times in a row.} {gql_status: 42NFF} {gql_status_description: error: syntax error or access rule violation - permission/access denied. Access denied, see the security logs for details.}",
+          "details": {}
+        }
+      ],
+      "error": null,
+      "duration_s": 8.25
+    },
+    {
+      "case_id": "ucf-intermediate-005",
+      "question": "Are there customers using more than one email address? Show those customers and how many email addresses they have on file.",
+      "difficulty": "intermediate",
+      "tags": [
+        "match",
+        "aggregation",
+        "filter",
+        "email"
+      ],
+      "verdict": "FAIL",
+      "failed_gate": 1,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (c:Customer)-[:USES_EMAIL]->(e:Email)\nWITH c, count(e) AS emailCount\nWHERE emailCount > 1\nRETURN c.customerID, c.name, emailCount\nORDER BY emailCount DESC",
+      "metrics": {},
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "FAIL",
+          "reason": "Syntax error: {neo4j_code: Neo.ClientError.Security.AuthenticationRateLimit} {message: The client has provided incorrect authentication details too many times in a row.} {gql_status: 42NFF} {gql_status_description: error: syntax error or access rule violation - permission/access denied. Access denied, see the security logs for details.}",
+          "details": {}
+        }
+      ],
+      "error": null,
+      "duration_s": 7.614
+    },
+    {
+      "case_id": "ucf-intermediate-006",
+      "question": "What is the average, highest, and total number of transactions for each transaction status (pending, completed, etc.)?",
+      "difficulty": "intermediate",
+      "tags": [
+        "match",
+        "aggregation",
+        "groupby"
+      ],
+      "verdict": "FAIL",
+      "failed_gate": 1,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (a:Account)-[:SENT]->(t:Transaction)\nWITH t.status AS status, a, count(t) AS txnCountPerAccount\nRETURN status,\n       sum(txnCountPerAccount)              AS totalTransactions,\n       round(avg(txnCountPerAccount), 2)   AS avgTransactionsPerAccount,\n       max(txnCountPerAccount)             AS highestTransactionsPerAccount\nORDER BY status",
+      "metrics": {},
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "FAIL",
+          "reason": "Syntax error: {neo4j_code: Neo.ClientError.Security.AuthenticationRateLimit} {message: The client has provided incorrect authentication details too many times in a row.} {gql_status: 42NFF} {gql_status_description: error: syntax error or access rule violation - permission/access denied. Access denied, see the security logs for details.}",
+          "details": {}
+        }
+      ],
+      "error": null,
+      "duration_s": 21.297
+    },
+    {
+      "case_id": "ucf-advanced-001",
+      "question": "Which accounts are indirectly linked to each other through chains of shared personal details? I want to see account pairs that are connected through two to four intermediate links.",
+      "difficulty": "advanced",
+      "tags": [
+        "qpe",
+        "fraud-ring",
+        "quantified-path"
+      ],
+      "verdict": "FAIL",
+      "failed_gate": 1,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (a:Account)-[:SHARED_IDENTIFIERS]-{2,4}-(b:Account)\nWHERE elementId(a) < elementId(b)\nWITH a, b, count(*) AS pathCount\nRETURN a.accountID     AS accountA,\n       a.accountNumber AS accountNumberA,\n       b.accountID     AS accountB,\n       b.accountNumber AS accountNumberB,\n       pathCount\nORDER BY pathCount DESC\nLIMIT 100",
+      "metrics": {},
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "FAIL",
+          "reason": "Syntax error: {neo4j_code: Neo.ClientError.Security.AuthenticationRateLimit} {message: The client has provided incorrect authentication details too many times in a row.} {gql_status: 42NFF} {gql_status_description: error: syntax error or access rule violation - permission/access denied. Access denied, see the security logs for details.}",
+          "details": {}
+        }
+      ],
+      "error": null,
+      "duration_s": 37.423
+    },
+    {
+      "case_id": "ucf-advanced-002",
+      "question": "What is the shortest chain of linked accounts connecting a savings account to a checking account?",
+      "difficulty": "advanced",
+      "tags": [
+        "shortest-path",
+        "traversal",
+        "fraud"
+      ],
+      "verdict": "FAIL",
+      "failed_gate": 1,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH p = SHORTEST 1\n  (start:Account {accountType: 'Savings'})\n  -[:TRANSACTED_TO|SHARED_IDENTIFIERS]-{1,}\n  (end:Account {accountType: 'Checking'})\nWHERE start <> end\nRETURN\n  start.accountID        AS savingsAccount,\n  end.accountID          AS checkingAccount,\n  length(p)              AS hops,\n  [n IN nodes(p) | n.accountID + ' (' + n.accountType + ')'] AS chain",
+      "metrics": {},
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "FAIL",
+          "reason": "Syntax error: {neo4j_code: Neo.ClientError.Security.Unauthorized} {message: The client is unauthorized due to authentication failure.} {gql_status: 42NFF} {gql_status_description: error: syntax error or access rule violation - permission/access denied. Access denied, see the security logs for details.}",
+          "details": {}
+        }
+      ],
+      "error": null,
+      "duration_s": 26.453
+    },
+    {
+      "case_id": "ucf-advanced-003",
+      "question": "Which customers sit at the center of the most financial connections in our network? For each, show whether they have any open alerts or investigations.",
+      "difficulty": "advanced",
+      "tags": [
+        "optional-match",
+        "centrality",
+        "alert"
+      ],
+      "verdict": "FAIL",
+      "failed_gate": 1,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (c:Customer)\nWITH c ORDER BY c.betweenness DESC LIMIT 10\nMATCH (c)-[:HAS_ACCOUNT]->(a:Account)\nOPTIONAL MATCH (a)-[:HAS_ALERT]->(alert:Alert)-[:HAS_STATUS]->(as:AlertStatus)\nWHERE as.status IN ['open', 'investigating']\nRETURN\n  c.name                          AS customer,\n  c.customerID                    AS customerID,\n  round(c.betweenness, 4)         AS betweenness,\n  c.fraudFlag                     AS fraudFlag,\n  count(DISTINCT alert)           AS activeAlertCount,\n  collect(DISTINCT as.status)     AS activeAlertStatuses\nORDER BY betweenness DESC",
+      "metrics": {},
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "FAIL",
+          "reason": "Syntax error: {neo4j_code: Neo.ClientError.Security.AuthenticationRateLimit} {message: The client has provided incorrect authentication details too many times in a row.} {gql_status: 42NFF} {gql_status_description: error: syntax error or access rule violation - permission/access denied. Access denied, see the security logs for details.}",
+          "details": {}
+        }
+      ],
+      "error": null,
+      "duration_s": 23.973
+    },
+    {
+      "case_id": "ucf-advanced-004",
+      "question": "Which accounts have been particularly active \u2014 sending more than three transactions? Show the account number, type, and transaction count.",
+      "difficulty": "advanced",
+      "tags": [
+        "subquery",
+        "count",
+        "filter"
+      ],
+      "verdict": "FAIL",
+      "failed_gate": 1,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (a:Account)-[:SENT]->(t:Transaction)\nWITH a, count(t) AS txCount\nWHERE txCount > 3\nRETURN a.accountNumber AS accountNumber, a.accountType AS accountType, txCount\nORDER BY txCount DESC",
+      "metrics": {},
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "FAIL",
+          "reason": "Syntax error: {neo4j_code: Neo.ClientError.Security.AuthenticationRateLimit} {message: The client has provided incorrect authentication details too many times in a row.} {gql_status: 42NFF} {gql_status_description: error: syntax error or access rule violation - permission/access denied. Access denied, see the security logs for details.}",
+          "details": {}
+        }
+      ],
+      "error": null,
+      "duration_s": 7.876
+    },
+    {
+      "case_id": "ucf-advanced-005",
+      "question": "Which transactions are unusually large compared to other transactions of the same type? Show transactions that exceed the average for their category.",
+      "difficulty": "advanced",
+      "tags": [
+        "aggregation",
+        "filter",
+        "with"
+      ],
+      "verdict": "FAIL",
+      "failed_gate": 1,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (t:Transaction)\nWITH t.type AS txType, avg(t.amount) AS avgAmount\nMATCH (tx:Transaction {type: txType})\nWHERE tx.amount > avgAmount\nRETURN tx.transactionID,\n       tx.type,\n       tx.amount,\n       round(avgAmount, 2)          AS typeAvgAmount,\n       round((tx.amount - avgAmount) / avgAmount * 100, 2) AS pctAboveAvg,\n       tx.status,\n       tx.date\nORDER BY tx.type, pctAboveAvg DESC",
+      "metrics": {},
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "FAIL",
+          "reason": "Syntax error: {neo4j_code: Neo.ClientError.Security.Unauthorized} {message: The client is unauthorized due to authentication failure.} {gql_status: 42NFF} {gql_status_description: error: syntax error or access rule violation - permission/access denied. Access denied, see the security logs for details.}",
+          "details": {}
+        }
+      ],
+      "error": null,
+      "duration_s": 21.841
+    },
+    {
+      "case_id": "ucf-advanced-006",
+      "question": "Look up customers with the surname 'Hoffman'. Are any of them flagged for fraud, and how prominent are they in our customer network?",
+      "difficulty": "advanced",
+      "tags": [
+        "search",
+        "fulltext",
+        "index"
+      ],
+      "verdict": "FAIL",
+      "failed_gate": 1,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nCALL db.index.fulltext.queryNodes('customerNames', 'Hoffman') YIELD node AS c, score\nRETURN c.customerID          AS customerId,\n       c.name                AS name,\n       c.fraudFlag           AS fraudFlag,\n       round(c.pagerank, 4)  AS pagerank,\n       round(c.betweenness, 4) AS betweenness,\n       c.louvainCommunity    AS fraudCluster,\n       round(score, 4)       AS nameMatchScore\nORDER BY c.fraudFlag DESC, c.pagerank DESC",
+      "metrics": {},
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "FAIL",
+          "reason": "Syntax error: {neo4j_code: Neo.ClientError.Security.AuthenticationRateLimit} {message: The client has provided incorrect authentication details too many times in a row.} {gql_status: 42NFF} {gql_status_description: error: syntax error or access rule violation - permission/access denied. Access denied, see the security logs for details.}",
+          "details": {}
+        }
+      ],
+      "error": null,
+      "duration_s": 16.775
+    },
+    {
+      "case_id": "ucf-complex-001",
+      "question": "Find pairs of accounts that share personal details where at least one account belongs to a customer flagged for fraud. Who owns these accounts?",
+      "difficulty": "complex",
+      "tags": [
+        "fraud-ring",
+        "shared-identifiers",
+        "call-subquery",
+        "fraud"
+      ],
+      "verdict": "FAIL",
+      "failed_gate": 1,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (a1:Account)-[:SHARED_IDENTIFIERS]-(a2:Account)\nWHERE elementId(a1) < elementId(a2)\nMATCH (c1:Customer)-[:HAS_ACCOUNT]->(a1)\nMATCH (c2:Customer)-[:HAS_ACCOUNT]->(a2)\nWHERE c1.fraudFlag = 'True' OR c2.fraudFlag = 'True'\nRETURN\n  a1.accountID        AS account1ID,\n  a1.accountNumber    AS account1Number,\n  c1.name             AS owner1,\n  c1.fraudFlag        AS owner1Flagged,\n  a2.accountID        AS account2ID,\n  a2.accountNumber    AS account2Number,\n  c2.name             AS owner2,\n  c2.fraudFlag        AS owner2Flagged\nORDER BY owner1Flagged DESC, owner2Flagged DESC",
+      "metrics": {},
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "FAIL",
+          "reason": "Syntax error: {neo4j_code: Neo.ClientError.Security.Unauthorized} {message: The client is unauthorized due to authentication failure.} {gql_status: 42NFF} {gql_status_description: error: syntax error or access rule violation - permission/access denied. Access denied, see the security logs for details.}",
+          "details": {}
+        }
+      ],
+      "error": null,
+      "duration_s": 22.458
+    },
+    {
+      "case_id": "ucf-complex-002",
+      "question": "Which accounts received unusually large sums of money within a single month in 2025? Flag any account that received more than $10,000 in one calendar month.",
+      "difficulty": "complex",
+      "tags": [
+        "temporal",
+        "aggregation",
+        "fraud",
+        "with"
+      ],
+      "verdict": "FAIL",
+      "failed_gate": 1,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (t:Transaction)-[:RECEIVED]->(a:Account)\nWHERE t.date.year = 2025\n  AND t.status = 'Completed'\nWITH a,\n     t.date.year  AS year,\n     t.date.month AS month,\n     sum(t.amount) AS totalReceived\nWHERE totalReceived > 10000\nRETURN a.accountID,\n       a.accountNumber,\n       a.accountType,\n       a.status,\n       year,\n       month,\n       round(totalReceived, 2) AS totalReceived\nORDER BY totalReceived DESC",
+      "metrics": {},
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "FAIL",
+          "reason": "Syntax error: {neo4j_code: Neo.ClientError.Security.AuthenticationRateLimit} {message: The client has provided incorrect authentication details too many times in a row.} {gql_status: 42NFF} {gql_status_description: error: syntax error or access rule violation - permission/access denied. Access denied, see the security logs for details.}",
+          "details": {}
+        }
+      ],
+      "error": null,
+      "duration_s": 16.902
+    },
+    {
+      "case_id": "ucf-complex-003",
+      "question": "Are there customers in the same fraud network cluster who are also sharing phone numbers or email addresses with each other? This could indicate coordinated activity.",
+      "difficulty": "complex",
+      "tags": [
+        "community",
+        "shared-identifiers",
+        "fraud",
+        "collect"
+      ],
+      "verdict": "FAIL",
+      "failed_gate": 1,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (c1:Customer)-[:USES_PHONE|USES_EMAIL]->(shared)<-[:USES_PHONE|USES_EMAIL]-(c2:Customer)\nWHERE c1.louvainCommunity IS NOT NULL\n  AND c1.louvainCommunity = c2.louvainCommunity\n  AND c1.customerID < c2.customerID\nWITH c1, c2,\n     collect(DISTINCT\n       WHEN 'PhoneNumber' IN labels(shared) THEN 'phone:' + shared.phoneNumber\n            'Email'       IN labels(shared) THEN 'email:' + shared.email\n       ELSE 'unknown' END\n     ) AS sharedIdentifiers\nRETURN\n  c1.louvainCommunity          AS fraudCluster,\n  c1.name                      AS customer1,\n  c1.fraudFlag                 AS c1FraudFlag,\n  c2.name                      AS customer2,\n  c2.fraudFlag                 AS c2FraudFlag,\n  sharedIdentifiers,\n  size(sharedIdentifiers)      AS sharedCount\nORDER BY fraudCluster, sharedCount DESC",
+      "metrics": {},
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "FAIL",
+          "reason": "Syntax error: {neo4j_code: Neo.ClientError.Security.AuthenticationRateLimit} {message: The client has provided incorrect authentication details too many times in a row.} {gql_status: 42NFF} {gql_status_description: error: syntax error or access rule violation - permission/access denied. Access denied, see the security logs for details.}",
+          "details": {}
+        }
+      ],
+      "error": null,
+      "duration_s": 31.046
+    },
+    {
+      "case_id": "ucf-complex-004",
+      "question": "For money transfer transactions, can you trace the flow of funds \u2014 showing which account sent money, which transaction carried it, and which account received it? Show the largest transfers first.",
+      "difficulty": "complex",
+      "tags": [
+        "search",
+        "fulltext",
+        "traversal",
+        "money-flow"
+      ],
+      "verdict": "FAIL",
+      "failed_gate": 1,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (sender:Account)-[:SENT]->(t:Transaction)-[:RECEIVED]->(receiver:Account)\nWHERE t.type = 'Transfer'\nRETURN sender.accountNumber AS senderAccount,\n       sender.accountType   AS senderType,\n       t.transactionID      AS transactionID,\n       t.amount             AS amount,\n       t.date               AS date,\n       t.status             AS status,\n       receiver.accountNumber AS receiverAccount,\n       receiver.accountType   AS receiverType\nORDER BY t.amount DESC\nLIMIT 25",
+      "metrics": {},
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "FAIL",
+          "reason": "Syntax error: {neo4j_code: Neo.ClientError.Security.AuthenticationRateLimit} {message: The client has provided incorrect authentication details too many times in a row.} {gql_status: 42NFF} {gql_status_description: error: syntax error or access rule violation - permission/access denied. Access denied, see the security logs for details.}",
+          "details": {}
+        }
+      ],
+      "error": null,
+      "duration_s": 8.778
+    },
+    {
+      "case_id": "ucf-expert-001",
+      "question": "Find all customers named Michael. Are any of them flagged for fraud, and which fraud network cluster do they belong to?",
+      "difficulty": "expert",
+      "tags": [
+        "search",
+        "fulltext",
+        "ga-2026",
+        "fraud"
+      ],
+      "verdict": "FAIL",
+      "failed_gate": 1,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nCALL db.index.fulltext.queryNodes('customerNames', 'Michael') YIELD node AS c, score\nRETURN c.customerID        AS customerID,\n       c.name              AS name,\n       c.fraudFlag         AS isFraudFlagged,\n       c.louvainCommunity  AS fraudCluster,\n       c.betweenness       AS betweenness,\n       c.pagerank          AS pagerank\nORDER BY c.fraudFlag DESC, c.louvainCommunity ASC, score DESC",
+      "metrics": {},
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "FAIL",
+          "reason": "Syntax error: {neo4j_code: Neo.ClientError.Security.AuthenticationRateLimit} {message: The client has provided incorrect authentication details too many times in a row.} {gql_status: 42NFF} {gql_status_description: error: syntax error or access rule violation - permission/access denied. Access denied, see the security logs for details.}",
+          "details": {}
+        }
+      ],
+      "error": null,
+      "duration_s": 12.495
+    },
+    {
+      "case_id": "ucf-expert-002",
+      "question": "Among the most influential accounts in our network, which pairs are most directly connected through shared identity links? Show the tightest connections first.",
+      "difficulty": "expert",
+      "tags": [
+        "all-shortest",
+        "qpe",
+        "fraud-ring",
+        "paths"
+      ],
+      "verdict": "FAIL",
+      "failed_gate": 1,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (a:Account)-[:SHARED_IDENTIFIERS]->(b:Account)\nWITH a, b, (a.pagerank + b.pagerank) AS combinedInfluence\nORDER BY combinedInfluence DESC\nLIMIT 20\nRETURN\n  a.accountID          AS account1ID,\n  a.accountNumber      AS account1Number,\n  round(a.pagerank, 4) AS account1PageRank,\n  b.accountID          AS account2ID,\n  b.accountNumber      AS account2Number,\n  round(b.pagerank, 4) AS account2PageRank,\n  round(combinedInfluence, 4) AS combinedInfluence",
+      "metrics": {},
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "FAIL",
+          "reason": "Syntax error: {neo4j_code: Neo.ClientError.Security.Unauthorized} {message: The client is unauthorized due to authentication failure.} {gql_status: 42NFF} {gql_status_description: error: syntax error or access rule violation - permission/access denied. Access denied, see the security logs for details.}",
+          "details": {}
+        }
+      ],
+      "error": null,
+      "duration_s": 38.455
+    },
+    {
+      "case_id": "ucf-expert-003",
+      "question": "Are there active accounts sending money through multiple intermediate accounts before reaching a destination \u2014 a pattern that could indicate layering in money laundering? Show account pairs with multiple such routing paths.",
+      "difficulty": "expert",
+      "tags": [
+        "qpe",
+        "money-laundering",
+        "traversal",
+        "deep-path"
+      ],
+      "verdict": "FAIL",
+      "failed_gate": 1,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH path = (src:Account {status: 'Active'})-[:TRANSACTED_TO]->{2,4}(dst:Account {status: 'Active'})\nWHERE src <> dst\n  AND ALL(n IN nodes(path)[1..-1] WHERE n.status = 'Active')\nWITH src, dst, collect(path) AS paths\nWHERE size(paths) >= 2\nRETURN\n  src.accountID        AS sourceAccount,\n  src.accountNumber    AS sourceAccountNumber,\n  dst.accountID        AS destinationAccount,\n  dst.accountNumber    AS destinationAccountNumber,\n  size(paths)          AS routingPathCount,\n  [p IN paths | [n IN nodes(p) | n.accountID]] AS routingPaths\nORDER BY routingPathCount DESC\nLIMIT 20",
+      "metrics": {},
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "FAIL",
+          "reason": "Syntax error: {neo4j_code: Neo.ClientError.Security.Unauthorized} {message: The client is unauthorized due to authentication failure.} {gql_status: 42NFF} {gql_status_description: error: syntax error or access rule violation - permission/access denied. Access denied, see the security logs for details.}",
+          "details": {}
+        }
+      ],
+      "error": null,
+      "duration_s": 43.858
+    },
+    {
+      "case_id": "ucf-expert-004",
+      "question": "Mark all customers who belong to the same network cluster as known fraudsters as 'suspicious due to network association'. Process them in small batches to avoid overloading the system.",
+      "difficulty": "expert",
+      "tags": [
+        "call-in-transactions",
+        "batch",
+        "write",
+        "fraud-flagging"
+      ],
+      "verdict": "FAIL",
+      "failed_gate": 1,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (fraudster:Customer {fraudFlag: 'True'})\nWHERE fraudster.louvainCommunity IS NOT NULL\nWITH collect(DISTINCT fraudster.louvainCommunity) AS fraudCommunities\n\nMATCH (c:Customer)\nWHERE c.louvainCommunity IN fraudCommunities\n  AND c.fraudFlag <> 'True'\n  AND c.louvainCommunity IS NOT NULL\n\nCALL (c) {\n  SET c.fraudFlag = 'suspicious due to network association'\n} IN TRANSACTIONS OF 500 ROWS ON ERROR CONTINUE\n\nRETURN count(*) AS markedSuspicious",
+      "metrics": {},
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "FAIL",
+          "reason": "Syntax error: {neo4j_code: Neo.ClientError.Security.AuthenticationRateLimit} {message: The client has provided incorrect authentication details too many times in a row.} {gql_status: 42NFF} {gql_status_description: error: syntax error or access rule violation - permission/access denied. Access denied, see the security logs for details.}",
+          "details": {}
+        }
+      ],
+      "error": null,
+      "duration_s": 42.024
+    },
+    {
+      "case_id": "ucf-expert-005",
+      "question": "Search for customers with the surname 'Poole' and trace how many accounts in our system are linked to their accounts \u2014 directly or through up to three degrees of shared identity.",
+      "difficulty": "expert",
+      "tags": [
+        "fulltext",
+        "qpe",
+        "fraud-ring",
+        "hybrid"
+      ],
+      "verdict": "FAIL",
+      "failed_gate": 1,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nCALL db.index.fulltext.queryNodes('customerNames', 'Poole') YIELD node AS customer, score\nWHERE customer.name ENDS WITH 'Poole'\nMATCH (customer)-[:HAS_ACCOUNT]->(seed:Account)\nWITH collect(DISTINCT customer.name) AS poole_customers,\n     collect(DISTINCT seed)          AS seedAccounts\nUNWIND seedAccounts AS seed\nMATCH (seed)-[:SHARED_IDENTIFIERS]-{1,3}(linked:Account)\nWHERE NOT linked IN seedAccounts\nWITH poole_customers, seedAccounts, collect(DISTINCT linked) AS linkedAccounts\nRETURN\n  poole_customers,\n  size(seedAccounts)   AS poole_account_count,\n  size(linkedAccounts) AS linked_account_count,\n  [a IN linkedAccounts | a.accountID] AS linked_account_ids",
+      "metrics": {},
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "FAIL",
+          "reason": "Syntax error: {neo4j_code: Neo.ClientError.Security.AuthenticationRateLimit} {message: The client has provided incorrect authentication details too many times in a row.} {gql_status: 42NFF} {gql_status_description: error: syntax error or access rule violation - permission/access denied. Access denied, see the security logs for details.}",
+          "details": {}
+        }
+      ],
+      "error": null,
+      "duration_s": 43.289
+    }
+  ]
+}

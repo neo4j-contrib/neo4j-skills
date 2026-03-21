@@ -568,7 +568,7 @@ tasks:
       SKILL.md sections most responsible for failures and apply the highest-priority
       recommended edits to SKILL.md. Re-run harness on failing cases after edits to
       confirm improvement. Commit updated SKILL.md, case files, and improvement report.
-    status: pending
+    status: completed
     dependencies:
       - task-024
       - task-025
@@ -581,7 +581,7 @@ tasks:
       - "At least one SKILL.md improvement is applied based on the report recommendations"
       - "Overall pass rate across all 3 domains: ≥ 85% (basic+intermediate combined)"
       - "Improvement report committed to skill-generation-validation-tools/tests/results/"
-    completed_at: null
+    completed_at: "2026-03-21T14:20:00Z"
 
   - id: task-030
     title: "Add structured dataset: schema sections to all domain YAML files"

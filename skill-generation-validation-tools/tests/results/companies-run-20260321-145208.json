@@ -1,0 +1,939 @@
+{
+  "run_id": "run-20260321T135208",
+  "started_at": "2026-03-21T13:52:08.837472+00:00",
+  "completed_at": "2026-03-21T13:54:11.982632+00:00",
+  "skill": "neo4j-cypher-authoring-skill",
+  "summary": {
+    "total": 35,
+    "passed": 0,
+    "warned": 0,
+    "failed": 35,
+    "pass_rate": 0.0
+  },
+  "cases": [
+    {
+      "case_id": "companies-basic-001",
+      "question": "Which companies in our database are independent \u2014 not owned by or part of any other company?",
+      "difficulty": "basic",
+      "tags": [
+        "match",
+        "label",
+        "filter",
+        "not-exists"
+      ],
+      "verdict": "FAIL",
+      "failed_gate": 1,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (o:Organization)\nWHERE NOT EXISTS { (o)<-[:HAS_SUBSIDIARY]-() }\nRETURN o.name AS company, o.description AS description\nORDER BY o.name\nLIMIT 25",
+      "metrics": {},
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "FAIL",
+          "reason": "Syntax error: {neo4j_code: Neo.ClientError.Security.AuthenticationRateLimit} {message: The client has provided incorrect authentication details too many times in a row.} {gql_status: 42NFF} {gql_status_description: error: syntax error or access rule violation - permission/access denied. Access denied, see the security logs for details.}",
+          "details": {}
+        }
+      ],
+      "error": null,
+      "duration_s": 10.547
+    },
+    {
+      "case_id": "companies-basic-002",
+      "question": "How many companies are tracked in our database?",
+      "difficulty": "basic",
+      "tags": [
+        "match",
+        "aggregation",
+        "count"
+      ],
+      "verdict": "FAIL",
+      "failed_gate": 1,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (o:Organization)\nRETURN count(o) AS companyCount",
+      "metrics": {},
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "FAIL",
+          "reason": "Syntax error: {neo4j_code: Neo.ClientError.Security.Unauthorized} {message: The client is unauthorized due to authentication failure.} {gql_status: 42NFF} {gql_status_description: error: syntax error or access rule violation - permission/access denied. Access denied, see the security logs for details.}",
+          "details": {}
+        }
+      ],
+      "error": null,
+      "duration_s": 4.179
+    },
+    {
+      "case_id": "companies-basic-003",
+      "question": "List the first 10 companies in alphabetical order.",
+      "difficulty": "basic",
+      "tags": [
+        "match",
+        "order-by",
+        "limit"
+      ],
+      "verdict": "FAIL",
+      "failed_gate": 1,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (o:Organization)\nRETURN o.name\nORDER BY o.name ASC\nLIMIT 10",
+      "metrics": {},
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "FAIL",
+          "reason": "Syntax error: {neo4j_code: Neo.ClientError.Security.Unauthorized} {message: The client is unauthorized due to authentication failure.} {gql_status: 42NFF} {gql_status_description: error: syntax error or access rule violation - permission/access denied. Access denied, see the security logs for details.}",
+          "details": {}
+        }
+      ],
+      "error": null,
+      "duration_s": 4.559
+    },
+    {
+      "case_id": "companies-basic-004",
+      "question": "What are the most positively covered news articles mentioning Apple? Show the top 10 by sentiment score with their titles.",
+      "difficulty": "basic",
+      "tags": [
+        "match",
+        "relationship",
+        "mentions"
+      ],
+      "verdict": "FAIL",
+      "failed_gate": 1,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (a:Article)-[:MENTIONS]->(o:Organization {name: 'Apple'})\nRETURN a.title, a.sentiment\nORDER BY a.sentiment DESC\nLIMIT 10",
+      "metrics": {},
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "FAIL",
+          "reason": "Syntax error: {neo4j_code: Neo.ClientError.Security.Unauthorized} {message: The client is unauthorized due to authentication failure.} {gql_status: 42NFF} {gql_status_description: error: syntax error or access rule violation - permission/access denied. Access denied, see the security logs for details.}",
+          "details": {}
+        }
+      ],
+      "error": null,
+      "duration_s": 6.625
+    },
+    {
+      "case_id": "companies-basic-005",
+      "question": "Which companies get the most press coverage? Rank the top 10 by number of news articles mentioning them.",
+      "difficulty": "basic",
+      "tags": [
+        "match",
+        "aggregation",
+        "count",
+        "order-by",
+        "limit"
+      ],
+      "verdict": "FAIL",
+      "failed_gate": 1,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (a:Article)-[:MENTIONS]->(o:Organization)\nRETURN o.name AS company, count(a) AS articleCount\nORDER BY articleCount DESC\nLIMIT 10",
+      "metrics": {},
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "FAIL",
+          "reason": "Syntax error: {neo4j_code: Neo.ClientError.Security.AuthenticationRateLimit} {message: The client has provided incorrect authentication details too many times in a row.} {gql_status: 42NFF} {gql_status_description: error: syntax error or access rule violation - permission/access denied. Access denied, see the security logs for details.}",
+          "details": {}
+        }
+      ],
+      "error": null,
+      "duration_s": 7.511
+    },
+    {
+      "case_id": "companies-basic-006",
+      "question": "Which companies does Blackstone directly own? List up to 10 of its subsidiaries.",
+      "difficulty": "basic",
+      "tags": [
+        "match",
+        "relationship",
+        "subsidiary"
+      ],
+      "verdict": "FAIL",
+      "failed_gate": 1,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (parent:Organization {name: 'Blackstone'})-[:HAS_SUBSIDIARY]->(sub:Organization)\nRETURN sub.name AS subsidiary\nLIMIT 10",
+      "metrics": {},
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "FAIL",
+          "reason": "Syntax error: {neo4j_code: Neo.ClientError.Security.AuthenticationRateLimit} {message: The client has provided incorrect authentication details too many times in a row.} {gql_status: 42NFF} {gql_status_description: error: syntax error or access rule violation - permission/access denied. Access denied, see the security logs for details.}",
+          "details": {}
+        }
+      ],
+      "error": null,
+      "duration_s": 6.479
+    },
+    {
+      "case_id": "companies-basic-007",
+      "question": "What is the average news sentiment score across all articles in our database?",
+      "difficulty": "basic",
+      "tags": [
+        "match",
+        "aggregation",
+        "avg",
+        "sentiment"
+      ],
+      "verdict": "FAIL",
+      "failed_gate": 1,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (a:Article)\nRETURN avg(a.sentiment) AS avgSentiment",
+      "metrics": {},
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "FAIL",
+          "reason": "Syntax error: {neo4j_code: Neo.ClientError.Security.AuthenticationRateLimit} {message: The client has provided incorrect authentication details too many times in a row.} {gql_status: 42NFF} {gql_status_description: error: syntax error or access rule violation - permission/access denied. Access denied, see the security logs for details.}",
+          "details": {}
+        }
+      ],
+      "error": null,
+      "duration_s": 3.475
+    },
+    {
+      "case_id": "companies-basic-008",
+      "question": "Which 5 companies are mentioned most frequently in the news? Show their names and a brief description.",
+      "difficulty": "basic",
+      "tags": [
+        "match",
+        "aggregation",
+        "relationship",
+        "limit",
+        "order-by"
+      ],
+      "verdict": "FAIL",
+      "failed_gate": 1,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (a:Article)-[:MENTIONS]->(o:Organization)\nWITH o, count(a) AS mentionCount\nORDER BY mentionCount DESC\nLIMIT 5\nRETURN o.name AS name, o.description AS description, mentionCount",
+      "metrics": {},
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "FAIL",
+          "reason": "Syntax error: {neo4j_code: Neo.ClientError.Security.AuthenticationRateLimit} {message: The client has provided incorrect authentication details too many times in a row.} {gql_status: 42NFF} {gql_status_description: error: syntax error or access rule violation - permission/access denied. Access denied, see the security logs for details.}",
+          "details": {}
+        }
+      ],
+      "error": null,
+      "duration_s": 9.581
+    },
+    {
+      "case_id": "companies-basic-009",
+      "question": "Show me the most positive news articles in our database \u2014 articles with a positive sentiment score. Return the top 10 by sentiment.",
+      "difficulty": "basic",
+      "tags": [
+        "match",
+        "filter",
+        "sentiment",
+        "order-by",
+        "limit"
+      ],
+      "verdict": "FAIL",
+      "failed_gate": 1,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (a:Article)\nWHERE a.sentiment > 0\nRETURN a.title, a.sentiment, a.date, a.url\nORDER BY a.sentiment DESC\nLIMIT 10",
+      "metrics": {},
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "FAIL",
+          "reason": "Syntax error: {neo4j_code: Neo.ClientError.Security.AuthenticationRateLimit} {message: The client has provided incorrect authentication details too many times in a row.} {gql_status: 42NFF} {gql_status_description: error: syntax error or access rule violation - permission/access denied. Access denied, see the security logs for details.}",
+          "details": {}
+        }
+      ],
+      "error": null,
+      "duration_s": 8.447
+    },
+    {
+      "case_id": "companies-basic-010",
+      "question": "How many news articles in our database are positive, neutral, or negative in tone? Give me a breakdown by sentiment category.",
+      "difficulty": "basic",
+      "tags": [
+        "match",
+        "aggregation",
+        "case-when",
+        "sentiment"
+      ],
+      "verdict": "FAIL",
+      "failed_gate": 1,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (a:Article)\nRETURN\n  WHEN a.sentiment > 0 THEN 'positive'\n       a.sentiment < 0 THEN 'negative'\n  ELSE 'neutral' END AS sentimentCategory,\n  count(a) AS articleCount\nORDER BY articleCount DESC",
+      "metrics": {},
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "FAIL",
+          "reason": "Syntax error: {neo4j_code: Neo.ClientError.Security.AuthenticationRateLimit} {message: The client has provided incorrect authentication details too many times in a row.} {gql_status: 42NFF} {gql_status_description: error: syntax error or access rule violation - permission/access denied. Access denied, see the security logs for details.}",
+          "details": {}
+        }
+      ],
+      "error": null,
+      "duration_s": 7.371
+    },
+    {
+      "case_id": "companies-intermediate-001",
+      "question": "Which companies are attracting the most negative press coverage? Show those mentioned in strongly negative articles, along with how many such articles each has.",
+      "difficulty": "intermediate",
+      "tags": [
+        "match",
+        "filter",
+        "aggregation",
+        "relationship",
+        "sentiment"
+      ],
+      "verdict": "FAIL",
+      "failed_gate": 1,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (a:Article)-[:MENTIONS]->(o:Organization)\nWHERE a.sentiment < -0.5\nWITH o, count(a) AS negativeArticleCount\nORDER BY negativeArticleCount DESC\nRETURN o.name AS company, negativeArticleCount\nLIMIT 20",
+      "metrics": {},
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "FAIL",
+          "reason": "Syntax error: {neo4j_code: Neo.ClientError.Security.AuthenticationRateLimit} {message: The client has provided incorrect authentication details too many times in a row.} {gql_status: 42NFF} {gql_status_description: error: syntax error or access rule violation - permission/access denied. Access denied, see the security logs for details.}",
+          "details": {}
+        }
+      ],
+      "error": null,
+      "duration_s": 10.948
+    },
+    {
+      "case_id": "companies-intermediate-002",
+      "question": "Which pairs of companies are most frequently mentioned together in the same news articles? Show the top 10 most co-covered pairs.",
+      "difficulty": "intermediate",
+      "tags": [
+        "match",
+        "aggregation",
+        "co-occurrence",
+        "relationship",
+        "limit"
+      ],
+      "verdict": "FAIL",
+      "failed_gate": 1,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (a:Article)-[:MENTIONS]->(o1:Organization),\n      (a)-[:MENTIONS]->(o2:Organization)\nWHERE o1.name < o2.name\nRETURN o1.name AS company1, o2.name AS company2, count(a) AS sharedArticles\nORDER BY sharedArticles DESC\nLIMIT 10",
+      "metrics": {},
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "FAIL",
+          "reason": "Syntax error: {neo4j_code: Neo.ClientError.Security.AuthenticationRateLimit} {message: The client has provided incorrect authentication details too many times in a row.} {gql_status: 42NFF} {gql_status_description: error: syntax error or access rule violation - permission/access denied. Access denied, see the security logs for details.}",
+          "details": {}
+        }
+      ],
+      "error": null,
+      "duration_s": 12.585
+    },
+    {
+      "case_id": "companies-intermediate-003",
+      "question": "Among companies that are not subsidiaries of any other firm, which have the most negative media coverage on average? Only include companies with at least 3 articles.",
+      "difficulty": "intermediate",
+      "tags": [
+        "match",
+        "aggregation",
+        "filter",
+        "having",
+        "not-exists",
+        "sentiment"
+      ],
+      "verdict": "FAIL",
+      "failed_gate": 1,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (a:Article)-[:MENTIONS]->(o:Organization)\nWHERE NOT EXISTS { (o)<-[:HAS_SUBSIDIARY]-() }\nWITH o, avg(a.sentiment) AS avgSentiment, count(a) AS articleCount\nWHERE articleCount >= 3\nRETURN o.name AS company, avgSentiment, articleCount\nORDER BY avgSentiment ASC\nLIMIT 10",
+      "metrics": {},
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "FAIL",
+          "reason": "Syntax error: {neo4j_code: Neo.ClientError.Security.AuthenticationRateLimit} {message: The client has provided incorrect authentication details too many times in a row.} {gql_status: 42NFF} {gql_status_description: error: syntax error or access rule violation - permission/access denied. Access denied, see the security logs for details.}",
+          "details": {}
+        }
+      ],
+      "error": null,
+      "duration_s": 12.788
+    },
+    {
+      "case_id": "companies-intermediate-004",
+      "question": "Search for companies with 'tech' in their name. What do they do?",
+      "difficulty": "intermediate",
+      "tags": [
+        "fulltext",
+        "index",
+        "search",
+        "procedure"
+      ],
+      "verdict": "FAIL",
+      "failed_gate": 1,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nCALL db.index.fulltext.queryNodes('entity', 'tech') YIELD node, score\nWHERE node:Organization\nRETURN node.name AS company, node.description AS description, score\nORDER BY score DESC\nLIMIT 25",
+      "metrics": {},
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "FAIL",
+          "reason": "Syntax error: {neo4j_code: Neo.ClientError.Security.Unauthorized} {message: The client is unauthorized due to authentication failure.} {gql_status: 42NFF} {gql_status_description: error: syntax error or access rule violation - permission/access denied. Access denied, see the security logs for details.}",
+          "details": {}
+        }
+      ],
+      "error": null,
+      "duration_s": 10.074
+    },
+    {
+      "case_id": "companies-intermediate-005",
+      "question": "What companies does Blackstone own, including those owned through intermediary companies? Show up to two levels of ownership, returning up to 20 distinct names.",
+      "difficulty": "intermediate",
+      "tags": [
+        "match",
+        "variable-length",
+        "relationship",
+        "traversal"
+      ],
+      "verdict": "FAIL",
+      "failed_gate": 1,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (parent:Organization {name: 'Blackstone'})-[:HAS_SUBSIDIARY]-{1,2}(subsidiary:Organization)\nRETURN DISTINCT subsidiary.name AS company\nLIMIT 20",
+      "metrics": {},
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "FAIL",
+          "reason": "Syntax error: {neo4j_code: Neo.ClientError.Security.AuthenticationRateLimit} {message: The client has provided incorrect authentication details too many times in a row.} {gql_status: 42NFF} {gql_status_description: error: syntax error or access rule violation - permission/access denied. Access denied, see the security logs for details.}",
+          "details": {}
+        }
+      ],
+      "error": null,
+      "duration_s": 11.673
+    },
+    {
+      "case_id": "companies-intermediate-006",
+      "question": "For the 5 most-covered companies in the news, what was the most positively-toned article written about each of them?",
+      "difficulty": "intermediate",
+      "tags": [
+        "call-subquery",
+        "aggregation",
+        "relationship",
+        "limit"
+      ],
+      "verdict": "FAIL",
+      "failed_gate": 1,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (a:Article)-[:MENTIONS]->(o:Organization)\nWITH o, count(a) AS articleCount\nORDER BY articleCount DESC\nLIMIT 5\nCALL (o) {\n  MATCH (a2:Article)-[:MENTIONS]->(o)\n  RETURN a2\n  ORDER BY a2.sentiment DESC\n  LIMIT 1\n}\nRETURN o.name          AS company,\n       articleCount,\n       a2.title        AS topArticleTitle,\n       a2.sentiment    AS topSentiment,\n       a2.url          AS url\nORDER BY articleCount DESC",
+      "metrics": {},
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "FAIL",
+          "reason": "Syntax error: {neo4j_code: Neo.ClientError.Security.AuthenticationRateLimit} {message: The client has provided incorrect authentication details too many times in a row.} {gql_status: 42NFF} {gql_status_description: error: syntax error or access rule violation - permission/access denied. Access denied, see the security logs for details.}",
+          "details": {}
+        }
+      ],
+      "error": null,
+      "duration_s": 20.512
+    },
+    {
+      "case_id": "companies-intermediate-007",
+      "question": "How many news article segments are linked to articles that mention companies in our database?",
+      "difficulty": "intermediate",
+      "tags": [
+        "match",
+        "aggregation",
+        "multi-hop",
+        "relationship"
+      ],
+      "verdict": "FAIL",
+      "failed_gate": 1,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (a:Article)-[:MENTIONS]->(:Organization)\nMATCH (a)-[:HAS_CHUNK]->(c:Chunk)\nRETURN count(DISTINCT c) AS chunkCount",
+      "metrics": {},
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "FAIL",
+          "reason": "Syntax error: {neo4j_code: Neo.ClientError.Security.AuthenticationRateLimit} {message: The client has provided incorrect authentication details too many times in a row.} {gql_status: 42NFF} {gql_status_description: error: syntax error or access rule violation - permission/access denied. Access denied, see the security logs for details.}",
+          "details": {}
+        }
+      ],
+      "error": null,
+      "duration_s": 8.768
+    },
+    {
+      "case_id": "companies-intermediate-008",
+      "question": "Which companies both have subsidiary businesses and appear in the news? Show their name and number of subsidiaries, ranked by size of their corporate family.",
+      "difficulty": "intermediate",
+      "tags": [
+        "match",
+        "aggregation",
+        "filter",
+        "relationship",
+        "having"
+      ],
+      "verdict": "FAIL",
+      "failed_gate": 1,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (org:Organization)-[:HAS_SUBSIDIARY]->(sub:Organization)\nMATCH (:Article)-[:MENTIONS]->(org)\nWITH org, count(DISTINCT sub) AS subsidiaryCount\nRETURN org.name AS company, subsidiaryCount\nORDER BY subsidiaryCount DESC",
+      "metrics": {},
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "FAIL",
+          "reason": "Syntax error: {neo4j_code: Neo.ClientError.Security.Unauthorized} {message: The client is unauthorized due to authentication failure.} {gql_status: 42NFF} {gql_status_description: error: syntax error or access rule violation - permission/access denied. Access denied, see the security logs for details.}",
+          "details": {}
+        }
+      ],
+      "error": null,
+      "duration_s": 11.001
+    },
+    {
+      "case_id": "companies-intermediate-009",
+      "question": "Which companies have a supplier relationship with another company AND also appear in news coverage? Show the company, its supplier, and how many articles mention it. Return the top 10 by coverage.",
+      "difficulty": "intermediate",
+      "tags": [
+        "match",
+        "relationship",
+        "aggregation",
+        "multi-pattern"
+      ],
+      "verdict": "FAIL",
+      "failed_gate": 1,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (o:Organization)-[:HAS_SUPPLIER]->(s:Organization)\nMATCH (a:Article)-[:MENTIONS]->(o)\nWITH o, s, count(DISTINCT a) AS articleCount\nRETURN o.name AS company, s.name AS supplier, articleCount\nORDER BY articleCount DESC\nLIMIT 10",
+      "metrics": {},
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "FAIL",
+          "reason": "Syntax error: {neo4j_code: Neo.ClientError.Security.AuthenticationRateLimit} {message: The client has provided incorrect authentication details too many times in a row.} {gql_status: 42NFF} {gql_status_description: error: syntax error or access rule violation - permission/access denied. Access denied, see the security logs for details.}",
+          "details": {}
+        }
+      ],
+      "error": null,
+      "duration_s": 11.491
+    },
+    {
+      "case_id": "companies-intermediate-010",
+      "question": "Which company has the most direct subsidiaries? Return its name and the count.",
+      "difficulty": "intermediate",
+      "tags": [
+        "match",
+        "aggregation",
+        "relationship",
+        "order-by",
+        "limit"
+      ],
+      "verdict": "FAIL",
+      "failed_gate": 1,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25 MATCH (parent:Organization)-[:HAS_SUBSIDIARY]->(sub:Organization) RETURN parent.name AS company, count(sub) AS subsidiaryCount ORDER BY subsidiaryCount DESC LIMIT 1",
+      "metrics": {},
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "FAIL",
+          "reason": "Syntax error: {neo4j_code: Neo.ClientError.Security.AuthenticationRateLimit} {message: The client has provided incorrect authentication details too many times in a row.} {gql_status: 42NFF} {gql_status_description: error: syntax error or access rule violation - permission/access denied. Access denied, see the security logs for details.}",
+          "details": {}
+        }
+      ],
+      "error": null,
+      "duration_s": 5.425
+    },
+    {
+      "case_id": "companies-advanced-001",
+      "question": "What companies are within Blackstone's ownership structure \u2014 either directly owned or owned through one intermediary company? Return up to 20 distinct names.",
+      "difficulty": "advanced",
+      "tags": [
+        "qpe",
+        "quantified-path",
+        "relationship",
+        "traversal"
+      ],
+      "verdict": "FAIL",
+      "failed_gate": 1,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (blackstone:Organization {name: 'Blackstone'})-[:HAS_SUBSIDIARY]->{1,2}(subsidiary:Organization)\nRETURN DISTINCT subsidiary.name AS name\nLIMIT 20",
+      "metrics": {},
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "FAIL",
+          "reason": "Syntax error: {neo4j_code: Neo.ClientError.Security.Unauthorized} {message: The client is unauthorized due to authentication failure.} {gql_status: 42NFF} {gql_status_description: error: syntax error or access rule violation - permission/access denied. Access denied, see the security logs for details.}",
+          "details": {}
+        }
+      ],
+      "error": null,
+      "duration_s": 16.931
+    },
+    {
+      "case_id": "companies-advanced-002",
+      "question": "How large is Blackstone's full corporate family \u2014 counting every company it owns at any depth of the ownership chain?",
+      "difficulty": "advanced",
+      "tags": [
+        "qpe",
+        "quantified-path",
+        "unbounded-quantifier",
+        "relationship"
+      ],
+      "verdict": "FAIL",
+      "failed_gate": 1,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (root:Organization {name: 'Blackstone'})\nMATCH (root)-[:HAS_SUBSIDIARY]->{1,}(subsidiary:Organization)\nRETURN count(DISTINCT subsidiary) AS totalFamilySize",
+      "metrics": {},
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "FAIL",
+          "reason": "Syntax error: {neo4j_code: Neo.ClientError.Security.AuthenticationRateLimit} {message: The client has provided incorrect authentication details too many times in a row.} {gql_status: 42NFF} {gql_status_description: error: syntax error or access rule violation - permission/access denied. Access denied, see the security logs for details.}",
+          "details": {}
+        }
+      ],
+      "error": null,
+      "duration_s": 19.666
+    },
+    {
+      "case_id": "companies-advanced-003",
+      "question": "Which 5 companies have the most total connections in our database \u2014 counting ownership relationships, news mentions, and industry category links combined?",
+      "difficulty": "advanced",
+      "tags": [
+        "match",
+        "aggregation",
+        "degree",
+        "relationship"
+      ],
+      "verdict": "FAIL",
+      "failed_gate": 1,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (o:Organization)\nWITH o,\n  COUNT { (o)-[:HAS_SUBSIDIARY]-() }   AS ownershipLinks,\n  COUNT { ()-[:MENTIONS]->(o) }        AS mentionLinks,\n  COUNT { (o)-[:IN_INDUSTRY]->() }     AS industryLinks,\n  COUNT { (o)-[:HAS_CATEGORY]->() }    AS categoryLinks\nWITH o,\n  ownershipLinks + mentionLinks + industryLinks + categoryLinks AS totalConnections\nRETURN o.name AS company, totalConnections\nORDER BY totalConnections DESC\nLIMIT 5",
+      "metrics": {},
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "FAIL",
+          "reason": "Syntax error: {neo4j_code: Neo.ClientError.Security.AuthenticationRateLimit} {message: The client has provided incorrect authentication details too many times in a row.} {gql_status: 42NFF} {gql_status_description: error: syntax error or access rule violation - permission/access denied. Access denied, see the security logs for details.}",
+          "details": {}
+        }
+      ],
+      "error": null,
+      "duration_s": 20.678
+    },
+    {
+      "case_id": "companies-advanced-004",
+      "question": "Find the 5 news article segments most semantically relevant to a general business query. Return the segment text and how closely it matches.",
+      "difficulty": "advanced",
+      "tags": [
+        "vector",
+        "index",
+        "similarity",
+        "procedure"
+      ],
+      "verdict": "FAIL",
+      "failed_gate": 1,
+      "warned_gate": null,
+      "generated_cypher": "// Embedding must be computed externally (e.g. OpenAI text-embedding-ada-002 for\n// query text \"business strategy revenue growth investment\").\n// Replace the vector literal below with your actual 1536-dim float array.\nCYPHER 25\nCALL db.index.vector.queryNodes('news', 5, $embedding) YIELD node, score\nRETURN node.text AS segment_text, score\nORDER BY score DESC",
+      "metrics": {},
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "FAIL",
+          "reason": "Syntax error: {neo4j_code: Neo.ClientError.Security.AuthenticationRateLimit} {message: The client has provided incorrect authentication details too many times in a row.} {gql_status: 42NFF} {gql_status_description: error: syntax error or access rule violation - permission/access denied. Access denied, see the security logs for details.}",
+          "details": {}
+        }
+      ],
+      "error": null,
+      "duration_s": 20.762
+    },
+    {
+      "case_id": "companies-advanced-005",
+      "question": "Search for companies named 'Amazon' and show all the news articles that mention each of them.",
+      "difficulty": "advanced",
+      "tags": [
+        "fulltext",
+        "index",
+        "search",
+        "call-subquery",
+        "procedure"
+      ],
+      "verdict": "FAIL",
+      "failed_gate": 1,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nCALL db.index.fulltext.queryNodes('entity', 'Amazon') YIELD node AS org, score AS searchScore\nMATCH (a:Article)-[:MENTIONS]->(org)\nRETURN org.name AS company,\n       a.title   AS articleTitle,\n       a.date    AS articleDate,\n       a.sentiment AS sentiment\nORDER BY org.name, a.date DESC",
+      "metrics": {},
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "FAIL",
+          "reason": "Syntax error: {neo4j_code: Neo.ClientError.Security.AuthenticationRateLimit} {message: The client has provided incorrect authentication details too many times in a row.} {gql_status: 42NFF} {gql_status_description: error: syntax error or access rule violation - permission/access denied. Access denied, see the security logs for details.}",
+          "details": {}
+        }
+      ],
+      "error": null,
+      "duration_s": 14.026
+    },
+    {
+      "case_id": "companies-advanced-006",
+      "question": "For the 20 most-covered companies in our news database, show how many subsidiaries each owns and what the average tone of their press coverage is. Rank by most negative coverage first.",
+      "difficulty": "advanced",
+      "tags": [
+        "call-subquery",
+        "aggregation",
+        "relationship",
+        "sentiment"
+      ],
+      "verdict": "FAIL",
+      "failed_gate": 1,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (a:Article)-[:MENTIONS]->(o:Organization)\nWITH o, count(a) AS articleCount, avg(a.sentiment) AS avgSentiment\nORDER BY articleCount DESC\nLIMIT 20\nOPTIONAL MATCH (o)-[:HAS_SUBSIDIARY]->(sub:Organization)\nWITH o, articleCount, avgSentiment, count(sub) AS subsidiaryCount\nRETURN o.name            AS company,\n       articleCount,\n       subsidiaryCount,\n       round(avgSentiment, 3) AS avgSentiment\nORDER BY avgSentiment ASC",
+      "metrics": {},
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "FAIL",
+          "reason": "Syntax error: {neo4j_code: Neo.ClientError.Security.AuthenticationRateLimit} {message: The client has provided incorrect authentication details too many times in a row.} {gql_status: 42NFF} {gql_status_description: error: syntax error or access rule violation - permission/access denied. Access denied, see the security logs for details.}",
+          "details": {}
+        }
+      ],
+      "error": null,
+      "duration_s": 26.203
+    },
+    {
+      "case_id": "companies-advanced-007",
+      "question": "Which company pairs appear in both positive and negative news stories? I'm looking for companies that generate mixed sentiment coverage together. Show the top 10 pairs.",
+      "difficulty": "advanced",
+      "tags": [
+        "match",
+        "aggregation",
+        "co-occurrence",
+        "filter",
+        "sentiment",
+        "count-subquery"
+      ],
+      "verdict": "FAIL",
+      "failed_gate": 1,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (a:Article)-[:MENTIONS]->(o1:Organization),\n      (a)-[:MENTIONS]->(o2:Organization)\nWHERE o1.name < o2.name\nWITH o1, o2, collect(DISTINCT a) AS sharedArticles\nWITH o1, o2,\n     size([x IN sharedArticles WHERE x.sentiment > 0]) AS posCount,\n     size([x IN sharedArticles WHERE x.sentiment < 0]) AS negCount\nWHERE posCount > 0 AND negCount > 0\nRETURN o1.name AS company1, o2.name AS company2,\n       posCount, negCount, posCount + negCount AS totalArticles\nORDER BY totalArticles DESC\nLIMIT 10",
+      "metrics": {},
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "FAIL",
+          "reason": "Syntax error: {neo4j_code: Neo.ClientError.Security.AuthenticationRateLimit} {message: The client has provided incorrect authentication details too many times in a row.} {gql_status: 42NFF} {gql_status_description: error: syntax error or access rule violation - permission/access denied. Access denied, see the security logs for details.}",
+          "details": {}
+        }
+      ],
+      "error": null,
+      "duration_s": 36.264
+    },
+    {
+      "case_id": "companies-advanced-008",
+      "question": "Which companies are talked about in the news more often than they have subsidiaries? Show up to 10 such companies with their article count and subsidiary count.",
+      "difficulty": "advanced",
+      "tags": [
+        "count-subquery",
+        "aggregation",
+        "relationship",
+        "filter"
+      ],
+      "verdict": "FAIL",
+      "failed_gate": 1,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (o:Organization)\nWITH o,\n     COUNT { (:Article)-[:MENTIONS]->(o) } AS articleCount,\n     COUNT { (o)-[:HAS_SUBSIDIARY]->(:Organization) } AS subsidiaryCount\nWHERE articleCount > subsidiaryCount\nRETURN o.name AS company, articleCount, subsidiaryCount\nORDER BY articleCount DESC\nLIMIT 10",
+      "metrics": {},
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "FAIL",
+          "reason": "Syntax error: {neo4j_code: Neo.ClientError.Security.AuthenticationRateLimit} {message: The client has provided incorrect authentication details too many times in a row.} {gql_status: 42NFF} {gql_status_description: error: syntax error or access rule violation - permission/access denied. Access denied, see the security logs for details.}",
+          "details": {}
+        }
+      ],
+      "error": null,
+      "duration_s": 11.933
+    },
+    {
+      "case_id": "companies-advanced-009",
+      "question": "Which pairs of companies in the same industry category are also covered together in the same news articles? Show the category, the company pair, and how often they appear together.",
+      "difficulty": "advanced",
+      "tags": [
+        "match",
+        "multi-pattern",
+        "relationship",
+        "aggregation",
+        "category"
+      ],
+      "verdict": "FAIL",
+      "failed_gate": 1,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (o1:Organization)-[:IN_INDUSTRY]->(ic:IndustryCategory)<-[:IN_INDUSTRY]-(o2:Organization)\nWHERE o1.name < o2.name\nMATCH (a:Article)-[:MENTIONS]->(o1)\nMATCH (a)-[:MENTIONS]->(o2)\nRETURN ic.name AS category,\n       o1.name AS company1,\n       o2.name AS company2,\n       count(a) AS co_mentions\nORDER BY co_mentions DESC\nLIMIT 25",
+      "metrics": {},
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "FAIL",
+          "reason": "Syntax error: {neo4j_code: Neo.ClientError.Security.AuthenticationRateLimit} {message: The client has provided incorrect authentication details too many times in a row.} {gql_status: 42NFF} {gql_status_description: error: syntax error or access rule violation - permission/access denied. Access denied, see the security logs for details.}",
+          "details": {}
+        }
+      ],
+      "error": null,
+      "duration_s": 18.826
+    },
+    {
+      "case_id": "companies-advanced-010",
+      "question": "For companies that have at least one subsidiary, list each company's name alongside all the subsidiaries it directly owns and the industry categories it belongs to. Return up to 20 companies, ordered alphabetically.",
+      "difficulty": "advanced",
+      "tags": [
+        "collect-subquery",
+        "aggregation",
+        "relationship",
+        "list"
+      ],
+      "verdict": "FAIL",
+      "failed_gate": 1,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (parent:Organization)\nWHERE EXISTS { (parent)-[:HAS_SUBSIDIARY]->(:Organization) }\nWITH parent,\n  COLLECT { MATCH (parent)-[:HAS_SUBSIDIARY]->(sub:Organization) RETURN sub.name ORDER BY sub.name } AS subsidiaries,\n  COLLECT { MATCH (parent)-[:IN_INDUSTRY]->(cat:IndustryCategory) RETURN cat.name ORDER BY cat.name } AS industries\nRETURN parent.name AS company, subsidiaries, industries\nORDER BY company\nLIMIT 20",
+      "metrics": {},
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "FAIL",
+          "reason": "Syntax error: {neo4j_code: Neo.ClientError.Security.AuthenticationRateLimit} {message: The client has provided incorrect authentication details too many times in a row.} {gql_status: 42NFF} {gql_status_description: error: syntax error or access rule violation - permission/access denied. Access denied, see the security logs for details.}",
+          "details": {}
+        }
+      ],
+      "error": null,
+      "duration_s": 24.089
+    },
+    {
+      "case_id": "companies-complex-001",
+      "question": "For 20 companies in our database, how many news articles mention each of them? Process the results in small batches.",
+      "difficulty": "complex",
+      "tags": [
+        "call-in-transactions",
+        "batch",
+        "read"
+      ],
+      "verdict": "FAIL",
+      "failed_gate": 1,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (o:Organization)\nWITH o LIMIT 20\nCALL (o) {\n  MATCH (a:Article)-[:MENTIONS]->(o)\n  RETURN count(a) AS articleCount\n} IN TRANSACTIONS OF 5 ROWS\nRETURN o.name AS company, articleCount\nORDER BY articleCount DESC",
+      "metrics": {},
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "FAIL",
+          "reason": "Syntax error: {neo4j_code: Neo.ClientError.Security.Unauthorized} {message: The client is unauthorized due to authentication failure.} {gql_status: 42NFF} {gql_status_description: error: syntax error or access rule violation - permission/access denied. Access denied, see the security logs for details.}",
+          "details": {}
+        }
+      ],
+      "error": null,
+      "duration_s": 19.591
+    },
+    {
+      "case_id": "companies-complex-002",
+      "question": "By industry category, give me a comprehensive picture: how many companies are in each category, how many news articles mention them in total, what is the average sentiment of that coverage, and how many subsidiaries exist across the group? Show the top 10 categories by total article count.",
+      "difficulty": "complex",
+      "tags": [
+        "call-subquery",
+        "aggregation",
+        "multi-level",
+        "category",
+        "relationship"
+      ],
+      "verdict": "FAIL",
+      "failed_gate": 1,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (cat:IndustryCategory)<-[:IN_INDUSTRY]-(o:Organization)\nWITH cat, collect(DISTINCT o) AS companies\nCALL (cat, companies) {\n  UNWIND companies AS o\n  OPTIONAL MATCH (a:Article)-[:MENTIONS]->(o)\n  WITH collect(DISTINCT a) AS allArticles\n  WITH [a IN allArticles WHERE a IS NOT NULL] AS articles\n  RETURN size(articles) AS articleCount,\n         CASE WHEN size(articles) > 0\n              THEN reduce(s = 0.0, a IN articles | s + a.sentiment) / size(articles)\n              ELSE null END AS avgSentiment\n}\nCALL (cat, companies) {\n  UNWIND companies AS o\n  OPTIONAL MATCH (o)-[:HAS_SUBSIDIARY]->(sub:Organization)\n  RETURN count(DISTINCT sub) AS subsidiaryCount\n}\nRETURN cat.name                AS category,\n       size(companies)         AS companyCount,\n       articleCount,\n       round(avgSentiment, 3)  AS avgSentiment,\n       subsidiaryCount\nORDER BY articleCount DESC\nLIMIT 10",
+      "metrics": {},
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "FAIL",
+          "reason": "Syntax error: {neo4j_code: Neo.ClientError.Security.AuthenticationRateLimit} {message: The client has provided incorrect authentication details too many times in a row.} {gql_status: 42NFF} {gql_status_description: error: syntax error or access rule violation - permission/access denied. Access denied, see the security logs for details.}",
+          "details": {}
+        }
+      ],
+      "error": null,
+      "duration_s": 47.983
+    },
+    {
+      "case_id": "companies-complex-003",
+      "question": "Search for Microsoft in our company database. For each match, show its industry category, the top 3 news headlines about it, how many news articles mention it, and how many subsidiaries it has.",
+      "difficulty": "complex",
+      "tags": [
+        "fulltext",
+        "index",
+        "call-subquery",
+        "traversal",
+        "relationship",
+        "collect",
+        "graphrag"
+      ],
+      "verdict": "FAIL",
+      "failed_gate": 1,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nCALL db.index.fulltext.queryNodes('entity', 'Microsoft') YIELD node AS org, score\nWITH org, score\nORDER BY score DESC\nOPTIONAL MATCH (org)-[:IN_INDUSTRY]->(ic:IndustryCategory)\nWITH org, score,\n     collect(ic.name) AS industries,\n     COUNT { (a:Article)-[:MENTIONS]->(org) } AS articleCount,\n     COUNT { (org)-[:HAS_SUBSIDIARY]->(:Organization) } AS subsidiaryCount,\n     COLLECT {\n       MATCH (a:Article)-[:MENTIONS]->(org)\n       RETURN a.title\n       ORDER BY a.date DESC\n       LIMIT 3\n     } AS topHeadlines\nRETURN org.name        AS company,\n       industries,\n       topHeadlines,\n       articleCount,\n       subsidiaryCount\nORDER BY score DESC",
+      "metrics": {},
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "FAIL",
+          "reason": "Syntax error: {neo4j_code: Neo.ClientError.Security.AuthenticationRateLimit} {message: The client has provided incorrect authentication details too many times in a row.} {gql_status: 42NFF} {gql_status_description: error: syntax error or access rule violation - permission/access denied. Access denied, see the security logs for details.}",
+          "details": {}
+        }
+      ],
+      "error": null,
+      "duration_s": 44.235
+    },
+    {
+      "case_id": "companies-complex-004",
+      "question": "For companies with at least 5 subsidiaries, show the most positively-covered news article about each (if any), and list the names of companies that sit two levels down in their ownership hierarchy. Return up to 10 companies.",
+      "difficulty": "complex",
+      "tags": [
+        "call-subquery",
+        "optional-match",
+        "qpe",
+        "quantified-path",
+        "relationship"
+      ],
+      "verdict": "FAIL",
+      "failed_gate": 1,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (org:Organization)-[:HAS_SUBSIDIARY]->(sub:Organization)\nWITH org, count(sub) AS subCount\nWHERE subCount >= 5\nOPTIONAL MATCH (a:Article)-[:MENTIONS]->(org)\nWITH org, subCount, a\nORDER BY a.sentiment DESC\nWITH org, subCount, collect(a)[0] AS topArticle\nOPTIONAL MATCH (org)-[:HAS_SUBSIDIARY]->(:Organization)-[:HAS_SUBSIDIARY]->(level2:Organization)\nWITH org, subCount, topArticle, collect(DISTINCT level2.name) AS twoLevelsDown\nRETURN org.name                  AS company,\n       subCount                  AS directSubsidiaryCount,\n       topArticle.title          AS topArticleTitle,\n       topArticle.sentiment      AS topArticleSentiment,\n       twoLevelsDown             AS twoLevelsDownCompanies\nORDER BY subCount DESC\nLIMIT 10",
+      "metrics": {},
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "FAIL",
+          "reason": "Syntax error: {neo4j_code: Neo.ClientError.Security.AuthenticationRateLimit} {message: The client has provided incorrect authentication details too many times in a row.} {gql_status: 42NFF} {gql_status_description: error: syntax error or access rule violation - permission/access denied. Access denied, see the security logs for details.}",
+          "details": {}
+        }
+      ],
+      "error": null,
+      "duration_s": 35.332
+    },
+    {
+      "case_id": "companies-complex-005",
+      "question": "Classify every company into one of four groups: those with both subsidiaries and press coverage, those with subsidiaries but no press coverage, those with press coverage but no subsidiaries, and those with neither. How many companies fall into each group?",
+      "difficulty": "complex",
+      "tags": [
+        "exists-subquery",
+        "case-when",
+        "aggregation",
+        "classification",
+        "relationship"
+      ],
+      "verdict": "FAIL",
+      "failed_gate": 1,
+      "warned_gate": null,
+      "generated_cypher": "CYPHER 25\nMATCH (o:Organization)\nWITH o,\n     EXISTS { (o)-[:HAS_SUBSIDIARY]->(:Organization) } AS hasSubsidiaries,\n     EXISTS { ()-[:MENTIONS]->(o) }                    AS hasCoverage\nWITH CASE\n       WHEN hasSubsidiaries AND hasCoverage           THEN 'subsidiaries + coverage'\n       WHEN hasSubsidiaries AND NOT hasCoverage       THEN 'subsidiaries only'\n       WHEN NOT hasSubsidiaries AND hasCoverage       THEN 'coverage only'\n       ELSE                                                'neither'\n     END AS groupLabel\nRETURN groupLabel, count(*) AS companyCount\nORDER BY companyCount DESC",
+      "metrics": {},
+      "gate_details": [
+        {
+          "gate": 1,
+          "verdict": "FAIL",
+          "reason": "Syntax error: {neo4j_code: Neo.ClientError.Security.Unauthorized} {message: The client is unauthorized due to authentication failure.} {gql_status: 42NFF} {gql_status_description: error: syntax error or access rule violation - permission/access denied. Access denied, see the security logs for details.}",
+          "details": {}
+        }
+      ],
+      "error": null,
+      "duration_s": 22.359
+    }
+  ]
+}

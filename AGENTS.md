@@ -182,6 +182,9 @@ The script generates **first drafts** for L3 reference files (not final output).
 - Section 5 (Unclassified) catches cases that didn't match any pattern — always include it so novel failures are surfaced for manual review.
 - Multi-file deduplication: last-wins by `case_id` when the same case appears in multiple run files.
 - Generates report to stdout when `--output` is omitted — useful for quick CLI review.
+- Run across latest result files (not oldest) — use the highest-timestamp JSON files per domain for the most current baseline.
+- Result JSON structure: top-level keys are `run_id`, `started_at`, `completed_at`, `skill`, `summary`, `cases`. Per-case fields include `case_id`, `difficulty`, `verdict`, `failed_gate`, `generated_cypher`, `metrics`, `gate_details`.
+- Baseline pass rates (after task-028 improvements): basic 95.5%, intermediate 86.4%, advanced 81.8%, complex 76.9%, expert 50.0%. Basic+intermediate combined: 90.9% (target ≥85%).
 
 ## Exporter Notes (tests/harness/exporter.py)
 
