@@ -751,7 +751,7 @@ tasks:
       (c) agents should check the database version before choosing between SEARCH
       syntax and the procedure fallback. Also update AGENTS.md gotcha entry for the
       SEARCH clause to reflect the GA status and version boundary.
-    status: pending
+    status: completed
     dependencies:
       - task-010
     acceptance_criteria:
@@ -759,7 +759,7 @@ tasks:
       - "SKILL.md includes version-conditional guidance: SEARCH for 2026.02+, procedure for older"
       - "AGENTS.md gotcha for SEARCH clause updated from 'Preview' to 'GA in 2026.02.1'"
       - "SKILL.md body remains ≤ 300 lines after the update"
-    completed_at: null
+    completed_at: "2026-03-21T23:30:00Z"
 
   - id: task-037
     title: "Enforce label-free MATCH prohibition across SKILL.md and L3 reference files"

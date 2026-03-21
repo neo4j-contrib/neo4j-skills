@@ -1200,3 +1200,28 @@ Key Decisions:
 - Did not change SKILL.md QPE compatibility table (already correct); added bold warning
 
 Next Task: task-036 (Expand test coverage to 10 database domains) or task-029 (SEARCH clause GA update) or task-038 (negative examples for stale training patterns)
+
+================================================================================
+TASK-029: Update SKILL.md: SEARCH clause GA in Neo4j 2026.02.1
+Date: 2026-03-21T23:30:00Z
+================================================================================
+
+Summary:
+Updated the SEARCH clause section in SKILL.md to include explicit version-conditional
+guidance (use SEARCH for Neo4j 2026.02.1+, use procedure fallback for older versions).
+The AGENTS.md gotcha was already correct (said "GA in Neo4j 2026.02.1") so no change
+was needed there. SKILL.md remains at 299 lines (within the 300-line budget).
+
+Files Changed:
+- neo4j-cypher-authoring-skill/SKILL.md (modified — SEARCH callout now states "Version
+  check required" with explicit version boundary and procedure fallback for <2026.02;
+  code comments changed from "local/demo" framing to "2026.02.1+ / <2026.02" version framing)
+
+Key Decisions:
+- Kept the heading text unchanged (already had "GA in Neo4j 2026.02.1+")
+- Changed callout body from "NOT available on demo.neo4jlabs.com" to the canonical
+  version-conditional form: "GA in 2026.02.1+; use procedure fallback for older versions"
+- Updated code comment labels from "local/demo" to version numbers for portability
+
+Next Task: task-036 (Expand test coverage to 10 database domains) or task-033
+(Enrich domain case files with value-grounded and casual-language questions)
