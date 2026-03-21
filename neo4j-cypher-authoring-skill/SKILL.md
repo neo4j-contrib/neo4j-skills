@@ -49,15 +49,17 @@ MATCH (n:Person) RETURN n.name LIMIT 10
 
 ## Schema-First Protocol
 
-Run all five inspection queries before writing any `MATCH` clause:
+**If schema context is provided in the prompt** (labels, properties, indexes, constraints, vector dimensions) — use it directly. Do NOT run inspection queries; the user may lack read access, schema queries cannot be mixed with data queries in the same transaction, and the agent may never see results from a separate query turn.
+
+**If no schema context is provided** — run the five inspection queries below before writing any `MATCH` clause:
 
 ```cypher
 -- 1. Graph topology
 CYPHER 25 CALL db.schema.visualization() YIELD nodes, relationships RETURN nodes, relationships;
 
--- 2. Online indexes
-CYPHER 25 SHOW INDEXES YIELD name, type, labelsOrTypes, properties, state
-WHERE state = 'ONLINE' RETURN name, type, labelsOrTypes, properties;
+-- 2. Online indexes (includes vector dimensions in options map)
+CYPHER 25 SHOW INDEXES YIELD name, type, labelsOrTypes, properties, options, state
+WHERE state = 'ONLINE' RETURN name, type, labelsOrTypes, properties, options;
 
 -- 3. Constraints
 CYPHER 25 SHOW CONSTRAINTS YIELD name, type, labelsOrTypes, properties
@@ -80,6 +82,8 @@ RETURN relType, propertyName, propertyTypes, mandatory;
 ```
 
 Run 5a when `apocAvailable = true`; run 5b otherwise.
+
+**Vector index dimensions**: always read from the provided schema context (the `dimensions` field on the index or property). Never introspect `options.vector.dimensions` at runtime — this requires a separate schema query the agent may not be able to execute. If dimensions are absent from the provided schema, state the assumption explicitly in a comment.
 
 ---
 
