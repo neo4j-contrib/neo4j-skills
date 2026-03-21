@@ -73,7 +73,7 @@ dataset:
       - {type: SENT,               from: Account,    to: Transaction,  description: "Account that originated/sent the transaction"}
       - {type: RECEIVED,           from: Transaction, to: Account,      description: "Account that received the transaction funds"}
       - {type: TRANSACTED_TO,      from: Account,    to: Account,      description: "Direct transfer link between accounts (derived convenience relationship)"}
-      - {type: SHARED_IDENTIFIERS, from: Account,    to: Account,      description: "Accounts sharing email, phone, or address — key fraud ring signal"}
+      - {type: SHARED_IDENTIFIERS, from: Customer,   to: Customer,     description: "Customers sharing email, phone, or address — key fraud ring signal. NOTE: connects Customer nodes, NOT Account nodes."}
       - {type: HAS_ACCOUNT,        from: Customer,   to: Account}
       - {type: USES_EMAIL,         from: Customer,   to: Email}
       - {type: USES_PHONE,         from: Customer,   to: PhoneNumber}
@@ -96,7 +96,7 @@ dataset:
   notes:
     - "Money flow pattern: (sender:Account)-[:SENT]->(t:Transaction)-[:RECEIVED]->(receiver:Account)"
     - "Direct transfer link: (a:Account)-[:TRANSACTED_TO]->(b:Account)"
-    - "Fraud rings: (a:Account)-[:SHARED_IDENTIFIERS]->{2,4}(b:Account)"
+    - "Fraud rings: (c1:Customer)-[:SHARED_IDENTIFIERS]->{2,4}(c2:Customer) — SHARED_IDENTIFIERS links Customer nodes, NOT Account nodes"
     - "SEARCH clause IS AVAILABLE on this local Neo4j 2026.02.1 instance (vector only)"
     - "Write queries ARE ALLOWED on this local database (MERGE, SET, CALL IN TRANSACTIONS)"
     - "QPE {m,n} syntax is fully supported here — use for bounded fraud chain traversal"
@@ -271,7 +271,7 @@ cases:
       ORDER BY totalAmount DESC
 
   - id: "ucf-intermediate-004"
-    question: "Which accounts appear to be linked to each other through shared personal details? Show the pairs of linked account numbers."
+    question: "Which customers appear to be linked to each other through shared personal details? Show the pairs of linked customer names."
     difficulty: intermediate
     tags: [match, traversal, fraud, shared-identifiers]
     database: neo4j
@@ -282,14 +282,14 @@ cases:
     max_runtime_ms: 10000
     cypher: |
       CYPHER 25
-      MATCH (a1:Account)-[:SHARED_IDENTIFIERS]-(a2:Account)
-      WHERE a1.accountNumber < a2.accountNumber
-      RETURN a1.accountNumber AS account1,
-             a2.accountNumber AS account2
+      MATCH (c1:Customer)-[:SHARED_IDENTIFIERS]->(c2:Customer)
+      WHERE c1.customerID < c2.customerID
+      RETURN c1.name AS customer1,
+             c2.name AS customer2
       LIMIT 20
 
   - id: "ucf-intermediate-005"
-    question: "Are there customers using more than one email address? Show those customers and how many email addresses they have on file."
+    question: "How many email addresses does each customer have on file? Show customers along with their email count, sorted by most emails first."
     difficulty: intermediate
     tags: [match, aggregation, filter, email]
     database: neo4j
@@ -302,9 +302,9 @@ cases:
       CYPHER 25
       MATCH (c:Customer)-[:USES_EMAIL]->(e:Email)
       WITH c, count(e) AS emailCount
-      WHERE emailCount > 1
       RETURN c.name AS customerName, emailCount
       ORDER BY emailCount DESC
+      LIMIT 20
 
   - id: "ucf-intermediate-006"
     question: "What is the average, highest, and total number of transactions for each transaction status (pending, completed, etc.)?"
@@ -329,7 +329,7 @@ cases:
   # ADVANCED (6 cases) — QPE, OPTIONAL MATCH, subqueries, SHORTEST path
   # ---------------------------------------------------------------------------
   - id: "ucf-advanced-001"
-    question: "Which accounts are indirectly linked to each other through chains of shared personal details? I want to see account pairs that are connected through two to four intermediate links."
+    question: "Which customers are indirectly linked to each other through chains of shared personal details? I want to see customer pairs that are connected through two to four intermediate links."
     difficulty: advanced
     tags: [qpe, fraud-ring, quantified-path]
     database: neo4j
@@ -340,14 +340,14 @@ cases:
     max_runtime_ms: 15000
     cypher: |
       CYPHER 25
-      MATCH (a:Account) ((x)-[:SHARED_IDENTIFIERS]-(y)){2,4} (b:Account)
-      WHERE a.accountNumber <> b.accountNumber
-      RETURN a.accountNumber AS startAccount,
-             b.accountNumber AS endAccount
+      MATCH (a:Customer) ((x)-[:SHARED_IDENTIFIERS]-(y)){2,4} (b:Customer)
+      WHERE a.customerID <> b.customerID
+      RETURN a.name AS startCustomer,
+             b.name AS endCustomer
       LIMIT 20
 
   - id: "ucf-advanced-002"
-    question: "What is the shortest chain of linked accounts connecting a savings account to a checking account?"
+    question: "What is the shortest chain of shared identity links connecting a flagged customer to one who is not yet flagged?"
     difficulty: advanced
     tags: [shortest-path, traversal, fraud]
     database: neo4j
@@ -358,11 +358,13 @@ cases:
     max_runtime_ms: 15000
     cypher: |
       CYPHER 25
-      MATCH (a:Account {accountType: 'Savings'}), (b:Account {accountType: 'Checking'})
-      WITH a, b LIMIT 1
-      MATCH p = SHORTEST 1 (a)-[:SHARED_IDENTIFIERS*]-(b)
-      RETURN length(p) AS pathLength,
-             [n IN nodes(p) | n.accountNumber] AS accountNumbers
+      MATCH (c1:Customer {fraudFlag: 'True'}), (c2:Customer {fraudFlag: 'False'})
+      WITH c1, c2 LIMIT 10
+      MATCH p = SHORTEST 1 (c1)-[:SHARED_IDENTIFIERS*]-(c2)
+      RETURN c1.name AS flaggedCustomer,
+             c2.name AS unflaggedCustomer,
+             length(p) AS chainLength
+      LIMIT 5
 
   - id: "ucf-advanced-003"
     question: "Which customers sit at the center of the most financial connections in our network? For each, show whether they have any open alerts or investigations."
@@ -448,7 +450,7 @@ cases:
   # COMPLEX (4 cases) — multi-ring detection, temporal anomaly, CALL subquery
   # ---------------------------------------------------------------------------
   - id: "ucf-complex-001"
-    question: "Find pairs of accounts that share personal details where at least one account belongs to a customer flagged for fraud. Who owns these accounts?"
+    question: "Find pairs of customers that share personal details where at least one is flagged for fraud. Show both customer names and their fraud status."
     difficulty: complex
     tags: [fraud-ring, shared-identifiers, call-subquery, fraud]
     database: neo4j
@@ -459,19 +461,13 @@ cases:
     max_runtime_ms: 30000
     cypher: |
       CYPHER 25
-      MATCH (a1:Account)-[:SHARED_IDENTIFIERS]-(a2:Account)
-      WHERE a1.accountNumber < a2.accountNumber
-      CALL (a1, a2) {
-        OPTIONAL MATCH (c1:Customer)-[:HAS_ACCOUNT]->(a1)
-        OPTIONAL MATCH (c2:Customer)-[:HAS_ACCOUNT]->(a2)
-        RETURN c1.fraudFlag AS flag1, c2.fraudFlag AS flag2,
-               c1.name AS name1, c2.name AS name2
-      }
-      WHERE flag1 = 'True' OR flag2 = 'True'
-      RETURN a1.accountNumber AS account1,
-             a2.accountNumber AS account2,
-             name1, name2,
-             flag1, flag2
+      MATCH (c1:Customer)-[:SHARED_IDENTIFIERS]-(c2:Customer)
+      WHERE c1.customerID < c2.customerID
+        AND (c1.fraudFlag = 'True' OR c2.fraudFlag = 'True')
+      RETURN c1.name AS customer1,
+             c1.fraudFlag AS flag1,
+             c2.name AS customer2,
+             c2.fraudFlag AS flag2
       LIMIT 20
 
   - id: "ucf-complex-002"
@@ -571,7 +567,7 @@ cases:
       ORDER BY c.pagerank DESC
 
   - id: "ucf-expert-002"
-    question: "Among the most influential accounts in our network, which pairs are most directly connected through shared identity links? Show the tightest connections first."
+    question: "Among the most influential customers in our network, which pairs are most directly connected through shared identity links? Show the tightest connections first."
     difficulty: expert
     tags: [all-shortest, qpe, fraud-ring, paths]
     database: neo4j
@@ -582,13 +578,13 @@ cases:
     max_runtime_ms: 30000
     cypher: |
       CYPHER 25
-      MATCH (a:Account), (b:Account)
+      MATCH (a:Customer), (b:Customer)
       WHERE a.pagerank > 0.5 AND b.pagerank > 0.5
-        AND a.accountNumber < b.accountNumber
+        AND a.customerID < b.customerID
       WITH a, b LIMIT 5
       MATCH p = ALL SHORTEST (a)-[:SHARED_IDENTIFIERS*1..4]-(b)
-      RETURN a.accountNumber AS from,
-             b.accountNumber AS to,
+      RETURN a.name AS from,
+             b.name AS to,
              length(p) AS pathLength,
              count(p) AS numPaths
       LIMIT 10
@@ -641,7 +637,7 @@ cases:
       RETURN count(suspect) AS flaggedCount
 
   - id: "ucf-expert-005"
-    question: "Search for customers with the surname 'Poole' and trace how many accounts in our system are linked to their accounts — directly or through up to three degrees of shared identity."
+    question: "Search for customers with the surname 'Poole' and trace which other customers in our system are linked to them — directly or through up to three degrees of shared identity."
     difficulty: expert
     tags: [fulltext, qpe, fraud-ring, hybrid]
     database: neo4j
@@ -653,12 +649,10 @@ cases:
     cypher: |
       CYPHER 25
       CALL db.index.fulltext.queryNodes('customerNames', 'Poole') YIELD node AS c, score
-      MATCH (c)-[:HAS_ACCOUNT]->(a:Account)
-      MATCH (a) ((x)-[:SHARED_IDENTIFIERS]-(y)){1,3} (connected:Account)
-      WHERE a.accountNumber <> connected.accountNumber
+      MATCH (c) ((x)-[:SHARED_IDENTIFIERS]-(y)){1,3} (connected:Customer)
+      WHERE c.customerID <> connected.customerID
       RETURN c.name AS customerName,
-             a.accountNumber AS rootAccount,
-             connected.accountNumber AS connectedAccount,
+             connected.name AS connectedCustomer,
              score
       ORDER BY score DESC
       LIMIT 20

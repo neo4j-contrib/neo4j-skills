@@ -34,54 +34,23 @@ Non-negotiable defaults — apply before writing any query:
 
 ---
 
-## Cypher 25 Version Pragma
+## Cypher 25 Pragma + Schema-First Protocol
 
-Every generated query must begin with `CYPHER 25`. Selects the Cypher 25 parser; enables QPEs, WHEN, SEARCH, CALL scope clauses, type predicates. Without it, Neo4j defaults to Cypher 5 — new syntax causes parse errors.
-
-```cypher
-CYPHER 25
-MATCH (n:Person) RETURN n.name LIMIT 10
-```
-
-**Compat**: to target a Cypher 5–only server, omit the pragma and document the constraint.
-
----
-
-## Schema-First Protocol
+Every query begins with `CYPHER 25` (enables QPEs, SEARCH, CALL scope clauses, type predicates).
 
 **If schema context is provided in the prompt** (labels, properties, indexes, constraints, vector dimensions) — use it directly. Do NOT run inspection queries; the user may lack read access, schema queries cannot be mixed with data queries in the same transaction, and the agent may never see results from a separate query turn.
 
-**If no schema context is provided** — run the five inspection queries below before writing any `MATCH` clause:
+**If no schema context is provided** — run these inspection queries before any `MATCH` clause:
 
 ```cypher
--- 1. Graph topology
 CYPHER 25 CALL db.schema.visualization() YIELD nodes, relationships RETURN nodes, relationships;
-
--- 2. Online indexes (includes vector dimensions in options map)
-CYPHER 25 SHOW INDEXES YIELD name, type, labelsOrTypes, properties, options, state
-WHERE state = 'ONLINE' RETURN name, type, labelsOrTypes, properties, options;
-
--- 3. Constraints
-CYPHER 25 SHOW CONSTRAINTS YIELD name, type, labelsOrTypes, properties
-RETURN name, type, labelsOrTypes, properties;
-
--- 4. Detect APOC (never throws)
-CYPHER 25 SHOW PROCEDURES WHERE name = 'apoc.meta.schema'
-YIELD name RETURN count(name) > 0 AS apocAvailable;
-
--- 5a. Property schema — APOC preferred (fast)
-CYPHER 25 CALL apoc.meta.schema() YIELD value RETURN value;
-
--- 5b. Property schema — fallback when APOC absent (slow on large graphs)
-CYPHER 25 CALL db.schema.nodeTypeProperties()
-YIELD nodeLabels, propertyName, propertyTypes, mandatory
-RETURN nodeLabels, propertyName, propertyTypes, mandatory;
-CYPHER 25 CALL db.schema.relTypeProperties()
-YIELD relType, propertyName, propertyTypes, mandatory
-RETURN relType, propertyName, propertyTypes, mandatory;
+CYPHER 25 SHOW INDEXES YIELD name, type, labelsOrTypes, properties, options, state WHERE state = 'ONLINE' RETURN name, type, labelsOrTypes, properties, options;
+CYPHER 25 SHOW CONSTRAINTS YIELD name, type, labelsOrTypes, properties RETURN name, type, labelsOrTypes, properties;
+-- Detect APOC:
+CYPHER 25 SHOW PROCEDURES WHERE name = 'apoc.meta.schema' YIELD name RETURN count(name) > 0 AS apocAvailable;
+-- If APOC available: CYPHER 25 CALL apoc.meta.schema() YIELD value RETURN value;
+-- Otherwise: CYPHER 25 CALL db.schema.nodeTypeProperties() YIELD nodeLabels, propertyName, propertyTypes, mandatory RETURN nodeLabels, propertyName, propertyTypes, mandatory;
 ```
-
-Run 5a when `apocAvailable = true`; run 5b otherwise.
 
 **Vector index dimensions**: always read from the provided schema context (the `dimensions` field on the index or property). Never introspect `options.vector.dimensions` at runtime — this requires a separate schema query the agent may not be able to execute. If dimensions are absent from the provided schema, state the assumption explicitly in a comment.
 
@@ -89,28 +58,20 @@ Run 5a when `apocAvailable = true`; run 5b otherwise.
 
 ## Output Mode: Literals vs Parameters
 
-**Interactive mode** (human running queries directly): use literal values. Immediately executable, no runtime config needed.
-
-**Programmatic mode** (queries used in application code): use `$param` placeholders. Enables plan caching; prevents injection. Pass via `.execute_query(query, name="Alice")`.
-
-**Always return both formats** as a YAML block, plus a parameter resolution section:
+**Always return both formats** as a YAML block. Default mode: `interactive` (literal values). `programmatic` mode uses `$param` for plan caching.
 
 ```yaml
 query_literals: |
   CYPHER 25
-  MATCH (n:Organization {name: 'Apple'})
-  RETURN n.name, n.description LIMIT 10
-
+  MATCH (n:Organization {name: 'Apple'}) RETURN n.name LIMIT 10
 query_parametrized: |
   CYPHER 25
-  MATCH (n:Organization {name: $name})
-  RETURN n.name, n.description LIMIT 10
-
+  MATCH (n:Organization {name: $name}) RETURN n.name LIMIT 10
 parameters:
   name: "Apple"
 ```
 
-When `interactive` is the mode (default), wrap `query_literals` in a ` ```cypher ` block too so it renders properly. When `programmatic` is the mode, highlight `query_parametrized` as the primary output.
+Wrap `query_literals` in a ` ```cypher ` block too for direct rendering in interactive mode.
 
 ---
 
@@ -158,61 +119,15 @@ Business questions use domain vocabulary that does **not** match schema labels:
 
 ## Value Normalization and Domain Translation
 
-**When a schema context with sample, enum, or range data is provided, apply these rules before writing any query.**
+**When schema provides `values:` (enum) or `sample:` data, map user language to stored values before writing any query.**
 
-> **Output format is an internal detail.** When communicating concerns or translated values to the user (comments, ⚠ notices), never mention `$param` placeholders, YAML keys, or dual-format output — those are implementation details of the query output, invisible to the end user.
+> **Output format is internal.** Never mention `$param` placeholders or YAML keys in user-facing comments or responses.
 
-### 1 — Translate user-supplied values to schema domain values
-
-Users speak in business language; the database stores domain-specific codes or formats. If the schema supplies `values:` (enum) or `sample:` entries for a property, map the user's input to the nearest matching stored value.
-
-| User says | Schema sample / values | Use in query |
-|---|---|---|
-| "Chicago" | Airport codes: `["ORD", "MDW", "CHI"]` | `"ORD"` (primary airport) |
-| "bolt 134" | Transaction IDs: `["BOLT-001-INV", "BOLT-134-INV"]` | `"BOLT-134-INV"` |
-| "active customers" | status values: `["ACTIVE", "INACTIVE", "SUSPENDED"]` | `"ACTIVE"` |
-| "last year" | year range 1990–2024 | `datetime().year - 1` |
-| "The Matrix" | title sample: `["Matrix, The", "Toy Story"]` | `"Matrix, The"` (article-inversion) |
-
-**Article-inversion**: some datasets sort by moving leading articles (The, A, An) to the end — `"The Matrix"` → `"Matrix, The"`. When schema samples show this pattern, apply it to all user-supplied titles.
-
-**Rule**: When you infer a translation, state it explicitly in a comment above the query:
-```cypher
--- Translated: user said "Chicago" → using "ORD" (primary IATA code in this dataset)
-CYPHER 25
-MATCH (f:Flight)-[:DEPARTS_FROM]->(a:Airport {code: "ORD"}) RETURN f;
-```
-
-### 2 — Validate numeric values against observed ranges
-
-If the schema provides `min:` / `max:` for a property and the user's value is outside that range by more than an order of magnitude, **surface a concern before writing the query**:
-
-```
-⚠ Value concern: You asked for age = -5. Schema shows Customer.age range 18–95.
-  Negative age is outside the observed domain. Proceeding with age = 5 (assuming typo).
-  If you meant a different field, please clarify.
-```
-
-**Triggers that require explicit elicitation (do not silently guess)**:
-- Negative value where schema `min` ≥ 0 (e.g. negative age, negative amount)
-- Value > 10× schema `max` (e.g. temperature 50,000 K when range is 200–400 K)
-- ID/code format mismatch when `values:` or `sample:` are provided and none match the input
-- Date/year outside the observed range by more than 5 years
-
-### 3 — ID pattern recognition
-
-When schema samples reveal a structured ID format, infer the pattern and apply it:
-
-| Observed samples | Inferred pattern | User input → stored value |
-|---|---|---|
-| `"TXN-00001"`, `"TXN-00234"` | `TXN-{5d}` zero-padded | `"txn 234"` → `"TXN-00234"` |
-| `"ACC-ABC123"`, `"ACC-XYZ789"` | `ACC-{alphanum}` uppercase | `"acc-abc123"` → `"ACC-ABC123"` |
-
-Always state the inferred pattern in a comment and offer the normalized value to the user for confirmation when there is ambiguity.
-
-### 4 — When values are NOT provided in schema
-
-If `values:` and `sample:` are absent for a property, apply common-sense transformations to the user's input (normalise case to match the property type, trim whitespace, expand obvious abbreviations, infer standard formats) and use the result. Elicit clarification only when the information provided is genuinely insufficient to generate a query at all — not as a default.
+**Rules:**
+1. **Schema enum match** — map "active customers" → `'ACTIVE'` from schema `values`; "The Matrix" → `'Matrix, The'` if samples show article-inversion. Comment: `-- Translated: user said "active" → 'ACTIVE' (stored enum value)`
+2. **Range validation** — if user value is outside schema `min`/`max` by 10×, surface a ⚠ concern and ask before proceeding
+3. **ID pattern normalization** — `"txn 234"` → `"TXN-00234"` when samples show `"TXN-00001"` format
+4. **No schema values?** — apply common-sense transformation (trim, uppercase, expand abbreviations); only elicit when genuinely insufficient
 
 ---
 
@@ -221,96 +136,69 @@ If `values:` and `sample:` are absent for a property, apply common-sense transfo
 ### MERGE Safety
 
 **Rules:**
-1. **Single-node pattern** — `MERGE` a node using only its constrained key property(ies). Never include non-key properties in the MERGE pattern; set them in `ON CREATE SET` / `ON MATCH SET`.
-2. **Single-relationship pattern** — `MERGE` a relationship only after both its start and end nodes are already bound (via a prior `MATCH` or `MERGE`). Never `MERGE` a multi-hop path or a relationship with an unbound endpoint — this creates unintended nodes.
-3. **Always include both sub-clauses** — every `MERGE` must have `ON CREATE SET` (initialise new node/rel) and `ON MATCH SET` (update existing). Omitting either is a silent logic error.
+1. **Key property only** — `MERGE` on constrained key property(ies) only; set other properties in `ON CREATE SET` / `ON MATCH SET`
+2. **Pre-bind endpoints** — for relationship MERGE, `MATCH` or `MERGE` both nodes first; never MERGE a full path
+3. **Both sub-clauses** — every MERGE must have `ON CREATE SET` and `ON MATCH SET`
 
 ```cypher
--- CORRECT: single-node MERGE on key property only
-CYPHER 25
-MERGE (p:Person {id: $id})
-  ON CREATE SET p.name = $name, p.createdAt = datetime()
-  ON MATCH SET p.updatedAt = datetime()
-RETURN p;
-
--- CORRECT: relationship MERGE with both endpoints pre-bound
-CYPHER 25
-MATCH (a:Person {id: $fromId})
-MATCH (b:Person {id: $toId})
-MERGE (a)-[r:KNOWS]->(b)
-  ON CREATE SET r.since = date()
-  ON MATCH SET r.lastSeen = date()
-RETURN r;
-
--- WRONG: multi-property MERGE pattern (over-broad, creates duplicates)
--- MERGE (p:Person {id: $id, name: $name, email: $email})
-
--- WRONG: relationship MERGE without pre-bound endpoints (creates ghost nodes)
--- MERGE (:Person {id: $fromId})-[:KNOWS]->(:Person {id: $toId})
+-- DO: CYPHER 25 MATCH (a:Person {id:$a}) MATCH (b:Person {id:$b}) MERGE (a)-[r:KNOWS]->(b) ON CREATE SET r.since=date() ON MATCH SET r.lastSeen=date();
+-- DON'T: MERGE (p:Person {id:$id, name:$name}) -- multi-property = duplicates
+-- DON'T: MERGE (:Person {id:$a})-[:KNOWS]->(:Person {id:$b}) -- unbound = ghost nodes
 ```
 
 ### Quantified Path Expressions (QPEs)
 
+**ALWAYS prefer `{1,}` over `+` and `{0,}` over `*`** — `+`/`*` shorthands fail on some servers (e.g. demo.neo4jlabs.com). Use `+`/`*` only after confirming server support.
+
 ```cypher
--- {m,n} fixed range
+-- {m,n} fixed range — universal, works everywhere
 CYPHER 25 MATCH (a:Person)-[:KNOWS]-{1,3}(b:Person {name: $name}) RETURN a.name;
 
--- + one or more
-CYPHER 25 MATCH (root:Category)-[:HAS_SUBCATEGORY]+->(leaf:Category) RETURN root.name, leaf.name;
+-- {1,} one-or-more (prefer over +); {0,} zero-or-more (prefer over *)
+CYPHER 25 MATCH (root:Category) (()-[:HAS_SUBCATEGORY]->(){1,}) (leaf:Category) RETURN root.name, leaf.name;
 
--- * zero or more
-CYPHER 25 MATCH (n:Person)-[:KNOWS]*(m:Person) RETURN n, m;
-
--- Full QPE with group variable
+-- Full QPE with group variable (parentheses required around the hop pattern)
 CYPHER 25 MATCH ((a:Stop)-[r:NEXT]->(b:Stop)){1,5} RETURN a, b, r;
 ```
+
+**NEVER write `SHORTEST 1 (a)-[:REL]+`** — wrap in group: `SHORTEST 1 (a)(()-[:REL]->()){1,}(b)`.
 
 **REPEATABLE ELEMENTS** requires bounded quantifier — no `+` or `*`.
 
 ### WITH Cardinality Reset
 
-```cypher
-CYPHER 25
-MATCH (p:Person)-[:ACTED_IN]->(m:Movie)
-WITH p, count(m) AS movieCount
-WHERE movieCount > 5
-MATCH (p)-[:KNOWS]->(friend:Person)
-RETURN p.name, friend.name;
-```
+`WITH` closes the row stream; use it to filter aggregated results before further traversal: `MATCH (p:Person)-[:ACTED_IN]->(m:Movie) WITH p, count(m) AS mc WHERE mc > 5 MATCH (p)-[:KNOWS]->(f:Person) RETURN p.name, f.name;`
 
-`WITH` closes the row stream; use it to filter before expensive traversals.
-
-### WHEN Conditional
+### CASE WHEN Conditional
 
 ```cypher
 CYPHER 25
 MATCH (n:Event)
 RETURN n.name,
-  WHEN n.type = 'A' THEN 'Alpha'
-       n.type = 'B' THEN 'Beta'
+  CASE WHEN n.type = 'A' THEN 'Alpha'
+       WHEN n.type = 'B' THEN 'Beta'
   ELSE 'Other' END AS category;
 ```
 
-### SEARCH Clause (Vector — GA in Neo4j 2026.02.1+)
+**Note**: Use `CASE WHEN ... THEN ... ELSE ... END`. The standalone `WHEN ... THEN ... END` form (without `CASE`) is not yet supported in Neo4j 2026.x.
+
+### CALL IN TRANSACTIONS
 
 ```cypher
--- SEARCH clause (vector only; GA in Neo4j 2026.02.1 on local instances)
--- NOT available on demo.neo4jlabs.com — use db.index.vector.queryNodes() there
-CYPHER 25
-MATCH (c:Chunk) SEARCH (c) USING VECTOR INDEX news
-  WITH QUERY VECTOR $embedding
-WHERE score > 0.8
-RETURN c.text, score LIMIT 10;
+-- CORRECT: CYPHER 25 MATCH (c:Customer) CALL (c) { SET c.flag = 'done' } IN TRANSACTIONS OF 100 ROWS RETURN count(c);
+```
+**NEVER write** `CALL (x) IN TRANSACTIONS { }` — `IN TRANSACTIONS` comes AFTER the `{ }` block.
 
--- Fulltext: always via procedure (all Neo4j versions including demo)
-CYPHER 25
-CALL db.index.fulltext.queryNodes('entity', $query) YIELD node, score
-RETURN node.name, score LIMIT 20;
+---
 
--- Vector search on demo.neo4jlabs.com (no SEARCH clause):
-CYPHER 25
-CALL db.index.vector.queryNodes('news', 5, $embedding) YIELD node, score
-RETURN node.text, score;
+### SEARCH Clause (Vector — GA in Neo4j 2026.02.1+)
+
+> **SEARCH is vector-only** — fulltext always uses `db.index.fulltext.queryNodes()`. SEARCH clause NOT available on demo.neo4jlabs.com.
+
+```cypher
+-- Vector (local 2026.02.1+): CYPHER 25 MATCH (c:Chunk) SEARCH (c) USING VECTOR INDEX news WITH QUERY VECTOR $embedding WHERE score > 0.8 RETURN c.text, score LIMIT 10;
+-- Vector (demo.neo4jlabs.com): CYPHER 25 CALL db.index.vector.queryNodes('news', 5, $embedding) YIELD node, score RETURN node.text, score;
+-- Fulltext (all versions): CYPHER 25 CALL db.index.fulltext.queryNodes('entity', $query) YIELD node, score RETURN node.name, score LIMIT 20;
 ```
 
 ---
@@ -321,8 +209,8 @@ RETURN node.text, score;
 |---|---|
 | `[:REL*1..5]` | `-[:REL]-{1,5}` |
 | `[:REL*]` | `-[:REL]*` |
-| `shortestPath((a)-[*]->(b))` | `SHORTEST 1 (a)-[]-+(b)` |
-| `allShortestPaths((a)-[*]->(b))` | `ALL SHORTEST (a)-[]-+(b)` |
+| `shortestPath((a)-[*]->(b))` | `SHORTEST 1 (a)(()-[]->()){1,}(b)` |
+| `allShortestPaths((a)-[*]->(b))` | `ALL SHORTEST (a)(()-[]->()){1,}(b)` |
 | `CALL { WITH x ... }` | `CALL (x) { ... }` |
 | `id(n)` | `elementId(n)` |
 | `collect()[..N]` | `COLLECT { MATCH ... RETURN ... LIMIT N }` |
@@ -379,56 +267,21 @@ Do **not** load all files — select only what the current query type requires.
 
 ## EXPLAIN / PROFILE Validation Loop
 
-**Step 1: Run EXPLAIN** — look for red-flag operators:
+`CYPHER 25 EXPLAIN <query>` — red flags: `AllNodesScan` (missing index or label-free MATCH), `CartesianProduct` (missing join predicate), `NodeByLabelScan` (no property filter index).
 
-```cypher
-CYPHER 25 EXPLAIN MATCH (n:Person {name: $name}) RETURN n;
-```
-
-| Operator | Problem | Fix |
-|---|---|---|
-| `AllNodesScan` | Missing index **or label-free `MATCH (n)`** | Add label + `USING INDEX` hint, or create index |
-| `CartesianProduct` | Unconstrained cross-join | Add join predicate via `WHERE` |
-| `NodeByLabelScan` (large label) | No property index | Use index or filter earlier with `WITH` |
-
-**Step 2: If plan is clean, run PROFILE:**
-
-```cypher
-CYPHER 25 PROFILE MATCH (n:Person {name: $name}) RETURN n;
-```
-
-**Metrics:**
-
-| Metric | Warning threshold | Hard fail |
-|---|---|---|
-| `dbHits` | > expected | > expected × 10 |
-| `rows` | — | < `min_results` |
-| `allocatedMemory` | > 100 MB | > expected × 5 |
-| `elapsedTimeMs` | > expected | guidance only (CI varies) |
-
-Rewrite until `dbHits` and `allocatedMemory` are within bounds.
+`CYPHER 25 PROFILE <query>` — check: `dbHits` (warn: > expected; fail: > expected × 10), `rows` (fail if < min_results), `allocatedMemory` (warn: > 100 MB; fail: > expected × 5), `elapsedTimeMs` (guidance only). Rewrite until `dbHits` and `allocatedMemory` are within bounds.
 
 ---
 
 ## Failure Recovery Patterns
 
-**0-Result Queries:**
-1. Verify params are non-null and correctly typed
-2. Remove `WHERE` predicates one at a time to isolate
-3. Re-run `db.schema.visualization()` — label / rel type may be misspelled
-4. Check `EXPLAIN` plan — confirm an index is used, not `AllNodesScan`
-5. Return empty result; do not retry indefinitely
+**0-Result Queries:** (1) verify params non-null and correctly typed; (2) remove `WHERE` predicates one at a time to isolate; (3) check label/rel-type spelling against schema; (4) EXPLAIN to confirm index used.
 
-**TypeErrors** (`Cannot coerce STRING to INTEGER`):
-1. Check property type from schema inspection
-2. Cast: prefer `OrNull` variants (`toIntegerOrNull`, `toFloatOrNull`) to avoid runtime errors
-3. Guard: `WHERE n.prop IS NOT NULL` before coercion
+**TypeErrors:** prefer `toIntegerOrNull`/`toFloatOrNull` over base casting; guard with `IS NOT NULL` before coercion.
 
-**Query Timeouts:**
-1. Run `EXPLAIN` — look for `AllNodesScan` or `CartesianProduct`
-2. Add or hint the correct index
-3. Add `LIMIT`; for batch ops switch to `CALL IN TRANSACTIONS OF 1000 ROWS`
-4. Report timeout with the plan; do not silently retry
+**DateTime vs date() mismatch** — `DateTime >= date('2025-01-01')` returns 0 rows: use `.year` accessor (`t.date.year = 2025`) or `datetime()` literals for DateTime-typed properties.
+
+**Timeouts:** EXPLAIN → fix AllNodesScan/CartesianProduct → add LIMIT → switch to `CALL IN TRANSACTIONS OF 1000 ROWS`.
 
 ---
 

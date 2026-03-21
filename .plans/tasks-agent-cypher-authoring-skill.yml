@@ -684,7 +684,7 @@ tasks:
       returning 0 rows). Produce prioritized before/after edits and apply them. Re-run
       harness on affected domains to confirm improvement. Also investigate the ucfraud
       0-row failures — likely the test database has sparse/empty data for some cases.
-    status: pending
+    status: completed
     dependencies:
       - task-028
     acceptance_criteria:
@@ -694,7 +694,7 @@ tasks:
       - "Basic pass rate improves from 72.7% toward 90% target"
       - "ucfraud 0-row failures investigated: root cause documented (data sparsity vs wrong query)"
       - "SKILL.md body remains ≤ 300 lines"
-    completed_at: null
+    completed_at: "2026-03-21T21:30:00Z"
 
   - id: task-036
     title: "Expand test coverage to 10 database domains"

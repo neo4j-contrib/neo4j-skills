@@ -1142,3 +1142,61 @@ Key Decisions:
 - Results ordered by original submission index (not completion order) for deterministic reports
 
 Next Task: task-029 (SEARCH clause GA update in SKILL.md) or task-035 (critical skill review)
+
+================================================================================
+TASK-035: Critical skill review and improvement pass based on harness failures
+Date: 2026-03-21T21:30:00Z
+================================================================================
+
+Summary:
+Investigated all 16 harness failures from the 3-domain run. Root causes split into:
+(1) Schema data errors in ucfraud.yml — SHARED_IDENTIFIERS connects Customer→Customer
+    (not Account→Account as documented); all 6 ucfraud test cases using Account nodes
+    for this relationship were producing 0 rows.
+(2) Bad test expectations — ucf-intermediate-005 expects customers with >1 email but
+    dataset has exactly 1 email per customer; fixed question to not filter on >1.
+(3) DateTime vs date() type mismatch — model generated `t.date >= date('2025-01-01')`
+    but t.date is a DateTime type; .year accessor works correctly.
+(4) CASE WHEN syntax — SKILL.md showed standalone `WHEN` (without CASE) which is not
+    supported in Neo4j 2026.x; verified and fixed to `CASE WHEN ... END`.
+(5) QPE + syntax on demo DB — `+` not supported, `{1,}` is universal; SKILL.md
+    updated to make {1,} the explicit default.
+
+SKILL.md improvements applied:
+- QPE section: "ALWAYS prefer {1,} over +" with explicit warning about demo DB
+- NEVER write SHORTEST 1 (a)-[:REL]+ note added
+- CASE WHEN section: replaced bare WHEN with CASE WHEN, added note on Neo4j 2026.x
+- CALL IN TRANSACTIONS: new compact section showing correct `{ } IN TRANSACTIONS`
+  syntax vs the wrong `CALL (x) IN TRANSACTIONS { }` form
+- SEARCH section: added explicit "> SEARCH is vector-only" callout before code block
+- Failure Recovery: added DateTime vs date() mismatch guidance
+- Deprecated syntax table: fixed SHORTEST examples to use {1,} group form
+- Trimmed SKILL.md from 446 → 299 lines (within 300-line budget)
+
+ucfraud.yml fixes:
+- schema: SHARED_IDENTIFIERS from/to changed from Account→Account to Customer→Customer
+- schema notes: updated fraud ring pattern to use Customer nodes
+- ucf-intermediate-004: question updated to ask about customers, cypher fixed
+- ucf-intermediate-005: question changed to list all emails (not filter >1 which = 0 rows)
+- ucf-advanced-001: use Customer for QPE SHARED_IDENTIFIERS traversal
+- ucf-advanced-002: use Customer SHORTEST for SHARED_IDENTIFIERS
+- ucf-complex-001: use Customer pairs instead of Account pairs
+- ucf-expert-002: use Customer ALL SHORTEST instead of Account ALL SHORTEST
+- ucf-expert-005: use Customer QPE for SHARED_IDENTIFIERS traversal
+
+All fixed reference cyphers verified against live bolt://localhost:7687 — all return ≥1 row.
+All 94 test cases pass dry-run validation.
+Extraction tests: ALL TESTS PASSED.
+
+Files Changed:
+- .plans/tasks-agent-cypher-authoring-skill.yml (task-035 status: completed)
+- neo4j-cypher-authoring-skill/SKILL.md (multiple improvements, trimmed to 299 lines)
+- skill-generation-validation-tools/tests/cases/ucfraud.yml (schema + 7 test case fixes)
+
+Key Decisions:
+- SHARED_IDENTIFIERS schema error: fixed in ucfraud.yml schema AND in test cases
+- ucf-intermediate-005: changed question rather than setting min_results=0 (better test)
+- CASE WHEN: verified actual Cypher 25 behavior; standalone WHEN fails on 2026.02.1
+- Did not change SKILL.md QPE compatibility table (already correct); added bold warning
+
+Next Task: task-036 (Expand test coverage to 10 database domains) or task-029 (SEARCH clause GA update) or task-038 (negative examples for stale training patterns)

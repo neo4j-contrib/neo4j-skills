@@ -47,7 +47,7 @@
 - Aggregating functions: `collect(null)` → `[]` (empty list), `count(null)` → `0`, `sum(null)` → `0`; all others → `null` when all inputs are null.
 - `SEARCH` clause: **GA in Neo4j 2026.02.1** (was Preview in 2026.01). Vector-only — fulltext indexes still use `db.index.fulltext.queryNodes()` procedure. SEARCH clause does not cover fulltext indexes. Use SEARCH only against `bolt://localhost` (2026.02.1); demo.neo4jlabs.com is an older version without it.
 - demo.neo4jlabs.com/companies DB constraints: (1) read-only — write queries (MERGE/CREATE/SET) fail with `Security.Forbidden`; (2) QPE `+` syntax not supported (use `{1,}` instead); (3) SEARCH clause not available (older version); (4) zero-vector invalid for similarity search (use non-zero values like 0.1). Relationship types available: HAS_SUBSIDIARY, HAS_SUPPLIER, HAS_BOARD_MEMBER, HAS_PARENT, HAS_CHILD, HAS_CATEGORY, HAS_CEO, HAS_INVESTOR, HAS_COMPETITOR, IN_CITY, IN_COUNTRY, MENTIONS, HAS_CHUNK. No `IN_INDUSTRY` rel type. Organizations with most subsidiaries: Blackstone (1037), Comcast (908), Viacom (531).
-- bolt://localhost (neo4j/password, database=neo4j): ucfraud dataset, writeable, Neo4j 2026.02.1. Supports: write queries, CALL IN TRANSACTIONS, SEARCH clause (GA). Fulltext indexes: `customerNames` (Customer.name), `transactionTypes` (Transaction.type, Transaction.status).
+- bolt://localhost (neo4j/password, database=neo4j): ucfraud dataset, writeable, Neo4j 2026.02.1. Supports: write queries, CALL IN TRANSACTIONS, SEARCH clause (GA). Fulltext indexes: `customerNames` (Customer.name), `transactionTypes` (Transaction.type, Transaction.status). **SHARED_IDENTIFIERS connects Customer→Customer (NOT Account→Account)**. Transaction.date is DateTime type — compare with `.year` accessor not `date()` literals.
 - demo.neo4jlabs.com/recommendations DB schema: Nodes: `Movie` (movieId, title, plot, released, imdbRating, url, poster, tmdbId, budget, revenue, runtime, imdbId, imdbVotes, languages, countries, `plotEmbedding` <Vector 1536>), `Person` (name, born, bio, url, poster, tmdbId, imdbId), `User` (userId, name), `Genre` (name). Relationships: `(User)-[:RATED {rating, timestamp}]->(Movie)`, `(Person)-[:ACTED_IN {role}]->(Movie)`, `(Person)-[:DIRECTED]->(Movie)`, `(Movie)-[:IN_GENRE]->(Genre)`. Indexes: `moviePlots` (vector on Movie.plotEmbedding, 1536 dims, cosine), `movieTitles` (fulltext on Movie.title). No WROTE/REVIEWED rel types — only RATED/ACTED_IN/DIRECTED/IN_GENRE. userId values are strings in queries. Tom Hanks and Kevin Bacon are both in the DB (Kevin Bacon connection problem is valid). 'The Matrix' exists as a movie node. Vector index name is `moviePlots` (NOT `news`). Fulltext index name is `movieTitles` (NOT `entity`).
 - Test case authoring rule: never use `$param` parameters in test questions for the harness — the harness does not inject runtime parameters. Use literal values or ask the model to use literals.
 - Vector index `OPTIONS` map is **mandatory** — `vector.dimensions` and `vector.similarity_function` are required at creation time.
@@ -244,6 +244,13 @@ PASS if the output format is implied naturally ("show", "list", "how many", "ran
 - Expert write cases (CALL IN TRANSACTIONS) on read-only demo DBs will always FAIL Gate 2 with Security.Forbidden — this is expected; the test validates syntax (Gate 1) not execution (Gate 2+).
 - Avoid the word "batch" in question text — use "groups of N at a time" instead.
 - "Full-text search" as a concept (not index name) is acceptable business language; "db.index.fulltext.queryNodes()" is not.
+
+## SKILL.md Critical Syntax Notes (verified on Neo4j 2026.02.1)
+
+- `CASE WHEN ... THEN ... ELSE ... END` is correct; standalone `WHEN ... THEN ... END` (without CASE) is NOT supported in Neo4j 2026.02.1 — syntax error.
+- `CALL IN TRANSACTIONS` syntax: `MATCH ... CALL (x) { ... } IN TRANSACTIONS OF N ROWS` — `IN TRANSACTIONS` comes AFTER the `{ }` block. Never `CALL (x) IN TRANSACTIONS { }`.
+- DateTime vs date() mismatch: `Transaction.date` stored as DateTime; `t.date >= date('2025-01-01')` returns 0 rows; use `t.date.year = 2025` or `datetime()` comparisons.
+- `SHORTEST 1 (a)-[:REL]+` fails — wrap: `SHORTEST 1 (a)(()-[:REL]->()){1,}(b)`.
 
 ## SKILL.md Authoring Notes
 
