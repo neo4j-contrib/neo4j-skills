@@ -19,17 +19,20 @@ Exit codes:
 """
 
 import argparse
+import concurrent.futures
 import json
 import os
 import re
 import subprocess
 import sys
-import tempfile
+import threading
 import time
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
+
+_print_lock = threading.Lock()
 
 # ---------------------------------------------------------------------------
 # Path setup — allow running from repo root or harness dir
@@ -912,6 +915,43 @@ def run_case(
 # ---------------------------------------------------------------------------
 
 
+def _run_case_buffered(
+    tc: TestCase,
+    skill_name: str,
+    driver: Any,
+    *,
+    idx: int,
+    total: int,
+    dry_run: bool,
+    claude_timeout_s: int,
+    schema_text: Optional[str],
+    value_hints: Optional[str],
+    verbose: bool,
+) -> tuple["TestCaseResult", list[str]]:
+    """Run a single case and return (result, log_lines) for atomic printing."""
+    log_lines: list[str] = []
+    if verbose:
+        log_lines.append(
+            f"[{idx}/{total}] {tc.id} ({tc.difficulty}) — {tc.question[:60]}..."
+        )
+    result = run_case(
+        tc, skill_name, driver,
+        dry_run=dry_run,
+        claude_timeout_s=claude_timeout_s,
+        schema_text=schema_text,
+        value_hints=value_hints,
+    )
+    if verbose:
+        gate_info = ""
+        if result.failed_gate:
+            gate_info = f" [GATE {result.failed_gate}]"
+        elif result.warned_gate:
+            gate_info = f" [GATE {result.warned_gate}]"
+        symbol = {"PASS": "✓", "WARN": "⚠", "FAIL": "✗"}.get(result.verdict, "?")
+        log_lines.append(f"  {symbol} {result.verdict}{gate_info}")
+    return result, log_lines
+
+
 def run_all(
     cases: list[TestCase],
     skill_name: str,
@@ -922,6 +962,7 @@ def run_all(
     verbose: bool = False,
     cases_path: Optional[Path] = None,
     schema_dir: Optional[Path] = None,
+    workers: int = 1,
 ) -> RunReport:
     """
     Run all test cases and return an aggregate RunReport.
@@ -975,41 +1016,79 @@ def run_all(
 
     results: list[TestCaseResult] = []
     passed = warned = failed = 0
+    n_workers = max(1, min(workers, len(cases)))
 
-    for i, tc in enumerate(cases, 1):
-        if verbose:
-            print(
-                f"[{i}/{len(cases)}] {tc.id} ({tc.difficulty}) — {tc.question[:60]}...",
-                flush=True,
+    if n_workers == 1:
+        # Serial execution
+        for i, tc in enumerate(cases, 1):
+            schema_text = schema_cache.get(tc.domain)
+            value_hints = value_hints_cache.get(tc.domain)
+            result, log_lines = _run_case_buffered(
+                tc, skill_name, driver,
+                idx=i, total=len(cases),
+                dry_run=dry_run,
+                claude_timeout_s=claude_timeout_s,
+                schema_text=schema_text,
+                value_hints=value_hints,
+                verbose=verbose,
             )
-
-        schema_text = schema_cache.get(tc.domain)
-        value_hints = value_hints_cache.get(tc.domain)
-
-        result = run_case(
-            tc, skill_name, driver,
-            dry_run=dry_run,
-            claude_timeout_s=claude_timeout_s,
-            schema_text=schema_text,
-            value_hints=value_hints,
-        )
-        results.append(result)
-
-        if result.verdict == PASS:
-            passed += 1
-        elif result.verdict == WARN:
-            warned += 1
-        else:
-            failed += 1
-
+            for line in log_lines:
+                print(line, flush=True)
+            results.append(result)
+            if result.verdict == PASS:
+                passed += 1
+            elif result.verdict == WARN:
+                warned += 1
+            else:
+                failed += 1
+    else:
+        # Parallel execution: submit all, collect as completed, print atomically
         if verbose:
-            gate_info = ""
-            if result.failed_gate:
-                gate_info = f" [GATE {result.failed_gate}]"
-            elif result.warned_gate:
-                gate_info = f" [GATE {result.warned_gate}]"
-            symbol = {"PASS": "✓", "WARN": "⚠", "FAIL": "✗"}.get(result.verdict, "?")
-            print(f"  {symbol} {result.verdict}{gate_info}", flush=True)
+            print(f"[parallel] Running {len(cases)} cases across {n_workers} workers", flush=True)
+        # Map future → submission index for result ordering
+        future_to_idx: dict[concurrent.futures.Future, int] = {}
+        idx_to_result: dict[int, TestCaseResult] = {}
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=n_workers) as executor:
+            for i, tc in enumerate(cases, 1):
+                schema_text = schema_cache.get(tc.domain)
+                value_hints = value_hints_cache.get(tc.domain)
+                future = executor.submit(
+                    _run_case_buffered,
+                    tc, skill_name, driver,
+                    idx=i, total=len(cases),
+                    dry_run=dry_run,
+                    claude_timeout_s=claude_timeout_s,
+                    schema_text=schema_text,
+                    value_hints=value_hints,
+                    verbose=verbose,
+                )
+                future_to_idx[future] = i
+
+            for future in concurrent.futures.as_completed(future_to_idx):
+                i = future_to_idx[future]
+                try:
+                    result, log_lines = future.result()
+                except Exception as exc:
+                    # Shouldn't reach here — _run_case_buffered is exception-safe
+                    log_lines = [f"[worker error on case {i}] {exc}"]
+                    result = None  # type: ignore
+
+                with _print_lock:
+                    for line in log_lines:
+                        print(line, flush=True)
+
+                if result is not None:
+                    idx_to_result[i] = result
+                    if result.verdict == PASS:
+                        passed += 1
+                    elif result.verdict == WARN:
+                        warned += 1
+                    else:
+                        failed += 1
+
+        # Restore submission order for the report
+        results = [idx_to_result[i] for i in sorted(idx_to_result)]
 
     completed_at = datetime.now(timezone.utc).isoformat()
 
@@ -1188,6 +1267,17 @@ def _parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
         action="store_true",
         help="Print per-case progress to stdout",
     )
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=1,
+        metavar="N",
+        help=(
+            "Number of parallel workers for Claude invocations (default: 1 = serial). "
+            "Each worker runs an independent claude subprocess. "
+            "Useful for speeding up large test suites — the Neo4j driver is shared and thread-safe."
+        ),
+    )
     return parser.parse_args(argv)
 
 
@@ -1259,6 +1349,7 @@ def main(argv: Optional[list[str]] = None) -> int:
         verbose=args.verbose,
         cases_path=cases_path,
         schema_dir=schema_dir,
+        workers=args.workers,
     )
 
     # Print summary
