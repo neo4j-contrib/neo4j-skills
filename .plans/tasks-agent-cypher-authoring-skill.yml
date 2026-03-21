@@ -1,7 +1,7 @@
 feature: agent-cypher-authoring-skill
 prd: ./prd-agent-cypher-authoring-skill.md
 created_at: 2026-03-19T00:00:00Z
-updated_at: 2026-03-20T12:00:00Z
+updated_at: 2026-03-21T10:00:00Z
 
 tasks:
   - id: task-001
@@ -454,3 +454,127 @@ tasks:
       - "SCHEMA (indexes/constraints/DDL) vs ADMIN (databases, users, roles, transactions) distinction is documented"
       - "New L3 file placement guidance states: files spanning categories must be split"
     completed_at: "2026-03-20T23:30:00Z"
+
+  - id: task-024
+    title: "Build analyze-results.py harness improvement report script"
+    description: |
+      Create skill-generation-validation-tools/scripts/analyze-results.py that reads
+      one or more harness JSON result files and produces a structured Markdown
+      improvement report. The report must group failures by gate (1–4), difficulty
+      tier, and tag cluster; infer which SKILL.md sections are most likely responsible
+      for each failure pattern (schema-first protocol, QPE syntax, MERGE safety, null
+      handling, subquery scope, type casting, etc.); and provide concrete recommended
+      edits with before/after Cypher examples where the pattern is clear. Output is
+      for human review only — the script does not patch SKILL.md.
+    status: completed
+    dependencies: []
+    acceptance_criteria:
+      - "Script accepts --input (one or more JSON files or a directory of JSON files) and --output (Markdown path) flags"
+      - "Report includes: overall summary table, per-gate failure breakdown, per-difficulty pass rate delta"
+      - "Each failure pattern is mapped to the most likely responsible SKILL.md section (e.g. 'Schema-First Protocol', 'QPE Patterns')"
+      - "Concrete recommendations include at least one example of what the skill should say differently"
+      - "Script runs with no DB or Claude connection needed (reads JSON only)"
+      - "Smoke test (no args) runs successfully and prints usage"
+    completed_at: "2026-03-21T00:30:00Z"
+
+  - id: task-025
+    title: "Create recommendations domain test cases (25+ across all difficulty tiers)"
+    description: |
+      Inspect the recommendations database schema at demo.neo4jlabs.com
+      (credentials: recommendations/recommendations), then hand-author 25+ test
+      cases across basic, intermediate, advanced, complex, and expert difficulty
+      tiers. Cases must exercise: bipartite User→Movie graph traversal, top-N
+      recommendations (ORDER BY + LIMIT), collaborative filtering via common neighbor
+      counting, rating aggregation (avg, count, stddev), COLLECT subquery for genres
+      and actors, OPTIONAL MATCH for sparse ratings, and any vector index present.
+      Expert cases must use SHORTEST path variants, deep QPE, or hybrid
+      fulltext+vector queries. Save to tests/cases/recommendations.yml and run the
+      full harness to validate against the live DB.
+    status: pending
+    dependencies:
+      - task-015
+    acceptance_criteria:
+      - "tests/cases/recommendations.yml contains ≥ 25 test cases"
+      - "Cases cover all 5 tiers: basic (≥6), intermediate (≥6), advanced (≥6), complex (≥4), expert (≥5)"
+      - "At least one case exercises each: top-N recommendation, rating aggregation, collaborative filtering, COLLECT subquery"
+      - "At least one expert case uses SHORTEST path or QPE {m,n} over the rating graph"
+      - "Harness run on recommendations.yml completes without runner errors (gate failures are acceptable)"
+      - "Pass rate: ≥ 90% basic, ≥ 80% intermediate, ≥ 70% advanced across the live DB"
+    completed_at: null
+
+  - id: task-026
+    title: "Create ucfraud domain test cases (25+ across all difficulty tiers)"
+    description: |
+      Inspect the ucfraud database schema at demo.neo4jlabs.com (credentials:
+      ucfraud/ucfraud), then hand-author 25+ test cases across basic, intermediate,
+      advanced, complex, and expert difficulty tiers. Cases must exercise: fraud ring
+      detection via QPE ({2,5} bounded quantifiers), transaction graph traversal
+      (Account→Transaction→Merchant multi-hop), temporal fraud patterns using
+      date/datetime and duration comparisons, SHORTEST path for tracing money flow,
+      and CALL IN TRANSACTIONS batch flagging (marked is_write_query: true). Expert
+      cases must combine ring detection QPE with temporal filters or SHORTEST k
+      enumeration. Save to tests/cases/ucfraud.yml and run the full harness to
+      validate against the live DB.
+    status: pending
+    dependencies:
+      - task-015
+    acceptance_criteria:
+      - "tests/cases/ucfraud.yml contains ≥ 25 test cases"
+      - "Cases cover all 5 tiers: basic (≥6), intermediate (≥6), advanced (≥6), complex (≥4), expert (≥5)"
+      - "At least one case uses QPE {m,n} for fraud ring detection"
+      - "At least one case uses temporal date/datetime predicates"
+      - "At least one case uses SHORTEST path for money-flow tracing"
+      - "Write-query cases are marked is_write_query: true"
+      - "Harness run on ucfraud.yml completes without runner errors"
+      - "Pass rate: ≥ 90% basic, ≥ 80% intermediate, ≥ 70% advanced"
+    completed_at: null
+
+  - id: task-027
+    title: "Add expert difficulty tier to all domains and extend companies.yml expert cases"
+    description: |
+      Define the 'expert' difficulty tier in the harness validator/runner (add to
+      accepted difficulty values and any per-tier reporting). Then add ≥ 5 expert
+      cases to companies.yml (in addition to the new domain files created by
+      task-025/026). Expert cases for companies must cover: multi-database USE clause
+      routing query, hybrid fulltext+vector re-ranking pipeline, CALL IN TRANSACTIONS
+      with ON ERROR CONTINUE for batch operations, ALL SHORTEST path enumeration over
+      the subsidiary graph, and deeply nested QPE with {m,n} bounded quantifiers.
+      Verify the harness reports an 'expert' tier in per-difficulty pass rate breakdown.
+    status: pending
+    dependencies:
+      - task-019
+      - task-025
+      - task-026
+    acceptance_criteria:
+      - "'expert' is accepted as a valid difficulty value in harness YAML without validation error"
+      - "Per-difficulty breakdown in reporter includes an 'expert' row"
+      - "tests/cases/companies.yml contains ≥ 5 expert-difficulty cases"
+      - "At least one companies expert case uses ALL SHORTEST or SHORTEST k"
+      - "At least one companies expert case uses CALL IN TRANSACTIONS with ON ERROR clause"
+      - "Expert pass rate ≥ 60% across companies domain on first run"
+    completed_at: null
+
+  - id: task-028
+    title: "Run full harness across all 3 domains and generate improvement report"
+    description: |
+      Run the complete test harness against all three domain case files (companies,
+      recommendations, ucfraud) in a single invocation or sequentially. Collect all
+      result JSON files. Run analyze-results.py across all result files to produce a
+      combined Markdown improvement report. Review the report to identify the top 3–5
+      SKILL.md sections most responsible for failures and apply the highest-priority
+      recommended edits to SKILL.md. Re-run harness on failing cases after edits to
+      confirm improvement. Commit updated SKILL.md, case files, and improvement report.
+    status: pending
+    dependencies:
+      - task-024
+      - task-025
+      - task-026
+      - task-027
+    acceptance_criteria:
+      - "Harness runs successfully against companies.yml, recommendations.yml, and ucfraud.yml"
+      - "analyze-results.py produces a Markdown report covering all 3 domains"
+      - "Report identifies ≥ 3 distinct failure patterns with SKILL.md section mappings"
+      - "At least one SKILL.md improvement is applied based on the report recommendations"
+      - "Overall pass rate across all 3 domains: ≥ 85% (basic+intermediate combined)"
+      - "Improvement report committed to skill-generation-validation-tools/tests/results/"
+    completed_at: null

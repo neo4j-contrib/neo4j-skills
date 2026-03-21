@@ -862,3 +862,49 @@ All 5 acceptance criteria met:
 - Baseline reports committed to tests/results/ ✓
 
 
+
+================================================================================
+TASK-024: Build analyze-results.py harness improvement report script
+Date: 2026-03-21T00:30:00Z
+================================================================================
+
+Summary:
+Created skill-generation-validation-tools/scripts/analyze-results.py that reads
+one or more harness JSON result files (produced by runner.py) and generates a
+structured Markdown improvement report.
+
+Key features:
+- Accepts --input (one or more JSON files or directory) and --output (Markdown path)
+- Section 1: Overall summary table (total, PASS/WARN/FAIL, pass rate)
+- Section 2: Per-difficulty pass rate vs PRD targets with delta column
+- Section 3: Per-gate breakdown (gates 1-4) with FAIL/WARN counts
+- Section 4: Failure pattern analysis with 13 built-in patterns mapped to SKILL.md sections
+- Section 5: Unclassified failures (cases not matching any known pattern)
+- Section 6: Tag cluster frequency table for non-PASS cases
+- Each pattern includes: description, affected cases, before/after Cypher examples,
+  concrete SKILL.md recommendation
+- Reads JSON only — no DB or Claude connection needed
+- Smoke tests (no args) print usage and verify all report sections
+
+Pattern detection architecture:
+- FAILURE_PATTERNS list with 13 entries covering: CYPHER 25 pragma, QPE syntax,
+  deprecated shortestPath/id(), vector dimension mismatch, CALL IN TRANSACTIONS
+  implicit-txn requirement, null propagation, unsafe MERGE, subquery scope,
+  type casting (OrNull preference), performance threshold, SEARCH-fulltext confusion
+- match_reason: plain substring against gate reason text
+- match_cypher: plain substring against generated_cypher
+- match_cypher_regex: re.search() for regex patterns (kept separate to avoid
+  invalid regex from literal chars like '(' in match_cypher)
+
+Tested against:
+- baseline-final.json (35 cases, 91.4% pass rate) → correctly identified 7 patterns
+- tests/results/ directory (9 JSON files, 185 raw cases) → multi-file merge works
+- Smoke tests: all pass
+
+Files Changed:
+- skill-generation-validation-tools/scripts/analyze-results.py (created)
+- skill-generation-validation-tools/tests/results/improvement-report-baseline.md (generated)
+- .plans/tasks-agent-cypher-authoring-skill.yml (task-024 → completed)
+- AGENTS.md (analyze-results.py notes added)
+
+Next Task: task-025 (recommendations domain test cases) — depends on task-015 (runner)

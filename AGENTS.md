@@ -166,6 +166,16 @@ The script generates **first drafts** for L3 reference files (not final output).
 - Directory mode skips `*-generated.yml` files (those require human promotion via exporter.py first).
 - Schema context formatter sorts labels, rel types, and property names for deterministic output.
 
+## analyze-results.py Notes (scripts/analyze-results.py)
+
+- CLI: `uv run python3 scripts/analyze-results.py --input tests/results/ --output report.md`; or `--input file1.json file2.json` for multiple files.
+- Smoke tests: direct invocation with no args (`uv run python3 scripts/analyze-results.py`).
+- Pattern detection split: `match_cypher` = plain substring (case-insensitive `in` check); `match_cypher_regex` = `re.search()`. Keep them separate — mixing regex syntax chars like `(` in `match_cypher` causes `re.PatternError`.
+- Pattern library has 13 built-in entries. Each maps to a SKILL.md section and includes a before/after Cypher example + recommendation text.
+- Section 5 (Unclassified) catches cases that didn't match any pattern — always include it so novel failures are surfaced for manual review.
+- Multi-file deduplication: last-wins by `case_id` when the same case appears in multiple run files.
+- Generates report to stdout when `--output` is omitted — useful for quick CLI review.
+
 ## Exporter Notes (tests/harness/exporter.py)
 
 - CLI: `uv run python3 tests/harness/exporter.py --input run.json --domain companies --output-dir tests/dataset/ [--schema schema.json] [--dry-run]`
