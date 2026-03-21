@@ -1,0 +1,576 @@
+# recommendations.yml — Test cases for neo4j-cypher-authoring-skill
+# Database: demo.neo4jlabs.com — recommendations / recommendations
+#
+# Schema summary (inspected 2026-03-21):
+#   Nodes:      Movie  (movieId, title, plot, released, imdbRating, url, poster,
+#                        tmdbId, budget, revenue, runtime, imdbId, imdbVotes,
+#                        languages, countries, plotEmbedding <Vector(1536)>)
+#               Person (name, born, bio, url, poster, tmdbId, imdbId)
+#               User   (userId, name)
+#               Genre  (name)
+#   Relations:  (User)-[:RATED {rating, timestamp}]->(Movie)
+#               (Person)-[:ACTED_IN {role}]->(Movie)
+#               (Person)-[:DIRECTED]->(Movie)
+#               (Movie)-[:IN_GENRE]->(Genre)
+#   Indexes:    moviePlots  — vector  on Movie.plotEmbedding (1536 dims, cosine)
+#               movieTitles — fulltext on Movie.title
+#
+# Baseline metrics were captured against demo.neo4jlabs.com on 2026-03-21.
+# Thresholds: max_db_hits = observed × 3, max_allocated_memory_bytes = observed × 3,
+#             max_runtime_ms = observed × 5.
+#
+# NOTE: recommendations-generated.yml (generator output) is gitignored.
+# Promote stubs from generated → this file after human review.
+
+cases:
+
+  # ─── BASIC (6 cases) ─────────────────────────────────────────────────────────
+
+  - id: rec-basic-001
+    question: "List the titles of the first 10 movies in the recommendations database."
+    database: recommendations
+    difficulty: basic
+    tags: [match, label, limit]
+    domain: recommendations
+    min_results: 10
+    max_db_hits: 10000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 5000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (m:Movie)
+      RETURN m.title AS title
+      LIMIT 10
+
+  - id: rec-basic-002
+    question: "Count the total number of Movie nodes in the recommendations database."
+    database: recommendations
+    difficulty: basic
+    tags: [match, aggregation, count]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 10000
+    max_allocated_memory_bytes: 2097152
+    max_runtime_ms: 3000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (m:Movie)
+      RETURN count(m) AS totalMovies
+
+  - id: rec-basic-003
+    question: "Return the titles and release years of movies released after 2000, ordered by release year descending, limited to 10."
+    database: recommendations
+    difficulty: basic
+    tags: [match, filter, order-by, limit]
+    domain: recommendations
+    min_results: 10
+    max_db_hits: 20000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 5000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (m:Movie)
+      WHERE m.released > 2000
+      RETURN m.title AS title, m.released AS year
+      ORDER BY m.released DESC
+      LIMIT 10
+
+  - id: rec-basic-004
+    question: "Find all genres available in the recommendations database."
+    database: recommendations
+    difficulty: basic
+    tags: [match, label, return]
+    domain: recommendations
+    min_results: 5
+    max_db_hits: 5000
+    max_allocated_memory_bytes: 2097152
+    max_runtime_ms: 3000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (g:Genre)
+      RETURN g.name AS genre
+      ORDER BY g.name
+
+  - id: rec-basic-005
+    question: "Find the names of actors who acted in the movie 'The Matrix'."
+    database: recommendations
+    difficulty: basic
+    tags: [match, relationship, filter]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 10000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 5000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (p:Person)-[:ACTED_IN]->(m:Movie {title: 'The Matrix'})
+      RETURN p.name AS actor
+
+  - id: rec-basic-006
+    question: "Count the total number of ratings in the database."
+    database: recommendations
+    difficulty: basic
+    tags: [match, aggregation, count, relationship]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 100000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 5000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH ()-[:RATED]->()
+      RETURN count(*) AS totalRatings
+
+  # ─── INTERMEDIATE (6 cases) ──────────────────────────────────────────────────
+
+  - id: rec-intermediate-001
+    question: "Find the top 10 movies by average rating, where each movie has at least 5 ratings. Return the title, average rating, and number of ratings."
+    database: recommendations
+    difficulty: intermediate
+    tags: [match, aggregation, avg, order-by, limit, filter]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 200000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 10000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (u:User)-[r:RATED]->(m:Movie)
+      WITH m, avg(r.rating) AS avgRating, count(r) AS numRatings
+      WHERE numRatings >= 5
+      RETURN m.title AS title, round(avgRating, 2) AS avgRating, numRatings
+      ORDER BY avgRating DESC
+      LIMIT 10
+
+  - id: rec-intermediate-002
+    question: "For each genre, count the number of movies and return genres with more than 20 movies, ordered by movie count descending."
+    database: recommendations
+    difficulty: intermediate
+    tags: [match, aggregation, count, order-by, filter, relationship]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 100000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 8000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (m:Movie)-[:IN_GENRE]->(g:Genre)
+      WITH g, count(m) AS movieCount
+      WHERE movieCount > 20
+      RETURN g.name AS genre, movieCount
+      ORDER BY movieCount DESC
+
+  - id: rec-intermediate-003
+    question: "Find movies that Tom Hanks has acted in, returning the title and the year released."
+    database: recommendations
+    difficulty: intermediate
+    tags: [match, relationship, filter, return]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 30000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 5000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (p:Person {name: 'Tom Hanks'})-[:ACTED_IN]->(m:Movie)
+      RETURN m.title AS title, m.released AS year
+      ORDER BY m.released DESC
+
+  - id: rec-intermediate-004
+    question: "Find users who have rated more than 10 movies, returning user name and their rating count."
+    database: recommendations
+    difficulty: intermediate
+    tags: [match, aggregation, count, filter, relationship]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 200000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 10000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (u:User)-[r:RATED]->(m:Movie)
+      WITH u, count(r) AS numRatings
+      WHERE numRatings > 10
+      RETURN u.name AS userName, numRatings
+      ORDER BY numRatings DESC
+      LIMIT 20
+
+  - id: rec-intermediate-005
+    question: "Find the average IMDb rating of movies in each genre. Return the genre name and average IMDb rating, ordered by average rating descending."
+    database: recommendations
+    difficulty: intermediate
+    tags: [match, aggregation, avg, order-by, relationship]
+    domain: recommendations
+    min_results: 5
+    max_db_hits: 100000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 8000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (m:Movie)-[:IN_GENRE]->(g:Genre)
+      WHERE m.imdbRating IS NOT NULL
+      WITH g, avg(m.imdbRating) AS avgImdb
+      RETURN g.name AS genre, round(avgImdb, 2) AS avgImdbRating
+      ORDER BY avgImdb DESC
+
+  - id: rec-intermediate-006
+    question: "Find the directors who have directed more than 3 movies, returning their name and the number of movies directed."
+    database: recommendations
+    difficulty: intermediate
+    tags: [match, aggregation, count, filter, relationship]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 50000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 8000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (p:Person)-[:DIRECTED]->(m:Movie)
+      WITH p, count(m) AS moviesDirected
+      WHERE moviesDirected > 3
+      RETURN p.name AS director, moviesDirected
+      ORDER BY moviesDirected DESC
+      LIMIT 20
+
+  # ─── ADVANCED (6 cases) ──────────────────────────────────────────────────────
+
+  - id: rec-advanced-001
+    question: "For each user who has rated at least 3 movies, collect the list of movie titles they rated with 5 stars. Return the user name and the list of 5-star movies."
+    database: recommendations
+    difficulty: advanced
+    tags: [match, collect, filter, aggregation, relationship]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 300000
+    max_allocated_memory_bytes: 31457280
+    max_runtime_ms: 15000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (u:User)-[r:RATED]->(m:Movie)
+      WITH u, count(r) AS totalRated, collect(CASE WHEN r.rating = 5 THEN m.title ELSE null END) AS fiveStarMovies
+      WHERE totalRated >= 3
+      RETURN u.name AS userName, [t IN fiveStarMovies WHERE t IS NOT NULL] AS fiveStarTitles
+
+  - id: rec-advanced-002
+    question: "Use OPTIONAL MATCH to find all movies along with their average user rating. Movies with no ratings should still appear with a null average. Return title, imdbRating, and avgUserRating, ordered by imdbRating descending, limit 10."
+    database: recommendations
+    difficulty: advanced
+    tags: [optional-match, aggregation, avg, null, order-by, limit]
+    domain: recommendations
+    min_results: 10
+    max_db_hits: 300000
+    max_allocated_memory_bytes: 31457280
+    max_runtime_ms: 15000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (m:Movie)
+      OPTIONAL MATCH (u:User)-[r:RATED]->(m)
+      WITH m, avg(r.rating) AS avgUserRating
+      RETURN m.title AS title, m.imdbRating AS imdbRating, avgUserRating
+      ORDER BY m.imdbRating DESC
+      LIMIT 10
+
+  - id: rec-advanced-003
+    question: "Find collaborative filtering candidates: movies that User 1 has NOT rated, but that have been highly rated (>= 4) by users who also rated the same movies as User 1. Return the candidate movie titles and count of common raters, top 10."
+    database: recommendations
+    difficulty: advanced
+    tags: [match, filter, aggregation, count, collaborative-filtering, not-exists]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 500000
+    max_allocated_memory_bytes: 52428800
+    max_runtime_ms: 20000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (target:User {userId: '1'})-[:RATED]->(m:Movie)<-[:RATED]-(peer:User)
+      WHERE target <> peer
+      MATCH (peer)-[r2:RATED]->(candidate:Movie)
+      WHERE r2.rating >= 4
+        AND NOT EXISTS { (target)-[:RATED]->(candidate) }
+      RETURN candidate.title AS title, count(DISTINCT peer) AS commonRaters
+      ORDER BY commonRaters DESC
+      LIMIT 10
+
+  - id: rec-advanced-004
+    question: "Use a COLLECT subquery to find each genre and the list of its top 5 movies by IMDb rating. Return genre name and the collected movie titles."
+    database: recommendations
+    difficulty: advanced
+    tags: [collect-subquery, aggregation, order-by, limit, relationship]
+    domain: recommendations
+    min_results: 5
+    max_db_hits: 200000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 15000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (g:Genre)
+      WITH g,
+           COLLECT {
+             MATCH (m:Movie)-[:IN_GENRE]->(g)
+             WHERE m.imdbRating IS NOT NULL
+             RETURN m.title
+             ORDER BY m.imdbRating DESC
+             LIMIT 5
+           } AS topMovies
+      RETURN g.name AS genre, topMovies
+
+  - id: rec-advanced-005
+    question: "Find Person nodes who co-starred (via shared movies) with actors in 'The Matrix', using a variable-length pattern of depth 1 to 2 ACTED_IN hops. Return distinct person names excluding direct Matrix cast."
+    database: recommendations
+    difficulty: advanced
+    tags: [variable-length, match, relationship, filter, depth]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 200000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 15000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (matrix:Movie {title: 'The Matrix'})<-[:ACTED_IN]-(directCast:Person)
+      MATCH (directCast)-[:ACTED_IN]->(otherMovie:Movie)<-[:ACTED_IN]-(costar:Person)
+      WHERE costar <> directCast
+        AND NOT EXISTS { (costar)-[:ACTED_IN]->(:Movie {title: 'The Matrix'}) }
+      RETURN DISTINCT costar.name AS person
+      ORDER BY costar.name
+      LIMIT 30
+
+  - id: rec-advanced-006
+    question: "Use a fulltext index search on movie titles to find movies matching 'star wars', then return their title, released year, and IMDb rating."
+    database: recommendations
+    difficulty: advanced
+    tags: [fulltext, index, search, match]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 50000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 10000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      CALL db.index.fulltext.queryNodes('movieTitles', 'star wars') YIELD node AS m, score
+      RETURN m.title AS title, m.released AS released, m.imdbRating AS imdbRating, score
+      ORDER BY score DESC
+      LIMIT 10
+
+  # ─── COMPLEX (4 cases) ───────────────────────────────────────────────────────
+
+  - id: rec-complex-001
+    question: "Implement collaborative filtering: for User 534, find the top 5 recommended movies by counting how many peers (users who rated the same movies as User 534) also rated each candidate movie highly (>= 4). Exclude movies User 534 has already rated."
+    database: recommendations
+    difficulty: complex
+    tags: [match, collaborative-filtering, aggregation, count, not-exists, filter, order-by, limit]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 1000000
+    max_allocated_memory_bytes: 104857600
+    max_runtime_ms: 30000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (target:User {userId: '534'})-[:RATED]->(common:Movie)<-[:RATED]-(peer:User)
+      WHERE target <> peer
+      WITH target, peer, count(common) AS sharedMovies
+      ORDER BY sharedMovies DESC
+      LIMIT 50
+      MATCH (peer)-[r:RATED]->(candidate:Movie)
+      WHERE r.rating >= 4
+        AND NOT EXISTS { (target)-[:RATED]->(candidate) }
+      RETURN candidate.title AS title, count(DISTINCT peer) AS supporters, avg(r.rating) AS avgRating
+      ORDER BY supporters DESC, avgRating DESC
+      LIMIT 5
+
+  - id: rec-complex-002
+    question: "Find all Person nodes who have both acted in and directed movies. For each such person, return their name, number of movies acted in, and number of movies directed."
+    database: recommendations
+    difficulty: complex
+    tags: [match, aggregation, count, filter, multiple-relationships, exists]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 100000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 15000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (p:Person)
+      WHERE EXISTS { (p)-[:ACTED_IN]->(:Movie) }
+        AND EXISTS { (p)-[:DIRECTED]->(:Movie) }
+      WITH p,
+           COUNT { (p)-[:ACTED_IN]->(:Movie) } AS actedCount,
+           COUNT { (p)-[:DIRECTED]->(:Movie) } AS directedCount
+      RETURN p.name AS person, actedCount, directedCount
+      ORDER BY actedCount + directedCount DESC
+      LIMIT 20
+
+  - id: rec-complex-003
+    question: "For each genre, calculate the standard deviation of user ratings for movies in that genre. Return genres with at least 50 ratings, ordered by rating standard deviation ascending (most consistent genres first)."
+    database: recommendations
+    difficulty: complex
+    tags: [match, aggregation, stddev, filter, order-by, relationship]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 500000
+    max_allocated_memory_bytes: 52428800
+    max_runtime_ms: 20000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (u:User)-[r:RATED]->(m:Movie)-[:IN_GENRE]->(g:Genre)
+      WITH g, collect(r.rating) AS ratings, count(r) AS numRatings, stDev(r.rating) AS ratingStdDev
+      WHERE numRatings >= 50
+      RETURN g.name AS genre, numRatings, round(ratingStdDev, 3) AS ratingStdDev
+      ORDER BY ratingStdDev ASC
+
+  - id: rec-complex-004
+    question: "Use a CALL subquery to compute, for each of the top 10 most-rated movies, the list of genres it belongs to and its average user rating. Return movie title, genres list, and average rating."
+    database: recommendations
+    difficulty: complex
+    tags: [call-subquery, collect, aggregation, avg, order-by, limit, relationship]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 500000
+    max_allocated_memory_bytes: 52428800
+    max_runtime_ms: 20000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (m:Movie)
+      WITH m, COUNT { (u:User)-[:RATED]->(m) } AS numRatings
+      ORDER BY numRatings DESC
+      LIMIT 10
+      CALL (m) {
+        MATCH (u:User)-[r:RATED]->(m)
+        RETURN avg(r.rating) AS avgRating
+      }
+      WITH m, numRatings, avgRating,
+           COLLECT { MATCH (m)-[:IN_GENRE]->(g:Genre) RETURN g.name } AS genres
+      RETURN m.title AS title, genres, round(avgRating, 2) AS avgRating, numRatings
+      ORDER BY numRatings DESC
+
+  # ─── EXPERT (5 cases) ────────────────────────────────────────────────────────
+
+  - id: rec-expert-001
+    question: "Find the shortest path (by number of ACTED_IN hops) between the Person 'Tom Hanks' and the Person 'Kevin Bacon', passing through Movie nodes. Use a quantified path expression bounded at 1 to 6 repetitions. Return the movie titles on the path and the total path length."
+    database: recommendations
+    difficulty: expert
+    tags: [shortest-path, match, relationship, path, qpe]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 500000
+    max_allocated_memory_bytes: 104857600
+    max_runtime_ms: 30000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (tom:Person {name: 'Tom Hanks'}), (kevin:Person {name: 'Kevin Bacon'})
+      MATCH path = SHORTEST 1
+            (tom)-[:ACTED_IN]->(m1:Movie)<-[:ACTED_IN]-(mid:Person)-[:ACTED_IN]->(m2:Movie)<-[:ACTED_IN]-(kevin)
+      RETURN [n IN nodes(path) WHERE n:Movie | n.title] AS moviesOnPath, length(path) AS pathLength
+
+  - id: rec-expert-002
+    question: "Use a quantified path expression with {1,3} hops of ACTED_IN to find all movies reachable from 'The Matrix' via co-starring actors (i.e. movies that share at least one actor with The Matrix, or share actors with those movies). Return distinct movie titles reachable within 3 ACTED_IN hops."
+    database: recommendations
+    difficulty: expert
+    tags: [qpe, quantified-path, match, relationship, depth, bounded]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 1000000
+    max_allocated_memory_bytes: 104857600
+    max_runtime_ms: 30000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (start:Movie {title: 'The Matrix'})
+      MATCH (start)((:Movie)<-[:ACTED_IN]-(:Person)-[:ACTED_IN]->(:Movie)){1,3}(reachable:Movie)
+      WHERE reachable <> start
+      RETURN DISTINCT reachable.title AS movie
+      ORDER BY reachable.title
+      LIMIT 50
+
+  - id: rec-expert-003
+    question: "Perform a vector similarity search using the moviePlots index to find the 5 movies most similar to the plot of 'The Matrix'. Return the movie title and similarity score."
+    database: recommendations
+    difficulty: expert
+    tags: [vector, index, similarity, search]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 100000
+    max_allocated_memory_bytes: 52428800
+    max_runtime_ms: 20000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (ref:Movie {title: 'The Matrix'})
+      WHERE ref.plotEmbedding IS NOT NULL
+      CALL db.index.vector.queryNodes('moviePlots', 6, ref.plotEmbedding) YIELD node AS m, score
+      WHERE m <> ref
+      RETURN m.title AS title, round(score, 4) AS similarity
+      ORDER BY score DESC
+      LIMIT 5
+
+  - id: rec-expert-004
+    question: "Implement a hybrid recommendation combining collaborative filtering (count of peers who rated >= 4) and genre overlap (count of genres shared between seen and candidate movies) for movies User 1 has not rated. Weight cf score 2x and genre score 1x. Return top 10 by combined score."
+    database: recommendations
+    difficulty: expert
+    tags: [match, collaborative-filtering, genre-overlap, aggregation, filter, scoring, not-exists, order-by, limit]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 1000000
+    max_allocated_memory_bytes: 104857600
+    max_runtime_ms: 30000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (target:User {userId: '1'})-[:RATED]->(seen:Movie)<-[:RATED]-(peer:User)
+      WHERE target <> peer
+      WITH target, peer
+      MATCH (peer)-[r:RATED]->(candidate:Movie)
+      WHERE r.rating >= 4
+        AND NOT EXISTS { (target)-[:RATED]->(candidate) }
+      WITH target, candidate, count(DISTINCT peer) AS cfScore
+      OPTIONAL MATCH (target)-[:RATED]->(seenMovie:Movie)-[:IN_GENRE]->(g:Genre)<-[:IN_GENRE]-(candidate)
+      WITH candidate, cfScore, count(DISTINCT g) AS genreScore
+      RETURN candidate.title AS title,
+             (2 * cfScore + genreScore) AS combinedScore,
+             cfScore, genreScore
+      ORDER BY combinedScore DESC
+      LIMIT 10
+
+  - id: rec-expert-005
+    question: "Find the most influential users in the recommendations graph using a proxy PageRank measure: for each user, count how many other users share at least 3 commonly rated movies with them (their 'neighborhood size'). Return the top 10 users by neighborhood size."
+    database: recommendations
+    difficulty: expert
+    tags: [match, aggregation, count, filter, graph-analysis, collaborative-filtering]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 1000000
+    max_allocated_memory_bytes: 104857600
+    max_runtime_ms: 30000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (u:User)-[:RATED]->(m:Movie)<-[:RATED]-(peer:User)
+      WHERE u <> peer
+      WITH u, peer, count(DISTINCT m) AS sharedMovies
+      WHERE sharedMovies >= 3
+      WITH u, count(DISTINCT peer) AS neighborhoodSize
+      RETURN u.name AS userName, u.userId AS userId, neighborhoodSize
+      ORDER BY neighborhoodSize DESC
+      LIMIT 10

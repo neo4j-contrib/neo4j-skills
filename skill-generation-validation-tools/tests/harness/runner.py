@@ -134,7 +134,7 @@ class RunReport:
 # Test case loader
 # ---------------------------------------------------------------------------
 
-_VALID_DIFFICULTIES = {"basic", "intermediate", "advanced", "complex"}
+_VALID_DIFFICULTIES = {"basic", "intermediate", "advanced", "complex", "expert"}
 
 
 def load_cases(

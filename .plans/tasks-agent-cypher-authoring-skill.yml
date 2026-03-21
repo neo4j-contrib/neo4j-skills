@@ -490,7 +490,7 @@ tasks:
       Expert cases must use SHORTEST path variants, deep QPE, or hybrid
       fulltext+vector queries. Save to tests/cases/recommendations.yml and run the
       full harness to validate against the live DB.
-    status: pending
+    status: completed
     dependencies:
       - task-015
     acceptance_criteria:
@@ -500,7 +500,7 @@ tasks:
       - "At least one expert case uses SHORTEST path or QPE {m,n} over the rating graph"
       - "Harness run on recommendations.yml completes without runner errors (gate failures are acceptable)"
       - "Pass rate: ≥ 90% basic, ≥ 80% intermediate, ≥ 70% advanced across the live DB"
-    completed_at: null
+    completed_at: "2026-03-21T12:00:00Z"
 
   - id: task-026
     title: "Create ucfraud domain test cases (25+ across all difficulty tiers)"

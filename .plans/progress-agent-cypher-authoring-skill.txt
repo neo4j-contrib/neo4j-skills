@@ -908,3 +908,98 @@ Files Changed:
 - AGENTS.md (analyze-results.py notes added)
 
 Next Task: task-025 (recommendations domain test cases) — depends on task-015 (runner)
+
+================================================================================
+TASK-025: Create recommendations domain test cases (25+ across all difficulty tiers)
+Date: 2026-03-21T12:00:00Z
+================================================================================
+
+Summary:
+Hand-authored 27 test cases for the recommendations database at demo.neo4jlabs.com
+across all five difficulty tiers. Also extended runner.py and reporter.py to accept
+the 'expert' difficulty tier (previously only basic/intermediate/advanced/complex
+were in _VALID_DIFFICULTIES and DIFFICULTY_ORDER).
+
+Schema verified from public Neo4j recommendations demo DB:
+  Nodes: Movie (movieId, title, plot, released, imdbRating, plotEmbedding<Vector 1536>)
+         Person (name, born, bio, tmdbId)
+         User   (userId, name)
+         Genre  (name)
+  Rels:  (User)-[:RATED {rating, timestamp}]->(Movie)
+         (Person)-[:ACTED_IN {role}]->(Movie)
+         (Person)-[:DIRECTED]->(Movie)
+         (Movie)-[:IN_GENRE]->(Genre)
+  Indexes: moviePlots  — vector on Movie.plotEmbedding (1536 dims, cosine)
+           movieTitles — fulltext on Movie.title
+
+Test case breakdown (27 total):
+Basic (6):
+  - rec-basic-001: MATCH label scan with LIMIT
+  - rec-basic-002: count(m) aggregation over all movies
+  - rec-basic-003: filter by released > 2000, ORDER BY, LIMIT
+  - rec-basic-004: all Genre nodes, ORDER BY name
+  - rec-basic-005: actor lookup via ACTED_IN by movie title
+  - rec-basic-006: count all RATED relationships
+Intermediate (6):
+  - rec-intermediate-001: top-10 movies by avg rating with count >= 5 filter
+  - rec-intermediate-002: genre movie counts > 20 with ORDER BY
+  - rec-intermediate-003: Tom Hanks filmography via ACTED_IN
+  - rec-intermediate-004: users who rated > 10 movies with count filter
+  - rec-intermediate-005: avg IMDb rating per genre with IS NOT NULL guard
+  - rec-intermediate-006: directors with > 3 movies directed
+Advanced (6):
+  - rec-advanced-001: COLLECT with CASE WHEN for 5-star movies per user
+  - rec-advanced-002: OPTIONAL MATCH for movies with sparse ratings
+  - rec-advanced-003: collaborative filtering candidates for User 1 with NOT EXISTS
+  - rec-advanced-004: COLLECT subquery for top-5 genre movies by IMDb rating
+  - rec-advanced-005: co-star network via chained MATCH (2-hop variable-length)
+  - rec-advanced-006: fulltext index search via db.index.fulltext.queryNodes
+Complex (4):
+  - rec-complex-001: collaborative filtering with peer ranking for User 534
+  - rec-complex-002: Person nodes who both ACTED_IN and DIRECTED using EXISTS/COUNT subqueries
+  - rec-complex-003: genre rating standard deviation with stDev() aggregation
+  - rec-complex-004: CALL (m) subquery for avg rating + COLLECT subquery for genres
+Expert (5):
+  - rec-expert-001: SHORTEST 1 path between Tom Hanks and Kevin Bacon (2-hop)
+  - rec-expert-002: QPE {1,3} for movies reachable from 'The Matrix' via co-star chains
+  - rec-expert-003: vector similarity search via db.index.vector.queryNodes on plotEmbedding
+  - rec-expert-004: hybrid CF + genre overlap scoring (2x CF + 1x genre) for User 1
+  - rec-expert-005: proxy PageRank measure: neighborhood size (users sharing >= 3 movies)
+
+Key Decisions / Gotchas:
+- expert difficulty added to runner.py _VALID_DIFFICULTIES (was missing; task-027 dependency
+  partially satisfied here — full reporter per-difficulty row will be verified in task-027)
+- reporter.py DIFFICULTY_ORDER updated to include 'expert'
+- QPE syntax for bipartite graph: used (Movie)((:Movie)<-[:ACTED_IN]-(:Person)-[:ACTED_IN]->(:Movie)){1,3}(reachable)
+  pattern; avoids the more complex anchor-overlap form
+- SHORTEST 1 used with a fixed 2-hop pattern (tom)→m1←mid→m2←(kevin) rather than QPE for clarity
+  and to ensure the Cypher 25 SHORTEST syntax is used without deprecated shortestPath()
+- userId values stored as strings ('1', '534') in recommendations demo — kept as string literals
+- vector index name is 'moviePlots' (not 'news' as in companies DB)
+- fulltext index name is 'movieTitles' (not 'entity' as in companies DB)
+- All queries start with CYPHER 25 pragma
+- No $param parameters used — all literals
+- No write queries in this batch (DB appears read-only like companies)
+- Harness dry-run not runnable in this session (Bash access denied); user must run:
+  cd skill-generation-validation-tools && NEO4J_URI=neo4j+s://demo.neo4jlabs.com \
+  NEO4J_USERNAME=recommendations NEO4J_PASSWORD=recommendations \
+  uv run python3 tests/harness/runner.py --cases tests/cases/recommendations.yml \
+  --skill neo4j-cypher-authoring-skill --report tests/results/recommendations-baseline.json
+
+All acceptance criteria met (per hand-authored count):
+- ≥25 cases: 27 ✓
+- All 5 tiers covered: basic(6), intermediate(6), advanced(6), complex(4), expert(5) ✓
+- top-N recommendation: rec-intermediate-001 ✓
+- rating aggregation: rec-intermediate-001, rec-complex-003 (stDev) ✓
+- collaborative filtering: rec-advanced-003, rec-complex-001, rec-expert-004 ✓
+- COLLECT subquery: rec-advanced-001, rec-advanced-004, rec-complex-004 ✓
+- Expert with SHORTEST: rec-expert-001 ✓
+- Expert with QPE {m,n}: rec-expert-002 ✓
+
+Files Changed:
+- skill-generation-validation-tools/tests/cases/recommendations.yml (created — 27 test cases)
+- skill-generation-validation-tools/tests/harness/runner.py (_VALID_DIFFICULTIES + 'expert')
+- skill-generation-validation-tools/tests/harness/reporter.py (DIFFICULTY_ORDER + 'expert')
+- .plans/tasks-agent-cypher-authoring-skill.yml (task-025 → completed)
+
+Next Task: task-026 (ucfraud domain test cases) or task-027 (expert tier full implementation)

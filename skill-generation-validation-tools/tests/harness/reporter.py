@@ -37,7 +37,7 @@ PASS = "PASS"
 WARN = "WARN"
 FAIL = "FAIL"
 
-DIFFICULTY_ORDER = ["basic", "intermediate", "advanced", "complex"]
+DIFFICULTY_ORDER = ["basic", "intermediate", "advanced", "complex", "expert"]
 
 
 # ---------------------------------------------------------------------------
