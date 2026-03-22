@@ -1299,3 +1299,36 @@ Key Decisions:
   addressed by the existing Failure Recovery section in SKILL.md, not new DO-NOT examples.
 
 Next Task: task-039 (Validate unclassified failures) or task-036 (10 domains) or task-041 (version-conditional runner)
+
+================================================================================
+TASK-041: Add version-conditional test case support to harness runner
+Date: 2026-03-22T12:00:00Z
+================================================================================
+
+Summary:
+Added min_version field to test case YAML, --neo4j-version CLI flag to runner.py,
+auto-detection of server version via dbms.components(), SKIPPED verdict logic, and
+reporter support for SKIPPED in per-difficulty breakdown and a dedicated Skipped Cases section.
+
+Files Changed:
+- skill-generation-validation-tools/tests/harness/runner.py (modified — added SKIPPED verdict,
+  min_version field in TestCase, version comparison utilities, detect_server_version(),
+  --neo4j-version flag, neo4j_version param in run_all(), SKIPPED counting in RunReport,
+  skip_reason in TestCaseResult and serialization, min_version format validation in dry-run)
+- skill-generation-validation-tools/tests/harness/reporter.py (modified — added SKIPPED constant,
+  SKIPPED count in overall summary, SKIPPED column in per-difficulty table, dedicated Skipped
+  Cases section, _SKIPPED_ badge in results table)
+
+Key Decisions:
+- Version comparison is prefix-match: "2026.02" required matches "2026.02.1" detected (YYYY.MM
+  prefix comparison only compares the components present in required, not full strings)
+- Pass rate denominator excludes SKIPPED cases (only runnable cases counted)
+- Per-difficulty SKIPPED column is only shown when at least one case was skipped (clean output
+  for runs without version-gated cases)
+- dbms.components() is tried in system DB first, then neo4j DB as fallback (handles Aura/cloud)
+- Version detection only runs when at least one test case has min_version set (avoids unnecessary
+  DB call on most runs)
+- SKIPPED cases are not included in exit code calculation (only FAIL and WARN matter)
+
+Next Task: task-042 (Update SEARCH test cases for upgraded demo.neo4jlabs.com) — depends on
+task-041 (now completed) and task-029 (completed)

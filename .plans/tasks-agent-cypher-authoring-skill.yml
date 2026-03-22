@@ -855,7 +855,7 @@ tasks:
       absent. Reporter must include SKIPPED cases in the per-difficulty breakdown with
       count and list of skipped IDs. This prevents false Gate 2 failures for
       SEARCH-clause and GRAPH TYPE cases on pre-2026.02 demo servers.
-    status: pending
+    status: completed
     dependencies:
       - task-034
     acceptance_criteria:
@@ -864,7 +864,7 @@ tasks:
       - "Cases with min_version > detected version are recorded as SKIPPED, not FAIL"
       - "SKIPPED verdict appears in reporter per-difficulty breakdown with count and case IDs"
       - "Dry-run mode validates min_version field format (semver-style YYYY.MM) without DB connection"
-    completed_at: null
+    completed_at: "2026-03-22T12:00:00Z"
 
   - id: task-042
     title: "Update SEARCH test cases and tooling for upgraded demo.neo4jlabs.com (2026.02)"

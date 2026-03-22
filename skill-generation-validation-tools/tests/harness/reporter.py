@@ -36,6 +36,7 @@ from typing import Any, Optional
 PASS = "PASS"
 WARN = "WARN"
 FAIL = "FAIL"
+SKIPPED = "SKIPPED"
 
 DIFFICULTY_ORDER = ["basic", "intermediate", "advanced", "complex", "expert"]
 
@@ -69,6 +70,7 @@ def generate_report(report_data: dict[str, Any]) -> str:
     passed = summary.get("passed", 0)
     warned = summary.get("warned", 0)
     failed = summary.get("failed", 0)
+    skipped = summary.get("skipped", sum(1 for c in cases if c.get("verdict") == SKIPPED))
     pass_rate = summary.get(
         "pass_rate", (passed / total) if total else 0.0
     )
@@ -94,6 +96,8 @@ def generate_report(report_data: dict[str, Any]) -> str:
     lines.append(f"| PASS | {passed} |")
     lines.append(f"| WARN | {warned} |")
     lines.append(f"| FAIL | {failed} |")
+    if skipped:
+        lines.append(f"| SKIPPED | {skipped} |")
     lines.append(f"| Pass rate | {pass_rate:.1%} |")
     lines.append("")
 
@@ -105,37 +109,64 @@ def generate_report(report_data: dict[str, Any]) -> str:
         d = c.get("difficulty", "basic")
         by_difficulty.setdefault(d, []).append(c)
 
+    # Check if any cases were SKIPPED to decide whether to show the column
+    has_skipped = any(c.get("verdict") == SKIPPED for c in cases)
+
     if by_difficulty:
         lines.append("## Per-Difficulty Pass Rates")
         lines.append("")
-        lines.append("| Difficulty | Total | PASS | WARN | FAIL | Pass Rate |")
-        lines.append("|------------|------:|-----:|-----:|-----:|----------:|")
+        if has_skipped:
+            lines.append("| Difficulty | Total | PASS | WARN | FAIL | SKIPPED | Pass Rate |")
+            lines.append("|------------|------:|-----:|-----:|-----:|--------:|----------:|")
+        else:
+            lines.append("| Difficulty | Total | PASS | WARN | FAIL | Pass Rate |")
+            lines.append("|------------|------:|-----:|-----:|-----:|----------:|")
 
-        for diff in DIFFICULTY_ORDER:
-            if diff not in by_difficulty:
-                continue
-            group = by_difficulty[diff]
+        def _diff_row(diff: str, group: list[dict[str, Any]]) -> str:
             g_total = len(group)
             g_pass = sum(1 for c in group if c.get("verdict") == PASS)
             g_warn = sum(1 for c in group if c.get("verdict") == WARN)
             g_fail = sum(1 for c in group if c.get("verdict") == FAIL)
-            g_rate = g_pass / g_total if g_total else 0.0
-            lines.append(
+            g_skip = sum(1 for c in group if c.get("verdict") == SKIPPED)
+            # Pass rate excludes skipped cases from denominator
+            g_runnable = g_total - g_skip
+            g_rate = g_pass / g_runnable if g_runnable else 0.0
+            if has_skipped:
+                return (
+                    f"| {diff.capitalize()} | {g_total} | {g_pass} | {g_warn} | {g_fail} | {g_skip} | {g_rate:.1%} |"
+                )
+            return (
                 f"| {diff.capitalize()} | {g_total} | {g_pass} | {g_warn} | {g_fail} | {g_rate:.1%} |"
             )
+
+        for diff in DIFFICULTY_ORDER:
+            if diff not in by_difficulty:
+                continue
+            lines.append(_diff_row(diff, by_difficulty[diff]))
 
         # Also show any unlisted difficulty levels
         for diff, group in sorted(by_difficulty.items()):
             if diff in DIFFICULTY_ORDER:
                 continue
-            g_total = len(group)
-            g_pass = sum(1 for c in group if c.get("verdict") == PASS)
-            g_warn = sum(1 for c in group if c.get("verdict") == WARN)
-            g_fail = sum(1 for c in group if c.get("verdict") == FAIL)
-            g_rate = g_pass / g_total if g_total else 0.0
-            lines.append(
-                f"| {diff.capitalize()} | {g_total} | {g_pass} | {g_warn} | {g_fail} | {g_rate:.1%} |"
-            )
+            lines.append(_diff_row(diff, group))
+        lines.append("")
+
+    # -----------------------------------------------------------------------
+    # SKIPPED cases section (when present)
+    # -----------------------------------------------------------------------
+    skipped_cases = [c for c in cases if c.get("verdict") == SKIPPED]
+    if skipped_cases:
+        lines.append("## Skipped Cases")
+        lines.append("")
+        lines.append("Cases skipped due to min_version requirements not being met by the server.")
+        lines.append("")
+        lines.append("| ID | Difficulty | Reason |")
+        lines.append("|----|------------|--------|")
+        for c in skipped_cases:
+            case_id = c.get("case_id", "?")
+            diff = c.get("difficulty", "?")
+            reason = c.get("skip_reason") or "version requirement not met"
+            lines.append(f"| `{case_id}` | {diff} | {reason} |")
         lines.append("")
 
     # -----------------------------------------------------------------------
@@ -195,7 +226,7 @@ def generate_report(report_data: dict[str, Any]) -> str:
         question = _truncate(c.get("question", ""), 60)
 
         # Emoji-free verdict marker
-        verdict_badge = {"PASS": "PASS", "WARN": "WARN", "FAIL": "**FAIL**"}.get(
+        verdict_badge = {"PASS": "PASS", "WARN": "WARN", "FAIL": "**FAIL**", "SKIPPED": "_SKIPPED_"}.get(
             verdict, verdict
         )
 

@@ -117,6 +117,17 @@ The script generates **first drafts** for L3 reference files (not final output).
 - `--since VERSION` filters rendered output AND the summary count. Useful in GH Actions to report only what changed in the new submodule pin.
 - Empty sections correctly render `_No entries._` (not missing or crash).
 
+## Version-Conditional Test Cases (min_version field)
+
+- `min_version` field in test case YAML (YYYY.MM or YYYY.MM.PATCH) skips the case when server < required version.
+- `--neo4j-version VERSION` flag provides version explicitly; otherwise auto-detected via `dbms.components()`.
+- Auto-detection only runs when at least one test case has `min_version` set (avoids extra DB call on most runs).
+- SKIPPED cases appear in reporter per-difficulty table (only when skips exist) and in a dedicated Skipped Cases section.
+- Pass rate denominator excludes SKIPPED cases — only runnable cases are counted.
+- `detect_server_version()` tries `database_="system"` first, then default DB as fallback (handles Aura/cloud).
+- Version comparison is prefix-match: `"2026.02"` required against `"2026.02.1"` detected → satisfies (only compares up to required's component count).
+- Dry-run validates `min_version` format without DB connection (`_validate_min_version_format()`).
+
 ## Runner Notes (tests/harness/runner.py)
 
 - Claude headless invocation: `claude --skill <name>` does NOT exist in claude 2.1.80. Runner uses `--append-system-prompt` with SKILL.md content loaded via `_load_skill_content()`. The `--skill` flag is a fallback for future CLI versions.

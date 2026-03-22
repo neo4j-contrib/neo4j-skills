@@ -44,6 +44,8 @@ sys.path.insert(0, str(_HERE))
 
 from validator import FAIL, PASS, WARN, ValidationResult, validate  # noqa: E402
 
+SKIPPED = "SKIPPED"
+
 # ---------------------------------------------------------------------------
 # Optional YAML import — fallback to stdlib json for dry-run only
 # ---------------------------------------------------------------------------
@@ -88,6 +90,9 @@ class TestCase:
     max_allocated_memory_bytes: Optional[int] = None
     max_runtime_ms: Optional[float] = None
     is_write_query: bool = False
+    # Minimum Neo4j version required to run this test (YYYY.MM format, e.g. "2026.02")
+    # Cases with min_version > detected server version are SKIPPED rather than FAIL.
+    min_version: Optional[str] = None
     # Source file (set by loader)
     source_file: str = ""
 
@@ -100,7 +105,7 @@ class TestCaseResult:
     question: str
     difficulty: str
     tags: list[str]
-    verdict: str  # PASS | WARN | FAIL
+    verdict: str  # PASS | WARN | FAIL | SKIPPED
     failed_gate: Optional[int]
     warned_gate: Optional[int]
     generated_cypher: str
@@ -108,6 +113,7 @@ class TestCaseResult:
     gate_details: list[dict[str, Any]]
     error: Optional[str]  # Runner-level error (e.g. Claude invocation failed)
     duration_s: float
+    skip_reason: Optional[str] = None  # Non-None when verdict == SKIPPED
 
 
 @dataclass
@@ -122,6 +128,7 @@ class RunReport:
     passed: int
     warned: int
     failed: int
+    skipped: int
     cases: list[TestCaseResult]
 
     @property
@@ -196,6 +203,7 @@ def load_cases(
                 max_allocated_memory_bytes=raw.get("max_allocated_memory_bytes"),
                 max_runtime_ms=raw.get("max_runtime_ms"),
                 is_write_query=bool(raw.get("is_write_query", False)),
+                min_version=str(raw["min_version"]) if raw.get("min_version") else None,
                 source_file=str(f),
             )
 
@@ -720,6 +728,90 @@ def invoke_claude(
 
 
 # ---------------------------------------------------------------------------
+# Version comparison utilities
+# ---------------------------------------------------------------------------
+
+_MIN_VERSION_RE = re.compile(r"^\d{4}\.\d+(\.\d+)?$")
+
+
+def _parse_version(v: str) -> tuple[int, ...]:
+    """
+    Parse a Neo4j version string into a comparable tuple.
+
+    Accepts YYYY.MM (e.g. "2026.02") or YYYY.MM.PATCH (e.g. "2026.02.1").
+    Returns a tuple of ints for comparison, e.g. (2026, 2) or (2026, 2, 1).
+    """
+    try:
+        return tuple(int(x) for x in v.split("."))
+    except ValueError:
+        return (0,)
+
+
+def _version_satisfies(detected: str, required: str) -> bool:
+    """
+    Return True if detected_version >= required_version.
+
+    Both strings are in YYYY.MM or YYYY.MM.PATCH format.
+    Compares only the components present in `required` (prefix match).
+
+    Examples:
+        _version_satisfies("2026.02.1", "2026.02")   → True
+        _version_satisfies("2026.01.0", "2026.02")   → False
+        _version_satisfies("2026.03", "2026.02")     → True
+    """
+    detected_parts = _parse_version(detected)
+    required_parts = _parse_version(required)
+
+    # Pad detected to at least the length of required for safe comparison
+    n = len(required_parts)
+    detected_trimmed = detected_parts[:n] if len(detected_parts) >= n else detected_parts
+    required_trimmed = required_parts[:n]
+
+    return detected_trimmed >= required_trimmed
+
+
+def detect_server_version(driver: Any) -> Optional[str]:
+    """
+    Query dbms.components() to detect the Neo4j server version.
+
+    Returns a version string like "2026.02.1" or None on failure.
+    """
+    if driver is None:
+        return None
+    try:
+        records, _, _ = driver.execute_query(
+            "CALL dbms.components() YIELD name, versions WHERE name = 'Neo4j Kernel' "
+            "RETURN versions[0] AS version",
+            database_="system",
+        )
+        if records:
+            raw = str(records[0]["version"])
+            # Strip any suffix like "-enterprise" or "-aura"
+            version = raw.split("-")[0].strip()
+            return version
+    except Exception:
+        # Some editions / Aura may not expose dbms.components in system db;
+        # fall back to neo4j db
+        try:
+            records, _, _ = driver.execute_query(
+                "CALL dbms.components() YIELD name, versions WHERE name = 'Neo4j Kernel' "
+                "RETURN versions[0] AS version",
+            )
+            if records:
+                raw = str(records[0]["version"])
+                version = raw.split("-")[0].strip()
+                return version
+        except Exception:
+            pass
+    return None
+
+
+def _validate_min_version_format(v: str) -> bool:
+    """Return True if v matches YYYY.MM or YYYY.MM.PATCH pattern."""
+    return bool(_MIN_VERSION_RE.match(v))
+
+
+# ---------------------------------------------------------------------------
 # Neo4j driver setup
 # ---------------------------------------------------------------------------
 
@@ -840,12 +932,16 @@ def run_case(
     claude_timeout_s: int = 120,
     schema_text: Optional[str] = None,
     value_hints: Optional[str] = None,
+    server_version: Optional[str] = None,
 ) -> TestCaseResult:
     """
     Run a single test case end-to-end.
 
     Dry-run mode skips Claude invocation and Neo4j execution; validates only
     that the TestCase struct loaded correctly and returns a synthetic PASS.
+
+    When server_version is provided (or auto-detected), cases with min_version
+    greater than the detected version are recorded as SKIPPED rather than executed.
     """
     t0 = time.monotonic()
     error: Optional[str] = None
@@ -867,6 +963,28 @@ def run_case(
             error=None,
             duration_s=round(time.monotonic() - t0, 3),
         )
+
+    # Version gate: skip case if min_version requirement is not met
+    if tc.min_version and server_version:
+        if not _version_satisfies(server_version, tc.min_version):
+            skip_reason = (
+                f"Server version {server_version!r} < min_version {tc.min_version!r}"
+            )
+            return TestCaseResult(
+                case_id=tc.id,
+                question=tc.question,
+                difficulty=tc.difficulty,
+                tags=tc.tags,
+                verdict=SKIPPED,
+                failed_gate=None,
+                warned_gate=None,
+                generated_cypher="",
+                metrics={},
+                gate_details=[],
+                error=None,
+                duration_s=round(time.monotonic() - t0, 3),
+                skip_reason=skip_reason,
+            )
 
     # Step 1: invoke Claude Code headless
     prompt = _build_claude_prompt(tc, schema_text=schema_text, value_hints=value_hints)
@@ -1002,6 +1120,7 @@ def _run_case_buffered(
     schema_text: Optional[str],
     value_hints: Optional[str],
     verbose: bool,
+    server_version: Optional[str] = None,
 ) -> tuple["TestCaseResult", list[str]]:
     """Run a single case and return (result, log_lines) for atomic printing."""
     log_lines: list[str] = []
@@ -1015,6 +1134,7 @@ def _run_case_buffered(
         claude_timeout_s=claude_timeout_s,
         schema_text=schema_text,
         value_hints=value_hints,
+        server_version=server_version,
     )
     if verbose:
         gate_info = ""
@@ -1022,8 +1142,9 @@ def _run_case_buffered(
             gate_info = f" [GATE {result.failed_gate}]"
         elif result.warned_gate:
             gate_info = f" [GATE {result.warned_gate}]"
-        symbol = {"PASS": "✓", "WARN": "⚠", "FAIL": "✗"}.get(result.verdict, "?")
-        log_lines.append(f"  {symbol} {result.verdict}{gate_info}")
+        symbol = {"PASS": "✓", "WARN": "⚠", "FAIL": "✗", "SKIPPED": "—"}.get(result.verdict, "?")
+        skip_info = f" ({result.skip_reason})" if result.skip_reason else ""
+        log_lines.append(f"  {symbol} {result.verdict}{gate_info}{skip_info}")
     return result, log_lines
 
 
@@ -1040,6 +1161,7 @@ def run_all(
     workers: int = 1,
     integration_env: Optional[dict[str, str]] = None,
     fallback_password: Optional[str] = None,
+    neo4j_version: Optional[str] = None,
 ) -> RunReport:
     """
     Run all test cases and return an aggregate RunReport.
@@ -1112,8 +1234,25 @@ def run_all(
             )
             warned_domains.add(tc.domain)
 
+    # Version detection: use provided flag value, or auto-detect from DB
+    server_version: Optional[str] = neo4j_version
+    has_version_gated_cases = any(tc.min_version for tc in cases)
+    if has_version_gated_cases and not dry_run and server_version is None:
+        detect_driver = driver or next(iter(domain_drivers.values()), None)
+        if detect_driver:
+            server_version = detect_server_version(detect_driver)
+            if verbose:
+                if server_version:
+                    print(f"[version] Auto-detected server version: {server_version}", flush=True)
+                else:
+                    print(
+                        "[version] WARNING: Could not auto-detect server version; "
+                        "version-gated cases will NOT be skipped.",
+                        flush=True,
+                    )
+
     results: list[TestCaseResult] = []
-    passed = warned = failed = 0
+    passed = warned = failed = skipped = 0
     n_workers = max(1, min(workers, len(cases)))
 
     if n_workers == 1:
@@ -1130,6 +1269,7 @@ def run_all(
                 schema_text=schema_text,
                 value_hints=value_hints,
                 verbose=verbose,
+                server_version=server_version,
             )
             for line in log_lines:
                 print(line, flush=True)
@@ -1138,6 +1278,8 @@ def run_all(
                 passed += 1
             elif result.verdict == WARN:
                 warned += 1
+            elif result.verdict == SKIPPED:
+                skipped += 1
             else:
                 failed += 1
     else:
@@ -1162,6 +1304,7 @@ def run_all(
                     schema_text=schema_text,
                     value_hints=value_hints,
                     verbose=verbose,
+                    server_version=server_version,
                 )
                 future_to_idx[future] = i
 
@@ -1184,6 +1327,8 @@ def run_all(
                         passed += 1
                     elif result.verdict == WARN:
                         warned += 1
+                    elif result.verdict == SKIPPED:
+                        skipped += 1
                     else:
                         failed += 1
 
@@ -1201,6 +1346,7 @@ def run_all(
         passed=passed,
         warned=warned,
         failed=failed,
+        skipped=skipped,
         cases=results,
     )
 
@@ -1224,6 +1370,7 @@ def _result_to_dict(r: TestCaseResult) -> dict[str, Any]:
         "gate_details": r.gate_details,
         "error": r.error,
         "duration_s": r.duration_s,
+        "skip_reason": r.skip_reason,
     }
 
 
@@ -1238,6 +1385,7 @@ def report_to_dict(report: RunReport) -> dict[str, Any]:
             "passed": report.passed,
             "warned": report.warned,
             "failed": report.failed,
+            "skipped": report.skipped,
             "pass_rate": round(report.passed / report.total, 4) if report.total else 0.0,
         },
         "cases": [_result_to_dict(r) for r in report.cases],
@@ -1286,6 +1434,12 @@ def validate_yaml_structure(cases: list[TestCase]) -> list[str]:
 
         if tc.min_results < 0:
             errors.append(f"{prefix} min_results must be >= 0, got {tc.min_results}")
+
+        if tc.min_version is not None and not _validate_min_version_format(tc.min_version):
+            errors.append(
+                f"{prefix} min_version {tc.min_version!r} must be in YYYY.MM or YYYY.MM.PATCH format "
+                "(e.g. '2026.02' or '2026.02.1')"
+            )
 
     return errors
 
@@ -1387,6 +1541,16 @@ def _parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
             "Searched automatically in ./integration.env and tests/integration.env if not set."
         ),
     )
+    parser.add_argument(
+        "--neo4j-version",
+        default=None,
+        metavar="VERSION",
+        help=(
+            "Neo4j server version to use for min_version filtering (e.g. '2026.01', '2026.02'). "
+            "When omitted, version is auto-detected via dbms.components() if any test case has min_version set. "
+            "Format: YYYY.MM or YYYY.MM.PATCH."
+        ),
+    )
     return parser.parse_args(argv)
 
 
@@ -1465,12 +1629,14 @@ def main(argv: Optional[list[str]] = None) -> int:
         workers=args.workers,
         integration_env=integration_env,
         fallback_password=args.neo4j_password,
+        neo4j_version=getattr(args, "neo4j_version", None),
     )
 
     # Print summary
+    skipped_note = f", {report.skipped} SKIPPED" if report.skipped else ""
     print(
         f"\nResults: {report.passed}/{report.total} PASS, "
-        f"{report.warned} WARN, {report.failed} FAIL",
+        f"{report.warned} WARN, {report.failed} FAIL{skipped_note}",
         flush=True,
     )
 
