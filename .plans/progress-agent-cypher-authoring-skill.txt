@@ -1364,3 +1364,32 @@ Key Decisions:
 - ACYCLIC/TRAIL/WALK path modes are not supported in Neo4j 2026.02.1 — model learned them from GQL training data
 
 Next Task: task-036 (Expand test coverage to 10 database domains) or task-045 (Split dataset:/database: blocks)
+
+================================================================================
+TASK-045: Split dataset:/database: blocks in domain YAMLs and inject version into harness prompts
+Date: 2026-03-22T14:00:00Z
+================================================================================
+
+Summary:
+Refactored the three domain YAML test case files (companies.yml, recommendations.yml,
+ucfraud.yml) to split connection/version info out of the `dataset:` block into a new
+top-level `database:` key. Updated runner.py to read the new structure, inject
+`Database version: Neo4j X.Y / Cypher 25` into every Claude prompt, and use the
+YAML version to satisfy min_version filtering without a live DB round-trip.
+Backwards compatibility with the old `dataset.connection` format is preserved.
+
+Files Changed:
+- skill-generation-validation-tools/tests/cases/companies.yml (split: added database: block with neo4j_version 2026.01, removed connection from dataset:)
+- skill-generation-validation-tools/tests/cases/recommendations.yml (same split, neo4j_version 2026.01)
+- skill-generation-validation-tools/tests/cases/ucfraud.yml (same split, neo4j_version 2026.02.1)
+- skill-generation-validation-tools/tests/harness/runner.py (load_dataset_schemas returns tuple; _format_dataset_schema accepts db_block; _build_domain_drivers reads db_blocks; run_all uses db_blocks for version injection; dry-run validates database: block format)
+- .plans/tasks-agent-cypher-authoring-skill.yml (task-045 status → completed)
+
+Key Decisions:
+- load_dataset_schemas() now returns a (schemas, db_blocks) tuple — backwards-compatible since callers were updated
+- Version injection priority: CLI flag → YAML database.neo4j_version → dbms.components() auto-detect
+- Connection info in dataset.connection (old format) is still read as fallback for any files not yet migrated
+- Dry-run validates neo4j_version format (YYYY.MM or YYYY.MM.PATCH) in database: blocks
+- ucfraud gets neo4j_version 2026.02.1 (local instance), both demo domains get 2026.01
+
+Next Task: task-046 (Create references/version-matrix.md and add inline version callouts to L3 files)

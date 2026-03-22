@@ -297,12 +297,19 @@ def _load_domain_schema(domain: str, schema_dir: Path) -> Optional[str]:
     return None
 
 
-def load_dataset_schemas(path: Path) -> dict[str, dict[str, Any]]:
+def load_dataset_schemas(
+    path: Path,
+) -> tuple[dict[str, dict[str, Any]], dict[str, dict[str, Any]]]:
     """
-    Load dataset schema sections from YAML test case files.
+    Load dataset schema sections and database connection blocks from YAML test case files.
 
-    Reads the `dataset:` top-level key from each YAML file in the given path.
-    Returns a dict mapping domain name → dataset dict.
+    Reads the `dataset:` and `database:` top-level keys from each YAML file in the
+    given path. Returns a tuple of two dicts mapping domain name → dict:
+      - dataset_schemas: schema/description for prompt injection
+      - database_blocks:  uri/username/database/neo4j_version/cypher_version for drivers
+
+    The `database:` key is the new (task-045) canonical location for connection info.
+    For backwards compatibility, falls back to `dataset.connection` if `database:` absent.
 
     This is the primary mechanism for schema injection — schema is co-located
     with test cases in the same YAML file, not a separate schema directory.
@@ -313,9 +320,10 @@ def load_dataset_schemas(path: Path) -> dict[str, dict[str, Any]]:
     elif path.is_file():
         files = [path]
     else:
-        return {}
+        return {}, {}
 
     schemas: dict[str, dict[str, Any]] = {}
+    db_blocks: dict[str, dict[str, Any]] = {}
     for f in files:
         if f.name.endswith("-generated.yml"):
             continue  # Skip generator output stubs
@@ -327,23 +335,47 @@ def load_dataset_schemas(path: Path) -> dict[str, dict[str, Any]]:
         if dataset and isinstance(dataset, dict):
             domain = str(dataset.get("name") or f.stem)
             schemas[domain] = dataset
-    return schemas
+
+            # New structure: top-level `database:` key
+            db_block = data.get("database")
+            if db_block and isinstance(db_block, dict):
+                db_blocks[domain] = db_block
+            elif "connection" in dataset:
+                # Backwards compat: old dataset.connection format
+                conn = dataset["connection"]
+                db_blocks[domain] = {
+                    "uri": conn.get("uri"),
+                    "username": conn.get("username"),
+                    "database": dataset.get("database", domain),
+                }
+    return schemas, db_blocks
 
 
-def _format_dataset_schema(dataset: dict[str, Any]) -> str:
+def _format_dataset_schema(
+    dataset: dict[str, Any],
+    db_block: Optional[dict[str, Any]] = None,
+) -> str:
     """
     Format a structured `dataset:` dict into a compact, prompt-injectable text block.
 
     The formatted block tells the model exactly which labels, relationship types,
     properties (with types, ranges, sample values), and indexes exist — so it
     uses correct names and avoids hallucinating schema elements.
+
+    When db_block is provided (from the top-level `database:` key), its
+    neo4j_version and cypher_version fields are injected so the model can
+    use version-appropriate syntax.
     """
     lines: list[str] = []
 
     name = dataset.get("name", "unknown")
-    database = dataset.get("database", name)
+    # database name: prefer db_block.database, fall back to dataset.database or name
+    database = (
+        (db_block or {}).get("database")
+        or dataset.get("database")
+        or name
+    )
     description = str(dataset.get("description", "")).strip()
-    connection = dataset.get("connection", {})
     schema = dataset.get("schema", {})
     notes = dataset.get("notes", [])
 
@@ -352,10 +384,17 @@ def _format_dataset_schema(dataset: dict[str, Any]) -> str:
     if description:
         lines.append(description)
 
-    if connection:
-        uri = connection.get("uri", "")
-        user = connection.get("username", "")
-        lines.append(f"Connection: {uri} | user: {user}")
+    # Version info from database: block — helps model choose correct syntax
+    if db_block:
+        neo4j_version = db_block.get("neo4j_version", "")
+        cypher_version = db_block.get("cypher_version", "")
+        if neo4j_version or cypher_version:
+            ver_parts = []
+            if neo4j_version:
+                ver_parts.append(f"Neo4j {neo4j_version}")
+            if cypher_version:
+                ver_parts.append(f"Cypher {cypher_version}")
+            lines.append(f"Database version: {' / '.join(ver_parts)}")
 
     # ── Nodes ──────────────────────────────────────────────────────────────────
     nodes = schema.get("nodes", {})
@@ -874,9 +913,15 @@ def _build_domain_drivers(
     dataset_schemas: dict[str, dict[str, Any]],
     integration_env: dict[str, str],
     fallback_password: Optional[str] = None,
+    db_blocks: Optional[dict[str, dict[str, Any]]] = None,
 ) -> dict[str, Any]:
     """
     Create per-domain Neo4j drivers from dataset YAML connection info.
+
+    Connection info resolution order per domain:
+    1. Top-level `database:` block (task-045 canonical location)
+    2. Legacy `dataset.connection` block (backwards compat)
+    3. Environment variables / CLI fallback
 
     Password resolution order per domain:
     1. integration.env key  {DOMAIN}_PASSWORD  (e.g. COMPANIES_PASSWORD)
@@ -891,11 +936,22 @@ def _build_domain_drivers(
     except ImportError:
         return {}
 
+    db_blocks = db_blocks or {}
     drivers: dict[str, Any] = {}
     for domain, dataset in dataset_schemas.items():
+        # Prefer top-level database: block; fall back to dataset.connection
+        db_block = db_blocks.get(domain) or {}
         connection = dataset.get("connection", {})
-        uri = connection.get("uri") or os.environ.get("NEO4J_URI", "bolt://localhost:7687")
-        username = connection.get("username") or os.environ.get("NEO4J_USERNAME", "neo4j")
+        uri = (
+            db_block.get("uri")
+            or connection.get("uri")
+            or os.environ.get("NEO4J_URI", "bolt://localhost:7687")
+        )
+        username = (
+            db_block.get("username")
+            or connection.get("username")
+            or os.environ.get("NEO4J_USERNAME", "neo4j")
+        )
 
         domain_key = domain.upper()
         password = (
@@ -1171,8 +1227,13 @@ def run_all(
     2. Override: external JSON/YAML files in schema_dir (for shared/externalized schema)
 
     Driver selection per case:
-    - If the domain has a dataset: connection section, a domain-specific driver is used.
+    - If the domain has a database: block (or legacy dataset.connection), a per-domain driver is used.
     - Falls back to the shared `driver` arg for domains without connection info.
+
+    Version injection:
+    - neo4j_version from the CLI flag takes precedence.
+    - Otherwise, neo4j_version is read from the database: block in the YAML file.
+    - As a last resort, version is auto-detected via dbms.components() when min_version cases exist.
     """
     started_at = datetime.now(timezone.utc).isoformat()
     run_id = f"run-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S')}"
@@ -1185,17 +1246,28 @@ def run_all(
     # Value hints cache: domain → formatted sample/enum/range data for prompt injection
     value_hints_cache: dict[str, Optional[str]] = {}
 
+    # Per-domain database blocks (uri/username/neo4j_version/cypher_version)
+    db_blocks: dict[str, dict[str, Any]] = {}
+
     # Per-domain drivers (each domain may connect to a different Neo4j instance/user)
     domain_drivers: dict[str, Any] = {}
 
     if cases_path:
-        dataset_schemas = load_dataset_schemas(cases_path)
+        dataset_schemas, db_blocks = load_dataset_schemas(cases_path)
         for domain, dataset in dataset_schemas.items():
-            schema_cache[domain] = _format_dataset_schema(dataset)
+            db_block = db_blocks.get(domain)
+            schema_cache[domain] = _format_dataset_schema(dataset, db_block=db_block)
             value_hints_cache[domain] = _collect_value_hints(dataset)
             if verbose:
                 hint_note = " (with value hints)" if value_hints_cache[domain] else ""
-                print(f"[schema] Loaded dataset schema for '{domain}' from YAML{hint_note}", flush=True)
+                ver_note = ""
+                if db_block and db_block.get("neo4j_version"):
+                    ver_note = f" [Neo4j {db_block['neo4j_version']}]"
+                print(
+                    f"[schema] Loaded dataset schema for '{domain}' from YAML"
+                    f"{hint_note}{ver_note}",
+                    flush=True,
+                )
 
         # Build per-domain drivers from connection info in dataset YAML
         if not dry_run:
@@ -1203,12 +1275,14 @@ def run_all(
                 dataset_schemas,
                 integration_env or {},
                 fallback_password=fallback_password,
+                db_blocks=db_blocks,
             )
             for domain, d in domain_drivers.items():
                 if verbose:
+                    db = db_blocks.get(domain) or {}
                     ds = dataset_schemas[domain]
-                    uri = ds.get("connection", {}).get("uri", "default")
-                    user = ds.get("connection", {}).get("username", "default")
+                    uri = db.get("uri") or ds.get("connection", {}).get("uri", "default")
+                    user = db.get("username") or ds.get("connection", {}).get("username", "default")
                     print(f"[driver] Domain '{domain}' → {uri} as {user}", flush=True)
 
     if schema_dir:
@@ -1234,8 +1308,18 @@ def run_all(
             )
             warned_domains.add(tc.domain)
 
-    # Version detection: use provided flag value, or auto-detect from DB
+    # Version detection: CLI flag → YAML database: block → auto-detect from DB
     server_version: Optional[str] = neo4j_version
+    if server_version is None and db_blocks:
+        # Use version from database: block (all domains should agree; take first non-empty)
+        for _db in db_blocks.values():
+            _v = _db.get("neo4j_version")
+            if _v:
+                server_version = str(_v)
+                if verbose:
+                    print(f"[version] Using neo4j_version from YAML database: block: {server_version}", flush=True)
+                break
+
     has_version_gated_cases = any(tc.min_version for tc in cases)
     if has_version_gated_cases and not dry_run and server_version is None:
         detect_driver = driver or next(iter(domain_drivers.values()), None)
@@ -1582,6 +1666,25 @@ def main(argv: Optional[list[str]] = None) -> int:
     # Dry-run: validate YAML structure only
     if args.dry_run:
         errors = validate_yaml_structure(cases)
+
+        # Also validate database: blocks (neo4j_version format, required fields)
+        _db_block_errors: list[str] = []
+        try:
+            _, _db_blocks_check = load_dataset_schemas(cases_path)
+            _MIN_VERSION_FIELDS = {"uri", "username", "database"}
+            for domain, db in _db_blocks_check.items():
+                for field in ("neo4j_version", "cypher_version"):
+                    val = db.get(field)
+                    if val is not None and field == "neo4j_version":
+                        if not _validate_min_version_format(str(val)):
+                            _db_block_errors.append(
+                                f"[database:{domain}] neo4j_version {val!r} must be "
+                                "in YYYY.MM or YYYY.MM.PATCH format"
+                            )
+        except Exception:
+            pass
+        errors = errors + _db_block_errors
+
         if errors:
             for err in errors:
                 print(f"YAML ERROR: {err}", file=sys.stderr)

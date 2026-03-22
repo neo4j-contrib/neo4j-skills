@@ -4,13 +4,15 @@
 # Thresholds: max_db_hits = observed × 3, max_allocated_memory_bytes = observed × 3,
 #             max_runtime_ms = observed × 5.
 
+database:
+  uri: bolt://localhost:7687
+  username: neo4j
+  database: neo4j
+  neo4j_version: "2026.02.1"
+  cypher_version: "25"
+
 dataset:
   name: ucfraud
-  database: neo4j
-  connection:
-    uri: bolt://localhost:7687
-    username: neo4j
-    password: password
   description: |
     A financial transaction fraud detection graph modelling bank customers, their accounts,
     the transactions between accounts, and shared personal details (email, phone, address)

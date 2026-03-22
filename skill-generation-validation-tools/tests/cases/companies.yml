@@ -4,13 +4,15 @@
 # Thresholds: max_db_hits = observed × 3, max_allocated_memory_bytes = observed × 3,
 #             max_runtime_ms = observed × 5.
 
+database:
+  uri: neo4j+s://demo.neo4jlabs.com:7687
+  username: companies
+  database: companies
+  neo4j_version: "2026.01"
+  cypher_version: "25"
+
 dataset:
   name: companies
-  database: companies
-  connection:
-    uri: neo4j+s://demo.neo4jlabs.com:7687
-    username: companies
-    password: companies
   description: |
     A corporate intelligence knowledge graph of publicly traded companies, their news coverage,
     and corporate ownership structures. Use to explore which companies belong to which industries,

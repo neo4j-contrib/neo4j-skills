@@ -128,6 +128,17 @@ The script generates **first drafts** for L3 reference files (not final output).
 - Version comparison is prefix-match: `"2026.02"` required against `"2026.02.1"` detected → satisfies (only compares up to required's component count).
 - Dry-run validates `min_version` format without DB connection (`_validate_min_version_format()`).
 
+## Domain YAML Structure (task-045: dataset: + database: split)
+
+Domain YAML files now have two top-level keys:
+- `database:` — connection info and version: `uri`, `username`, `database`, `neo4j_version` (YYYY.MM.PATCH), `cypher_version`
+- `dataset:` — schema for prompt injection: `name`, `description`, `schema` (nodes/relationships/indexes), `notes`
+
+`load_dataset_schemas()` returns a `(schemas_dict, db_blocks_dict)` tuple — not a single dict.
+`_format_dataset_schema(dataset, db_block=...)` injects `Database version: Neo4j X.Y / Cypher 25` when db_block provided.
+Version resolution order in `run_all()`: CLI `--neo4j-version` → `database.neo4j_version` in YAML → `dbms.components()` auto-detect.
+Backwards compatibility: old `dataset.connection` format still works as fallback in `_build_domain_drivers()`.
+
 ## Runner Notes (tests/harness/runner.py)
 
 - Claude headless invocation: `claude --skill <name>` does NOT exist in claude 2.1.80. Runner uses `--append-system-prompt` with SKILL.md content loaded via `_load_skill_content()`. The `--skill` flag is a fallback for future CLI versions.

@@ -948,7 +948,7 @@ tasks:
       read database.neo4j_version and database.cypher_version and inject them into every
       Claude prompt alongside the schema context block. Dry-run must validate the new
       YAML structure without errors.
-    status: pending
+    status: completed
     dependencies:
       - task-030
     acceptance_criteria:
@@ -958,7 +958,7 @@ tasks:
       - "runner.py reads database.neo4j_version and appends it to the injected schema context block"
       - "Claude prompt now includes 'Database version: YYYY.MM.PATCH / Cypher: 25' line"
       - "Harness dry-run validates new YAML structure without errors"
-    completed_at: null
+    completed_at: "2026-03-22T14:00:00Z"
 
   - id: task-046
     title: "Create references/version-matrix.md and add inline version callouts to L3 files"

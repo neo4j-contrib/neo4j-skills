@@ -4,13 +4,15 @@
 # Thresholds: max_db_hits = observed × 3, max_allocated_memory_bytes = observed × 3,
 #             max_runtime_ms = observed × 5.
 
+database:
+  uri: neo4j+s://demo.neo4jlabs.com:7687
+  username: recommendations
+  database: recommendations
+  neo4j_version: "2026.01"
+  cypher_version: "25"
+
 dataset:
   name: recommendations
-  database: recommendations
-  connection:
-    uri: neo4j+s://demo.neo4jlabs.com:7687
-    username: recommendations
-    password: recommendations
   description: |
     A movie recommendation graph containing films, the people who made them (actors, directors),
     users who rated them, and genre classifications. Use to explore movie ratings, actor and
