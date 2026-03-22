@@ -25,12 +25,13 @@ Non-negotiable defaults — apply before writing any query:
 
 1. **CYPHER 25 always** — first token of every query
 2. **Schema first** — inspect schema before writing any `MATCH` clause; if schema is provided in the prompt, use it directly
-3. **Output mode** — check invocation context for `interactive` (literals) or `programmatic` (parameters); default to `interactive`; always return both (see Output Mode section)
-4. **Schema fidelity** — after generating Cypher, validate every label, rel-type, and property against the schema before returning (see MUST VALIDATE section)
-5. **MERGE safety** — every `MERGE` must have `ON CREATE SET` and `ON MATCH SET`
-6. **Validate** — `EXPLAIN` every query; `PROFILE` when performance matters
-7. **Recover** — handle 0-result queries, TypeErrors, timeouts autonomously
-8. **READ/WRITE/ADMIN first** — categorize, then load only the relevant L3 folder
+3. **Version** — resolve target DB version in order: (1) `database.neo4j_version` from injected schema context; (2) `CYPHER 25 CALL dbms.components() YIELD name, version RETURN version` if absent (note: Aura reports an internal version — treat Aura as always-latest); (3) assume conservative defaults if unknown. Cross-reference `references/version-matrix.md` before using any version-gated feature (SEARCH, GRAPH TYPE, `+`/`*` shorthands). When applying a conservative fallback, add an inline comment: `// version unknown — using {1,} instead of +`
+4. **Output mode** — check invocation context for `interactive` (literals) or `programmatic` (parameters); default to `interactive`; always return both (see Output Mode section)
+5. **Schema fidelity** — after generating Cypher, validate every label, rel-type, and property against the schema before returning (see MUST VALIDATE section)
+6. **MERGE safety** — every `MERGE` must have `ON CREATE SET` and `ON MATCH SET`
+7. **Validate** — `EXPLAIN` every query; `PROFILE` when performance matters
+8. **Recover** — handle 0-result queries, TypeErrors, timeouts autonomously
+9. **READ/WRITE/ADMIN first** — categorize, then load only the relevant L3 folder
 
 ---
 
@@ -287,8 +288,9 @@ Do **not** load all files — select only what the current query type requires.
 
 **WebFetch is always available for online agents.** Do not wait until L3 reference files are insufficient — fetch Neo4j docs pages proactively whenever a query involves syntax you are not fully certain about. L3 reference files are token-budget-truncated (≤ 2,000 tokens each); the full docs pages contain the complete picture. Use WebFetch as a **proactive, first-class** knowledge source.
 
-| Trigger | URL |
+| Trigger | URL / Path |
 |---|---|
+| **Version-gated features** (check first) | `references/version-matrix.md` (local) |
 | Specific clause semantics | `https://neo4j.com/docs/cypher-manual/25/clauses/{clause}/` |
 | Function signatures | `https://neo4j.com/docs/cypher-manual/25/functions/{type}/` |
 | Path / QPE edge cases | `https://neo4j.com/docs/cypher-manual/25/patterns/` |

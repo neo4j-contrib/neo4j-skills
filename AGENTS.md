@@ -306,6 +306,7 @@ DO-NOT blocks for all three are now in: SKILL.md (QPE section), cypher25-pattern
 ## SKILL.md Authoring Notes
 
 - SKILL.md line budget is 300 lines (not 300 non-blank lines). Inline `CYPHER 25` on the same line as each query to save ~10 lines in the Schema-First Protocol section.
+- Autonomous Operation Protocol: Version step (step 3) uses 3-tier resolution: injected schema → dbms.components() → conservative defaults. Aura caveat and inline comment instruction must both appear in the same step to stay within budget.
 - Verified with: `wc -l SKILL.md` (lines) + `python3 -c "words=len(text.split()); print(int(words*1.3))"` (token estimate).
 - task-020 (WebFetch proactive framing) was folded into task-010's SKILL.md — the proactive framing is already present. task-020 can be marked as superseded or trivially completed.
 - SEARCH clause (Neo4j 2026.01 Preview) is **vector-only** — always document the fulltext procedure fallback alongside it.

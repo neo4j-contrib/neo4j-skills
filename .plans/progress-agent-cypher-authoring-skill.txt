@@ -1418,3 +1418,34 @@ Key Decisions:
 - --version-matrix flag scans 90 changelog entries and emits the baseline 8-feature table; the scan augments but doesn't replace the hand-coded data
 
 Next Task: task-047 (Add version-aware query generation protocol to SKILL.md — now unblocked by task-046)
+
+================================================================================
+TASK-047: Add version-aware query generation protocol to SKILL.md
+Date: 2026-03-22T15:00:00Z
+================================================================================
+
+Summary:
+Added a new "Version" step (step 3) to SKILL.md's Autonomous Operation Protocol
+documenting three-tier version resolution: (1) database.neo4j_version from
+injected schema context, (2) CALL dbms.components() fallback with explicit Aura
+caveat (treat as always-latest), (3) conservative defaults when unknown.
+Also added inline comment instruction for conservative fallbacks and a cross-
+reference to references/version-matrix.md. Updated the WebFetch escalation table
+to list version-matrix.md as a local-first lookup row before remote URLs.
+
+Files Changed:
+- neo4j-cypher-authoring-skill/SKILL.md (modified — added Version step 3 to
+  Autonomous Operation Protocol; renumbered steps 3-8 to 4-9; added
+  version-matrix.md row to WebFetch escalation table)
+- .plans/tasks-agent-cypher-authoring-skill.yml (task-047 marked completed)
+- .plans/progress-agent-cypher-authoring-skill.txt (this entry)
+
+Key Decisions:
+- Condensed 3-tier resolution + Aura caveat + inline comment instruction into
+  a single numbered step to stay within the 300-line budget (result: 299 lines)
+- Placed Version step at position 3, after Schema-first (step 2) — version
+  context is needed before writing the first MATCH clause, same as schema
+- Added version-matrix.md as first row in WebFetch table (local-first lookup)
+  with "(check first)" label to make the priority explicit
+
+Next Task: task-036 or task-042 or task-043 (all pending, task-036 has most dependencies satisfied)
