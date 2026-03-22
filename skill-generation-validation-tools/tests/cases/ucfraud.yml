@@ -715,3 +715,51 @@ cases:
     max_runtime_ms: 5000
     is_write_query: false
     notes: "casual 'marked as suspicious / flagged for potential fraud' → Customer.fraudFlag = 'True' (STRING not boolean, per schema); 'central to the network' → ORDER BY c.pagerank DESC"
+
+  # ---------------------------------------------------------------------------
+  # GRAPH TYPE (3 cases) — Preview Enterprise feature, Neo4j 2026.02+
+  # is_write_query: true (schema DDL); min_version: "2026.02" (Preview gate)
+  # These test syntax correctness (Gate 1) only — execution on local 2026.02.1
+  # Enterprise instance validates Gate 2 (DDL runs without error).
+  # ---------------------------------------------------------------------------
+  - id: "ucf-graphtype-001"
+    question: "List all declared graph type element types in the fraud database to understand what schema constraints are currently enforced."
+    difficulty: basic
+    tags: [graph-type, schema, ddl, show]
+    database: neo4j
+    domain: ucfraud
+    min_results: 0
+    max_db_hits: 1000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 5000
+    is_write_query: false
+    min_version: "2026.02"
+    notes: "SHOW GRAPH TYPES — read-only schema inspection; min_results: 0 acceptable since no graph type may be declared yet"
+
+  - id: "ucf-graphtype-002"
+    question: "Declare a schema element type for the Customer entity that enforces a mandatory customerID string and mandatory name string, to improve data quality on new customer records."
+    difficulty: intermediate
+    tags: [graph-type, schema, ddl, alter, element-type]
+    database: neo4j
+    domain: ucfraud
+    min_results: 0
+    max_db_hits: 5000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 10000
+    is_write_query: true
+    min_version: "2026.02"
+    notes: "ALTER CURRENT GRAPH TYPE SET with ::Customer element type — mandatory STRING NOT NULL for customerID and name; is_write_query:true because DDL modifies schema"
+
+  - id: "ucf-graphtype-003"
+    question: "Extend the database schema to add an element type for transactions that enforces a mandatory transactionID string and mandatory amount float, and add a schema constraint for the SENT relationship type."
+    difficulty: advanced
+    tags: [graph-type, schema, ddl, extend, element-type, relationship]
+    database: neo4j
+    domain: ucfraud
+    min_results: 0
+    max_db_hits: 5000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 10000
+    is_write_query: true
+    min_version: "2026.02"
+    notes: "EXTEND GRAPH TYPE WITH ::Transaction (transactionID :: STRING NOT NULL, amount :: FLOAT NOT NULL) and [::SENT] relationship element type; is_write_query:true; expects EXTEND GRAPH TYPE WITH syntax"

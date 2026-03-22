@@ -245,7 +245,7 @@ CYPHER 25 USE myDatabase MATCH (n:Person) RETURN n.name LIMIT 5;
 |---|---|---|
 | **READ** | MATCH, OPTIONAL MATCH, CALL subquery, WITH, RETURN, COUNT{}/COLLECT{}/EXISTS{}, SEARCH | `references/read/` |
 | **WRITE** | CREATE, MERGE, SET, REMOVE, DELETE, DETACH DELETE, CALL IN TRANSACTIONS, FOREACH, LOAD CSV | `references/write/` |
-| **SCHEMA** | CREATE/DROP INDEX, CREATE/DROP CONSTRAINT, SHOW INDEXES, SHOW CONSTRAINTS, SHOW PROCEDURES | `references/schema/` |
+| **SCHEMA** | CREATE/DROP INDEX, CREATE/DROP CONSTRAINT, SHOW INDEXES, SHOW CONSTRAINTS, SHOW PROCEDURES, GRAPH TYPE DDL (ALTER CURRENT GRAPH TYPE, EXTEND GRAPH TYPE, SHOW GRAPH TYPES, DROP GRAPH TYPE ELEMENTS) | `references/schema/` |
 | **ADMIN** | CREATE/DROP DATABASE, ALTER USER, roles/privileges, SHOW TRANSACTIONS, SHOW SERVERS | `references/admin/` |
 
 **Step 2 — Load only the relevant L3 file(s):**
@@ -258,6 +258,7 @@ CYPHER 25 USE myDatabase MATCH (n:Person) RETURN n.name LIMIT 5;
 | Type errors, null propagation, casting, type predicates | `read/cypher25-types-and-nulls.md` |
 | Batch writes, CALL IN TRANSACTIONS | `write/cypher25-call-in-transactions.md` |
 | Index creation, SEARCH, fulltext, vector, hints | `schema/cypher25-indexes.md` |
+| GRAPH TYPE DDL (Enterprise Preview — 2026.02+) | `schema/cypher25-graph-types.md` |
 | Naming, casing, formatting (all categories) | `cypher-style-guide.md` |
 
 Do **not** load all files — select only what the current query type requires.

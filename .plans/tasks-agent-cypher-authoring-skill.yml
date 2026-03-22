@@ -900,7 +900,7 @@ tasks:
       (Enterprise-only, not GA, not for production). Update SKILL.md Query Construction
       Decision Tree to list GRAPH TYPE clauses under SCHEMA and route to this file.
       Add ≥ 3 GRAPH TYPE test cases to ucfraud.yml (writeable Enterprise local instance).
-    status: pending
+    status: completed
     dependencies:
       - task-006
       - task-010
@@ -912,7 +912,7 @@ tasks:
       - "SKILL.md SCHEMA category in decision tree lists GRAPH TYPE and routes to cypher25-graph-types.md"
       - "ucfraud.yml contains ≥ 3 GRAPH TYPE test cases (SCHEMA category, is_write_query: true)"
       - "File is ≤ 2,000 tokens"
-    completed_at: null
+    completed_at: "2026-03-22T16:00:00Z"
 
   - id: task-044
     title: "Expand QPP/QPE coverage: REPEATABLE ELEMENTS, DIFFERENT RELATIONSHIPS, + shorthand validation"

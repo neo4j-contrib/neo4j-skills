@@ -1449,3 +1449,29 @@ Key Decisions:
   with "(check first)" label to make the priority explicit
 
 Next Task: task-036 or task-042 or task-043 (all pending, task-036 has most dependencies satisfied)
+================================================================================
+TASK-043: Author cypher25-graph-types.md L3 reference and add GRAPH TYPE to SKILL.md routing
+Date: 2026-03-22T16:00:00Z
+================================================================================
+
+Summary:
+Created the cypher25-graph-types.md L3 reference file for the GRAPH TYPE DDL
+Preview feature in Neo4j 2026.02 Enterprise Edition. Hand-authored from release
+notes (no docs-cypher content exists for this feature yet — submodule is at
+2026.01.0). Updated SKILL.md Query Construction Decision Tree to route GRAPH TYPE
+clauses to the new file. Added 3 GRAPH TYPE test cases to ucfraud.yml with
+min_version: "2026.02" gates. SKILL.md remains exactly 300 lines.
+
+Files Changed:
+- neo4j-cypher-authoring-skill/references/schema/cypher25-graph-types.md (created — hand-authored L3 reference)
+- neo4j-cypher-authoring-skill/SKILL.md (modified — SCHEMA category and routing table updated)
+- skill-generation-validation-tools/tests/cases/ucfraud.yml (modified — 3 GRAPH TYPE test cases appended)
+
+Key Decisions:
+- Hand-authored (not extracted) because docs-cypher submodule is pinned to 2026.01.0 and GRAPH TYPE is 2026.02 Preview
+- min_version: "2026.02" on all 3 test cases — harness will SKIP on older servers
+- ucf-graphtype-001 is read-only (SHOW GRAPH TYPES), ucf-graphtype-002/003 are is_write_query: true (DDL)
+- SKILL.md routing table added one row: "GRAPH TYPE DDL (Enterprise Preview)" → cypher25-graph-types.md
+- Token count: ~879 tokens (676 words × 1.3) — well within 2,000 limit
+
+Next Task: task-036 (Expand test coverage to 10 database domains) or task-042 (SEARCH test cases for upgraded demo)
