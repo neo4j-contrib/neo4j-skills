@@ -185,6 +185,21 @@ Cypher does **not** support `NULLS LAST` / `NULLS FIRST` (SQL syntax — will ca
 // DON'T: ORDER BY n.score DESC NULLS LAST   // SYNTAX ERROR — not valid Cypher
 ```
 
+### Subquery Body Format Rules
+
+`EXISTS {}` and `COUNT {}` accept **either** a bare pattern (with optional `WHERE`) or a full `MATCH ... RETURN` statement:
+```cypher
+EXISTS { (a)-[:R]->(b) }                    // bare pattern ✓
+EXISTS { MATCH (a)-[:R]->(b) WHERE a.x > 0 } // full statement ✓
+COUNT  { (a)-[:R]->(b) WHERE a.x > 0 }      // bare with WHERE ✓
+```
+
+`COLLECT {}` requires a **full `MATCH ... RETURN x` statement** — bare pattern is a syntax error:
+```cypher
+COLLECT { MATCH (a)-[:R]->(b) RETURN b.name }  // ✓ (RETURN exactly one column)
+COLLECT { (a)-[:R]->(b) }                      // SYNTAX ERROR ✗
+```
+
 ### WITH Cardinality Reset
 
 `WITH` closes the row stream; use it to filter aggregated results before further traversal: `MATCH (p:Person)-[:ACTED_IN]->(m:Movie) WITH p, count(m) AS mc WHERE mc > 5 MATCH (p)-[:KNOWS]->(f:Person) RETURN p.name, f.name;`
@@ -315,7 +330,7 @@ LIMIT 20
 | `ACYCLIC / TRAIL / WALK` path modes | Not supported in Neo4j 2026.x — omit; use `WHERE` guards |
 | `ORDER BY x DESC NULLS LAST` | `ORDER BY x DESC` — `NULLS LAST`/`FIRST` is SQL, not valid Cypher |
 | `MATCH (a)(p){n}(b) REPEATABLE ELEMENTS` | `MATCH REPEATABLE ELEMENTS (a)(p){n}(b)` — mode goes after MATCH |
-| `NOT EXISTS { MATCH (a)-[:R]->(b) }` | `NOT EXISTS { (a)-[:R]->(b) }` — no MATCH keyword inside EXISTS/NOT EXISTS |
+| `COLLECT { (a)-[:R]->(b) }` | `COLLECT { MATCH (a)-[:R]->(b) RETURN x }` — COLLECT requires full MATCH+RETURN; bare pattern is syntax error |
 
 ---
 

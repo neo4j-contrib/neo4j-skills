@@ -9,12 +9,30 @@ For bulk-write subqueries (`CALL IN TRANSACTIONS`), see `write/cypher25-call-in-
 
 ## Subquery forms at a glance
 
-| Form | Used in | Returns | Outer vars auto-imported? |
-|---|---|---|---|
-| `CALL (vars) { ... }` | Standalone clause | Multiple columns, multiple rows | No — must declare in `()` |
-| `COUNT { ... }` | Expression (WHERE, RETURN, etc.) | INTEGER | Yes |
-| `COLLECT { ... RETURN x }` | Expression | LIST | Yes |
-| `EXISTS { ... }` | Predicate expression | BOOLEAN | Yes |
+| Form | Used in | Returns | Outer vars auto-imported? | Body format |
+|---|---|---|---|---|
+| `CALL (vars) { ... }` | Standalone clause | Multiple columns, multiple rows | No — must declare in `()` | Full Cypher statement |
+| `COUNT { ... }` | Expression (WHERE, RETURN, etc.) | INTEGER | Yes | Pattern **or** full statement |
+| `COLLECT { MATCH ... RETURN x }` | Expression | LIST | Yes | **Full statement only** (MATCH + RETURN required) |
+| `EXISTS { ... }` | Predicate expression | BOOLEAN | Yes | Pattern **or** full statement |
+
+**Critical format rule:**
+- `EXISTS {}` and `COUNT {}` accept **both** a bare pattern `(a)-[:R]->(b)` (with optional `WHERE`) **and** a full Cypher statement with `MATCH ... RETURN`.
+- `COLLECT {}` accepts **only** the full statement form — `COLLECT { MATCH ... RETURN x }`. A bare pattern inside `COLLECT {}` is a syntax error.
+
+```cypher
+-- EXISTS: both forms valid
+EXISTS { (person)-[:HAS_DOG]->(:Dog) }                          -- bare pattern ✓
+EXISTS { MATCH (person)-[:HAS_DOG]->(d:Dog) WHERE d.age > 2 }  -- full statement ✓
+
+-- COUNT: both forms valid
+COUNT { (person)-[:HAS_DOG]->() }                              -- bare pattern ✓
+COUNT { MATCH (person)-[:HAS_DOG]->(d:Dog) WHERE d.age > 2 }   -- full statement ✓
+
+-- COLLECT: full statement ONLY
+COLLECT { MATCH (person)-[:HAS_DOG]->(d:Dog) RETURN d.name }   -- ✓
+COLLECT { (person)-[:HAS_DOG]->(d:Dog) }                       -- SYNTAX ERROR ✗
+```
 
 `COUNT {}` vs `count()`: `COUNT { pattern }` counts **rows** from a subquery; `count(expr)` is an aggregating function over the current row stream — not interchangeable.
 
@@ -103,8 +121,8 @@ RETURN p.name, COUNT { (p)-[:HAS_DOG]->() } AS dogCount
 
 - Outer-scope variables **automatically in scope** — no import needed.
 - Returns `INTEGER` — use in numeric comparisons or as a RETURN expression.
-- Pattern-only form: `COUNT { (a)-[:R]->(b) }` (no MATCH keyword needed for simple patterns).
-- Full Cypher form: `COUNT { MATCH (a)-[:R]->(b) WHERE ... RETURN a }` — `RETURN` is optional.
+- **Pattern form** (simple): `COUNT { (a)-[:R]->(b) }` or `COUNT { (a)-[:R]->(b) WHERE cond }` — no MATCH, no RETURN.
+- **Full statement form**: `COUNT { MATCH (a)-[:R]->(b) WHERE ... RETURN a }` — RETURN is optional in this form.
 
 ---
 
@@ -129,7 +147,9 @@ RETURN person.name, COLLECT {
 } AS recentDogs
 ```
 
-- `RETURN` clause is **mandatory** and must return **exactly one column**.
+- **Full statement only**: `COLLECT { MATCH ... RETURN x }` — `MATCH` and `RETURN` are both mandatory.
+- `RETURN` must return **exactly one column** — `RETURN x` not `RETURN x, y`.
+- Bare pattern form (`COLLECT { (a)-[:R]->(b) }`) is **not valid** — syntax error.
 - Outer-scope variables automatically in scope.
 - Returns `LIST` — use anywhere a list is expected.
 
@@ -148,8 +168,10 @@ RETURN person.name
 
 - Outer-scope variables automatically in scope.
 - Returns `BOOLEAN` — use only as a predicate.
-- Pattern-only form: `EXISTS { (a)-[:R]->(b) }` for simple patterns.
+- **Pattern form**: `EXISTS { (a)-[:R]->(b) }` or `EXISTS { (a)-[:R]->(b) WHERE cond }` — no MATCH needed.
+- **Full statement form**: `EXISTS { MATCH (a)-[:R]->(b) WHERE ... }` — RETURN clause is omitted (the subquery just needs to match something).
 - Short-circuits on first match (efficient).
+- `NOT EXISTS { ... }` follows the same rules — both pattern and full statement forms are valid.
 
 ---
 
