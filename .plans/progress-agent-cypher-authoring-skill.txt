@@ -1537,3 +1537,51 @@ Key Decisions:
 - SKILL.md QPE table simplified from 3-row to 2-row by merging "All other / unknown" case to stay within 300-line budget
 
 Next Task: task-036 (Expand test coverage to 10 database domains) or end of queue
+
+================================================================================
+TASK-036: Expand test coverage to 10 database domains
+Date: 2026-03-23T14:00:00Z
+================================================================================
+
+Summary:
+Added 6 new domain YAML test case files to reach the target of 10 domains total
+(4 existing: companies, recommendations, ucfraud, stackoverflow + 6 new).
+For each domain: inspected live schema at demo.neo4jlabs.com, sampled property
+values and relationship directions, then hand-authored 27 test cases across all
+5 difficulty tiers (6 basic, 6 intermediate, 6 advanced, 4 complex, 5 expert).
+Updated the PRD domain catalogue table with confirmed domain list. All 308 test
+cases across 10 domains pass dry-run validation. arxiv skipped (auth failed).
+
+Domains added:
+- goodreads: Book/Author/Review/User graph with SIMILAR_TO book network + 2 vector indexes
+- northwind: Classic ERP graph (Product/Category/Supplier/Customer/Order)
+- twitter: Social network ego graph (User/Tweet/Hashtag/FOLLOWS/RETWEETS)
+- legalcontracts: Contract/Party/Clause/Location graph with contract vector index
+- retail: H&M fashion retail (Product/Article/Department/Customer + PURCHASED)
+- ucnetwork: WiFi network monitoring (Client/AccessPoint/SSID/Snapshot time-series)
+
+Files Changed:
+- skill-generation-validation-tools/tests/cases/goodreads.yml (created — 27 cases)
+- skill-generation-validation-tools/tests/cases/northwind.yml (created — 27 cases)
+- skill-generation-validation-tools/tests/cases/twitter.yml (created — 27 cases)
+- skill-generation-validation-tools/tests/cases/legalcontracts.yml (created — 27 cases)
+- skill-generation-validation-tools/tests/cases/retail.yml (created — 27 cases)
+- skill-generation-validation-tools/tests/cases/ucnetwork.yml (created — 27 cases)
+- .plans/tasks-agent-cypher-authoring-skill.yml (task-036 status → completed)
+- .plans/prd-agent-cypher-authoring-skill.md (domain catalogue table updated)
+
+Key Decisions:
+- Chose goodreads, northwind, twitter, legalcontracts, retail, ucnetwork over
+  patientjourney (122M nodes, complex LOINC observation properties) and
+  ucsupplychainpharma (30+ internal process node types, poor harness usability)
+- Each domain verified against live DB before authoring test cases — relationship
+  directions, property types, and null patterns checked empirically
+- goodreads: PUBLISHED=(User→Review), WRITTEN_FOR=(Review→Book) — counterintuitive
+  naming verified live
+- northwind: Order.freight stored as STRING — noted in schema notes for model
+- legalcontracts: PARTY_TO direction is (Party)→(Contract) NOT (Contract)→(Party)
+- retail: PURCHASED relationship has properties (tDat, price, salesChannelId);
+  price is normalised 0-1 (not real currency)
+- ucnetwork: devices connect to snapshots via FIRST/LAST; snapshot chain via NEXT
+
+Next Task: All tasks complete

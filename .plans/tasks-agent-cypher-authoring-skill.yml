@@ -710,7 +710,7 @@ tasks:
       dataset: section; (3) author ≥ 25 test cases across all 5 difficulty tiers; (4) run
       harness to validate. Each domain should demonstrate a structurally distinct graph shape.
       Do NOT use the movies database — recommendations already covers movies.
-    status: pending
+    status: completed
     dependencies:
       - task-030
       - task-034
@@ -720,7 +720,7 @@ tasks:
       - "PRD domain catalogue table is complete with all 10 domains, hosts, and connection details"
       - "Harness runs without errors against all 10 domains (gate failures acceptable)"
       - "Each new domain demonstrates a structurally distinct graph shape from existing domains"
-    completed_at: null
+    completed_at: "2026-03-23T14:00:00Z"
 
   - id: task-033
     title: "Enrich domain case files with value-grounded and casual-language questions"

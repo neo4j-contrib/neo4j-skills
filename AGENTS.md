@@ -253,6 +253,18 @@ PASS if the output format is implied naturally ("show", "list", "how many", "ran
 
 **Companies (`companies`):** Organization node → company/firm; Article node → news article; Chunk node → article segment; HAS_SUBSIDIARY → owns/is parent of; MENTIONS → mentions/covers; `sentiment` → tone/coverage sentiment; fulltext index `entity` → company name search; QPE `{1,}` → at any depth in the ownership chain.
 
+**Goodreads (`goodreads`):** Book node → book; Author node → author; Review node → review; User node → reader; AUTHORED=(Author→Book); PUBLISHED=(User→Review) (not User→Book); WRITTEN_FOR=(Review→Book); SIMILAR_TO=(Book→Book); `average_rating` on Author stored as STRING — use toFloat(); `publication_year` also STRING; book-descriptions and review-text vector indexes (1536-dim, cosine).
+
+**Northwind (`northwind`):** Product node → product; Category node → category; Supplier node → supplier; Customer node → customer; Order node → order; ORDERS=(Order→Product); PURCHASED=(Customer→Order); PART_OF=(Product→Category); SUPPLIES=(Supplier→Product); `freight` and `orderDate` stored as STRING — use toFloat()/string comparison.
+
+**Twitter (`twitter`):** User node → user/account; Tweet node → tweet; Hashtag node → topic; Me node → central account (neo4j, screen_name='neo4j'); FOLLOWS=(User→User); POSTS=(User→Tweet); TAGS=(Tweet→Hashtag); RETWEETS=(Tweet→Tweet); Hashtag names are lowercase without #; `betweenness` is sparse.
+
+**Legal Contracts (`legalcontracts`):** Contract node → contract; Party node → signatory/company; Clause node → clause; Location node → jurisdiction; PARTY_TO=(Party→Contract) NOT (Contract→Party); HAS_CLAUSE=(Contract→Clause); HAS_GOVERNING_LAW=(Contract→Location); Party names in UPPER CASE; `effective_date` is DATE type; `total_amount` is sparse; contractSummary vector index (1536-dim, cosine).
+
+**Retail (`retail`):** Product node → product type; Article node → specific variant (colour/style); Department node → store department; Customer node → customer; PURCHASED=(Customer→Article) with properties tDat (DATE), price (normalised 0-1), salesChannelId (1=store, 2=online); VARIANT_OF=(Article→Product); FROM_DEPARTMENT=(Article→Department); product_text_embeddings (1536-dim) and article_graph_embeddings (128-dim) vector indexes.
+
+**UCNetwork (`ucnetwork`):** Client/AccessPoint/WIFIBridge all have :Device label; SSID node → WiFi network; Snapshot node → time-series observation; FIRST/LAST=(Device→Snapshot) for first/last observation; NEXT=(Snapshot→Snapshot) for linked list; SIGNAL/PERFORMANCE/MOBILITY/SECURITY_POSTURE=(Snapshot→metric_node); CONNECTED_TO=(Snapshot→Snapshot) for direct communication; signalstr is negative dBm (closer to 0 is stronger); timestamps are Unix epoch integers.
+
 ### Difficulty ↔ Question Complexity
 
 | Difficulty | What the user asks | Cypher implication |

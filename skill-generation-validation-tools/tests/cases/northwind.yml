@@ -1,0 +1,434 @@
+# northwind.yml — Test cases for neo4j-cypher-authoring-skill
+# NOTE: northwind-generated.yml (generator output) is gitignored.
+# Promote stubs from generated → this file after human review.
+# Thresholds: max_db_hits = observed × 3, max_allocated_memory_bytes = observed × 3,
+#             max_runtime_ms = observed × 5.
+
+database:
+  uri: neo4j+s://demo.neo4jlabs.com:7687
+  username: northwind
+  database: northwind
+  neo4j_version: "2026.02"
+  cypher_version: "25"
+  read_only: true  # demo.neo4jlabs.com — write cases SKIP rather than FAIL
+
+dataset:
+  name: northwind
+  description: |
+    A classic ERP (Enterprise Resource Planning) knowledge graph based on the Northwind trading
+    company dataset. Covers products, product categories, suppliers, customers, and purchase orders.
+    Use to explore product inventory and pricing, supplier networks, order histories, customer
+    purchasing patterns, and geographic distribution of customers and suppliers.
+    Contains 77 products, 8 categories, 29 suppliers, 91 customers, and 830 orders.
+  schema:
+    nodes:
+      Product:
+        description: "A product sold by the company"
+        properties:
+          productID:       {type: INTEGER, description: "Unique product identifier"}
+          productName:     {type: STRING, sample: ["Chai", "Chang", "Aniseed Syrup", "Ikura", "Tofu"]}
+          unitPrice:       {type: FLOAT, min: 2.5, max: 263.5, description: "Unit price in USD"}
+          unitsInStock:    {type: INTEGER, min: 0, description: "Current stock level; 0 means out of stock"}
+          unitsOnOrder:    {type: INTEGER, description: "Units currently on order from supplier"}
+          reorderLevel:    {type: INTEGER, description: "Stock level that triggers a reorder"}
+          discontinued:    {type: BOOLEAN, values: [true, false], description: "Whether the product has been discontinued"}
+          quantityPerUnit: {type: STRING, description: "Packaging description (e.g. '24 - 12 oz bottles')"}
+      Category:
+        description: "A product category"
+        properties:
+          categoryID:   {type: INTEGER}
+          categoryName: {type: STRING, values: ["Beverages", "Condiments", "Confections", "Dairy Products", "Grains/Cereals", "Meat/Poultry", "Produce", "Seafood"]}
+          description:  {type: STRING}
+      Supplier:
+        description: "A company that supplies products"
+        properties:
+          supplierID:   {type: INTEGER}
+          companyName:  {type: STRING, description: "Supplier company name"}
+          contactName:  {type: STRING}
+          contactTitle: {type: STRING}
+          country:      {type: STRING, sample: ["UK", "USA", "Germany", "France", "Japan", "Sweden", "Australia"]}
+          city:         {type: STRING}
+          phone:        {type: STRING}
+      Customer:
+        description: "A customer company that purchases from Northwind"
+        properties:
+          customerID:   {type: STRING, description: "5-character customer code (e.g. 'ALFKI')"}
+          companyName:  {type: STRING, sample: ["Alfreds Futterkiste", "Around the Horn", "Berglunds snabbköp"]}
+          contactName:  {type: STRING}
+          contactTitle: {type: STRING}
+          country:      {type: STRING, sample: ["Germany", "Mexico", "UK", "USA", "France", "Sweden", "Canada"]}
+          city:         {type: STRING}
+          region:       {type: STRING, description: "Region or state (sparse — mainly US/Canada customers)"}
+          phone:        {type: STRING}
+      Order:
+        description: "A customer purchase order"
+        properties:
+          orderID:      {type: INTEGER, description: "Unique order identifier"}
+          orderDate:    {type: STRING, description: "Order placement date (stored as string 'YYYY-MM-DD HH:MM:SS.mmm')"}
+          requiredDate: {type: STRING, description: "Requested delivery date (stored as string)"}
+          shippedDate:  {type: STRING, description: "Actual shipment date (stored as string; null if not yet shipped)"}
+          freight:      {type: STRING, description: "Freight charge (stored as string — use toFloat() to compare)"}
+          shipCountry:  {type: STRING, sample: ["France", "Germany", "UK", "USA", "Brazil"]}
+          shipCity:     {type: STRING}
+          shipName:     {type: STRING}
+    relationships:
+      - type: PART_OF
+        from: Product
+        to: Category
+        description: "Product belongs to this category"
+      - type: SUPPLIES
+        from: Supplier
+        to: Product
+        description: "Supplier provides this product"
+      - type: PURCHASED
+        from: Customer
+        to: Order
+        description: "Customer placed this order"
+      - type: ORDERS
+        from: Order
+        to: Product
+        description: "Order contains this product"
+    indexes: []
+  notes:
+    - "Order.orderDate, Order.freight are stored as STRING — use toFloat(o.freight) for numeric comparisons"
+    - "Product.discontinued is BOOLEAN — filter with p.discontinued = true or p.discontinued = false"
+    - "Category names are exact: 'Beverages', 'Condiments', 'Confections', 'Dairy Products', 'Grains/Cereals', 'Meat/Poultry', 'Produce', 'Seafood'"
+    - "Customer.customerID is a 5-character string (e.g. 'ALFKI'), not an integer"
+    - "No vector or fulltext indexes — all queries use RANGE indexes or label scans"
+    - "ORDERS relationship goes (Order)-[:ORDERS]->(Product), NOT (Customer)-[:ORDERS]->(Product)"
+
+cases:
+
+  # ─── BASIC (6 cases) ─────────────────────────────────────────────────────────
+
+  - id: northwind-basic-001
+    question: "How many products does Northwind sell?"
+    database: northwind
+    difficulty: basic
+    tags: [count, nodes]
+    domain: northwind
+    min_results: 1
+    max_db_hits: 500
+    max_allocated_memory_bytes: 2097152
+    max_runtime_ms: 5000
+    is_write_query: false
+
+  - id: northwind-basic-002
+    question: "Which products are currently out of stock?"
+    database: northwind
+    difficulty: basic
+    tags: [match, filter, inventory]
+    domain: northwind
+    min_results: 1
+    max_db_hits: 500
+    max_allocated_memory_bytes: 2097152
+    max_runtime_ms: 5000
+    is_write_query: false
+
+  - id: northwind-basic-003
+    question: "What are all the product categories available? List their names and descriptions."
+    database: northwind
+    difficulty: basic
+    tags: [match, categories]
+    domain: northwind
+    min_results: 8
+    max_db_hits: 200
+    max_allocated_memory_bytes: 2097152
+    max_runtime_ms: 5000
+    is_write_query: false
+
+  - id: northwind-basic-004
+    question: "Which products have been discontinued?"
+    database: northwind
+    difficulty: basic
+    tags: [match, filter, discontinued]
+    domain: northwind
+    min_results: 1
+    max_db_hits: 500
+    max_allocated_memory_bytes: 2097152
+    max_runtime_ms: 5000
+    is_write_query: false
+
+  - id: northwind-basic-005
+    question: "List all customers from Germany."
+    database: northwind
+    difficulty: basic
+    tags: [match, filter, geography]
+    domain: northwind
+    min_results: 1
+    max_db_hits: 500
+    max_allocated_memory_bytes: 2097152
+    max_runtime_ms: 5000
+    is_write_query: false
+
+  - id: northwind-basic-006
+    question: "What are the 10 most expensive products currently in stock? Show product name and unit price."
+    database: northwind
+    difficulty: basic
+    tags: [match, filter, order, limit, price]
+    domain: northwind
+    min_results: 10
+    max_db_hits: 1000
+    max_allocated_memory_bytes: 2097152
+    max_runtime_ms: 5000
+    is_write_query: false
+
+  # ─── INTERMEDIATE (6 cases) ──────────────────────────────────────────────────
+
+  - id: northwind-intermediate-001
+    question: "How many products are in each product category? Show category name and product count, sorted by count descending."
+    database: northwind
+    difficulty: intermediate
+    tags: [aggregation, relationship, group-by, order]
+    domain: northwind
+    min_results: 8
+    max_db_hits: 2000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 8000
+    is_write_query: false
+
+  - id: northwind-intermediate-002
+    question: "Which suppliers provide products in the Beverages category?"
+    database: northwind
+    difficulty: intermediate
+    tags: [match, relationship-chain, filter]
+    domain: northwind
+    min_results: 1
+    max_db_hits: 3000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 8000
+    is_write_query: false
+
+  - id: northwind-intermediate-003
+    question: "Which customers have placed more than 15 orders? Show customer company name and order count."
+    database: northwind
+    difficulty: intermediate
+    tags: [aggregation, relationship, filter, order]
+    domain: northwind
+    min_results: 1
+    max_db_hits: 3000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 8000
+    is_write_query: false
+
+  - id: northwind-intermediate-004
+    question: "What is the average unit price per category? Show category name, average price, min price, and max price."
+    database: northwind
+    difficulty: intermediate
+    tags: [aggregation, relationship, group-by]
+    domain: northwind
+    min_results: 8
+    max_db_hits: 2000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 8000
+    is_write_query: false
+
+  - id: northwind-intermediate-005
+    question: "Which suppliers provide the most products? Show top 5 by product count."
+    database: northwind
+    difficulty: intermediate
+    tags: [aggregation, relationship, order, limit]
+    domain: northwind
+    min_results: 5
+    max_db_hits: 2000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 8000
+    is_write_query: false
+
+  - id: northwind-intermediate-006
+    question: "How many distinct products were ordered by customers in the UK?"
+    database: northwind
+    difficulty: intermediate
+    tags: [aggregation, relationship-chain, distinct, filter]
+    domain: northwind
+    min_results: 1
+    max_db_hits: 10000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 8000
+    is_write_query: false
+
+  # ─── ADVANCED (6 cases) ──────────────────────────────────────────────────────
+
+  - id: northwind-advanced-001
+    question: "Find all products that need to be reordered — where the current stock is at or below the reorder level. Show product name, current stock, and reorder level."
+    database: northwind
+    difficulty: advanced
+    tags: [match, filter, comparison, inventory]
+    domain: northwind
+    min_results: 1
+    max_db_hits: 1000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 8000
+    is_write_query: false
+
+  - id: northwind-advanced-002
+    question: "For each country that customers are from, show total number of customers and total number of orders placed by those customers."
+    database: northwind
+    difficulty: advanced
+    tags: [aggregation, relationship, group-by, geography]
+    domain: northwind
+    min_results: 1
+    max_db_hits: 5000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 10000
+    is_write_query: false
+
+  - id: northwind-advanced-003
+    question: "Find products that are supplied by more than one supplier. Show product name and the list of supplier names."
+    database: northwind
+    difficulty: advanced
+    tags: [aggregation, collect, filter, relationship]
+    domain: northwind
+    min_results: 1
+    max_db_hits: 2000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 8000
+    is_write_query: false
+
+  - id: northwind-advanced-004
+    question: "Which categories have no discontinued products? List those category names."
+    database: northwind
+    difficulty: advanced
+    tags: [filter, not-exists, relationship]
+    domain: northwind
+    min_results: 1
+    max_db_hits: 2000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 8000
+    is_write_query: false
+
+  - id: northwind-advanced-005
+    question: "For each customer country, find the category of products most frequently ordered. Show country, top category, and order count."
+    database: northwind
+    difficulty: advanced
+    tags: [aggregation, group-by, relationship-chain, ranking]
+    domain: northwind
+    min_results: 1
+    max_db_hits: 20000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 15000
+    is_write_query: false
+
+  - id: northwind-advanced-006
+    question: "Which products have never been ordered? Show their names and categories."
+    database: northwind
+    difficulty: advanced
+    tags: [not-exists, optional-match, relationship]
+    domain: northwind
+    min_results: 1
+    max_db_hits: 5000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 10000
+    is_write_query: false
+
+  # ─── COMPLEX (4 cases) ───────────────────────────────────────────────────────
+
+  - id: northwind-complex-001
+    question: "Find customers who have ordered every category of product (all 8 categories). Return their company names."
+    database: northwind
+    difficulty: complex
+    tags: [subquery, collect, filter, relationship-chain, all-categories]
+    domain: northwind
+    min_results: 1
+    max_db_hits: 30000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 20000
+    is_write_query: false
+
+  - id: northwind-complex-002
+    question: "For each supplier, find the total value of their products that are currently in stock (unit price × units in stock). Rank suppliers by this inventory value. Show top 10."
+    database: northwind
+    difficulty: complex
+    tags: [aggregation, math, relationship, order, limit]
+    domain: northwind
+    min_results: 10
+    max_db_hits: 5000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 10000
+    is_write_query: false
+
+  - id: northwind-complex-003
+    question: "Which customers bought products in the Seafood category but have never bought products in the Beverages category? Show customer names."
+    database: northwind
+    difficulty: complex
+    tags: [set-difference, relationship-chain, filter, not-exists]
+    domain: northwind
+    min_results: 1
+    max_db_hits: 30000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 20000
+    is_write_query: false
+
+  - id: northwind-complex-004
+    question: "For each product category, show the top 2 best-selling products by order count, along with how many times each was ordered."
+    database: northwind
+    difficulty: complex
+    tags: [aggregation, ranking, collect, window-function, top-n-per-group]
+    domain: northwind
+    min_results: 1
+    max_db_hits: 20000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 15000
+    is_write_query: false
+
+  # ─── EXPERT (5 cases) ────────────────────────────────────────────────────────
+
+  - id: northwind-expert-001
+    question: "What is the full supply chain path from supplier to customer for the product named 'Chai'? Show the supplier, the product, a sample order, and the customer."
+    database: northwind
+    difficulty: expert
+    tags: [graph-traversal, relationship-chain, path]
+    domain: northwind
+    min_results: 1
+    max_db_hits: 10000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 15000
+    is_write_query: false
+
+  - id: northwind-expert-002
+    question: "Find pairs of customers who have both ordered the same product. Show the two customer names and the shared product name. Limit to 20 pairs."
+    database: northwind
+    difficulty: expert
+    tags: [graph-traversal, common-neighbor, relationship-chain, limit]
+    domain: northwind
+    min_results: 1
+    max_db_hits: 50000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 20000
+    is_write_query: false
+
+  - id: northwind-expert-003
+    question: "Find the shortest supply chain path between the supplier 'Exotic Liquids' and any German customer. Show the full path."
+    database: northwind
+    difficulty: expert
+    tags: [shortest-path, qpe, filter]
+    domain: northwind
+    min_results: 1
+    max_db_hits: 20000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 20000
+    is_write_query: false
+
+  - id: northwind-expert-004
+    question: "For each product category, rank the suppliers by total stock value (unit price × units in stock) they provide into that category. Show category, supplier name, and their rank within the category."
+    database: northwind
+    difficulty: expert
+    tags: [aggregation, ranking, collect, window-function, relationship]
+    domain: northwind
+    min_results: 1
+    max_db_hits: 10000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 15000
+    is_write_query: false
+
+  - id: northwind-expert-005
+    question: "Identify product categories that are supplied exclusively by non-UK suppliers — i.e. every product in the category comes from a supplier outside the UK. List those category names."
+    database: northwind
+    difficulty: expert
+    tags: [all-predicate, relationship-chain, filter, not-exists]
+    domain: northwind
+    min_results: 1
+    max_db_hits: 10000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 15000
+    is_write_query: false

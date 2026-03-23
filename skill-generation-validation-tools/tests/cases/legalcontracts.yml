@@ -1,0 +1,424 @@
+# legalcontracts.yml — Test cases for neo4j-cypher-authoring-skill
+# NOTE: legalcontracts-generated.yml (generator output) is gitignored.
+# Promote stubs from generated → this file after human review.
+# Thresholds: max_db_hits = observed × 3, max_allocated_memory_bytes = observed × 3,
+#             max_runtime_ms = observed × 5.
+
+database:
+  uri: neo4j+s://demo.neo4jlabs.com:7687
+  username: legalcontracts
+  database: legalcontracts
+  neo4j_version: "2026.02"
+  cypher_version: "25"
+  read_only: true  # demo.neo4jlabs.com — write cases SKIP rather than FAIL
+
+dataset:
+  name: legalcontracts
+  description: |
+    A legal contract knowledge graph covering commercial contracts between business parties. Each
+    contract has a type (Service, Strategic Alliance, License Agreement, etc.), an effective date,
+    optional monetary value, optional duration, governing law jurisdiction, and associated clauses.
+    Use to explore contract portfolios, party relationships, clause patterns, jurisdiction exposure,
+    and contract value analysis. Contains 510 contracts, 1,152 parties, 683 clauses, and 1,541
+    locations. A vector index supports semantic search on contract summaries.
+  schema:
+    nodes:
+      Contract:
+        description: "A commercial contract between parties"
+        properties:
+          file_id:        {type: STRING, description: "Source file identifier"}
+          contract_type:  {type: STRING, values: ["Service", "Strategic Alliance", "License Agreement", "Distributor", "Joint Venture", "Sponsorship", "Endorsement", "Maintenance", "IP", "Affiliate AgreementDevelopment", "Non-Disclosure Agreement", "Employment"], description: "Type of commercial agreement"}
+          effective_date: {type: DATE, sample: ["2019-01-01", "2020-04-07", "2015-06-15"], description: "Date the contract takes effect"}
+          end_date:       {type: DATE, description: "Contract expiry date (sparse — many contracts are open-ended)"}
+          total_amount:   {type: FLOAT, description: "Total contract value in USD (sparse — many contracts have no fixed amount)"}
+          duration:       {type: STRING, description: "ISO 8601 duration string (e.g. 'P6M' for 6 months, 'P12M' for 1 year; sparse)"}
+          summary:        {type: STRING, description: "Plain-language summary of the contract"}
+          contract_scope: {type: STRING, description: "Description of what the contract covers"}
+          embedding:      {type: VECTOR, dimensions: 1536, description: "Embedding of the contract summary for semantic similarity search"}
+      Party:
+        description: "A business or legal entity that is a signatory to one or more contracts"
+        properties:
+          name: {type: STRING, sample: ["HONEYWELL INTERNATIONAL INC.", "UBS ONCOLOGY IMPACT FUND L.P.", "MPM ONCOLOGY IMPACT MANAGEMENT LP"], description: "Legal entity name — often in UPPER CASE"}
+      Location:
+        description: "A jurisdiction or geographic location associated with governing law"
+        properties:
+          country: {type: STRING, sample: ["US", "UK", "CA"], description: "2-letter ISO country code"}
+          state:   {type: STRING, sample: ["NY", "CA", "DE", "MA", "New Jersey", "Indiana"], description: "State or province name (may be full name or abbreviation)"}
+          city:    {type: STRING, description: "City name (sparse)"}
+          address: {type: STRING, description: "Full address (sparse)"}
+      Clause:
+        description: "A clause within a contract"
+        properties:
+          type:    {type: STRING, values: ["Renewal & Termination", "Confidentiality & Non-Disclosure", "Liability & Indemnification", "Non-Compete & Exclusivity", "Service-Level Agreements"], description: "Legal category of the clause"}
+          summary: {type: STRING, description: "Plain-language summary of the clause content"}
+    relationships:
+      - type: PARTY_TO
+        from: Party
+        to: Contract
+        description: "Party is a signatory to this contract (Party)-[:PARTY_TO]->(Contract)"
+      - type: HAS_CLAUSE
+        from: Contract
+        to: Clause
+        description: "Contract contains this clause"
+      - type: HAS_GOVERNING_LAW
+        from: Contract
+        to: Location
+        description: "Contract is governed by the law of this jurisdiction"
+      - type: HAS_LOCATION
+        from: Party
+        to: Location
+        description: "Party is located in this jurisdiction (sparse)"
+    indexes:
+      - name: contractSummary
+        type: VECTOR
+        on: Contract(embedding)
+        dimensions: 1536
+        similarity: cosine
+        call: "CALL db.index.vector.queryNodes('contractSummary', N, $vec) YIELD node, score"
+        description: "Vector similarity search on contract summaries"
+  notes:
+    - "PARTY_TO direction: (Party)-[:PARTY_TO]->(Contract) — NOT (Contract)-[:PARTY_TO]->(Party)"
+    - "total_amount is sparse — many contracts have null. Use IS NOT NULL when filtering by amount."
+    - "duration is stored as ISO 8601 string (e.g. 'P6M', 'P12M', 'P1Y') — not a Neo4j Duration type"
+    - "effective_date is a DATE type — use date comparison: c.effective_date >= date('2020-01-01')"
+    - "Party names are typically in UPPER CASE — use CONTAINS or toLower() for flexible matching"
+    - "Contract types are exact strings — use full values from the values list above"
+    - "Clause types: exactly 5 distinct values as listed in the type values list"
+    - "SEARCH clause is GA on demo.neo4jlabs.com 2026.02.x — use SEARCH syntax for vector queries"
+
+cases:
+
+  # ─── BASIC (6 cases) ─────────────────────────────────────────────────────────
+
+  - id: legalcontracts-basic-001
+    question: "How many contracts are in the database?"
+    database: legalcontracts
+    difficulty: basic
+    tags: [count, nodes]
+    domain: legalcontracts
+    min_results: 1
+    max_db_hits: 1000
+    max_allocated_memory_bytes: 2097152
+    max_runtime_ms: 5000
+    is_write_query: false
+
+  - id: legalcontracts-basic-002
+    question: "What types of contracts exist in the portfolio? Show each type and how many contracts of that type there are."
+    database: legalcontracts
+    difficulty: basic
+    tags: [aggregation, group-by, order]
+    domain: legalcontracts
+    min_results: 1
+    max_db_hits: 2000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 5000
+    is_write_query: false
+
+  - id: legalcontracts-basic-003
+    question: "Show all Service agreements that became effective in 2019. List the file ID and effective date."
+    database: legalcontracts
+    difficulty: basic
+    tags: [match, filter, date, type]
+    domain: legalcontracts
+    min_results: 1
+    max_db_hits: 2000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 5000
+    is_write_query: false
+
+  - id: legalcontracts-basic-004
+    question: "Which contracts have a specified total amount above 100,000 dollars? Show the contract type, effective date, and amount."
+    database: legalcontracts
+    difficulty: basic
+    tags: [match, filter, amount]
+    domain: legalcontracts
+    min_results: 1
+    max_db_hits: 2000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 5000
+    is_write_query: false
+
+  - id: legalcontracts-basic-005
+    question: "What are the different clause types used across all contracts? List them."
+    database: legalcontracts
+    difficulty: basic
+    tags: [distinct, nodes]
+    domain: legalcontracts
+    min_results: 1
+    max_db_hits: 2000
+    max_allocated_memory_bytes: 2097152
+    max_runtime_ms: 5000
+    is_write_query: false
+
+  - id: legalcontracts-basic-006
+    question: "How many contracts are governed by New York law?"
+    database: legalcontracts
+    difficulty: basic
+    tags: [count, relationship, filter, jurisdiction]
+    domain: legalcontracts
+    min_results: 1
+    max_db_hits: 5000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 5000
+    is_write_query: false
+
+  # ─── INTERMEDIATE (6 cases) ──────────────────────────────────────────────────
+
+  - id: legalcontracts-intermediate-001
+    question: "Which parties are involved in the most contracts? Show top 10 parties by contract count."
+    database: legalcontracts
+    difficulty: intermediate
+    tags: [aggregation, relationship, order, limit]
+    domain: legalcontracts
+    min_results: 10
+    max_db_hits: 5000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 8000
+    is_write_query: false
+
+  - id: legalcontracts-intermediate-002
+    question: "What is the distribution of clause types — how many contracts include a confidentiality clause versus a liability clause?"
+    database: legalcontracts
+    difficulty: intermediate
+    tags: [aggregation, filter, relationship, comparison]
+    domain: legalcontracts
+    min_results: 1
+    max_db_hits: 5000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 8000
+    is_write_query: false
+
+  - id: legalcontracts-intermediate-003
+    question: "Which contracts have both a confidentiality clause and a non-compete clause? Show contract type and effective date."
+    database: legalcontracts
+    difficulty: intermediate
+    tags: [match, multiple-clauses, filter]
+    domain: legalcontracts
+    min_results: 1
+    max_db_hits: 10000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 10000
+    is_write_query: false
+
+  - id: legalcontracts-intermediate-004
+    question: "For each governing jurisdiction (state), how many contracts use that jurisdiction's law? Show the top 10 states by contract count."
+    database: legalcontracts
+    difficulty: intermediate
+    tags: [aggregation, relationship, group-by, order, limit]
+    domain: legalcontracts
+    min_results: 10
+    max_db_hits: 5000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 8000
+    is_write_query: false
+
+  - id: legalcontracts-intermediate-005
+    question: "Which parties have signed both Service agreements and License agreements? Show the party names."
+    database: legalcontracts
+    difficulty: intermediate
+    tags: [match, filter, set-intersection, relationship-chain]
+    domain: legalcontracts
+    min_results: 1
+    max_db_hits: 10000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 10000
+    is_write_query: false
+
+  - id: legalcontracts-intermediate-006
+    question: "What is the average total contract value for each contract type? Only include contracts where an amount is specified."
+    database: legalcontracts
+    difficulty: intermediate
+    tags: [aggregation, group-by, filter, null-handling]
+    domain: legalcontracts
+    min_results: 1
+    max_db_hits: 2000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 8000
+    is_write_query: false
+
+  # ─── ADVANCED (6 cases) ──────────────────────────────────────────────────────
+
+  - id: legalcontracts-advanced-001
+    question: "Find all contracts that do not have any clauses recorded. Show their type and effective date."
+    database: legalcontracts
+    difficulty: advanced
+    tags: [not-exists, filter, optional-match]
+    domain: legalcontracts
+    min_results: 1
+    max_db_hits: 5000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 8000
+    is_write_query: false
+
+  - id: legalcontracts-advanced-002
+    question: "For each contract type, list the most common governing law jurisdiction (state). Show contract type, top jurisdiction, and count."
+    database: legalcontracts
+    difficulty: advanced
+    tags: [aggregation, group-by, ranking, relationship]
+    domain: legalcontracts
+    min_results: 1
+    max_db_hits: 10000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 10000
+    is_write_query: false
+
+  - id: legalcontracts-advanced-003
+    question: "Find parties who are signatories on contracts that cover multiple different contract types. Show the party name and the distinct contract types they appear in."
+    database: legalcontracts
+    difficulty: advanced
+    tags: [aggregation, collect, filter, relationship]
+    domain: legalcontracts
+    min_results: 1
+    max_db_hits: 10000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 10000
+    is_write_query: false
+
+  - id: legalcontracts-advanced-004
+    question: "Which contracts have an effective date in 2020 or later and a specified total amount? Show the contract type, amount, and governing jurisdiction (state if available)."
+    database: legalcontracts
+    difficulty: advanced
+    tags: [match, optional-match, filter, date, null-handling]
+    domain: legalcontracts
+    min_results: 1
+    max_db_hits: 5000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 8000
+    is_write_query: false
+
+  - id: legalcontracts-advanced-005
+    question: "For each party, count how many distinct co-signatories they share across all contracts. Show the top 10 most connected parties."
+    database: legalcontracts
+    difficulty: advanced
+    tags: [common-neighbor, aggregation, graph-traversal, order]
+    domain: legalcontracts
+    min_results: 1
+    max_db_hits: 20000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 15000
+    is_write_query: false
+
+  - id: legalcontracts-advanced-006
+    question: "Which contracts contain all five types of clauses (Renewal, Confidentiality, Liability, Non-Compete, and Service-Level)? Show their effective dates and contract types."
+    database: legalcontracts
+    difficulty: advanced
+    tags: [filter, collect, count, all-clauses]
+    domain: legalcontracts
+    min_results: 1
+    max_db_hits: 10000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 15000
+    is_write_query: false
+
+  # ─── COMPLEX (4 cases) ───────────────────────────────────────────────────────
+
+  - id: legalcontracts-complex-001
+    question: "Find pairs of parties who have signed more than one contract together. Show both party names, the number of shared contracts, and list the contract types."
+    database: legalcontracts
+    difficulty: complex
+    tags: [common-contracts, aggregation, collect, filter]
+    domain: legalcontracts
+    min_results: 1
+    max_db_hits: 30000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 20000
+    is_write_query: false
+
+  - id: legalcontracts-complex-002
+    question: "For each jurisdiction (state), provide a breakdown: total contracts, total contracts with a liability clause, and the percentage that have liability clauses. Show states with at least 10 contracts."
+    database: legalcontracts
+    difficulty: complex
+    tags: [aggregation, conditional, percentage, relationship]
+    domain: legalcontracts
+    min_results: 1
+    max_db_hits: 20000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 20000
+    is_write_query: false
+
+  - id: legalcontracts-complex-003
+    question: "Show the clause coverage by contract type: for each contract type and clause type combination, how many contracts have that clause? Show as a heatmap-style table (contract type, clause type, count)."
+    database: legalcontracts
+    difficulty: complex
+    tags: [aggregation, group-by, cross-tabulation, relationship]
+    domain: legalcontracts
+    min_results: 1
+    max_db_hits: 20000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 20000
+    is_write_query: false
+
+  - id: legalcontracts-complex-004
+    question: "Find the top 5 parties by total contract value (sum of total_amount across all their contracts where the amount is known). Show party name, total value, and count of valued contracts."
+    database: legalcontracts
+    difficulty: complex
+    tags: [aggregation, sum, filter, null-handling, order]
+    domain: legalcontracts
+    min_results: 1
+    max_db_hits: 10000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 15000
+    is_write_query: false
+
+  # ─── EXPERT (5 cases) ────────────────────────────────────────────────────────
+
+  - id: legalcontracts-expert-001
+    question: "Find parties that are connected through a shared contract counterparty — i.e. party A signs contracts with party B, and party B signs contracts with party C, but A and C have no direct shared contract. Show up to 10 such A–B–C chains."
+    database: legalcontracts
+    difficulty: expert
+    tags: [graph-traversal, two-hop, not-exists, limit]
+    domain: legalcontracts
+    min_results: 1
+    max_db_hits: 100000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 30000
+    is_write_query: false
+
+  - id: legalcontracts-expert-002
+    question: "Using vector similarity on contract summaries, find the 5 contracts most semantically similar to the following description: 'software license and distribution agreement for technology products'. Return contract types and similarity scores."
+    database: legalcontracts
+    difficulty: expert
+    tags: [vector-search, similarity, semantic]
+    domain: legalcontracts
+    min_results: 1
+    max_db_hits: 10000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 15000
+    is_write_query: false
+    notes: "Requires an embedding vector for the query text — model should show the query structure using a parameter placeholder."
+
+  - id: legalcontracts-expert-003
+    question: "Find the shortest contract relationship path between 'HONEYWELL INTERNATIONAL INC.' and any party that has signed a Joint Venture agreement. Show the path including party names and contract types."
+    database: legalcontracts
+    difficulty: expert
+    tags: [shortest-path, qpe, filter, graph-traversal]
+    domain: legalcontracts
+    min_results: 1
+    max_db_hits: 50000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 30000
+    is_write_query: false
+
+  - id: legalcontracts-expert-004
+    question: "For each contract type, compute a risk score defined as: (count of contracts with liability clauses / total contracts of that type) × average total_amount where amount exists. Show contract type and risk score, sorted by highest risk first."
+    database: legalcontracts
+    difficulty: expert
+    tags: [aggregation, conditional, math, null-handling, scoring]
+    domain: legalcontracts
+    min_results: 1
+    max_db_hits: 20000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 20000
+    is_write_query: false
+
+  - id: legalcontracts-expert-005
+    question: "Find party networks: groups of parties that are all interconnected through shared contracts (each party in the group shares at least one contract with at least one other party in the group). Show the 5 largest such groups by party count."
+    database: legalcontracts
+    difficulty: expert
+    tags: [graph-traversal, community, qpe, aggregation]
+    domain: legalcontracts
+    min_results: 1
+    max_db_hits: 100000
+    max_allocated_memory_bytes: 52428800
+    max_runtime_ms: 60000
+    is_write_query: false

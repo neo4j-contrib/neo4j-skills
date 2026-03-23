@@ -1,0 +1,515 @@
+# ucnetwork.yml — Test cases for neo4j-cypher-authoring-skill
+# NOTE: ucnetwork-generated.yml (generator output) is gitignored.
+# Promote stubs from generated → this file after human review.
+# Thresholds: max_db_hits = observed × 3, max_allocated_memory_bytes = observed × 3,
+#             max_runtime_ms = observed × 5.
+
+database:
+  uri: neo4j+s://demo.neo4jlabs.com:7687
+  username: ucnetwork
+  database: ucnetwork
+  neo4j_version: "2026.02"
+  cypher_version: "25"
+  read_only: true  # demo.neo4jlabs.com — write cases SKIP rather than FAIL
+
+dataset:
+  name: ucnetwork
+  description: |
+    A WiFi network monitoring knowledge graph capturing wireless device activity in a campus or
+    enterprise environment. Devices (clients, access points, bridges) are observed through time-series
+    snapshots. Each snapshot records signal strength, performance metrics, mobility patterns, and
+    security posture. SSIDs (wireless networks) are linked to devices through probe, advertisement,
+    response, and beacon relationships. Use to analyse device connectivity, signal quality trends,
+    security vulnerabilities, and network topology.
+    Contains 346 client devices, 243 access points, 171 WiFi bridges, 179 SSIDs, and 1,120 snapshots.
+  schema:
+    nodes:
+      Client:
+        description: "A WiFi client device (laptop, phone, IoT device etc.)"
+        note: "Client nodes also have the Device label: (:Client:Device)"
+        properties:
+          mac:    {type: STRING, description: "MAC address of the device"}
+          cname:  {type: STRING, description: "Device display name (often same as MAC)"}
+          manufac: {type: STRING, description: "Hardware manufacturer (e.g. 'Intel Corporate', 'Apple, Inc.')"}
+          type:   {type: STRING, values: ["Wi-Fi Client"], description: "Device type classification"}
+          key:    {type: STRING, description: "Unique key identifier"}
+          phy:    {type: STRING, description: "PHY layer type"}
+      AccessPoint:
+        description: "A WiFi access point or router"
+        note: "AccessPoint nodes also have the Device label: (:AccessPoint:Device)"
+        properties:
+          mac:    {type: STRING, description: "MAC address of the access point"}
+          name:   {type: STRING, description: "Network name / SSID broadcast name"}
+          cname:  {type: STRING, description: "Display name"}
+          manufac: {type: STRING, description: "Hardware manufacturer (e.g. 'TP-Link Corporation Limited', 'NETGEAR')"}
+          type:   {type: STRING, description: "Device type"}
+          key:    {type: STRING}
+      SSID:
+        description: "A wireless network identifier (network name)"
+        properties:
+          name:          {type: STRING, description: "SSID name (may be null for hidden networks)"}
+          encryption:    {type: INTEGER, description: "Encryption type bitmask"}
+          firstseen:     {type: INTEGER, description: "Unix timestamp when SSID was first observed"}
+          lastseen:      {type: INTEGER, description: "Unix timestamp when SSID was last observed"}
+          advdvlen:      {type: INTEGER, description: "Count of devices advertising this SSID"}
+          respdvlen:     {type: INTEGER, description: "Count of devices responding to this SSID"}
+          probingdvlen:  {type: INTEGER, description: "Count of devices probing for this SSID"}
+          hash:          {type: STRING, description: "Hash identifier"}
+      Snapshot:
+        description: "A time-series observation snapshot for a device at a point in time"
+        properties:
+          id:         {type: INTEGER, description: "Snapshot identifier"}
+          timestamp:  {type: INTEGER, description: "Unix timestamp of this snapshot"}
+          firstseen:  {type: INTEGER, description: "Unix timestamp when this device was first seen"}
+          lastseen:   {type: INTEGER, description: "Unix timestamp when this device was last seen"}
+          signalstr:  {type: INTEGER, description: "Signal strength in dBm (negative value; higher/less negative is stronger)"}
+          nprssid:    {type: INTEGER, description: "Number of probe-request SSIDs seen"}
+          ncaps:      {type: INTEGER, description: "Number of capabilities observed"}
+          lbssid:     {type: STRING, description: "Last BSSID this device was associated with"}
+          key:        {type: STRING}
+      Signal:
+        description: "Signal quality metrics for a snapshot"
+        properties:
+          id:        {type: INTEGER}
+          frequency: {type: INTEGER, description: "WiFi channel frequency in MHz (e.g. 2412 = 2.4GHz ch1, 5180 = 5GHz ch36)"}
+      Performance:
+        description: "Performance metrics for a snapshot"
+        properties:
+          id:          {type: INTEGER}
+          datasize:    {type: INTEGER, description: "Data transfer size"}
+          datasizeretry: {type: INTEGER, description: "Retry data size (indication of poor link quality)"}
+          linkmeasure: {type: INTEGER, description: "Link quality measurement"}
+          maxtxpw:     {type: INTEGER, description: "Maximum transmit power"}
+          mintxpw:     {type: INTEGER, description: "Minimum transmit power"}
+      Mobility:
+        description: "Mobility and roaming metrics for a snapshot"
+        properties:
+          id:          {type: INTEGER}
+          lastbssid:   {type: STRING, description: "Last BSSID before current association"}
+          signalchange: {type: INTEGER, description: "Signal strength change since last snapshot (dBm delta)"}
+          seenbycount: {type: INTEGER, description: "Number of access points that have observed this device"}
+          firstseen:   {type: INTEGER}
+          lastseen:    {type: INTEGER}
+      SecurityPosture:
+        description: "Security-related metrics for a snapshot"
+        properties:
+          id:       {type: INTEGER}
+          nretries: {type: INTEGER, description: "Number of retransmission retries (high value = interference or attack)"}
+          nfrag:    {type: INTEGER, description: "Number of fragmented frames (unusual fragmentation can indicate attacks)"}
+          wpscount: {type: INTEGER, description: "Number of WPS interactions (WPS vulnerabilities)"}
+          wpslast:  {type: INTEGER, description: "Timestamp of last WPS interaction"}
+          lastbssid: {type: STRING}
+      WIFIBridge:
+        description: "A WiFi bridge device extending the network"
+        note: "WIFIBridge nodes also have the Device label: (:WIFIBridge:Device)"
+        properties:
+          mac:    {type: STRING}
+          cname:  {type: STRING}
+          manufac: {type: STRING}
+      SSIDSnapshot:
+        description: "A time-series snapshot for an SSID observation"
+        properties:
+          id: {type: INTEGER}
+    relationships:
+      - type: FIRST
+        from: Client
+        to: Snapshot
+        description: "The first snapshot observed for this client device"
+      - type: LAST
+        from: Client
+        to: Snapshot
+        description: "The most recent snapshot for this client device"
+      - type: NEXT
+        from: Snapshot
+        to: Snapshot
+        description: "Linked list of snapshots in chronological order"
+      - type: SIGNAL
+        from: Snapshot
+        to: Signal
+        description: "Signal metrics for this snapshot"
+      - type: PERFORMANCE
+        from: Snapshot
+        to: Performance
+        description: "Performance metrics for this snapshot"
+      - type: MOBILITY
+        from: Snapshot
+        to: Mobility
+        description: "Mobility metrics for this snapshot"
+      - type: SECURITY_POSTURE
+        from: Snapshot
+        to: SecurityPosture
+        description: "Security posture metrics for this snapshot"
+      - type: CONNECTED_TO
+        from: Snapshot
+        to: Snapshot
+        description: "Snapshots observed communicating with each other"
+      - type: ADVERTISING_FOR
+        from: Snapshot
+        to: SSIDSnapshot
+        description: "Snapshot shows device advertising this SSID (access point broadcasting)"
+      - type: BEACONED
+        from: Snapshot
+        to: SSIDSnapshot
+        description: "Snapshot shows beacon frames for this SSID"
+      - type: PROBING_FOR
+        from: Snapshot
+        to: SSIDSnapshot
+        description: "Snapshot shows device probing for this SSID (client looking for known networks)"
+      - type: RESPONDING_FOR
+        from: Snapshot
+        to: SSIDSnapshot
+        description: "Snapshot shows device responding for this SSID"
+      - type: FIRST
+        from: SSID
+        to: SSIDSnapshot
+        description: "First snapshot for this SSID"
+      - type: LAST
+        from: SSID
+        to: SSIDSnapshot
+        description: "Most recent snapshot for this SSID"
+    indexes: []
+  notes:
+    - "Client/AccessPoint/WIFIBridge all have the :Device label — use the specific sub-label for clarity"
+    - "FIRST and LAST relationships link Device nodes to their first/last Snapshot"
+    - "Signal strength (signalstr) is negative dBm — values closer to 0 are stronger (e.g. -40 > -80)"
+    - "Timestamps are Unix epoch integers — use datetime() or direct integer comparison"
+    - "No vector or fulltext indexes on this database"
+    - "Snapshot linked list: traverse (d:Client)-[:FIRST]->(s:Snapshot)-[:NEXT*]->(s2:Snapshot) for history"
+    - "SSIDSnapshot is an intermediate node linking SSID observations to device snapshots"
+    - "Encryption field on SSID is an integer bitmask, not a string — do not filter by string values"
+
+cases:
+
+  # ─── BASIC (6 cases) ─────────────────────────────────────────────────────────
+
+  - id: ucnetwork-basic-001
+    question: "How many client devices, access points, and WiFi bridges are in the network?"
+    database: ucnetwork
+    difficulty: basic
+    tags: [count, nodes, multi-label]
+    domain: ucnetwork
+    min_results: 1
+    max_db_hits: 1000
+    max_allocated_memory_bytes: 2097152
+    max_runtime_ms: 5000
+    is_write_query: false
+
+  - id: ucnetwork-basic-002
+    question: "Which device manufacturers appear most frequently among client devices? Show top 5 by count."
+    database: ucnetwork
+    difficulty: basic
+    tags: [aggregation, group-by, order, limit]
+    domain: ucnetwork
+    min_results: 5
+    max_db_hits: 2000
+    max_allocated_memory_bytes: 2097152
+    max_runtime_ms: 5000
+    is_write_query: false
+
+  - id: ucnetwork-basic-003
+    question: "How many distinct WiFi networks (SSIDs) are visible in this environment?"
+    database: ucnetwork
+    difficulty: basic
+    tags: [count, nodes]
+    domain: ucnetwork
+    min_results: 1
+    max_db_hits: 500
+    max_allocated_memory_bytes: 2097152
+    max_runtime_ms: 5000
+    is_write_query: false
+
+  - id: ucnetwork-basic-004
+    question: "List all access points by their name and manufacturer."
+    database: ucnetwork
+    difficulty: basic
+    tags: [match, nodes]
+    domain: ucnetwork
+    min_results: 1
+    max_db_hits: 1000
+    max_allocated_memory_bytes: 2097152
+    max_runtime_ms: 5000
+    is_write_query: false
+
+  - id: ucnetwork-basic-005
+    question: "How many WiFi networks are hidden (have no name)?"
+    database: ucnetwork
+    difficulty: basic
+    tags: [count, filter, null-handling]
+    domain: ucnetwork
+    min_results: 1
+    max_db_hits: 500
+    max_allocated_memory_bytes: 2097152
+    max_runtime_ms: 5000
+    is_write_query: false
+
+  - id: ucnetwork-basic-006
+    question: "Which access point manufacturers are present in the network? List each manufacturer and how many access points they make."
+    database: ucnetwork
+    difficulty: basic
+    tags: [aggregation, group-by, order]
+    domain: ucnetwork
+    min_results: 1
+    max_db_hits: 1000
+    max_allocated_memory_bytes: 2097152
+    max_runtime_ms: 5000
+    is_write_query: false
+
+  # ─── INTERMEDIATE (6 cases) ──────────────────────────────────────────────────
+
+  - id: ucnetwork-intermediate-001
+    question: "For each client device, what is the signal strength recorded in their most recent snapshot? Show the device MAC address and signal strength."
+    database: ucnetwork
+    difficulty: intermediate
+    tags: [relationship, latest-snapshot, order]
+    domain: ucnetwork
+    min_results: 1
+    max_db_hits: 5000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 10000
+    is_write_query: false
+
+  - id: ucnetwork-intermediate-002
+    question: "Which client devices have been seen by more than 2 access points (high seenbycount)? Show MAC address and seenby count from their latest snapshot."
+    database: ucnetwork
+    difficulty: intermediate
+    tags: [relationship, filter, mobility]
+    domain: ucnetwork
+    min_results: 1
+    max_db_hits: 5000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 10000
+    is_write_query: false
+
+  - id: ucnetwork-intermediate-003
+    question: "How many WiFi networks are being actively probed by client devices? Show network name and number of devices probing for it."
+    database: ucnetwork
+    difficulty: intermediate
+    tags: [aggregation, relationship-chain, order]
+    domain: ucnetwork
+    min_results: 1
+    max_db_hits: 5000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 10000
+    is_write_query: false
+
+  - id: ucnetwork-intermediate-004
+    question: "Find client devices operating on the 5GHz band (frequency above 5000 MHz). Show device MAC and the frequency observed."
+    database: ucnetwork
+    difficulty: intermediate
+    tags: [relationship-chain, filter, signal]
+    domain: ucnetwork
+    min_results: 1
+    max_db_hits: 10000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 10000
+    is_write_query: false
+
+  - id: ucnetwork-intermediate-005
+    question: "Which devices have a high retry rate in their performance metrics (datasizeretry greater than datasize)? These may be experiencing poor signal quality."
+    database: ucnetwork
+    difficulty: intermediate
+    tags: [relationship-chain, comparison, filter, performance]
+    domain: ucnetwork
+    min_results: 1
+    max_db_hits: 10000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 10000
+    is_write_query: false
+
+  - id: ucnetwork-intermediate-006
+    question: "For each WiFi network (SSID) that has a name, how many client devices are probing for it? Show networks probed by at least 2 devices."
+    database: ucnetwork
+    difficulty: intermediate
+    tags: [aggregation, relationship-chain, filter, null-handling]
+    domain: ucnetwork
+    min_results: 1
+    max_db_hits: 5000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 10000
+    is_write_query: false
+
+  # ─── ADVANCED (6 cases) ──────────────────────────────────────────────────────
+
+  - id: ucnetwork-advanced-001
+    question: "Find client devices that have moved between snapshots — devices whose most recent snapshot shows a different last BSSID than their first snapshot."
+    database: ucnetwork
+    difficulty: advanced
+    tags: [relationship, comparison, first-last, mobility]
+    domain: ucnetwork
+    min_results: 1
+    max_db_hits: 10000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 15000
+    is_write_query: false
+
+  - id: ucnetwork-advanced-002
+    question: "Find potentially suspicious devices: clients with high WPS interaction counts (wpscount above 5) in their security posture. Show device MAC, manufacturer, and WPS count."
+    database: ucnetwork
+    difficulty: advanced
+    tags: [relationship-chain, filter, security]
+    domain: ucnetwork
+    min_results: 1
+    max_db_hits: 10000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 10000
+    is_write_query: false
+
+  - id: ucnetwork-advanced-003
+    question: "Which pairs of devices have been directly connected to each other (via CONNECTED_TO between their snapshots)? Show the MAC addresses of both devices."
+    database: ucnetwork
+    difficulty: advanced
+    tags: [relationship-chain, connected-to, graph-traversal]
+    domain: ucnetwork
+    min_results: 1
+    max_db_hits: 20000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 15000
+    is_write_query: false
+
+  - id: ucnetwork-advanced-004
+    question: "Find the client devices with the weakest signal in their most recent snapshot. Show the bottom 10 devices by signal strength."
+    database: ucnetwork
+    difficulty: advanced
+    tags: [relationship, order, signal-quality, limit]
+    domain: ucnetwork
+    min_results: 1
+    max_db_hits: 5000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 10000
+    is_write_query: false
+
+  - id: ucnetwork-advanced-005
+    question: "For each access point manufacturer, what is the average signal strength reported by client snapshots connected to SSIDs that those access points advertise?"
+    database: ucnetwork
+    difficulty: advanced
+    tags: [aggregation, relationship-chain, group-by, signal]
+    domain: ucnetwork
+    min_results: 1
+    max_db_hits: 30000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 20000
+    is_write_query: false
+
+  - id: ucnetwork-advanced-006
+    question: "Find client devices that probe for networks but whose probed networks have no advertiser (no access point broadcasting that SSID). These may be looking for networks not present in this environment."
+    database: ucnetwork
+    difficulty: advanced
+    tags: [not-exists, relationship-chain, filter]
+    domain: ucnetwork
+    min_results: 1
+    max_db_hits: 20000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 15000
+    is_write_query: false
+
+  # ─── COMPLEX (4 cases) ───────────────────────────────────────────────────────
+
+  - id: ucnetwork-complex-001
+    question: "For each client device, traverse its complete snapshot timeline (FIRST → NEXT chain) and report the total number of snapshots recorded. Show device MAC and snapshot count."
+    database: ucnetwork
+    difficulty: complex
+    tags: [qpe, linked-list, traversal, aggregation]
+    domain: ucnetwork
+    min_results: 1
+    max_db_hits: 10000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 20000
+    is_write_query: false
+
+  - id: ucnetwork-complex-002
+    question: "Find the WiFi networks that are being probed by devices that also have high retry rates. This combination may indicate devices struggling to reconnect to a known network."
+    database: ucnetwork
+    difficulty: complex
+    tags: [relationship-chain, filter, security, correlated]
+    domain: ucnetwork
+    min_results: 1
+    max_db_hits: 30000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 20000
+    is_write_query: false
+
+  - id: ucnetwork-complex-003
+    question: "Identify client devices that have interacted (via snapshots) with more than 3 distinct SSIDs. Show device MAC, manufacturer, and the list of SSID names they have interacted with."
+    database: ucnetwork
+    difficulty: complex
+    tags: [aggregation, collect, filter, relationship-chain]
+    domain: ucnetwork
+    min_results: 1
+    max_db_hits: 20000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 20000
+    is_write_query: false
+
+  - id: ucnetwork-complex-004
+    question: "Create a security risk summary: for each device, compute a risk score as retries + fragments + wps_interactions from their security posture metrics. Show top 10 highest risk devices."
+    database: ucnetwork
+    difficulty: complex
+    tags: [aggregation, math, scoring, relationship-chain, order]
+    domain: ucnetwork
+    min_results: 1
+    max_db_hits: 20000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 20000
+    is_write_query: false
+
+  # ─── EXPERT (5 cases) ────────────────────────────────────────────────────────
+
+  - id: ucnetwork-expert-001
+    question: "Trace the full snapshot history for the client device with MAC address '08:55:31:6A:FF:5' — traverse the FIRST-to-NEXT linked list and return all snapshots with their signal strength and timestamps."
+    database: ucnetwork
+    difficulty: expert
+    tags: [qpe, linked-list, traversal, filter]
+    domain: ucnetwork
+    min_results: 1
+    max_db_hits: 5000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 15000
+    is_write_query: false
+
+  - id: ucnetwork-expert-002
+    question: "Find all devices that are within 2 hops of each other in the CONNECTED_TO network. Show pairs of devices (by MAC address) and the number of distinct intermediate snapshots connecting them."
+    database: ucnetwork
+    difficulty: expert
+    tags: [qpe, graph-traversal, two-hop, aggregation]
+    domain: ucnetwork
+    min_results: 1
+    max_db_hits: 50000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 30000
+    is_write_query: false
+
+  - id: ucnetwork-expert-003
+    question: "Find the shortest connected path between the client with the highest signal strength and the client with the lowest signal strength, traversing CONNECTED_TO snapshot links."
+    database: ucnetwork
+    difficulty: expert
+    tags: [shortest-path, qpe, filter, signal]
+    domain: ucnetwork
+    min_results: 1
+    max_db_hits: 50000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 30000
+    is_write_query: false
+
+  - id: ucnetwork-expert-004
+    question: "Detect potentially rogue access points: access points whose SSIDs are also being probed by more than 5 client devices but have no RESPONDING_FOR snapshots. List their names and MAC addresses."
+    database: ucnetwork
+    difficulty: expert
+    tags: [not-exists, filter, security, relationship-chain]
+    domain: ucnetwork
+    min_results: 1
+    max_db_hits: 30000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 20000
+    is_write_query: false
+
+  - id: ucnetwork-expert-005
+    question: "Analyse roaming patterns: find client devices that have traversed through at least 3 different snapshots with different signal strengths. For each such device, show the MAC, the count of snapshots in their timeline, and the signal strength range (max minus min)."
+    database: ucnetwork
+    difficulty: expert
+    tags: [qpe, linked-list, aggregation, mobility, signal]
+    domain: ucnetwork
+    min_results: 1
+    max_db_hits: 30000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 30000
+    is_write_query: false

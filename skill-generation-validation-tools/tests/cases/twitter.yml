@@ -1,0 +1,450 @@
+# twitter.yml — Test cases for neo4j-cypher-authoring-skill
+# NOTE: twitter-generated.yml (generator output) is gitignored.
+# Promote stubs from generated → this file after human review.
+# Thresholds: max_db_hits = observed × 3, max_allocated_memory_bytes = observed × 3,
+#             max_runtime_ms = observed × 5.
+
+database:
+  uri: neo4j+s://demo.neo4jlabs.com:7687
+  username: twitter
+  database: twitter
+  neo4j_version: "2026.02"
+  cypher_version: "25"
+  read_only: true  # demo.neo4jlabs.com — write cases SKIP rather than FAIL
+
+dataset:
+  name: twitter
+  description: |
+    A social media knowledge graph based on Twitter/X activity, primarily around Neo4j and tech
+    topics from early 2021. Contains users, tweets, hashtags, links, and the social interactions
+    between them: follows, retweets, replies, mentions, and tag usage. A :Me node identifies the
+    central user account (Neo4j's official Twitter account). Use to explore influencer networks,
+    hashtag trends, retweet patterns, and follower graph topology.
+    Contains ~39K users, 2,407 tweets, 344 hashtags, and 44,630 FOLLOWS relationships.
+  schema:
+    nodes:
+      User:
+        description: "A Twitter/X user account"
+        properties:
+          screen_name:       {type: STRING, sample: ["neo4j", "NASAPersevere", "graphistas"], description: "Twitter handle (no @)"}
+          name:              {type: STRING, description: "Display name"}
+          followers:         {type: INTEGER, description: "Number of followers"}
+          following:         {type: INTEGER, description: "Number of accounts this user follows"}
+          statuses:          {type: INTEGER, description: "Total tweets/statuses posted"}
+          betweenness:       {type: FLOAT, description: "Betweenness centrality score in the follow graph (sparse)"}
+          location:          {type: STRING, description: "Self-reported location (sparse)"}
+          profile_image_url: {type: STRING}
+          url:               {type: STRING}
+      Me:
+        description: "The central user account in the dataset (Neo4j's official account: screen_name='neo4j'). Acts as the ego node of the social graph."
+        properties:
+          screen_name: {type: STRING, sample: ["neo4j"]}
+          followers:   {type: INTEGER}
+          following:   {type: INTEGER}
+          betweenness: {type: FLOAT}
+      Tweet:
+        description: "A tweet or retweet post"
+        properties:
+          id:            {type: STRING, description: "Tweet ID string"}
+          text:          {type: STRING, description: "Tweet content"}
+          favorites:     {type: INTEGER, description: "Number of likes (stored as INTEGER or STRING depending on tweet; use coalesce/toInteger)"}
+          created_at:    {type: STRING, description: "ISO datetime string of when tweet was created"}
+          import_method: {type: STRING, description: "How the tweet was imported into the graph"}
+      Hashtag:
+        description: "A Twitter hashtag"
+        properties:
+          name: {type: STRING, sample: ["neo4j", "graphdatabases", "antimoneylaundering", "cloud", "education"], description: "Hashtag text in lowercase without the # symbol"}
+      Link:
+        description: "A URL shared in a tweet"
+        properties:
+          url: {type: STRING}
+      Source:
+        description: "The Twitter client app used to post (e.g. 'Twitter for iPhone')"
+        properties:
+          name: {type: STRING, sample: ["TweetDeck", "Twitter for iPhone", "Twitter Web App"]}
+    relationships:
+      - type: FOLLOWS
+        from: User
+        to: User
+        description: "One user follows another (44,630 total)"
+      - type: POSTS
+        from: User
+        to: Tweet
+        description: "User posted this tweet"
+      - type: TAGS
+        from: Tweet
+        to: Hashtag
+        description: "Tweet uses this hashtag"
+      - type: CONTAINS
+        from: Tweet
+        to: Link
+        description: "Tweet contains this URL link"
+      - type: USING
+        from: Tweet
+        to: Source
+        description: "Tweet was posted using this client app"
+      - type: MENTIONS
+        from: Tweet
+        to: User
+        description: "Tweet mentions this user with @handle"
+      - type: RETWEETS
+        from: Tweet
+        to: Tweet
+        description: "This tweet is a retweet of another tweet"
+      - type: REPLY_TO
+        from: Tweet
+        to: Tweet
+        description: "This tweet is a reply to another tweet"
+      - type: INTERACTS_WITH
+        from: User
+        to: User
+        description: "Aggregated interaction relationship between users"
+      - type: AMPLIFIES
+        from: User
+        to: User
+        description: "User amplifies (retweets/shares) content from another user"
+    indexes: []
+  notes:
+    - "The :Me node represents Neo4j's account (screen_name='neo4j') — it has both :Me and :User labels"
+    - "Hashtag names are lowercase and have no # prefix in the graph (e.g. 'neo4j', not '#neo4j')"
+    - "FOLLOWS is the main social graph relationship — 44,630 edges among ~39K users"
+    - "Tweet.favorites may be stored as INTEGER or STRING depending on import — use toInteger() for numeric comparisons"
+    - "No vector or fulltext indexes — use string matching for text search"
+    - "Dataset is from early 2021; temporal questions should account for fixed date range"
+    - "betweenness is sparse — most users have no betweenness score"
+
+cases:
+
+  # ─── BASIC (6 cases) ─────────────────────────────────────────────────────────
+
+  - id: twitter-basic-001
+    question: "How many users are in the social network?"
+    database: twitter
+    difficulty: basic
+    tags: [count, nodes]
+    domain: twitter
+    min_results: 1
+    max_db_hits: 5000
+    max_allocated_memory_bytes: 2097152
+    max_runtime_ms: 5000
+    is_write_query: false
+
+  - id: twitter-basic-002
+    question: "What are the 10 most used hashtags in the dataset? Show hashtag name and the number of tweets using each."
+    database: twitter
+    difficulty: basic
+    tags: [aggregation, relationship, order, limit]
+    domain: twitter
+    min_results: 10
+    max_db_hits: 10000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 5000
+    is_write_query: false
+
+  - id: twitter-basic-003
+    question: "Who are the top 10 users with the most followers? Show screen name and follower count."
+    database: twitter
+    difficulty: basic
+    tags: [match, order, limit]
+    domain: twitter
+    min_results: 10
+    max_db_hits: 50000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 5000
+    is_write_query: false
+
+  - id: twitter-basic-004
+    question: "How many tweets mention the hashtag 'neo4j'?"
+    database: twitter
+    difficulty: basic
+    tags: [count, relationship, filter]
+    domain: twitter
+    min_results: 1
+    max_db_hits: 5000
+    max_allocated_memory_bytes: 2097152
+    max_runtime_ms: 5000
+    is_write_query: false
+
+  - id: twitter-basic-005
+    question: "Which Twitter client apps were used to post tweets? Show the app name and how many tweets were posted with it."
+    database: twitter
+    difficulty: basic
+    tags: [aggregation, relationship, group-by]
+    domain: twitter
+    min_results: 1
+    max_db_hits: 10000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 5000
+    is_write_query: false
+
+  - id: twitter-basic-006
+    question: "List all users that the central Neo4j account directly follows. Show their screen names."
+    database: twitter
+    difficulty: basic
+    tags: [match, relationship, me-node]
+    domain: twitter
+    min_results: 1
+    max_db_hits: 20000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 5000
+    is_write_query: false
+
+  # ─── INTERMEDIATE (6 cases) ──────────────────────────────────────────────────
+
+  - id: twitter-intermediate-001
+    question: "Which users both follow the Neo4j account and are followed back by the Neo4j account? Show their screen names."
+    database: twitter
+    difficulty: intermediate
+    tags: [match, mutual-follows, filter]
+    domain: twitter
+    min_results: 1
+    max_db_hits: 30000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 10000
+    is_write_query: false
+
+  - id: twitter-intermediate-002
+    question: "Which users have posted the most tweets in the dataset? Show top 10 by tweet count."
+    database: twitter
+    difficulty: intermediate
+    tags: [aggregation, relationship, order, limit]
+    domain: twitter
+    min_results: 10
+    max_db_hits: 10000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 8000
+    is_write_query: false
+
+  - id: twitter-intermediate-003
+    question: "Which hashtags are used together with 'neo4j' in the same tweets? Show the co-occurring hashtag and how many tweets they share."
+    database: twitter
+    difficulty: intermediate
+    tags: [aggregation, relationship, co-occurrence, order]
+    domain: twitter
+    min_results: 1
+    max_db_hits: 15000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 10000
+    is_write_query: false
+
+  - id: twitter-intermediate-004
+    question: "How many of the users followed by the Neo4j account have more than 10,000 followers themselves? Show their screen names and follower counts."
+    database: twitter
+    difficulty: intermediate
+    tags: [match, relationship, filter, influencers]
+    domain: twitter
+    min_results: 1
+    max_db_hits: 30000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 10000
+    is_write_query: false
+
+  - id: twitter-intermediate-005
+    question: "Find all tweets that contain a link and use the hashtag 'graphdatabases'. Show the tweet text and the URL."
+    database: twitter
+    difficulty: intermediate
+    tags: [match, multiple-relationships, filter]
+    domain: twitter
+    min_results: 1
+    max_db_hits: 15000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 8000
+    is_write_query: false
+
+  - id: twitter-intermediate-006
+    question: "Which users have been mentioned in tweets but are not themselves in the main user list as active posters? Show up to 20 such user screen names."
+    database: twitter
+    difficulty: intermediate
+    tags: [optional-match, not-exists, filter, limit]
+    domain: twitter
+    min_results: 1
+    max_db_hits: 15000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 10000
+    is_write_query: false
+
+  # ─── ADVANCED (6 cases) ──────────────────────────────────────────────────────
+
+  - id: twitter-advanced-001
+    question: "Find users who follow each other (mutual follows). Show pairs of screen names. Limit to 20 pairs."
+    database: twitter
+    difficulty: advanced
+    tags: [bidirectional, mutual-follows, filter, limit]
+    domain: twitter
+    min_results: 1
+    max_db_hits: 100000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 15000
+    is_write_query: false
+
+  - id: twitter-advanced-002
+    question: "For each user who has been retweeted, how many times have their tweets been retweeted in total? Show the top 10 most retweeted users."
+    database: twitter
+    difficulty: advanced
+    tags: [aggregation, relationship-chain, order, limit]
+    domain: twitter
+    min_results: 1
+    max_db_hits: 10000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 10000
+    is_write_query: false
+
+  - id: twitter-advanced-003
+    question: "Find the users with the highest betweenness centrality score in the network. Show top 10 with their screen names and score."
+    database: twitter
+    difficulty: advanced
+    tags: [match, filter, order, betweenness, graph-analytics]
+    domain: twitter
+    min_results: 1
+    max_db_hits: 50000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 10000
+    is_write_query: false
+
+  - id: twitter-advanced-004
+    question: "Which hashtags have been used in reply tweets (as opposed to original posts)? Show hashtag name and count of reply tweets using it."
+    database: twitter
+    difficulty: advanced
+    tags: [aggregation, multiple-relationships, filter]
+    domain: twitter
+    min_results: 1
+    max_db_hits: 10000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 10000
+    is_write_query: false
+
+  - id: twitter-advanced-005
+    question: "Find users who follow the Neo4j account but whose own follower count is greater than the Neo4j account's follower count."
+    database: twitter
+    difficulty: advanced
+    tags: [match, comparison, relationship, filter]
+    domain: twitter
+    min_results: 1
+    max_db_hits: 50000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 10000
+    is_write_query: false
+
+  - id: twitter-advanced-006
+    question: "Which users have been mentioned the most across all tweets? Show the top 10 mentioned users by mention count."
+    database: twitter
+    difficulty: advanced
+    tags: [aggregation, relationship, order, limit]
+    domain: twitter
+    min_results: 1
+    max_db_hits: 10000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 10000
+    is_write_query: false
+
+  # ─── COMPLEX (4 cases) ───────────────────────────────────────────────────────
+
+  - id: twitter-complex-001
+    question: "Find users who are 2 hops away in the follower network from the Neo4j account — i.e. users followed by someone who follows Neo4j, but not directly followed by Neo4j. Show up to 20 distinct screen names."
+    database: twitter
+    difficulty: complex
+    tags: [graph-traversal, two-hop, not-exists, limit]
+    domain: twitter
+    min_results: 1
+    max_db_hits: 100000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 20000
+    is_write_query: false
+
+  - id: twitter-complex-002
+    question: "For the top 5 most popular hashtags, show the hashtag, how many unique users tweeted with it, and a list of those users' screen names."
+    database: twitter
+    difficulty: complex
+    tags: [aggregation, collect, relationship-chain, order]
+    domain: twitter
+    min_results: 5
+    max_db_hits: 30000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 20000
+    is_write_query: false
+
+  - id: twitter-complex-003
+    question: "Find all retweet chains — where tweet A retweets tweet B, and tweet B retweets tweet C. Show the three tweet texts and the authors of each."
+    database: twitter
+    difficulty: complex
+    tags: [graph-traversal, chained-relationships, retweet-chain]
+    domain: twitter
+    min_results: 1
+    max_db_hits: 20000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 15000
+    is_write_query: false
+
+  - id: twitter-complex-004
+    question: "For each user followed by the Neo4j account, show how many of their followers also follow the Neo4j account (shared audience). Show top 10 by shared audience size."
+    database: twitter
+    difficulty: complex
+    tags: [aggregation, relationship, common-follower, order, limit]
+    domain: twitter
+    min_results: 1
+    max_db_hits: 200000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 30000
+    is_write_query: false
+
+  # ─── EXPERT (5 cases) ────────────────────────────────────────────────────────
+
+  - id: twitter-expert-001
+    question: "Find the shortest path in the follower network between the user 'neo4j' and the user 'NASAPersevere'. Show all users in the path."
+    database: twitter
+    difficulty: expert
+    tags: [shortest-path, qpe, graph-traversal]
+    domain: twitter
+    min_results: 1
+    max_db_hits: 100000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 30000
+    is_write_query: false
+
+  - id: twitter-expert-002
+    question: "Identify bridge users in the follower network — users who follow people in multiple distinct clusters. Use betweenness centrality if available, otherwise find users who follow at least 5 people who don't follow each other. Show top 10."
+    database: twitter
+    difficulty: expert
+    tags: [graph-analytics, betweenness, filter, order]
+    domain: twitter
+    min_results: 1
+    max_db_hits: 100000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 30000
+    is_write_query: false
+
+  - id: twitter-expert-003
+    question: "Find all users reachable from Neo4j's account within 3 follow hops. Show how many distinct users are reachable at each hop distance (1, 2, 3)."
+    database: twitter
+    difficulty: expert
+    tags: [qpe, quantified-path, graph-traversal, aggregation]
+    domain: twitter
+    min_results: 1
+    max_db_hits: 500000
+    max_allocated_memory_bytes: 52428800
+    max_runtime_ms: 60000
+    is_write_query: false
+
+  - id: twitter-expert-004
+    question: "For each pair of hashtags that co-occur in at least 3 tweets, compute a co-occurrence score. Show top 15 pairs by co-occurrence count."
+    database: twitter
+    difficulty: expert
+    tags: [co-occurrence, aggregation, relationship-chain, order, limit]
+    domain: twitter
+    min_results: 1
+    max_db_hits: 30000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 30000
+    is_write_query: false
+
+  - id: twitter-expert-005
+    question: "Find influential amplifiers: users who both have high follower counts and have been retweeted multiple times. Score each user as followers × retweet_count and show the top 10."
+    database: twitter
+    difficulty: expert
+    tags: [aggregation, math, relationship-chain, scoring, order, limit]
+    domain: twitter
+    min_results: 1
+    max_db_hits: 50000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 30000
+    is_write_query: false

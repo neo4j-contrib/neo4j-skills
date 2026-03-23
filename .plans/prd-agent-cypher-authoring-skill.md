@@ -114,13 +114,13 @@ Kept GQL-origin features (add real value, not just renames): `WHEN` (conditional
 | 3 | ucfraud | neo4j | localhost:7687 | Transaction fraud graph | QPE fraud rings, temporal, CALL IN TRANSACTIONS |
 | 4 | northwind | northwind | demo.neo4jlabs.com | Retail ERP (relational-to-graph) | Order→Product→Supplier traversal, aggregation |
 | 5 | stackoverflow | stackoverflow | demo.neo4jlabs.com | Q&A tag network | Tag co-occurrence, user reputation, answer patterns |
-| 6 | movies | movies | demo.neo4jlabs.com | Movie cast/crew | Actor-director bipartite, ACTED_IN, DIRECTED |
-| 7 | airports | airports | demo.neo4jlabs.com | Transportation network | SHORTEST path, route traversal, geographic data |
-| 8 | *(TBD)* | — | — | Social network | Follower graphs, community detection |
-| 9 | *(TBD)* | — | — | *(TBD)* | *(TBD)* |
-| 10 | *(TBD)* | — | — | *(TBD)* | *(TBD)* |
+| 6 | goodreads | goodreads | demo.neo4jlabs.com | Book recommendation graph | Author→Book, User reviews, SIMILAR_TO, vector search |
+| 7 | twitter | twitter | demo.neo4jlabs.com | Social network / ego graph | FOLLOWS, retweets, hashtag co-occurrence, betweenness |
+| 8 | legalcontracts | legalcontracts | demo.neo4jlabs.com | Contract party graph | Party→Contract, clause coverage, vector similarity |
+| 9 | retail | retail | demo.neo4jlabs.com | Fashion retail purchase graph | Customer→Article, VARIANT_OF, temporal purchase patterns |
+| 10 | ucnetwork | ucnetwork | demo.neo4jlabs.com | WiFi network monitoring | Device snapshots, signal quality, CONNECTED_TO traversal |
 
-Domains 8–10 to be confirmed against available demo.neo4jlabs.com databases and local instances.
+All 10 domains confirmed and validated against live demo.neo4jlabs.com databases. airports and movies not used (airports unavailable; movies superseded by recommendations).
 
 - REQ-F-035: Each domain case file must include a set of value-enriched test questions that use concrete entity names, enum values, and ranges drawn from the `dataset:` schema rather than generic placeholders. A subset (≤ 30%) of questions per domain must be phrased in casual business-user language that requires the skill to perform value translation (e.g., "show me all flagged accounts" rather than "MATCH where status='flagged'"; "which high-severity alerts are still open" rather than "severity='high' AND status='open'"). These questions test the skill's value normalization and vocabulary translation capability without replacing the majority of existing technical test cases.
 

@@ -1,0 +1,438 @@
+# goodreads.yml — Test cases for neo4j-cypher-authoring-skill
+# NOTE: goodreads-generated.yml (generator output) is gitignored.
+# Promote stubs from generated → this file after human review.
+# Thresholds: max_db_hits = observed × 3, max_allocated_memory_bytes = observed × 3,
+#             max_runtime_ms = observed × 5.
+
+database:
+  uri: neo4j+s://demo.neo4jlabs.com:7687
+  username: goodreads
+  database: goodreads
+  neo4j_version: "2026.02"
+  cypher_version: "25"
+  read_only: true  # demo.neo4jlabs.com — write cases SKIP rather than FAIL
+
+dataset:
+  name: goodreads
+  description: |
+    A book recommendation knowledge graph from Goodreads containing books, authors, reviews,
+    and readers. Use to explore author catalogues, reader reviews and ratings, book similarity
+    networks, and reading preferences. Covers 10,000 books, 12,371 authors, 69,791 reviews,
+    and 44,827 users. Two vector indexes support semantic similarity search on book descriptions
+    and review text.
+  schema:
+    nodes:
+      Book:
+        description: "A book in the Goodreads catalogue"
+        properties:
+          book_id:        {type: STRING, description: "Goodreads internal book identifier"}
+          title:          {type: STRING, sample: ["The Hunger Games", "To Kill a Mockingbird", "Harry Potter and the Sorcerer's Stone"]}
+          average_rating: {type: FLOAT, min: 0.0, max: 5.0, description: "Average reader rating on a 0–5 scale"}
+          ratings_count:  {type: INTEGER, description: "Total number of ratings received"}
+          text_reviews_count: {type: INTEGER, description: "Total number of text reviews"}
+          publication_year: {type: STRING, description: "Year published as a string (e.g. '2009')"}
+          language_code:  {type: STRING, sample: ["eng", "en-US", "fre", "spa"], description: "ISO language code (sparse — many books have null)"}
+          publisher:      {type: STRING, description: "Publisher name (sparse)"}
+          num_pages:      {type: INTEGER, description: "Page count (sparse)"}
+          is_ebook:       {type: STRING, values: ["true", "false"], description: "Whether this edition is digital"}
+          format:         {type: STRING, sample: ["Hardcover", "Paperback", "Mass Market Paperback", "Kindle Edition"]}
+          embedding:      {type: VECTOR, dimensions: 1536, similarity: cosine, description: "Book description embedding for semantic search"}
+      Author:
+        description: "A book author"
+        properties:
+          author_id:          {type: STRING, description: "Goodreads internal author identifier"}
+          name:               {type: STRING, sample: ["Stephen King", "J.K. Rowling", "Suzanne Collins"]}
+          average_rating:     {type: STRING, description: "Average rating across all the author's books (stored as string)"}
+          ratings_count:      {type: STRING, description: "Total ratings across all author's books (stored as string)"}
+          text_reviews_count: {type: STRING, description: "Total text reviews across author's books (stored as string)"}
+      Review:
+        description: "A reader review of a book"
+        properties:
+          review_id:  {type: STRING}
+          rating:     {type: INTEGER, values: [0, 1, 2, 3, 4, 5], description: "Reader rating from 0 (unrated) to 5 stars"}
+          n_votes:    {type: INTEGER, description: "Number of helpful votes on the review"}
+          n_comments: {type: INTEGER, description: "Number of comments on the review"}
+          text:       {type: STRING, description: "Review text content"}
+          date_added: {type: STRING, description: "Date review was added (string format)"}
+          embedding:  {type: VECTOR, dimensions: 1536, similarity: cosine, description: "Review text embedding for semantic search"}
+      User:
+        description: "A Goodreads user who has written reviews"
+        properties:
+          user_id: {type: STRING, description: "Goodreads internal user identifier"}
+    relationships:
+      - type: AUTHORED
+        from: Author
+        to: Book
+        description: "Author wrote this book (one author may have written many books)"
+      - type: PUBLISHED
+        from: User
+        to: Review
+        description: "User published this review"
+      - type: WRITTEN_FOR
+        from: Review
+        to: Book
+        description: "This review is written for the book"
+      - type: SIMILAR_TO
+        from: Book
+        to: Book
+        description: "Two books are similar (based on reader co-ratings)"
+    indexes:
+      - name: book-descriptions
+        type: VECTOR
+        on: Book(embedding)
+        dimensions: 1536
+        similarity: cosine
+        call: "CALL db.index.vector.queryNodes('book-descriptions', N, $vec) YIELD node, score"
+        description: "Vector similarity search on book descriptions"
+      - name: review-text
+        type: VECTOR
+        on: Review(embedding)
+        dimensions: 1536
+        similarity: cosine
+        call: "CALL db.index.vector.queryNodes('review-text', N, $vec) YIELD node, score"
+        description: "Vector similarity search on review content"
+  notes:
+    - "Review ratings: 0=unrated, 1–5 stars. Many reviews have rating=0 (unrated shelves)."
+    - "publication_year is stored as STRING (e.g. '2009'), not an integer — use string comparison or toInteger()"
+    - "average_rating on Author is also STRING — use toFloat() to compare"
+    - "language_code is sparse — many books have null. Use IS NOT NULL when filtering by language."
+    - "SIMILAR_TO is directed: (b1:Book)-[:SIMILAR_TO]->(b2:Book)"
+    - "User connects to Review via PUBLISHED; Review connects to Book via WRITTEN_FOR — two hops to get user's reviewed books"
+    - "SEARCH clause is GA on demo.neo4jlabs.com 2026.02.x — use SEARCH syntax for vector queries"
+
+cases:
+
+  # ─── BASIC (6 cases) ─────────────────────────────────────────────────────────
+
+  - id: goodreads-basic-001
+    question: "How many books are in the library?"
+    database: goodreads
+    difficulty: basic
+    tags: [count, nodes]
+    domain: goodreads
+    min_results: 1
+    max_db_hits: 5000
+    max_allocated_memory_bytes: 2097152
+    max_runtime_ms: 5000
+    is_write_query: false
+
+  - id: goodreads-basic-002
+    question: "List the top 10 highest-rated books that have received at least 1000 ratings, showing title and average rating."
+    database: goodreads
+    difficulty: basic
+    tags: [match, filter, order, limit]
+    domain: goodreads
+    min_results: 10
+    max_db_hits: 15000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 5000
+    is_write_query: false
+
+  - id: goodreads-basic-003
+    question: "Who are the most-reviewed authors in the library? Show the top 5 by total text reviews."
+    database: goodreads
+    difficulty: basic
+    tags: [match, order, limit]
+    domain: goodreads
+    min_results: 5
+    max_db_hits: 10000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 5000
+    is_write_query: false
+
+  - id: goodreads-basic-004
+    question: "How many books are in English (language code 'eng')?"
+    database: goodreads
+    difficulty: basic
+    tags: [count, filter, string]
+    domain: goodreads
+    min_results: 1
+    max_db_hits: 15000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 5000
+    is_write_query: false
+
+  - id: goodreads-basic-005
+    question: "What books did the author named 'Stephen King' write? List their titles and average ratings."
+    database: goodreads
+    difficulty: basic
+    tags: [match, relationship, filter]
+    domain: goodreads
+    min_results: 1
+    max_db_hits: 30000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 5000
+    is_write_query: false
+
+  - id: goodreads-basic-006
+    question: "How many 5-star reviews are there in total?"
+    database: goodreads
+    difficulty: basic
+    tags: [count, filter]
+    domain: goodreads
+    min_results: 1
+    max_db_hits: 80000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 5000
+    is_write_query: false
+
+  # ─── INTERMEDIATE (6 cases) ──────────────────────────────────────────────────
+
+  - id: goodreads-intermediate-001
+    question: "Which authors have written more than 3 books in our library? Show author name and book count, sorted by most books first."
+    database: goodreads
+    difficulty: intermediate
+    tags: [aggregation, group-by, filter, order]
+    domain: goodreads
+    min_results: 1
+    max_db_hits: 30000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 8000
+    is_write_query: false
+
+  - id: goodreads-intermediate-002
+    question: "What is the average rating of books published in 2010? Compare to 2015."
+    database: goodreads
+    difficulty: intermediate
+    tags: [aggregation, filter, comparison]
+    domain: goodreads
+    min_results: 1
+    max_db_hits: 15000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 8000
+    is_write_query: false
+
+  - id: goodreads-intermediate-003
+    question: "For each format (hardcover, paperback, etc.), what is the average rating and total book count? Only show formats with at least 10 books."
+    database: goodreads
+    difficulty: intermediate
+    tags: [aggregation, group-by, filter]
+    domain: goodreads
+    min_results: 1
+    max_db_hits: 15000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 8000
+    is_write_query: false
+
+  - id: goodreads-intermediate-004
+    question: "Which books have received more than 100 helpful votes on at least one of their reviews? Show book title and the maximum helpful votes on any review."
+    database: goodreads
+    difficulty: intermediate
+    tags: [match, relationship, aggregation, filter]
+    domain: goodreads
+    min_results: 1
+    max_db_hits: 200000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 10000
+    is_write_query: false
+
+  - id: goodreads-intermediate-005
+    question: "Which books have a similar title — find books that share the word 'Harry' in their title and list them."
+    database: goodreads
+    difficulty: intermediate
+    tags: [match, filter, string, contains]
+    domain: goodreads
+    min_results: 1
+    max_db_hits: 30000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 5000
+    is_write_query: false
+
+  - id: goodreads-intermediate-006
+    question: "What is the rating distribution for reviews on books published before 2000? Show count for each star rating."
+    database: goodreads
+    difficulty: intermediate
+    tags: [aggregation, filter, relationship, group-by]
+    domain: goodreads
+    min_results: 1
+    max_db_hits: 100000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 10000
+    is_write_query: false
+
+  # ─── ADVANCED (6 cases) ──────────────────────────────────────────────────────
+
+  - id: goodreads-advanced-001
+    question: "Find books that are linked to at least 3 similar books. Show the book title, its average rating, and the count of similar books it connects to."
+    database: goodreads
+    difficulty: advanced
+    tags: [aggregation, relationship, filter, similar-to]
+    domain: goodreads
+    min_results: 1
+    max_db_hits: 5000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 8000
+    is_write_query: false
+
+  - id: goodreads-advanced-002
+    question: "For each author, compute their highest-rated and lowest-rated book. Show the author name, best title, best rating, worst title, and worst rating. Limit to authors with at least 5 books."
+    database: goodreads
+    difficulty: advanced
+    tags: [aggregation, collect, min-max, group-by]
+    domain: goodreads
+    min_results: 1
+    max_db_hits: 45000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 10000
+    is_write_query: false
+
+  - id: goodreads-advanced-003
+    question: "Find the books that have both high ratings (above 4.0) and many text reviews (more than 500). For each, list the title, rating, and review count, ordered by review count descending."
+    database: goodreads
+    difficulty: advanced
+    tags: [match, filter, order, compound-predicate]
+    domain: goodreads
+    min_results: 1
+    max_db_hits: 15000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 8000
+    is_write_query: false
+
+  - id: goodreads-advanced-004
+    question: "Which users have written reviews covering the most distinct books? Show the top 10 users by unique books reviewed."
+    database: goodreads
+    difficulty: advanced
+    tags: [aggregation, relationship-chain, distinct, order]
+    domain: goodreads
+    min_results: 10
+    max_db_hits: 300000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 15000
+    is_write_query: false
+
+  - id: goodreads-advanced-005
+    question: "Find all books that do not have any reviews in the database."
+    database: goodreads
+    difficulty: advanced
+    tags: [optional-match, not-exists, filter]
+    domain: goodreads
+    min_results: 1
+    max_db_hits: 50000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 10000
+    is_write_query: false
+
+  - id: goodreads-advanced-006
+    question: "For ebooks versus physical books, compare the average rating and total ratings count. Use the is_ebook field to split them."
+    database: goodreads
+    difficulty: advanced
+    tags: [aggregation, group-by, comparison, conditional]
+    domain: goodreads
+    min_results: 1
+    max_db_hits: 30000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 8000
+    is_write_query: false
+
+  # ─── COMPLEX (4 cases) ───────────────────────────────────────────────────────
+
+  - id: goodreads-complex-001
+    question: "Find authors whose books are all rated above 4.0. For each such author, also collect the titles of their books. Only include authors with at least 3 books in the library."
+    database: goodreads
+    difficulty: complex
+    tags: [subquery, collect, filter, all-predicate]
+    domain: goodreads
+    min_results: 1
+    max_db_hits: 50000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 15000
+    is_write_query: false
+
+  - id: goodreads-complex-002
+    question: "For the top 5 authors by number of books, show each author's name, their book titles, and the average rating across all their books combined."
+    database: goodreads
+    difficulty: complex
+    tags: [subquery, collect, aggregation, order, limit]
+    domain: goodreads
+    min_results: 5
+    max_db_hits: 50000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 15000
+    is_write_query: false
+
+  - id: goodreads-complex-003
+    question: "Find books that have at least 2 similar books which are themselves rated above 4.5. Show the original book title, its rating, and the titles of those highly-rated similar books."
+    database: goodreads
+    difficulty: complex
+    tags: [collect, filter, relationship-chain, subquery]
+    domain: goodreads
+    min_results: 1
+    max_db_hits: 5000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 10000
+    is_write_query: false
+
+  - id: goodreads-complex-004
+    question: "Compare the reading engagement across language groups: for each language, show the count of books, average rating, and total review count. Exclude books where language is unknown. Show top 5 languages by book count."
+    database: goodreads
+    difficulty: complex
+    tags: [aggregation, group-by, filter, null-handling, order]
+    domain: goodreads
+    min_results: 5
+    max_db_hits: 30000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 10000
+    is_write_query: false
+
+  # ─── EXPERT (5 cases) ────────────────────────────────────────────────────────
+
+  - id: goodreads-expert-001
+    question: "Find the shortest recommendation chain between the book 'The Hunger Games' and 'Divergent' through similar book links. Show all books in the path."
+    database: goodreads
+    difficulty: expert
+    tags: [shortest-path, qpe, graph-traversal]
+    domain: goodreads
+    min_results: 1
+    max_db_hits: 10000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 15000
+    is_write_query: false
+
+  - id: goodreads-expert-002
+    question: "Using vector similarity on book descriptions, find the 5 books most semantically similar to 'The Hunger Games'. Return book titles and similarity scores."
+    database: goodreads
+    difficulty: expert
+    tags: [vector-search, similarity, semantic]
+    domain: goodreads
+    min_results: 5
+    max_db_hits: 5000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 15000
+    is_write_query: false
+    notes: "Requires embedding vector for 'The Hunger Games' — the harness cannot inject a runtime vector. Model should acknowledge this and show the query structure using a parameter placeholder."
+
+  - id: goodreads-expert-003
+    question: "Find all books reachable from 'The Hunger Games' within 3 hops through the similar-books network, including the direct connections and indirect ones. Show distinct book titles."
+    database: goodreads
+    difficulty: expert
+    tags: [qpe, graph-traversal, quantified-path]
+    domain: goodreads
+    min_results: 1
+    max_db_hits: 5000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 15000
+    is_write_query: false
+
+  - id: goodreads-expert-004
+    question: "Rank authors by a combined score: total ratings count weighted 60% and average rating weighted 40%. Normalise each metric to 0–1 range across all authors before combining. Show top 10."
+    database: goodreads
+    difficulty: expert
+    tags: [aggregation, math, normalization, ranking]
+    domain: goodreads
+    min_results: 10
+    max_db_hits: 30000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 20000
+    is_write_query: false
+
+  - id: goodreads-expert-005
+    question: "For each author with at least 5 books, find their most popular book (highest ratings count) and determine how many of their other books have been linked as similar to it. Show author, top book title, and count of similar links."
+    database: goodreads
+    difficulty: expert
+    tags: [subquery, collect, aggregation, relationship, similar-to]
+    domain: goodreads
+    min_results: 1
+    max_db_hits: 50000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 20000
+    is_write_query: false
