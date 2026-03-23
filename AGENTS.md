@@ -69,6 +69,7 @@
 - **--model flag**: runner.py and generator.py accept `--model sonnet|haiku|opus` (short names) or a full model ID. Makefile variable `MODEL ?= sonnet`. Mapping: sonnet→claude-sonnet-4-6, haiku→claude-haiku-4-5, opus→claude-opus-4-5.
 - GDS `.stream` procedures do NOT write properties to nodes — never filter `WHERE n.louvainCommunity = x` unless schema confirms a `.write` was performed. Properties like `louvainCommunity`, `pageRank`, `betweenness` only exist if a GDS write-back ran. cypher25-gds.md Section 6 has the DO-NOT examples.
 - **recommendations domain**: `Movie.released` is a STRING `'YYYY-MM-DD'` — use string comparison (`> '2000-01-01'`), not integer. `User.userId` is a STRING — always quote: `{userId: '1'}`. Movie titles use article-inversion format: `'Matrix, The'` not `'The Matrix'`. Vector index name is `moviePlotsEmbedding` (NOT `moviePlots`). Fulltext index is `movieFulltext` (covers both title AND plot).
+- **goodreads domain**: `Book.publication_year` and `Author.average_rating` / `Author.ratings_count` are all stored as STRING — use `toIntegerOrNull()` / `toFloatOrNull()` before numeric comparison. `Book.language_code` is sparse (many nulls) — always use IS NOT NULL when filtering. Collaborative filtering path: `(u:User)-[:PUBLISHED]->(r:Review)-[:WRITTEN_FOR]->(b:Book)`. Write queries should be marked `is_write_query: false` here since `read_only: true` causes them to SKIP anyway.
 
 ## Python / uv
 

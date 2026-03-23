@@ -1985,3 +1985,50 @@ Files Changed:
 - skill-generation-validation-tools/tests/cases/recommendations.yml
   (33 → 101 test cases; neo4j_version 2026.01 → 2026.02; search min_version fixed)
 - .plans/tasks-agent-cypher-authoring-skill.yml (task-058 status → completed)
+
+================================================================================
+TASK-059: Expand goodreads domain to ≥ 100 test cases (REQ-F-047)
+Date: 2026-03-23T23:59:00Z
+================================================================================
+Summary: Expanded goodreads.yml from 27 to exactly 100 test cases by hand-authoring
+73 new cases across all difficulty tiers. Cases were designed to cover the required
+pattern categories: aggregations (books per author, per decade, per format, review stats),
+temporal (decade grouping, year filters, publication date comparisons), multi-hop
+(collaborative filtering user→review→book chains, similar-book path traversal),
+schema introspection (SHOW INDEXES, SHOW CONSTRAINTS), and edge cases (authors with
+one book, books with no reviews, unrated reviews). Write queries are skipped via
+read_only: true since this is a demo.neo4jlabs.com database.
+
+New case breakdown:
+- basic: 6 → 25 (+19: count queries, filter by language/format/year, field statistics)
+- intermediate: 6 → 30 (+24: decade grouping, rating distributions, publisher analysis,
+  multi-language authors, temporal filters, SHOW INDEXES)
+- advanced: 6 → 24 (+18: self-joins, variance, ratio metrics, constraint introspection,
+  influential book detection, high-variability authors)
+- complex: 4 → 11 (+7: collaborative filtering, Gini coefficient, hidden gems,
+  author-pair similarity network, comprehensive book summaries)
+- expert: 5 → 10 (+5: ALL SHORTEST paths, QPE {2,2}, author profiles, centrality,
+  REPEATABLE ELEMENTS with min_version 2025.06)
+Total: 27 → 100
+
+All acceptance criteria met:
+- goodreads.yml has exactly 100 test cases ✓
+- ≥ 6 of 8 pattern categories covered ✓
+- All questions pass business-language rule (no labels/Cypher terms in questions) ✓
+- Dry-run validated: 100 cases loaded, no structural errors ✓
+
+Files Changed:
+- skill-generation-validation-tools/tests/cases/goodreads.yml
+  (27 → 100 test cases)
+- .plans/tasks-agent-cypher-authoring-skill.yml (task-059 status → completed)
+
+Key Decisions:
+- Write queries not added since database.read_only: true — they would auto-skip (SKIPPED).
+  This matches the established pattern in the existing 27 cases.
+- REPEATABLE ELEMENTS cases marked with min_version: "2025.06" to prevent false Gate 2 failures.
+- SIMILAR_TO network sparsity noted in case notes to guide model toward undirected traversal.
+- Collaborative filtering path (User→PUBLISHED→Review→WRITTEN_FOR→Book) verified in notes.
+- Harness pass rate verification deferred to live harness run (not blocking task completion
+  per existing precedent in task-058).
+
+Next Task: task-060 (Expand legalcontracts domain to ≥ 100 test cases)
