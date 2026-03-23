@@ -1837,3 +1837,30 @@ Verification:
 - Batch sizes: 128 (simple count) to 1024 (multi-hop aggregation)
 
 Next: No more pending tasks — both task-054 and task-055 completed.
+
+================================================================================
+TASK-056: Add --model flag to runner.py and generator.py (REQ-F-046)
+Date: 2026-03-23T22:00:00Z
+================================================================================
+Summary: Added --model flag to runner.py, generator.py, and Makefile. Short names
+(sonnet/haiku/opus) map to full model IDs; full IDs pass through unchanged. Default
+is claude-sonnet-4-6 (sonnet).
+
+Changes:
+- runner.py: Added _MODEL_MAP dict, resolve_model_id(), --model CLI arg, model_id
+  kwarg threaded through invoke_claude(), run_case(), _run_case_buffered(), run_all()
+- generator.py: Same _MODEL_MAP/resolve_model_id() added, --model CLI arg, model_id
+  kwarg in _invoke_claude_for_generation() and generate()
+- Makefile: Added MODEL ?= sonnet variable; all $(HARNESS) invocations now pass
+  --model $(MODEL)
+
+Model ID mapping:
+  sonnet → claude-sonnet-4-6
+  haiku  → claude-haiku-4-5
+  opus   → claude-opus-4-5
+
+Validation:
+- make dry-run: 318 cases, Dry-run OK
+- make smoke: all smoke tests pass
+
+Next: task-057 (Expand companies domain to ≥ 100 test cases)

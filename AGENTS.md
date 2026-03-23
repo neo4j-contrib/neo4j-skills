@@ -8,6 +8,7 @@
 - Run harness (ucfraud, local DB): `uv run --project skill-generation-validation-tools python3 skill-generation-validation-tools/tests/harness/runner.py --cases skill-generation-validation-tools/tests/cases/ucfraud.yml --skill neo4j-cypher-authoring-skill --neo4j-uri bolt://localhost:7687 --neo4j-username neo4j --neo4j-password password --verbose`
 - Schema is auto-injected from `tests/schemas/{domain}.json` when the directory exists. Use `--no-schema` to disable for ablation runs.
 - Lint YAML: `yamllint .github/workflows/`
+- Run harness with specific model: add `--model haiku` (or `sonnet`/`opus`) to any runner.py invocation, or `MODEL=haiku` to any Makefile target.
 
 ## Conventions
 
@@ -65,6 +66,7 @@
 - `least()` / `greatest()` do NOT exist in Cypher — use `CASE WHEN a < b THEN a ELSE b END` instead.
 - Style guide keyword list (keywords.adoc) is 400 items — useless for agents. What agents need: UPPERCASE for clauses/operators, camelCase for functions, lowercase for `null`/`true`/`false`. Document this as a casing rules table, not a keyword enumeration.
 - GRAPH TYPE DDL (`ALTER CURRENT GRAPH TYPE`, `EXTEND GRAPH TYPE`, `SHOW GRAPH TYPES`, `CREATE GRAPH TYPE`, `DROP GRAPH TYPE`) cannot be `EXPLAIN`'d or `PROFILE`'d. Validator auto-PASSes Gates 1 and 4 for these; Gate 2 execution validates syntax. Detected via `_is_graph_type_ddl()` in validator.py.
+- **--model flag**: runner.py and generator.py accept `--model sonnet|haiku|opus` (short names) or a full model ID. Makefile variable `MODEL ?= sonnet`. Mapping: sonnet→claude-sonnet-4-6, haiku→claude-haiku-4-5, opus→claude-opus-4-5.
 - GDS `.stream` procedures do NOT write properties to nodes — never filter `WHERE n.louvainCommunity = x` unless schema confirms a `.write` was performed. Properties like `louvainCommunity`, `pageRank`, `betweenness` only exist if a GDS write-back ran. cypher25-gds.md Section 6 has the DO-NOT examples.
 
 ## Python / uv

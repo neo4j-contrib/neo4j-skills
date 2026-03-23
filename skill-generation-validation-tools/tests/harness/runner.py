@@ -47,6 +47,30 @@ from validator import FAIL, PASS, WARN, ValidationResult, validate  # noqa: E402
 SKIPPED = "SKIPPED"
 
 # ---------------------------------------------------------------------------
+# Model ID mapping: short name → full Anthropic model ID
+# ---------------------------------------------------------------------------
+
+_MODEL_MAP: dict[str, str] = {
+    "sonnet": "claude-sonnet-4-6",
+    "opus":   "claude-opus-4-5",
+    "haiku":  "claude-haiku-4-5",
+}
+_DEFAULT_MODEL = "sonnet"
+_DEFAULT_MODEL_ID = _MODEL_MAP[_DEFAULT_MODEL]
+
+
+def resolve_model_id(model_short: Optional[str]) -> str:
+    """
+    Resolve a short model name (sonnet/haiku/opus) to a full model ID.
+
+    Passes through a value that looks like a full model ID unchanged.
+    Defaults to claude-sonnet-4-6 when model_short is None.
+    """
+    if model_short is None:
+        return _DEFAULT_MODEL_ID
+    return _MODEL_MAP.get(model_short, model_short)  # pass-through if already a full ID
+
+# ---------------------------------------------------------------------------
 # Optional YAML import — fallback to stdlib json for dry-run only
 # ---------------------------------------------------------------------------
 
@@ -114,6 +138,8 @@ class TestCaseResult:
     error: Optional[str]  # Runner-level error (e.g. Claude invocation failed)
     duration_s: float
     skip_reason: Optional[str] = None  # Non-None when verdict == SKIPPED
+    generation_ms: int = 0  # Time spent invoking Claude (ms)
+    execution_ms: int = 0   # Time spent on Neo4j gate execution (ms)
 
 
 @dataclass
@@ -722,23 +748,28 @@ def invoke_claude(
     skill_name: str,
     *,
     timeout_s: int = 120,
-) -> tuple[str, Optional[str]]:
+    model_id: str = _DEFAULT_MODEL_ID,
+) -> tuple[str, Optional[str], int]:
     """
-    Invoke Claude Code headless and return (response_text, error_message).
+    Invoke Claude Code headless and return (response_text, error_message, generation_ms).
 
     Loads the skill's SKILL.md and appends it as a system prompt via
     --append-system-prompt. Falls back to --skill flag if SKILL.md cannot
     be found (for forward compatibility when --skill is implemented).
 
+    model_id is the full Anthropic model ID (e.g. 'claude-sonnet-4-6').
+    Use resolve_model_id() to convert a short name before calling.
+
     Returns:
-        (response_text, None) on success
-        ("", error_message) on failure
+        (response_text, None, generation_ms) on success
+        ("", error_message, generation_ms) on failure
     """
     skill_content = _load_skill_content(skill_name)
 
     if skill_content:
         cmd = [
             "claude",
+            "--model", model_id,
             "--append-system-prompt", skill_content,
             "--print",
             "--output-format", "text",
@@ -747,11 +778,13 @@ def invoke_claude(
         # Fallback: try --skill flag (may work in newer CLI versions)
         cmd = [
             "claude",
+            "--model", model_id,
             "--skill", skill_name,
             "--print",
             "--output-format", "text",
         ]
 
+    t0 = time.perf_counter()
     try:
         result = subprocess.run(
             cmd,
@@ -761,19 +794,23 @@ def invoke_claude(
             timeout=timeout_s,
             env={**os.environ},
         )
+        generation_ms = int((time.perf_counter() - t0) * 1000)
         if result.returncode != 0:
             err = result.stderr.strip() or f"claude exited {result.returncode}"
-            return "", err
-        return result.stdout, None
+            return "", err, generation_ms
+        return result.stdout, None, generation_ms
     except subprocess.TimeoutExpired:
-        return "", f"Claude invocation timed out after {timeout_s}s"
+        generation_ms = int((time.perf_counter() - t0) * 1000)
+        return "", f"Claude invocation timed out after {timeout_s}s", generation_ms
     except FileNotFoundError:
+        generation_ms = int((time.perf_counter() - t0) * 1000)
         return "", (
             "claude CLI not found. Install Claude Code and ensure 'claude' is on PATH. "
             "In CI, set ANTHROPIC_API_KEY and install the claude CLI."
-        )
+        ), generation_ms
     except Exception as exc:
-        return "", f"Unexpected error invoking claude: {exc}"
+        generation_ms = int((time.perf_counter() - t0) * 1000)
+        return "", f"Unexpected error invoking claude: {exc}", generation_ms
 
 
 # ---------------------------------------------------------------------------
@@ -1000,6 +1037,7 @@ def run_case(
     value_hints: Optional[str] = None,
     server_version: Optional[str] = None,
     domain_read_only: bool = False,
+    model_id: str = _DEFAULT_MODEL_ID,
 ) -> TestCaseResult:
     """
     Run a single test case end-to-end.
@@ -1018,6 +1056,8 @@ def run_case(
     error: Optional[str] = None
     generated_cypher = ""
     validation: Optional[ValidationResult] = None
+    generation_ms: int = 0
+    execution_ms: int = 0
 
     if dry_run:
         return TestCaseResult(
@@ -1033,6 +1073,8 @@ def run_case(
             gate_details=[],
             error=None,
             duration_s=round(time.monotonic() - t0, 3),
+            generation_ms=0,
+            execution_ms=0,
         )
 
     # Version gate: skip case if min_version requirement is not met
@@ -1077,8 +1119,8 @@ def run_case(
 
     # Step 1: invoke Claude Code headless
     prompt = _build_claude_prompt(tc, schema_text=schema_text, value_hints=value_hints)
-    response_text, invoke_error = invoke_claude(
-        prompt, skill_name, timeout_s=claude_timeout_s
+    response_text, invoke_error, generation_ms = invoke_claude(
+        prompt, skill_name, timeout_s=claude_timeout_s, model_id=model_id
     )
 
     if invoke_error:
@@ -1096,6 +1138,8 @@ def run_case(
             gate_details=[],
             error=error,
             duration_s=round(time.monotonic() - t0, 3),
+            generation_ms=generation_ms,
+            execution_ms=0,
         )
 
     # Step 2: extract Cypher from response
@@ -1115,6 +1159,8 @@ def run_case(
             gate_details=[],
             error=error,
             duration_s=round(time.monotonic() - t0, 3),
+            generation_ms=generation_ms,
+            execution_ms=0,
         )
 
     # Step 3: validate through all four gates
@@ -1136,9 +1182,12 @@ def run_case(
             gate_details=[],
             error=error,
             duration_s=round(time.monotonic() - t0, 3),
+            generation_ms=generation_ms,
+            execution_ms=0,
         )
 
     try:
+        exec_t0 = time.perf_counter()
         validation = validate(
             generated_cypher,
             driver,
@@ -1149,7 +1198,9 @@ def run_case(
             max_allocated_memory_bytes=tc.max_allocated_memory_bytes,
             max_runtime_ms=tc.max_runtime_ms,
         )
+        execution_ms = int((time.perf_counter() - exec_t0) * 1000)
     except Exception as exc:
+        execution_ms = int((time.perf_counter() - exec_t0) * 1000)
         error = f"Validator raised unexpected exception: {exc}"
         return TestCaseResult(
             case_id=tc.id,
@@ -1164,6 +1215,8 @@ def run_case(
             gate_details=[],
             error=error,
             duration_s=round(time.monotonic() - t0, 3),
+            generation_ms=generation_ms,
+            execution_ms=execution_ms,
         )
 
     gate_details = [
@@ -1189,6 +1242,8 @@ def run_case(
         gate_details=gate_details,
         error=error,
         duration_s=round(time.monotonic() - t0, 3),
+        generation_ms=generation_ms,
+        execution_ms=execution_ms,
     )
 
 
@@ -1211,6 +1266,7 @@ def _run_case_buffered(
     verbose: bool,
     server_version: Optional[str] = None,
     domain_read_only: bool = False,
+    model_id: str = _DEFAULT_MODEL_ID,
 ) -> tuple["TestCaseResult", list[str]]:
     """Run a single case and return (result, log_lines) for atomic printing."""
     log_lines: list[str] = []
@@ -1226,6 +1282,7 @@ def _run_case_buffered(
         value_hints=value_hints,
         server_version=server_version,
         domain_read_only=domain_read_only,
+        model_id=model_id,
     )
     if verbose:
         gate_info = ""
@@ -1235,7 +1292,13 @@ def _run_case_buffered(
             gate_info = f" [GATE {result.warned_gate}]"
         symbol = {"PASS": "✓", "WARN": "⚠", "FAIL": "✗", "SKIPPED": "—"}.get(result.verdict, "?")
         skip_info = f" ({result.skip_reason})" if result.skip_reason else ""
-        log_lines.append(f"  {symbol} {result.verdict}{gate_info}{skip_info}")
+        timing_info = ""
+        if result.generation_ms > 0 or result.execution_ms > 0:
+            timing_info = (
+                f" [gen: {result.generation_ms / 1000:.1f}s"
+                f" | exec: {result.execution_ms / 1000:.1f}s]"
+            )
+        log_lines.append(f"  {symbol} {result.verdict}{gate_info}{skip_info}{timing_info}")
     return result, log_lines
 
 
@@ -1253,6 +1316,7 @@ def run_all(
     integration_env: Optional[dict[str, str]] = None,
     fallback_password: Optional[str] = None,
     neo4j_version: Optional[str] = None,
+    model_id: str = _DEFAULT_MODEL_ID,
 ) -> RunReport:
     """
     Run all test cases and return an aggregate RunReport.
@@ -1399,6 +1463,7 @@ def run_all(
                 verbose=verbose,
                 server_version=server_version,
                 domain_read_only=tc.domain in read_only_domains,
+                model_id=model_id,
             )
             for line in log_lines:
                 print(line, flush=True)
@@ -1435,6 +1500,7 @@ def run_all(
                     verbose=verbose,
                     server_version=server_version,
                     domain_read_only=tc.domain in read_only_domains,
+                    model_id=model_id,
                 )
                 future_to_idx[future] = i
 
@@ -1501,10 +1567,15 @@ def _result_to_dict(r: TestCaseResult) -> dict[str, Any]:
         "error": r.error,
         "duration_s": r.duration_s,
         "skip_reason": r.skip_reason,
+        "generation_ms": r.generation_ms,
+        "execution_ms": r.execution_ms,
     }
 
 
 def report_to_dict(report: RunReport) -> dict[str, Any]:
+    total_gen_ms = sum(r.generation_ms for r in report.cases)
+    total_exec_ms = sum(r.execution_ms for r in report.cases)
+    n = report.total or 1
     return {
         "run_id": report.run_id,
         "started_at": report.started_at,
@@ -1517,6 +1588,10 @@ def report_to_dict(report: RunReport) -> dict[str, Any]:
             "failed": report.failed,
             "skipped": report.skipped,
             "pass_rate": round(report.passed / report.total, 4) if report.total else 0.0,
+            "generation_ms_total": total_gen_ms,
+            "generation_ms_avg": round(total_gen_ms / n),
+            "execution_ms_total": total_exec_ms,
+            "execution_ms_avg": round(total_exec_ms / n),
         },
         "cases": [_result_to_dict(r) for r in report.cases],
     }
@@ -1681,6 +1756,17 @@ def _parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
             "Format: YYYY.MM or YYYY.MM.PATCH."
         ),
     )
+    parser.add_argument(
+        "--model",
+        default=None,
+        metavar="MODEL",
+        help=(
+            "Claude model to use for query generation. "
+            "Short names: sonnet (default), haiku, opus. "
+            "Or pass a full model ID (e.g. 'claude-sonnet-4-6'). "
+            "Default: claude-sonnet-4-6."
+        ),
+    )
     return parser.parse_args(argv)
 
 
@@ -1765,6 +1851,11 @@ def main(argv: Optional[list[str]] = None) -> int:
         timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
         report_path = _REPO_ROOT / "tests" / "results" / f"run-{timestamp}.json"
 
+    # Resolve model ID from short name or pass-through full ID
+    model_id = resolve_model_id(getattr(args, "model", None))
+    if args.verbose:
+        print(f"[model] Using model: {model_id}", flush=True)
+
     # Run all cases
     report = run_all(
         cases,
@@ -1779,13 +1870,21 @@ def main(argv: Optional[list[str]] = None) -> int:
         integration_env=integration_env,
         fallback_password=args.neo4j_password,
         neo4j_version=getattr(args, "neo4j_version", None),
+        model_id=model_id,
     )
 
     # Print summary
     skipped_note = f", {report.skipped} SKIPPED" if report.skipped else ""
+    total_gen_ms = sum(r.generation_ms for r in report.cases)
+    total_exec_ms = sum(r.execution_ms for r in report.cases)
+    n_cases = report.total or 1
+    avg_gen_s = total_gen_ms / 1000 / n_cases
+    avg_exec_s = total_exec_ms / 1000 / n_cases
     print(
         f"\nResults: {report.passed}/{report.total} PASS, "
-        f"{report.warned} WARN, {report.failed} FAIL{skipped_note}",
+        f"{report.warned} WARN, {report.failed} FAIL{skipped_note}"
+        f" | gen: {total_gen_ms / 1000:.1f}s total ({avg_gen_s:.1f}s avg)"
+        f" | exec: {total_exec_ms / 1000:.1f}s total ({avg_exec_s:.1f}s avg)",
         flush=True,
     )
 

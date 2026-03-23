@@ -69,6 +69,25 @@ def _require_yaml() -> None:
 
 
 # ---------------------------------------------------------------------------
+# Model ID mapping (mirrors runner.py)
+# ---------------------------------------------------------------------------
+
+_MODEL_MAP: dict[str, str] = {
+    "sonnet": "claude-sonnet-4-6",
+    "opus":   "claude-opus-4-5",
+    "haiku":  "claude-haiku-4-5",
+}
+_DEFAULT_MODEL_ID = "claude-sonnet-4-6"
+
+
+def resolve_model_id(model_short: Optional[str]) -> str:
+    """Resolve short model name to full model ID; pass-through full IDs unchanged."""
+    if model_short is None:
+        return _DEFAULT_MODEL_ID
+    return _MODEL_MAP.get(model_short, model_short)
+
+
+# ---------------------------------------------------------------------------
 # Neo4j driver
 # ---------------------------------------------------------------------------
 
@@ -546,13 +565,17 @@ def _invoke_claude_for_generation(
     prompt: str,
     *,
     timeout_s: int = 120,
+    model_id: str = _DEFAULT_MODEL_ID,
 ) -> tuple[str, Optional[str]]:
     """
     Invoke Claude Code headless in print mode to generate test cases.
 
+    model_id is the full Anthropic model ID (e.g. 'claude-sonnet-4-6').
+    Use resolve_model_id() to convert a short name before calling.
+
     Returns (response_text, error_message).
     """
-    cmd = ["claude", "--print", "--output-format", "text"]
+    cmd = ["claude", "--model", model_id, "--print", "--output-format", "text"]
     full_prompt = _SYSTEM_PROMPT + "\n\n---\n\n" + prompt
 
     try:
@@ -704,6 +727,7 @@ def generate(
     dry_run: bool = False,
     claude_timeout_s: int = 120,
     verbose: bool = False,
+    model_id: str = _DEFAULT_MODEL_ID,
 ) -> Path:
     """
     Full generation pipeline:
@@ -789,7 +813,7 @@ def generate(
         print(f"[generator] Generating {count} {difficulty} question(s) via Claude...", flush=True)
         prompt = _build_generation_prompt(schema_context, database, difficulty, count)
         response_text, error = _invoke_claude_for_generation(
-            prompt, timeout_s=claude_timeout_s
+            prompt, timeout_s=claude_timeout_s, model_id=model_id
         )
 
         if error:
@@ -957,6 +981,17 @@ def _parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
         action="store_true",
         help="Print detailed progress including per-property semantics",
     )
+    parser.add_argument(
+        "--model",
+        default=None,
+        metavar="MODEL",
+        help=(
+            "Claude model to use for question generation. "
+            "Short names: sonnet (default), haiku, opus. "
+            "Or pass a full model ID (e.g. 'claude-sonnet-4-6'). "
+            "Default: claude-sonnet-4-6."
+        ),
+    )
     return parser.parse_args(argv)
 
 
@@ -975,9 +1010,12 @@ def main(argv: Optional[list[str]] = None) -> int:
         "complex": counts_list[3],
     }
 
+    model_id = resolve_model_id(getattr(args, "model", None))
+
     print(f"[generator] domain={domain} database={database}", flush=True)
     print(f"[generator] counts={counts}", flush=True)
     print(f"[generator] output_dir={output_dir}", flush=True)
+    print(f"[generator] model={model_id}", flush=True)
 
     driver = _get_driver(args.neo4j_uri, args.neo4j_username, args.neo4j_password)
 
@@ -991,6 +1029,7 @@ def main(argv: Optional[list[str]] = None) -> int:
             dry_run=args.dry_run,
             claude_timeout_s=args.timeout,
             verbose=args.verbose,
+            model_id=model_id,
         )
         print(f"[generator] Done: {output_path}", flush=True)
         return 0

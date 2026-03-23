@@ -1229,7 +1229,8 @@ tasks:
       Apply same flag to generator.py for question generation.
       Expose as MODEL= variable in Makefile targets (e.g. make run-all MODEL=haiku).
       Default behaviour unchanged — omitting --model uses sonnet.
-    status: pending
+    status: completed
+    completed_at: "2026-03-23T22:00:00Z"
     dependencies: []
     acceptance_criteria:
       - "--model sonnet|haiku|opus accepted by runner.py and generator.py"
