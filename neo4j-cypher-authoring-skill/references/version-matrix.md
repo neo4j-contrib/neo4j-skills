@@ -14,12 +14,14 @@ Cross-reference with the `database.neo4j_version` in the injected schema context
 | Quantified path patterns (QPE `{m,n}`) | 2025.06 | All | GA |
 | `REPEATABLE ELEMENTS` match mode | 2025.06 | All | GA |
 | `DIFFERENT RELATIONSHIPS` match mode | 2025.06 | All | GA |
+| `CYPHER runtime=parallel` hint | 2025.06 | All | GA |
 | `vector()` constructor | 2025.10 | All | GA |
 | `SEARCH` clause — vector indexes | ~2026.01 (Preview) / 2026.02.1 (GA) | All | GA |
 | `GRAPH TYPE` DDL clauses | 2026.02 | Enterprise | Preview |
 
 ## Notes
 
+- **`CYPHER runtime=parallel`**: Available from 2025.06+, all editions. Syntax: `CYPHER 25` on line 1, `CYPHER runtime=parallel` on line 2 (or same line), then the query. For READ analytics queries only — write queries silently ignore the hint. Confirm acceptance with `EXPLAIN` — header must show `Runtime PARALLEL`. See `read/cypher25-runtime.md`.
 - **SEARCH clause**: Available as Preview from approximately 2026.01 (including demo.neo4jlabs.com); GA for **node vector indexes only** in 2026.02.1. Correct syntax:
   `SEARCH n IN (VECTOR INDEX name FOR $vec LIMIT N) SCORE AS score` — variable name only (NOT `(n)`);
   LIMIT required inside parens; `SCORE AS varname` binds the similarity score after closing paren.

@@ -1793,3 +1793,47 @@ Results After Fix:
 - companies-expert-002: PASS — model generated CALL db.index.fulltext.queryNodes('news_fulltext', ...) correctly
 
 Next Task: task-055 (Add parallel runtime documentation to skill — REQ-F-045)
+
+================================================================================
+TASK-055: Add parallel runtime documentation to skill (REQ-F-045)
+Date: 2026-03-23T11:30:00Z
+================================================================================
+
+Summary:
+Added `CYPHER runtime=parallel` documentation to the skill. Verified the parallel
+runtime hint is accepted on both demo.neo4jlabs.com (2026.01.x) and localhost
+(2026.02.x). The hint syntax is `CYPHER 25\nCYPHER runtime=parallel\n<query>`.
+EXPLAIN plan confirms acceptance by showing `Runtime PARALLEL` in the header.
+
+Key findings from live DB testing:
+- Batch sizes: ~128 rows for simple aggregations, ~1024 rows for larger traversals
+- Write queries silently ignore the hint (planner falls back)
+- Short-hop index-seek queries show serial pipelines even with the hint accepted
+
+Files Changed:
+- neo4j-cypher-authoring-skill/references/read/cypher25-runtime.md (NEW)
+  - Full parallel runtime documentation: syntax, when to use, when NOT to use
+  - PROFILE plan analysis (Runtime PARALLEL header, batch size, pipeline labels)
+  - Version availability table (GA from 2025.06+, all editions)
+  - Example: parallel analytics aggregation over large dataset
+- neo4j-cypher-authoring-skill/SKILL.md
+  - Added routing entry for 'read/cypher25-runtime.md' in Step 2 decision table
+  - Added parallel runtime callout in EXPLAIN/PROFILE Validation Loop section
+- neo4j-cypher-authoring-skill/references/version-matrix.md
+  - Added 'CYPHER runtime=parallel hint' row (min 2025.06, all editions, GA)
+  - Added note in ## Notes section explaining syntax and verification
+- neo4j-cypher-authoring-skill/references/README.md
+  - Added cypher25-runtime.md entry to read/ folder inventory
+
+Key Decisions:
+- Created new L3 file rather than adding to cypher25-functions.md — parallel runtime
+  is a query configuration hint, not a function, and benefits from its own focused doc
+- Placed in read/ folder — parallel runtime is read-only; write queries ignore the hint
+- Noted session.run() vs execute_query() interactions are not affected by runtime hints
+
+Verification:
+- Dry-run: 318 cases loaded (unchanged)
+- EXPLAIN confirmed: Runtime PARALLEL accepted on both 2026.01.x and 2026.02.x
+- Batch sizes: 128 (simple count) to 1024 (multi-hop aggregation)
+
+Next: No more pending tasks — both task-054 and task-055 completed.

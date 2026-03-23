@@ -27,6 +27,7 @@ Agents should consult SKILL.md §"Query Construction Decision Tree" to select th
 | `cypher25-functions.md` | Aggregating functions (`count`, `collect`, `avg`, `sum`, `stdev`), list functions, string functions, scalar functions, predicate functions, math/trig, temporal, spatial, vector functions |
 | `cypher25-subqueries.md` | `CALL { }` subqueries, `OPTIONAL CALL`, `COUNT { }` / `COLLECT { }` / `EXISTS { }` subquery forms, correlated subquery scope rules |
 | `cypher25-types-and-nulls.md` | Type errors, null propagation, `IS NULL` / `IS NOT NULL` guards, `coalesce()`, type casting functions, type predicate expressions (`IS :: TYPE`) |
+| `cypher25-runtime.md` | Runtime hints (`CYPHER runtime=parallel`, `pipelined`, `slotted`, `interpreted`), when to use parallel runtime, when NOT to use it (OLTP, writes), EXPLAIN/PROFILE plan verification, version availability |
 
 ### `write/` — WRITE queries
 

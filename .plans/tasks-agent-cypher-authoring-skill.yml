@@ -1207,7 +1207,8 @@ tasks:
       - Add routing entry in SKILL.md decision tree
       - Add a note in SKILL.md's performance section referencing parallel runtime
         as an option for analytics queries that EXPLAIN shows as full scans
-    status: pending
+    status: completed
+    completed_at: "2026-03-23T11:30:00Z"
     dependencies: []
     acceptance_criteria:
       - "CYPHER runtime=parallel syntax documented with example"

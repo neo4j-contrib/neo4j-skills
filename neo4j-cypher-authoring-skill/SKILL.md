@@ -383,6 +383,7 @@ CYPHER 25 USE myDatabase MATCH (n:Person) RETURN n.name LIMIT 5;
 | Aggregation, list, string, temporal, spatial, vector functions | `read/cypher25-functions.md` |
 | CALL subquery, COUNT{}, COLLECT{}, EXISTS{} | `read/cypher25-subqueries.md` |
 | Type errors, null propagation, casting, type predicates | `read/cypher25-types-and-nulls.md` |
+| Runtime hints (`CYPHER runtime=parallel`), parallel execution, PROFILE pipeline analysis | `read/cypher25-runtime.md` |
 | Batch writes, CALL IN TRANSACTIONS | `write/cypher25-call-in-transactions.md` |
 | GDS algorithms (`gds.*`) — only when `gds: true` in schema | `write/cypher25-gds.md` |
 | APOC procedures/functions (`apoc.*`) — only when `capabilities` includes `"apoc"` | `read/cypher25-apoc.md` |
@@ -400,6 +401,8 @@ Do **not** load all files — select only what the current query type requires.
 `CYPHER 25 EXPLAIN <query>` — red flags: `AllNodesScan` (missing index or label-free MATCH), `CartesianProduct` (missing join predicate), `NodeByLabelScan` (no property filter index).
 
 `CYPHER 25 PROFILE <query>` — check: `dbHits` (warn: > expected; fail: > expected × 10), `rows` (fail if < min_results), `allocatedMemory` (warn: > 100 MB; fail: > expected × 5), `elapsedTimeMs` (guidance only). Rewrite until `dbHits` and `allocatedMemory` are within bounds.
+
+**Parallel runtime** — when EXPLAIN shows large `AllNodesScan`, `NodeByLabelScan`, or high-fanout `Expand(All)` on analytics queries, prepend `CYPHER runtime=parallel` after `CYPHER 25`. Confirm with EXPLAIN that the header shows `Runtime PARALLEL` (not `PIPELINED`). See `read/cypher25-runtime.md` for applicable query types, version requirements, and pipeline analysis.
 
 ---
 
