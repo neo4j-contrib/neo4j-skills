@@ -1320,7 +1320,8 @@ tasks:
       - Edge cases: parties with no active contracts, contracts with minimal clauses
       All questions must use casual business language.
       Target: ≥ 100 cases total, ≥ 90% pass rate.
-    status: pending
+    status: completed
+    completed_at: "2026-03-23T17:30:00Z"
     dependencies: [task-056]
     acceptance_criteria:
       - "legalcontracts.yml has ≥ 100 test cases"
