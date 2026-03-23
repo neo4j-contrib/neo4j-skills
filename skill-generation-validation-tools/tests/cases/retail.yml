@@ -106,6 +106,8 @@ dataset:
     - "clubMemberStatus values: 'ACTIVE' or 'PRE-CREATE'"
     - "article_graph_embeddings uses 128 dimensions (not 1536) — do not mix with product vector index"
     - "Vector search: use CALL db.index.vector.queryNodes('article_graph_embeddings', N, $vec) YIELD node AS a, score — SEARCH clause is NOT available (server is 2026.01.x)"
+    - "All 13,351 articles have at least 1 purchase — 'articles never purchased' returns 0 rows. Use 'articles never purchased online' (3,568 results) instead."
+    - "Verified customer ID for Strap top collaborative filtering: 'a95794754e2b0a93f7830ada52a8f75cb2090d0829c5c2c9b40f940b28345035' (2 Strap top variants purchased)"
 
 cases:
 
@@ -296,16 +298,17 @@ cases:
     is_write_query: false
 
   - id: retail-advanced-004
-    question: "Which articles have never been purchased? Show article ID, product name, and colour."
+    question: "Which articles have only been purchased in physical stores (salesChannelId=1) and never online (salesChannelId=2)? Show article ID, product name, and colour for the top 20 such articles ordered by article ID."
     database: retail
     difficulty: advanced
-    tags: [not-exists, optional-match]
+    tags: [not-exists, filter, sales-channel]
     domain: retail
     min_results: 1
     max_db_hits: 50000
     max_allocated_memory_bytes: 10485760
     max_runtime_ms: 15000
     is_write_query: false
+    notes: "Verified: 3,568 articles exist that have only store purchases and no online purchases. Pattern: MATCH (a:Article) WHERE EXISTS { ()-[:PURCHASED {salesChannelId: 1}]->(a) } AND NOT EXISTS { ()-[:PURCHASED {salesChannelId: 2}]->(a) }"
 
   - id: retail-advanced-005
     question: "For each customer age group (under 25, 25–40, 40–55, over 55), what is the total number of purchases and average purchase price? Exclude customers with no age recorded."
@@ -368,9 +371,18 @@ cases:
     max_allocated_memory_bytes: 52428800
     max_runtime_ms: 60000
     is_write_query: false
+    notes: |
+      PURCHASED relationship has tDat: DATE property. To extract month, use: p.tDat.month (DATE field accessor, not a function call).
+      Pattern for same-customer same-month baskets:
+        MATCH (c:Customer)-[p1:PURCHASED]->(a1:Article), (c)-[p2:PURCHASED]->(a2:Article)
+        WHERE a1.articleId < a2.articleId AND p1.tDat.year = p2.tDat.year AND p1.tDat.month = p2.tDat.month
+        WITH a1.prodName AS item1, a2.prodName AS item2, count(DISTINCT c) AS co_buy_count
+        WHERE co_buy_count >= 5
+        RETURN item1, item2, co_buy_count ORDER BY co_buy_count DESC LIMIT 20
+      IMPORTANT: do NOT use collect() + UNWIND to compute baskets — use direct cross-join on two MATCH clauses on the same customer.
 
   - id: retail-complex-004
-    question: "Build a product recommendation: for a given customer who has purchased 'Strap top', find other customers who bought the same article, and identify what other articles they also purchased. Show the recommended articles and how many times they were purchased by these similar customers."
+    question: "Build a collaborative product recommendation for customer 'a95794754e2b0a93f7830ada52a8f75cb2090d0829c5c2c9b40f940b28345035': find all customers who bought the same 'Strap top' article variants as this customer, then identify what other articles those similar customers purchased. Show recommended article names and how many similar customers bought each article (excluding articles already bought by the target customer)."
     database: retail
     difficulty: complex
     tags: [collaborative-filtering, relationship-chain, aggregation, recommendation]
@@ -380,6 +392,7 @@ cases:
     max_allocated_memory_bytes: 20971520
     max_runtime_ms: 30000
     is_write_query: false
+    notes: "Customer 'a95794754e2b0a93f7830ada52a8f75cb2090d0829c5c2c9b40f940b28345035' is verified to have purchased 2 'Strap top' article variants. There are at least 8 other customers who bought the same article. Pattern: MATCH (target:Customer {customerId: '...'})-[:PURCHASED]->(a:Article)-[:VARIANT_OF]->(:Product {prodName: 'Strap top'}) to find the target's Strap top articles, then find other customers who bought those same articles."
 
   # ─── EXPERT (5 cases) ────────────────────────────────────────────────────────
 

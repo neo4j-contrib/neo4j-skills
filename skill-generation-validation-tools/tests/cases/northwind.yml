@@ -97,6 +97,9 @@ dataset:
     - "Customer.customerID is a 5-character string (e.g. 'ALFKI'), not an integer"
     - "No vector or fulltext indexes — all queries use RANGE indexes or label scans"
     - "ORDERS relationship goes (Order)-[:ORDERS]->(Product), NOT (Customer)-[:ORDERS]->(Product)"
+    - "SUPPLIES is 1:1 in this dataset — each product has exactly one supplier. 'Products with multiple suppliers' returns 0 rows — do not write such test cases."
+    - "All 77 products appear in at least one order — 'products never ordered' returns 0 rows. Use inventory-based questions instead."
+    - "22 products are at or below reorder level. 5 products are completely out of stock (unitsInStock=0). 8 products are discontinued."
 
 cases:
 
@@ -275,16 +278,17 @@ cases:
     is_write_query: false
 
   - id: northwind-advanced-003
-    question: "Find products that are supplied by more than one supplier. Show product name and the list of supplier names."
+    question: "Find suppliers that supply products in more than one product category. Show supplier company name, the count of distinct categories, and the list of category names."
     database: northwind
     difficulty: advanced
-    tags: [aggregation, collect, filter, relationship]
+    tags: [aggregation, collect, filter, relationship-chain]
     domain: northwind
     min_results: 1
     max_db_hits: 2000
     max_allocated_memory_bytes: 5242880
     max_runtime_ms: 8000
     is_write_query: false
+    notes: "In Northwind each product has exactly one supplier (1:1 SUPPLIES relationship). No products have multiple suppliers. Instead, use cross-category supplier coverage. Verified: at least 5 suppliers cover 3+ categories."
 
   - id: northwind-advanced-004
     question: "Which categories have no discontinued products? List those category names."
@@ -311,16 +315,17 @@ cases:
     is_write_query: false
 
   - id: northwind-advanced-006
-    question: "Which products have never been ordered? Show their names and categories."
+    question: "Which products are currently running low on stock — where unitsInStock is at or below the reorderLevel AND unitsInStock is greater than 0 (not yet out of stock but approaching it)? Show product name, current stock, reorder level, and category."
     database: northwind
     difficulty: advanced
-    tags: [not-exists, optional-match, relationship]
+    tags: [match, filter, comparison, inventory, relationship]
     domain: northwind
     min_results: 1
     max_db_hits: 5000
     max_allocated_memory_bytes: 5242880
     max_runtime_ms: 10000
     is_write_query: false
+    notes: "All 77 Northwind products are in at least one order — 'products never ordered' returns 0 rows. Instead use inventory low-stock detection. Verified: 22 products are at or below reorder level; a subset of those still have stock > 0."
 
   # ─── COMPLEX (4 cases) ───────────────────────────────────────────────────────
 

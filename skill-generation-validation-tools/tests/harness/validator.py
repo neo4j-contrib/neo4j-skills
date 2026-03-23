@@ -14,7 +14,9 @@ Gate sequence:
 Write queries execute inside an explicit transaction that is always rolled back
 for test isolation (no side-effects on the test database).
 CALL IN TRANSACTIONS queries cannot run inside an explicit transaction; they are
-executed via an implicit (auto-commit) transaction instead — writes are committed.
+executed via session.run() (auto-commit implicit transaction) instead — writes
+ARE committed. driver.execute_query() uses explicit transactions internally in
+Neo4j 2026.x and must NOT be used for CALL IN TRANSACTIONS queries.
 """
 
 import json
@@ -508,12 +510,15 @@ def validate(
     try:
         if is_write_query and _is_call_in_transactions(cypher):
             # CALL IN TRANSACTIONS requires an implicit (auto-commit) transaction.
-            # Cannot run inside an explicit transaction — use execute_query() instead.
-            # Writes ARE committed; this is acceptable for local/writable test databases.
+            # driver.execute_query() internally uses an explicit transaction in Neo4j
+            # 2026.x — so use session.run() directly for implicit auto-commit semantics.
+            # Writes ARE committed; acceptable for local/writable test databases.
             t0 = time.monotonic()
-            records, summary, _ = driver.execute_query(cypher, database_=database)
+            with driver.session(database=database) as _session:
+                _result = _session.run(cypher)
+                records = list(_result)
+                actual_rows = len(records)
             elapsed_ms = (time.monotonic() - t0) * 1000.0
-            actual_rows = len(records)
         elif is_write_query:
             # Non-CALL-IN-TRANSACTIONS write queries: explicit txn, always roll back
             actual_rows, elapsed_ms = _execute_write_rollback(
@@ -589,6 +594,19 @@ def validate(
                 profile_cypher, driver, database=database
             )
             gate4_metrics = profile_metrics_raw or {}
+        elif is_write_query and _is_call_in_transactions(cypher):
+            # CALL IN TRANSACTIONS: PROFILE also requires implicit (auto-commit) txn.
+            # Use session.run() to avoid explicit-transaction rejection.
+            # NOTE: this commits the write again — acceptable for write-enabled test DBs.
+            t0 = time.monotonic()
+            with driver.session(database=database) as _session:
+                _result = _session.run(profile_cypher)
+                _summary = _result.consume()
+                plan = getattr(_summary, "profile", None)
+                gate4_metrics = extract_profile_metrics(plan)
+            profile_elapsed = (time.monotonic() - t0) * 1000.0
+            if gate4_metrics.get("elapsedTimeMs") is None:
+                gate4_metrics["elapsedTimeMs"] = profile_elapsed
         else:
             t0 = time.monotonic()
             _, summary, _ = driver.execute_query(

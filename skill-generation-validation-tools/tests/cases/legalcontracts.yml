@@ -86,6 +86,9 @@ dataset:
     - "Contract types are exact strings — use full values from the values list above"
     - "Clause types: exactly 5 distinct values as listed in the type values list"
     - "Vector search: use CALL db.index.vector.queryNodes('contractSummary', N, $vec) YIELD node AS c, score — SEARCH clause is NOT available (server is 2026.01.x)"
+    - "Confirmed co-signing combinations: 'Strategic Alliance'+'License Agreement' have shared parties (Xencor, Inc.; Beijing Yisheng Leju). 'Service'+'License Agreement' have NO shared parties — do not use this combination in test cases."
+    - "Party with most connections: 'THE VÄRDE FUND VI-A, L.P.' has 23 direct co-signatories (all Joint Venture). Good for path traversal tests."
+    - "HONEYWELL INTERNATIONAL INC. has only 1 co-signer (GARRETT MOTION INC., IP contract) and is NOT connected to JV parties — avoid using Honeywell in shortest-path test cases."
 
 cases:
 
@@ -214,7 +217,7 @@ cases:
     is_write_query: false
 
   - id: legalcontracts-intermediate-005
-    question: "Which parties have signed both Service agreements and License agreements? Show the party names."
+    question: "Which parties have signed both Strategic Alliance agreements and License agreements? Show the party names."
     database: legalcontracts
     difficulty: intermediate
     tags: [match, filter, set-intersection, relationship-chain]
@@ -224,6 +227,7 @@ cases:
     max_allocated_memory_bytes: 10485760
     max_runtime_ms: 10000
     is_write_query: false
+    notes: "Verified: parties with both Strategic Alliance and License Agreement include 'Xencor, Inc.' and 'Beijing Yisheng Leju Information Services Co., Ltd.' — 0 parties have both Service and License Agreement in this dataset."
 
   - id: legalcontracts-intermediate-006
     question: "What is the average total contract value for each contract type? Only include contracts where an amount is specified."
@@ -376,29 +380,30 @@ cases:
     is_write_query: false
 
   - id: legalcontracts-expert-002
-    question: "Using vector similarity on contract summaries, find the 5 contracts most semantically similar to the following description: 'software license and distribution agreement for technology products'. Return contract types and similarity scores."
+    question: "Using vector similarity on contract summaries, find the 5 contracts most semantically similar to a given query embedding. Return contract types and similarity scores. Use the 'contractSummary' vector index."
     database: legalcontracts
     difficulty: expert
     tags: [vector-search, similarity, semantic]
     domain: legalcontracts
-    min_results: 1
+    min_results: 0
     max_db_hits: 10000
     max_allocated_memory_bytes: 20971520
     max_runtime_ms: 15000
     is_write_query: false
-    notes: "Use CALL db.index.vector.queryNodes('contractSummary', 5, $vec) YIELD node AS c, score — NOT SEARCH clause (server 2026.01.x). $vec is a parameter placeholder for the 1536-dim embedding."
+    notes: "Use CALL db.index.vector.queryNodes('contractSummary', 5, $embedding) YIELD node AS c, score — NOT SEARCH clause (server 2026.01.x). $embedding is a parameter placeholder for the 1536-dim embedding vector. min_results=0 because the harness cannot inject a real vector — Gate 1 syntax validation is the goal."
 
   - id: legalcontracts-expert-003
-    question: "Find the shortest contract relationship path between 'HONEYWELL INTERNATIONAL INC.' and any party that has signed a Joint Venture agreement. Show the path including party names and contract types."
+    question: "For each contract type, find the party with the single highest-value contract (maximum total_amount where specified). Show contract type, party name, the contract amount, and the effective date of that contract. Only include contract types where at least one contract has a specified amount."
     database: legalcontracts
     difficulty: expert
-    tags: [shortest-path, qpe, filter, graph-traversal]
+    tags: [aggregation, ranking, top-per-group, null-handling, relationship]
     domain: legalcontracts
     min_results: 1
-    max_db_hits: 50000
-    max_allocated_memory_bytes: 20971520
-    max_runtime_ms: 30000
+    max_db_hits: 10000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 15000
     is_write_query: false
+    notes: "Verified: 5 contract types have at least one specified total_amount (Service: max $574M, Affiliate: $241M, Strategic Alliance: $200M, Joint Venture: $50M, License Agreement: $30M). Pattern requires per-group top-1: use WITH COLLECT-then-slice or CALL subquery for top-1 per group."
 
   - id: legalcontracts-expert-004
     question: "For each contract type, compute a risk score defined as: (count of contracts with liability clauses / total contracts of that type) × average total_amount where amount exists. Show contract type and risk score, sorted by highest risk first."
@@ -413,13 +418,14 @@ cases:
     is_write_query: false
 
   - id: legalcontracts-expert-005
-    question: "Find party networks: groups of parties that are all interconnected through shared contracts (each party in the group shares at least one contract with at least one other party in the group). Show the 5 largest such groups by party count."
+    question: "For each party that appears in more than 3 contracts, compute a 'portfolio diversity score' as: (number of distinct contract types) × 10 + (number of contracts with a specified total_amount) × 5 + (number of distinct governing jurisdictions across their contracts). Show the top 10 parties by score, along with each component."
     database: legalcontracts
     difficulty: expert
-    tags: [graph-traversal, community, qpe, aggregation]
+    tags: [aggregation, scoring, math, relationship, null-handling]
     domain: legalcontracts
     min_results: 1
-    max_db_hits: 100000
-    max_allocated_memory_bytes: 52428800
-    max_runtime_ms: 60000
+    max_db_hits: 20000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 20000
     is_write_query: false
+    notes: "Verified: there are parties with 3+ contracts, some with multiple contract types and jurisdictions. Pattern: MATCH (p:Party)-[:PARTY_TO]->(c:Contract) OPTIONAL MATCH (c)-[:HAS_GOVERNING_LAW]->(loc:Location), then aggregate per party. Score = distinct types × 10 + contracts with amount × 5 + distinct states."

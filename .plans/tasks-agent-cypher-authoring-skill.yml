@@ -1109,7 +1109,8 @@ tasks:
       - legalcontracts: 2-3 cases with Party name and contract_type enum mismatches
       - retail: 1-2 cases with customer ID or Article label mismatches
       - northwind: 1 case with Product.discontinued=true (no such products in DB)
-    status: pending
+    status: completed
+    completed_at: "2026-03-23T21:00:00Z"
     dependencies:
       - task-038
     acceptance_criteria:

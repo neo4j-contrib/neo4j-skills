@@ -1720,3 +1720,37 @@ Key Decisions:
 - Dry-run used as acceptance test since GDS requires a local instance to test live
 
 Next Task: task-051 (Fix zero-row test cases in goodreads/legalcontracts/retail/northwind)
+
+================================================================================
+TASK-051: Fix zero-row test cases: verify entity names against live DBs
+Date: 2026-03-23T21:00:00Z
+================================================================================
+
+Summary:
+Identified and fixed 12 failing test cases across 4 domains (goodreads, legalcontracts,
+retail, northwind) that were returning 0 rows or causing other Gate 2 failures. Root causes
+included: books with no SIMILAR_TO connections, co-signer contract-type combinations that
+don't exist, 0 unordered/unpurchased entities (all articles/products are used), and a
+harness bug where CALL IN TRANSACTIONS queries were incorrectly run in explicit transactions
+on Neo4j 2026.x.
+
+Files Changed:
+- skill-generation-validation-tools/tests/cases/goodreads.yml (fixed expert-001, expert-003 — wrong books; added SIMILAR_TO direction notes)
+- skill-generation-validation-tools/tests/cases/legalcontracts.yml (fixed intermediate-005 contract-type combo, expert-002 min_results=0, expert-003 replacement question, expert-005 replacement question)
+- skill-generation-validation-tools/tests/cases/retail.yml (fixed advanced-004 article query, complex-003 notes, complex-004 verified customer ID)
+- skill-generation-validation-tools/tests/cases/northwind.yml (fixed advanced-003 and advanced-006 with data-verified questions, added data constraint notes)
+- skill-generation-validation-tools/tests/harness/validator.py (fixed Gate 2 and Gate 4 CALL IN TRANSACTIONS to use session.run() instead of execute_query() — execute_query() uses explicit transactions in Neo4j 2026.x which is incompatible with CALL IN TRANSACTIONS)
+
+Key Decisions:
+- For cases where the dataset fundamentally doesn't have the expected data (e.g. no unordered products, no multi-supplier products), replaced with new data-verified questions rather than changing min_results to 0
+- For legalcontracts expert-002 (vector search), set min_results=0 since the harness can't inject real embedding vectors — structure validation only
+- Replaced legalcontracts expert-003 (SHORTEST path timeout) and expert-005 (0 rows) with analytically simpler but still expert-level questions
+- Fixed validator.py CALL IN TRANSACTIONS execution: execute_query() uses BEGIN/COMMIT internally in Neo4j Python driver 6.x, which conflicts with CALL IN TRANSACTIONS requirement for implicit transactions. Use session.run() instead.
+
+Results After Fixes:
+- goodreads: 27/27 PASS (was 25/27)
+- legalcontracts: 27/27 PASS (was 23/27)
+- retail: 27/27 PASS (was 23/27, 1 SKIPPED)
+- northwind: 31/32 PASS (was 29/32; 1 pre-existing QPE syntax failure in expert-003 unrelated to this task)
+
+Next Task: task-054 (Fix companies-expert-002: fulltext index used on wrong label)
