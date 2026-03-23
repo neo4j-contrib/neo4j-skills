@@ -1864,3 +1864,52 @@ Validation:
 - make smoke: all smoke tests pass
 
 Next: task-057 (Expand companies domain to ≥ 100 test cases)
+
+================================================================================
+TASK-057: Expand companies domain to ≥ 100 test cases (REQ-F-047)
+Date: 2026-03-23T22:30:00Z
+================================================================================
+Summary: Expanded companies.yml from 49 to 104 test cases by hand-authoring 55
+new cases covering all 8 required pattern categories. All questions use casual
+business-user language with no Cypher/graph-technical terms. Dry-run validates
+all 104 cases with no errors.
+
+New case groups added:
+- basic-011 to basic-020 (10 cases): count/list queries, temporal filters, name
+  search, revenue/employee filters, basic article counts
+- intermediate-011 to intermediate-020 (10 cases): yearly breakdown, industry
+  rankings, date-range filtering, wiki-url queries, sector-filtered aggregations,
+  category cross-queries, chunk stats
+- advanced-011 to advanced-015 (5 cases): sentiment trends over time, sector
+  temporal aggregation, ownership depth max, coverage before/after 2024 split,
+  board-member traversal
+- complex-006 to complex-010 (5 cases): multi-dimensional industry report,
+  monthly 2023 breakdown, middle-layer subsidiaries, AI fulltext+graph traversal,
+  total degree breakdown
+- expert-006 to expert-010 (5 cases): shortest paths between Apple/Microsoft,
+  semantic search with graph traversal, depth-3 Blackstone subsidiaries, quarterly
+  time-series, cross-sector energy→tech QPE
+- temporal-001 to temporal-006 (6 cases): yearly article breakdown, oldest articles,
+  2023 top companies, seasonal sentiment, 2024 mentions, coverage span duration
+- schema-001 to schema-005 (5 cases): SHOW INDEXES, SHOW CONSTRAINTS, vector/
+  fulltext index filter, SHOW PROCEDURES
+- write-001 to write-005 (5 cases): CREATE node, SET null→0, MERGE upsert,
+  bulk SET by sentiment flag, CALL IN TRANSACTIONS batch SET (all is_write_query: true)
+- plugin-001 to plugin-004 (4 cases): APOC string functions, APOC collect/flatten,
+  native degree centrality fallback, GenAI ai.similarity.cosine
+
+Tier distribution: basic 23, intermediate 29, advanced 28, complex 10, expert 14
+Total: 104 cases
+
+Files Changed:
+- skill-generation-validation-tools/tests/cases/companies.yml (49 → 104 cases)
+- .plans/tasks-agent-cypher-authoring-skill.yml (task-057 → completed)
+
+Key Decisions:
+- Write cases marked is_write_query: true — they SKIP on read-only demo server
+- Schema introspection (SHOW INDEXES etc.) treated as non-write read-only queries
+- Plugin cases include capability guards in notes (apoc/genai) per SKILL.md rules
+- GenAI cosine case uses ai.similarity.cosine() (scalar) not index search (top-K)
+- native degree centrality case (plugin-003) works without GDS using COUNT {}
+
+Next Task: task-058 (Expand recommendations domain to ≥ 100 test cases)

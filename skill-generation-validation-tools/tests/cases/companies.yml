@@ -732,3 +732,690 @@ cases:
     is_write_query: false
     min_version: "2025.06"
     notes: "DIFFERENT RELATIONSHIPS match mode (explicit default): MATCH DIFFERENT RELATIONSHIPS (a:Organization) (()-[:HAS_SUBSIDIARY]->()){2,2} (b:Organization) WHERE a.name <> b.name RETURN a.name, b.name, COUNT(*) AS pathCount ORDER BY pathCount DESC LIMIT 15. DIFFERENT RELATIONSHIPS is the default mode but explicitly stating it is valid Cypher 25."
+
+  # ─── BASIC EXPANSION (basic-011 through basic-020) ───────────────────────────
+
+  - id: companies-basic-011
+    question: "How many different industry categories are tracked in our company database?"
+    database: companies
+    difficulty: basic
+    tags: [match, aggregation, count, category]
+    domain: companies
+    min_results: 1
+    max_db_hits: 10000
+    max_allocated_memory_bytes: 2097152
+    max_runtime_ms: 3000
+    is_write_query: false
+
+  - id: companies-basic-012
+    question: "List up to 20 distinct industry categories that exist in our database, in alphabetical order."
+    database: companies
+    difficulty: basic
+    tags: [match, distinct, order-by, limit, category]
+    domain: companies
+    min_results: 1
+    max_db_hits: 10000
+    max_allocated_memory_bytes: 2097152
+    max_runtime_ms: 3000
+    is_write_query: false
+
+  - id: companies-basic-013
+    question: "Which companies have more than 100,000 employees? List their names and employee counts."
+    database: companies
+    difficulty: basic
+    tags: [match, filter, property, order-by]
+    domain: companies
+    min_results: 1
+    max_db_hits: 50000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 5000
+    is_write_query: false
+
+  - id: companies-basic-014
+    question: "What are the most recently published news articles in our database? Show the top 5 most recent by publication date."
+    database: companies
+    difficulty: basic
+    tags: [match, order-by, limit, temporal, date]
+    domain: companies
+    min_results: 1
+    max_db_hits: 50000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 5000
+    is_write_query: false
+
+  - id: companies-basic-015
+    question: "How many articles were published in 2024? Give me the total count."
+    database: companies
+    difficulty: basic
+    tags: [match, filter, temporal, date, count]
+    domain: companies
+    min_results: 1
+    max_db_hits: 50000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 5000
+    is_write_query: false
+
+  - id: companies-basic-016
+    question: "Does Microsoft appear in our company database? Show me its name and a brief description."
+    database: companies
+    difficulty: basic
+    tags: [match, filter, property, contains]
+    domain: companies
+    min_results: 1
+    max_db_hits: 10000
+    max_allocated_memory_bytes: 2097152
+    max_runtime_ms: 3000
+    is_write_query: false
+    notes: "Use CONTAINS 'Microsoft' or fulltext 'entity' index — company name may include legal suffixes"
+
+  - id: companies-basic-017
+    question: "Which companies in our database have a revenue recorded? List up to 10 along with their revenues."
+    database: companies
+    difficulty: basic
+    tags: [match, filter, property, not-null, order-by, limit]
+    domain: companies
+    min_results: 1
+    max_db_hits: 50000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 5000
+    is_write_query: false
+
+  - id: companies-basic-018
+    question: "How many articles are in our news database in total?"
+    database: companies
+    difficulty: basic
+    tags: [match, aggregation, count]
+    domain: companies
+    min_results: 1
+    max_db_hits: 10000
+    max_allocated_memory_bytes: 2097152
+    max_runtime_ms: 3000
+    is_write_query: false
+
+  - id: companies-basic-019
+    question: "Show me 10 news articles that mention Viacom."
+    database: companies
+    difficulty: basic
+    tags: [match, relationship, filter, limit, mentions]
+    domain: companies
+    min_results: 1
+    max_db_hits: 50000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 5000
+    is_write_query: false
+    notes: "Viacom is stored as 'Viacom' — use CONTAINS to match; traverse MENTIONS relationship from Article to Organization"
+
+  - id: companies-basic-020
+    question: "What is the most negatively covered company in our database — the one with the lowest average news sentiment score? Include companies with at least 2 articles."
+    database: companies
+    difficulty: basic
+    tags: [match, aggregation, avg, sentiment, order-by, limit]
+    domain: companies
+    min_results: 1
+    max_db_hits: 100000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 8000
+    is_write_query: false
+
+  # ─── INTERMEDIATE EXPANSION (intermediate-011 through intermediate-020) ───────
+
+  - id: companies-intermediate-011
+    question: "For each year with published articles, how many articles were published and what was the average sentiment? Order by year."
+    database: companies
+    difficulty: intermediate
+    tags: [match, aggregation, temporal, date, group-by, sentiment]
+    domain: companies
+    min_results: 1
+    max_db_hits: 100000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 8000
+    is_write_query: false
+
+  - id: companies-intermediate-012
+    question: "Which industry categories have the most companies? Show the top 10 categories by company count."
+    database: companies
+    difficulty: intermediate
+    tags: [match, relationship, aggregation, count, order-by, limit, category]
+    domain: companies
+    min_results: 1
+    max_db_hits: 50000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 5000
+    is_write_query: false
+
+  - id: companies-intermediate-013
+    question: "Show me all news articles published in the second half of 2023 — between July and December 2023. Include their titles and publication dates."
+    database: companies
+    difficulty: intermediate
+    tags: [match, filter, temporal, date-range, order-by]
+    domain: companies
+    min_results: 1
+    max_db_hits: 100000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 8000
+    is_write_query: false
+
+  - id: companies-intermediate-014
+    question: "Which companies have a Wikipedia page recorded in our database? Show 10 companies with their Wikipedia URLs."
+    database: companies
+    difficulty: intermediate
+    tags: [match, filter, property, not-null, limit]
+    domain: companies
+    min_results: 1
+    max_db_hits: 50000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 5000
+    is_write_query: false
+
+  - id: companies-intermediate-015
+    question: "For companies that belong to the Software or Internet industry categories, what is the average number of news articles mentioning each company? Include only companies with at least 1 article."
+    database: companies
+    difficulty: intermediate
+    tags: [match, relationship, aggregation, category, filter]
+    domain: companies
+    min_results: 1
+    max_db_hits: 100000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 8000
+    is_write_query: false
+
+  - id: companies-intermediate-016
+    question: "Find news articles published in 2024 that have a sentiment score above 0.5. Show their titles and publication dates."
+    database: companies
+    difficulty: intermediate
+    tags: [match, filter, temporal, sentiment, date]
+    domain: companies
+    min_results: 1
+    max_db_hits: 100000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 8000
+    is_write_query: false
+
+  - id: companies-intermediate-017
+    question: "Which companies appear in the news but have no recorded subsidiaries and no industry category assigned? Show up to 10."
+    database: companies
+    difficulty: intermediate
+    tags: [match, not-exists, relationship, filter, optional-pattern]
+    domain: companies
+    min_results: 1
+    max_db_hits: 100000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 8000
+    is_write_query: false
+
+  - id: companies-intermediate-018
+    question: "What is the total number of news article text segments (chunks) in our database, and what is the average number of chunks per article?"
+    database: companies
+    difficulty: intermediate
+    tags: [match, aggregation, count, avg, relationship, chunk]
+    domain: companies
+    min_results: 1
+    max_db_hits: 200000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 8000
+    is_write_query: false
+
+  - id: companies-intermediate-019
+    question: "Which companies are connected through both a supplier relationship and an industry category — meaning they supply to another firm AND both belong to the same category? Show up to 10 such pairs."
+    database: companies
+    difficulty: intermediate
+    tags: [match, multi-pattern, relationship, category, filter]
+    domain: companies
+    min_results: 1
+    max_db_hits: 200000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 10000
+    is_write_query: false
+
+  - id: companies-intermediate-020
+    question: "For the 5 most recently published articles in our database, which companies do they mention?"
+    database: companies
+    difficulty: intermediate
+    tags: [match, order-by, limit, temporal, relationship, mentions]
+    domain: companies
+    min_results: 1
+    max_db_hits: 50000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 5000
+    is_write_query: false
+
+  # ─── ADVANCED EXPANSION (advanced-011 through advanced-015) ──────────────────
+
+  - id: companies-advanced-011
+    question: "Which companies have seen a trend from negative to positive press over time? Look for companies whose most recent 5 articles are more positive on average than their earliest 5 articles. Show up to 10 such companies."
+    database: companies
+    difficulty: advanced
+    tags: [call-subquery, collect-subquery, temporal, sentiment, aggregation, trend]
+    domain: companies
+    min_results: 1
+    max_db_hits: 500000
+    max_allocated_memory_bytes: 50000000
+    max_runtime_ms: 30000
+    is_write_query: false
+
+  - id: companies-advanced-012
+    question: "For news articles mentioning companies that are in the Financial Services industry, what was the average sentiment by year? Only include years with more than 5 articles."
+    database: companies
+    difficulty: advanced
+    tags: [match, relationship, category, temporal, aggregation, sentiment, having]
+    domain: companies
+    min_results: 1
+    max_db_hits: 300000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 20000
+    is_write_query: false
+
+  - id: companies-advanced-013
+    question: "What is the longest chain of subsidiaries in our database — measured by the depth of the deepest ownership path? Return the maximum depth found."
+    database: companies
+    difficulty: advanced
+    tags: [qpe, quantified-path, subsidiary, aggregation, depth]
+    domain: companies
+    min_results: 1
+    max_db_hits: 5000000
+    max_allocated_memory_bytes: 200000000
+    max_runtime_ms: 120000
+    is_write_query: false
+    notes: "Use QPE with {1,} on HAS_SUBSIDIARY; group by path length and find maximum. Add LIMIT to avoid full graph scan."
+
+  - id: companies-advanced-014
+    question: "For the top 10 most-covered companies, show whether their coverage has been getting better or worse over time — calculate the sentiment average for articles published before 2024 versus articles from 2024 onward."
+    database: companies
+    difficulty: advanced
+    tags: [call-subquery, aggregation, sentiment, temporal, date, case-when]
+    domain: companies
+    min_results: 1
+    max_db_hits: 500000
+    max_allocated_memory_bytes: 50000000
+    max_runtime_ms: 30000
+    is_write_query: false
+
+  - id: companies-advanced-015
+    question: "Which companies have board member relationships to other companies? Show the company, its board member companies, and how many subsidiaries the board member company has. Return up to 10."
+    database: companies
+    difficulty: advanced
+    tags: [match, relationship, count-subquery, board-member, aggregation]
+    domain: companies
+    min_results: 1
+    max_db_hits: 200000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 15000
+    is_write_query: false
+
+  # ─── COMPLEX EXPANSION (complex-006 through complex-010) ─────────────────────
+
+  - id: companies-complex-006
+    question: "Build a detailed industry report: for each of the top 5 industry categories by company count, show how many companies are in it, the average company employee count, total news articles mentioning those companies, and the average article sentiment. Order by article count descending."
+    database: companies
+    difficulty: complex
+    tags: [call-subquery, aggregation, multi-level, category, sentiment, employees]
+    domain: companies
+    min_results: 1
+    max_db_hits: 500000
+    max_allocated_memory_bytes: 50000000
+    max_runtime_ms: 30000
+    is_write_query: false
+
+  - id: companies-complex-007
+    question: "For each month in 2023 where at least 5 articles were published, give me the article count, average sentiment, and which company was mentioned most often that month."
+    database: companies
+    difficulty: complex
+    tags: [call-subquery, aggregation, temporal, date, sentiment, monthly-breakdown]
+    domain: companies
+    min_results: 1
+    max_db_hits: 500000
+    max_allocated_memory_bytes: 50000000
+    max_runtime_ms: 30000
+    is_write_query: false
+
+  - id: companies-complex-008
+    question: "Find companies that are both subsidiaries of a larger corporation AND have their own subsidiaries — forming a middle layer in an ownership chain. For each such middle-layer company, show how many parents it has and how many subsidiaries it directly owns. Return up to 20."
+    database: companies
+    difficulty: complex
+    tags: [match, exists-subquery, count-subquery, relationship, subsidiary, middle-layer]
+    domain: companies
+    min_results: 1
+    max_db_hits: 500000
+    max_allocated_memory_bytes: 50000000
+    max_runtime_ms: 30000
+    is_write_query: false
+
+  - id: companies-complex-009
+    question: "Search for article chunks mentioning 'artificial intelligence' using full-text search. For each matching chunk, show the article title, the companies the article mentions, the publication date, and the article's sentiment score. Limit to 10 results ordered by relevance score."
+    database: companies
+    difficulty: complex
+    tags: [fulltext, procedure, graphrag, relationship, sentiment, temporal]
+    domain: companies
+    min_results: 1
+    max_db_hits: 200000
+    max_allocated_memory_bytes: 50000000
+    max_runtime_ms: 20000
+    is_write_query: false
+
+  - id: companies-complex-010
+    question: "For the 10 companies with the most total relationships in our graph (counting subsidiaries they own, supplier links, board memberships, and news mentions combined), show a breakdown of each relationship type count. Return the company name and each category's count."
+    database: companies
+    difficulty: complex
+    tags: [call-subquery, aggregation, degree, multi-relationship, count]
+    domain: companies
+    min_results: 1
+    max_db_hits: 1000000
+    max_allocated_memory_bytes: 100000000
+    max_runtime_ms: 60000
+    is_write_query: false
+
+  # ─── EXPERT EXPANSION (expert-006 through expert-010) ────────────────────────
+
+  - id: companies-expert-006
+    question: "Find all shortest paths between Apple and Microsoft in our corporate ownership graph. If they are connected through shared subsidiaries or parent companies, show the full path. Limit to the 5 shortest such paths."
+    database: companies
+    difficulty: expert
+    tags: [shortest-path, shortest-k, qpe, subsidiary, path, multi-hop]
+    domain: companies
+    min_results: 1
+    max_db_hits: 5000000
+    max_allocated_memory_bytes: 200000000
+    max_runtime_ms: 120000
+    is_write_query: false
+    notes: "Use SHORTEST 5 (()-[:HAS_SUBSIDIARY]->()){1,} syntax; Apple and Microsoft are stored with those names — use CONTAINS to match"
+
+  - id: companies-expert-007
+    question: "Perform a semantic search for article segments about 'mergers and acquisitions strategy'. For the top 10 most similar chunks, show their article title, the companies mentioned, the publication year, and the similarity score. Combine semantic relevance with graph traversal."
+    database: companies
+    difficulty: expert
+    tags: [fulltext, graphrag, call-subquery, relationship, sentiment, temporal]
+    domain: companies
+    min_results: 1
+    max_db_hits: 300000
+    max_allocated_memory_bytes: 100000000
+    max_runtime_ms: 60000
+    is_write_query: false
+
+  - id: companies-expert-008
+    question: "Which companies sit at exactly 3 levels down in Blackstone's ownership hierarchy — that is, Blackstone owns A, which owns B, which owns this company? Show the company names. Limit to 25 results."
+    database: companies
+    difficulty: expert
+    tags: [qpe, quantified-path, bounded-quantifiers, subsidiary, ownership-depth]
+    domain: companies
+    min_results: 1
+    max_db_hits: 5000000
+    max_allocated_memory_bytes: 200000000
+    max_runtime_ms: 120000
+    is_write_query: false
+    notes: "Use QPE {3,3} on HAS_SUBSIDIARY starting from Blackstone (use CONTAINS 'Blackstone')"
+
+  - id: companies-expert-009
+    question: "For the top 5 companies by total news articles, build a time-series view: for each quarter of the year (Q1 Jan-Mar, Q2 Apr-Jun, Q3 Jul-Sep, Q4 Oct-Dec), show the company name, quarter label, article count, and average sentiment. Only include quarters that have at least 3 articles."
+    database: companies
+    difficulty: expert
+    tags: [call-subquery, aggregation, temporal, date, sentiment, time-series, case-when]
+    domain: companies
+    min_results: 1
+    max_db_hits: 500000
+    max_allocated_memory_bytes: 100000000
+    max_runtime_ms: 60000
+    is_write_query: false
+
+  - id: companies-expert-010
+    question: "Find companies in the energy sector that are connected to companies in the technology sector through at most 3 ownership hops. Show the energy company, the path length, and the tech company it connects to. Limit to 20 results."
+    database: companies
+    difficulty: expert
+    tags: [qpe, quantified-path, category, cross-sector, bounded-quantifiers, multi-hop]
+    domain: companies
+    min_results: 1
+    max_db_hits: 5000000
+    max_allocated_memory_bytes: 200000000
+    max_runtime_ms: 120000
+    is_write_query: false
+
+  # ─── TEMPORAL & AGGREGATION CASES ────────────────────────────────────────────
+
+  - id: companies-temporal-001
+    question: "How many news articles were published each year in our database? Show a breakdown by year, ordered from most recent to oldest."
+    database: companies
+    difficulty: intermediate
+    tags: [match, aggregation, temporal, date, group-by, order-by]
+    domain: companies
+    min_results: 1
+    max_db_hits: 100000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 8000
+    is_write_query: false
+
+  - id: companies-temporal-002
+    question: "Show me the 10 oldest news articles in our database — the ones with the earliest publication dates."
+    database: companies
+    difficulty: basic
+    tags: [match, order-by, limit, temporal, date]
+    domain: companies
+    min_results: 1
+    max_db_hits: 50000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 5000
+    is_write_query: false
+
+  - id: companies-temporal-003
+    question: "Which companies received the most positive press coverage specifically in 2023? Show the top 5 by average sentiment score across their 2023 articles, with at least 3 articles that year."
+    database: companies
+    difficulty: advanced
+    tags: [match, filter, aggregation, temporal, sentiment, date, having]
+    domain: companies
+    min_results: 1
+    max_db_hits: 200000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 15000
+    is_write_query: false
+
+  - id: companies-temporal-004
+    question: "Is there a seasonal pattern in news sentiment? Compare the average sentiment of articles published in the first half of the year (January-June) versus the second half (July-December)."
+    database: companies
+    difficulty: advanced
+    tags: [match, aggregation, temporal, date, case-when, sentiment, seasonal]
+    domain: companies
+    min_results: 1
+    max_db_hits: 200000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 15000
+    is_write_query: false
+
+  - id: companies-temporal-005
+    question: "For articles published in 2024, which companies were mentioned most frequently? Show the top 10 with their mention counts."
+    database: companies
+    difficulty: intermediate
+    tags: [match, filter, aggregation, temporal, date, relationship, order-by, limit]
+    domain: companies
+    min_results: 1
+    max_db_hits: 200000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 10000
+    is_write_query: false
+
+  - id: companies-temporal-006
+    question: "What is the average gap in days between the first and most recent article mentioning each company? Show the top 10 companies with the longest coverage span."
+    database: companies
+    difficulty: advanced
+    tags: [match, aggregation, temporal, date, duration, min-max, relationship]
+    domain: companies
+    min_results: 1
+    max_db_hits: 300000
+    max_allocated_memory_bytes: 50000000
+    max_runtime_ms: 30000
+    is_write_query: false
+
+  # ─── SCHEMA INTROSPECTION CASES ──────────────────────────────────────────────
+
+  - id: companies-schema-001
+    question: "What indexes are defined on the companies database? Show their names, types, and which labels and properties they cover."
+    database: companies
+    difficulty: intermediate
+    tags: [show-indexes, schema, introspection, ddl]
+    domain: companies
+    min_results: 1
+    max_db_hits: 1000
+    max_allocated_memory_bytes: 2097152
+    max_runtime_ms: 3000
+    is_write_query: false
+
+  - id: companies-schema-002
+    question: "What constraints exist on the companies database? List any uniqueness or existence constraints along with the label and property they apply to."
+    database: companies
+    difficulty: intermediate
+    tags: [show-constraints, schema, introspection, ddl]
+    domain: companies
+    min_results: 1
+    max_db_hits: 1000
+    max_allocated_memory_bytes: 2097152
+    max_runtime_ms: 3000
+    is_write_query: false
+
+  - id: companies-schema-003
+    question: "Are there any vector indexes in the companies database? If so, what are their names, which nodes do they index, and what are their dimensions and similarity functions?"
+    database: companies
+    difficulty: intermediate
+    tags: [show-indexes, schema, vector, introspection, ddl, filter]
+    domain: companies
+    min_results: 1
+    max_db_hits: 1000
+    max_allocated_memory_bytes: 2097152
+    max_runtime_ms: 3000
+    is_write_query: false
+
+  - id: companies-schema-004
+    question: "What full-text indexes are available in the companies database? List their names, labels they cover, and properties indexed."
+    database: companies
+    difficulty: intermediate
+    tags: [show-indexes, schema, fulltext, introspection, ddl, filter]
+    domain: companies
+    min_results: 1
+    max_db_hits: 1000
+    max_allocated_memory_bytes: 2097152
+    max_runtime_ms: 3000
+    is_write_query: false
+
+  - id: companies-schema-005
+    question: "Show all available stored procedures and functions in the database that relate to full-text or vector search."
+    database: companies
+    difficulty: advanced
+    tags: [show-procedures, schema, introspection, fulltext, vector]
+    domain: companies
+    min_results: 1
+    max_db_hits: 5000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 5000
+    is_write_query: false
+
+  # ─── WRITE QUERY CASES (is_write_query: true — SKIP on read-only demo) ────────
+
+  - id: companies-write-001
+    question: "Add a new company called 'Nebula Technologies' to our database with a brief description 'An AI-focused software startup'."
+    database: companies
+    difficulty: intermediate
+    tags: [create, write, node-creation]
+    domain: companies
+    min_results: 0
+    max_db_hits: null
+    max_allocated_memory_bytes: null
+    max_runtime_ms: null
+    is_write_query: true
+
+  - id: companies-write-002
+    question: "Update all companies that have no employee count recorded — set their employee count to 0 as a placeholder."
+    database: companies
+    difficulty: intermediate
+    tags: [set, write, bulk-update, property, null-handling]
+    domain: companies
+    min_results: 0
+    max_db_hits: null
+    max_allocated_memory_bytes: null
+    max_runtime_ms: null
+    is_write_query: true
+
+  - id: companies-write-003
+    question: "Upsert a company named 'Global Ventures Inc.' — if it already exists update its summary to 'International investment firm', and if it does not exist create it with that summary."
+    database: companies
+    difficulty: advanced
+    tags: [merge, write, upsert, on-create-set, on-match-set]
+    domain: companies
+    min_results: 0
+    max_db_hits: null
+    max_allocated_memory_bytes: null
+    max_runtime_ms: null
+    is_write_query: true
+
+  - id: companies-write-004
+    question: "Mark all companies with negative average news sentiment (average below -0.3 across their articles) by setting a property 'negativePressFlagged' to true on each."
+    database: companies
+    difficulty: advanced
+    tags: [match, aggregation, set, write, property, sentiment, bulk-update]
+    domain: companies
+    min_results: 0
+    max_db_hits: null
+    max_allocated_memory_bytes: null
+    max_runtime_ms: null
+    is_write_query: true
+
+  - id: companies-write-005
+    question: "For all companies that have no industry category assigned, set a property called 'uncategorized' to true. Do this in batches of 500 companies at a time so the operation is safe."
+    database: companies
+    difficulty: expert
+    tags: [call-in-transactions, write, batch, set, property, null-handling]
+    domain: companies
+    min_results: 0
+    max_db_hits: null
+    max_allocated_memory_bytes: null
+    max_runtime_ms: null
+    is_write_query: true
+
+  # ─── PLUGIN / CAPABILITY CASES ────────────────────────────────────────────────
+
+  - id: companies-plugin-001
+    question: "Use the APOC library to convert the name of every company to uppercase and return the top 10 companies with their uppercased names."
+    database: companies
+    difficulty: advanced
+    tags: [apoc, plugin, string-function, limit]
+    domain: companies
+    min_results: 1
+    max_db_hits: 50000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 10000
+    is_write_query: false
+    notes: "apoc.text.toUpperCase(n.name) from apoc-core; requires capabilities includes 'apoc'"
+
+  - id: companies-plugin-002
+    question: "Using APOC collection utilities, for the top 5 most-covered companies aggregate all their article titles into a flat list and return the company name alongside that list."
+    database: companies
+    difficulty: advanced
+    tags: [apoc, plugin, collect, list, aggregation, relationship]
+    domain: companies
+    min_results: 1
+    max_db_hits: 200000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 15000
+    is_write_query: false
+    notes: "apoc.coll.flatten([...]) or simply collect() is sufficient; if using APOC: apoc.coll.toSet(collect(a.title)) to deduplicate"
+
+  - id: companies-plugin-003
+    question: "Compute a basic degree-centrality approximation for the top 10 companies in our network: count each company's total number of relationships across all types. Return the company name and degree count, ordered from highest to lowest."
+    database: companies
+    difficulty: advanced
+    tags: [aggregation, degree, count, multi-relationship, order-by, limit]
+    domain: companies
+    min_results: 1
+    max_db_hits: 500000
+    max_allocated_memory_bytes: 50000000
+    max_runtime_ms: 30000
+    is_write_query: false
+    notes: "Native Cypher fallback (no GDS needed): sum COUNT { (n)-[]->() } + COUNT { ()-[]->(n) } or use SIZE((n)--()) — no GDS required unless gds: true"
+
+  - id: companies-plugin-004
+    question: "Using the GenAI vector similarity capability, compute the cosine similarity between the embedding of the first Chunk in the database and the embeddings of the next 5 chunks. Return the pairs and their similarity scores."
+    database: companies
+    difficulty: expert
+    tags: [genai, ai-similarity, vector, plugin, cosine]
+    domain: companies
+    min_results: 1
+    max_db_hits: 10000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 10000
+    is_write_query: false
+    notes: "ai.similarity.cosine(c1.embedding, c2.embedding) — requires capabilities includes 'genai'; collect first chunk with MATCH (c1:Chunk) RETURN c1 LIMIT 1 then compare to next batch"

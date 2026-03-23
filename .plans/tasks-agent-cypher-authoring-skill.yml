@@ -1254,7 +1254,8 @@ tasks:
       - Edge cases: orgs with no subsidiaries (0-row), very large org networks (LIMIT)
       All questions must use casual business language (no labels/rel-types/Cypher).
       Target: ≥ 100 cases total, ≥ 90% pass rate after validation.
-    status: pending
+    status: completed
+    completed_at: "2026-03-23T22:30:00Z"
     dependencies: [task-056]
     acceptance_criteria:
       - "companies.yml has ≥ 100 test cases"
