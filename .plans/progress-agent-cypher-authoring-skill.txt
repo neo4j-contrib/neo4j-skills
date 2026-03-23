@@ -1611,3 +1611,31 @@ Key Decisions:
 - SKILL.md already had a GDS section; only added L3 pointer and decision tree row (net +2 lines)
 
 Next Task: task-049 (Add APOC library support)
+
+================================================================================
+TASK-049: Add APOC library support as optional capability in skill
+Date: 2026-03-23T16:00:00Z
+================================================================================
+
+Summary:
+Added full APOC (Awesome Procedures on Cypher) library support as an optional
+capability-gated feature. Created the L3 reference file with 47+ apoc.* examples
+across 7 categories. Updated runner.py to inject capabilities into Claude prompts.
+Updated SKILL.md with a new APOC section and routing table entry. Added
+capabilities: [apoc, apoc-extended] to ucfraud.yml (local Neo4j — APOC is
+available locally). All dry-runs pass.
+
+Files Changed:
+- neo4j-cypher-authoring-skill/references/read/cypher25-apoc.md (created — 7 sections, 47+ apoc.* calls)
+- neo4j-cypher-authoring-skill/SKILL.md (modified — added APOC section before GDS, added routing row)
+- skill-generation-validation-tools/tests/harness/runner.py (modified — inject capabilities block)
+- skill-generation-validation-tools/tests/cases/ucfraud.yml (modified — added capabilities: [apoc, apoc-extended])
+- .plans/tasks-agent-cypher-authoring-skill.yml (modified — task-049 marked completed)
+
+Key Decisions:
+- `capabilities` list in database: block (separate from the boolean `gds: true` field) — more flexible for multiple capabilities
+- apoc-extended gate documented separately since it's NOT available in Aura
+- Sections in cypher25-apoc.md: map, coll, text, date/temporal, path, load/export, availability check
+- Added "Prefer native Cypher" rule to prevent APOC over-use
+
+Next Task: task-050 (Add Neo4j GenAI plugin support)

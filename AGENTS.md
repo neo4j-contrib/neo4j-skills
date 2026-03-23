@@ -319,6 +319,15 @@ DO-NOT blocks for all three are now in: SKILL.md (QPE section), cypher25-pattern
 - `gds.util.asNode(nodeId)` is required to convert GDS internal integer nodeIds back to Neo4j nodes in RETURN.
 - GDS is NOT on demo.neo4jlabs.com — never use `gds.*` unless schema context explicitly states `gds: true`.
 
+## APOC Capabilities
+
+- `capabilities: [apoc, apoc-extended]` in `database:` block — runner.py injects this as a line in the schema context block.
+- `apoc-core` is bundled with Neo4j 5+ and always available in Aura. `apoc-extended` is NOT in Aura (load/export procedures).
+- APOC L3 reference is in `read/cypher25-apoc.md` (utility functions are read-only conceptually). Sections: map, coll, text, date/temporal, path traversal, load/export, availability check.
+- `apoc.path.*` relationship filter syntax: `'REL_TYPE>'` = outgoing, `'<REL_TYPE'` = incoming, `'REL_TYPE'` = either. Combine with `|`.
+- `apoc.date.*` operates on epoch ms/seconds — NOT Neo4j temporal types. Use `apoc.temporal.*` for Neo4j `date()`/`datetime()`.
+- `capabilities` is a list field (distinct from the boolean `gds: true`) — more extensible for future plugins (genai, etc.).
+
 ## SKILL.md Authoring Notes
 
 - SKILL.md line budget is 300 lines (not 300 non-blank lines). Inline `CYPHER 25` on the same line as each query to save ~10 lines in the Schema-First Protocol section.

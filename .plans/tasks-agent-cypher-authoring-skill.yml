@@ -1057,7 +1057,8 @@ tasks:
          - apoc.load.* (CSV/JSON load)
       3. SKILL.md: add capability-gating rule (only use apoc.* if capabilities includes apoc)
       4. Note that Aura always has apoc-core; local/cloud depends on installation
-    status: pending
+    status: completed
+    completed_at: "2026-03-23T16:00:00Z"
     dependencies:
       - task-048
     acceptance_criteria:

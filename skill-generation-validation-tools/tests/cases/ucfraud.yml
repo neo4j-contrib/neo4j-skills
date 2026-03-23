@@ -10,6 +10,7 @@ database:
   database: neo4j
   neo4j_version: "2026.02.1"
   cypher_version: "25"
+  capabilities: [apoc, apoc-extended]
 
 dataset:
   name: ucfraud

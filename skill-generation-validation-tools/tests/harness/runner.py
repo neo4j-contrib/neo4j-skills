@@ -398,6 +398,11 @@ def _format_dataset_schema(
         # GDS availability — inject so model knows whether gds.* is usable
         if db_block.get("gds") is True:
             lines.append("gds: true  (Graph Data Science library installed — gds.* procedures available)")
+        # Capabilities (apoc, apoc-extended, genai, etc.)
+        capabilities = db_block.get("capabilities", [])
+        if capabilities:
+            caps_str = ", ".join(str(c) for c in capabilities)
+            lines.append(f"capabilities: [{caps_str}]  (optional plugins available — use apoc.* only when 'apoc' listed)")
 
     # ── Nodes ──────────────────────────────────────────────────────────────────
     nodes = schema.get("nodes", {})

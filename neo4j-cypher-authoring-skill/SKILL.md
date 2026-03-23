@@ -210,6 +210,21 @@ RETURN n.name,
 
 ---
 
+### APOC Library (apoc.*)
+
+> **Capability gate** — only use `apoc.*` procedures and functions when the schema context `capabilities` list includes `"apoc"`. **Aura always has apoc-core** (bundled); local/cloud Neo4j requires the plugin to be installed. `apoc-extended` (load/export procedures) is NOT available in Aura.
+
+**When APOC is available**: Load `read/cypher25-apoc.md` for procedure signatures and examples. Key categories:
+- `apoc.map.*` — build/merge/transform maps; `apoc.coll.*` — set ops, flatten, zip, partition
+- `apoc.text.*` — fuzzy matching (`jaroWinklerDistance`), Soundex, regex groups, camelCase/snakeCase
+- `apoc.date.*` — parse/format non-ISO date strings via epoch ms; `apoc.temporal.*` — truncate/format Neo4j temporal values
+- `apoc.path.*` — configurable BFS/DFS traversal with label/rel filters (`apoc.path.expand`, `subgraphNodes`)
+- `apoc.load.*` / `apoc.export.*` — CSV/JSON load-import/export (requires `"apoc-extended"` in capabilities; NOT in Aura)
+
+**When APOC is NOT listed**: prefer native Cypher — `collect()`, `size()`, `[x IN list WHERE ...]`, `duration.between()`, `SHORTEST`. Do NOT emit any `apoc.*` call.
+
+---
+
 ### Graph Data Science (GDS) Library
 
 > **GDS is NOT available by default** — only use GDS procedures (`gds.*`) when the schema context explicitly states `gds: true` or lists GDS procedures. On demo databases and most cloud instances, GDS is not installed.
@@ -328,6 +343,7 @@ CYPHER 25 USE myDatabase MATCH (n:Person) RETURN n.name LIMIT 5;
 | Type errors, null propagation, casting, type predicates | `read/cypher25-types-and-nulls.md` |
 | Batch writes, CALL IN TRANSACTIONS | `write/cypher25-call-in-transactions.md` |
 | GDS algorithms (`gds.*`) — only when `gds: true` in schema | `write/cypher25-gds.md` |
+| APOC procedures/functions (`apoc.*`) — only when `capabilities` includes `"apoc"` | `read/cypher25-apoc.md` |
 | Index creation, SEARCH, fulltext, vector, hints | `schema/cypher25-indexes.md` |
 | GRAPH TYPE DDL (Enterprise Preview — 2026.02+) | `schema/cypher25-graph-types.md` |
 | Naming, casing, formatting (all categories) | `cypher-style-guide.md` |
