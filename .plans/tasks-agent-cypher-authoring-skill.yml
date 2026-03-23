@@ -1,7 +1,7 @@
 feature: agent-cypher-authoring-skill
 prd: ./prd-agent-cypher-authoring-skill.md
 created_at: 2026-03-19T00:00:00Z
-updated_at: 2026-03-21T13:00:00Z
+updated_at: 2026-03-23T12:00:00Z
 
 tasks:
   - id: task-001
@@ -1093,3 +1093,120 @@ tasks:
       - "SKILL.md routes to cypher25-genai.md for ai.* calls"
       - "Aura always-on note documented"
       - "Distinction between ai.similarity.cosine() (scalar) vs vector index search (top-K) documented"
+
+  - id: task-051
+    title: "Fix zero-row test cases: verify entity names against live DBs (REQ-F-041)"
+    description: |
+      8 test cases across goodreads, legalcontracts, retail, and northwind fail Gate 2 because
+      they reference entity names, IDs, or enum values that don't exist in the current DB.
+      For each failing case:
+      1. Identify the literal value causing 0 rows (book title, party name, customer ID, product, etc.)
+      2. Query the live DB to find a verified value that exists
+      3. Update the test case question + notes with the correct value
+      4. Re-run the domain harness to confirm Gate 2 passes
+      Known affected cases (from 2026-03-23 run):
+      - goodreads: 2 cases with book title path queries (title literals not found)
+      - legalcontracts: 2-3 cases with Party name and contract_type enum mismatches
+      - retail: 1-2 cases with customer ID or Article label mismatches
+      - northwind: 1 case with Product.discontinued=true (no such products in DB)
+    status: pending
+    dependencies:
+      - task-038
+    acceptance_criteria:
+      - "All previously zero-row Gate 2 failures in goodreads, legalcontracts, retail, northwind now PASS"
+      - "Corrected entity values verified against live DB before committing"
+      - "No new zero-row failures introduced"
+
+  - id: task-052
+    title: "Document GDS streaming-only default in cypher25-gds.md (REQ-F-042)"
+    description: |
+      Add a prominent note to write/cypher25-gds.md and SKILL.md GDS section:
+      GDS algorithm procedures (gds.louvain.stream, gds.pageRank.stream, etc.) return
+      results only during execution — they do NOT store properties on nodes unless a
+      separate write-back step (gds.louvain.write, gds.pageRank.write) is run.
+      Never assume properties like `node.louvainCommunity`, `node.pageRank`, etc. exist
+      unless schema context confirms a write-back was performed.
+      Add a negative example in the DO-NOT section:
+        // WRONG — assumes louvainCommunity is a stored property
+        MATCH (c:Customer) WHERE c.louvainCommunity = $community RETURN c
+        // CORRECT — stream results from GDS instead
+        CALL gds.louvain.stream('myGraph') YIELD nodeId, communityId
+        WHERE communityId = $community
+        RETURN gds.util.asNode(nodeId) AS customer
+    status: pending
+    dependencies:
+      - task-048
+    acceptance_criteria:
+      - "cypher25-gds.md has prominent streaming-vs-write-back section"
+      - "SKILL.md GDS note warns against assuming stored properties"
+      - "DO-NOT example added for louvainCommunity-style property access"
+      - "dry-run passes (318 cases)"
+
+  - id: task-053
+    title: "Fix Gate 1 validator false positive for GRAPH TYPE DDL (REQ-F-043)"
+    description: |
+      Two ucfraud test cases (ucf-graphtype-002, ucf-graphtype-003) fail Gate 1 with
+      ALTER CURRENT GRAPH TYPE ADD { ... } queries. Gate 1 should only block GQL-only
+      aliases (LET, FINISH, FILTER, INSERT, bare NEXT) — not valid Neo4j Enterprise DDL.
+      Steps:
+      1. Reproduce: run ucfraud harness and confirm ALTER CURRENT GRAPH TYPE fails Gate 1
+      2. Identify which Gate 1 regex is triggering (likely a broad pattern)
+      3. Add a whitelist / negative lookbehind for ALTER CURRENT GRAPH TYPE, SHOW GRAPH TYPES,
+         CREATE GRAPH TYPE to exclude them from GQL-only clause detection
+      4. Re-run to confirm the cases now reach Gate 2 (DDL execution)
+      5. If Gate 2 fails because local instance is Community edition, mark test cases with
+         min_version: "2026.02" and edition: enterprise appropriately
+    status: pending
+    dependencies: []
+    acceptance_criteria:
+      - "ALTER CURRENT GRAPH TYPE queries no longer fail Gate 1"
+      - "Gate 1 still correctly rejects bare LET, FINISH, FILTER, INSERT, NEXT"
+      - "make smoke passes"
+      - "ucfraud graph-type cases reach Gate 2 (pass or fail with correct gate)"
+
+  - id: task-054
+    title: "Fix companies-expert-002: fulltext index used on wrong label (REQ-F-044)"
+    description: |
+      Test case companies-expert-002 generates a query that calls
+      db.index.fulltext.queryNodes('entity', ...) and then filters WHERE node:Article.
+      The 'entity' fulltext index is on Organization(name), not Article — this always
+      returns 0 rows.
+      Fix:
+      1. Rewrite the test case question to ask about organizations by topic
+         (so the entity fulltext index is used correctly for Organization lookup), OR
+      2. Add a second fulltext/vector search case that correctly uses the 'news' vector
+         index on Chunk nodes for article content search
+      3. Add a schema note in companies.yml: 'entity index is on Organization(name) —
+         never use it to search for Articles'
+      4. Verify the fixed case passes Gate 2 with actual results
+    status: pending
+    dependencies: []
+    acceptance_criteria:
+      - "companies-expert-002 passes Gate 2 with actual_rows >= 1"
+      - "Schema note added clarifying entity index targets Organizations only"
+      - "No other companies cases use entity index with wrong label"
+
+  - id: task-055
+    title: "Add parallel runtime documentation to skill (REQ-F-045)"
+    description: |
+      Neo4j supports a parallel runtime for compute-intensive analytics queries.
+      Add content covering:
+      1. Runtime hint syntax: CYPHER runtime=parallel MATCH ...
+      2. Query types that benefit: full graph scans, large aggregations, analytics
+         (not OLTP short-hop lookups, not write queries)
+      3. Version availability and edition requirements
+      4. When NOT to use: OLTP queries, write queries, short-hop traversals
+      5. PROFILE interaction: confirm plan shows parallel operators
+      Deliverables:
+      - Add a "Parallel Runtime" section to an appropriate L3 reference file
+        (likely references/read/cypher25-functions.md or a new cypher25-runtime.md)
+      - Add routing entry in SKILL.md decision tree
+      - Add a note in SKILL.md's performance section referencing parallel runtime
+        as an option for analytics queries that EXPLAIN shows as full scans
+    status: pending
+    dependencies: []
+    acceptance_criteria:
+      - "CYPHER runtime=parallel syntax documented with example"
+      - "Applicable vs non-applicable query types listed"
+      - "SKILL.md decision tree has routing entry for parallel runtime"
+      - "dry-run passes (318 cases)"
