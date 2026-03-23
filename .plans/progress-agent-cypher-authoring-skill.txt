@@ -1913,3 +1913,75 @@ Key Decisions:
 - native degree centrality case (plugin-003) works without GDS using COUNT {}
 
 Next Task: task-058 (Expand recommendations domain to ≥ 100 test cases)
+
+================================================================================
+TASK-058: Expand recommendations domain to ≥ 100 test cases (REQ-F-047)
+Date: 2026-03-23T23:30:00Z
+================================================================================
+Summary: Expanded recommendations.yml from 33 to 101 test cases covering all 8
+required pattern categories. Added 68 new cases organized into sections:
+
+- Additional Basic (10 cases: rec-basic-007 through rec-basic-016)
+  Patterns: actor counts, director lookup, top-rated movies, genre filter,
+  filmography, user/genre counts, decade filter, role lookup, director listing
+
+- Additional Intermediate (12 cases: rec-intermediate-007 through rec-intermediate-018)
+  Patterns: avg rating by genre, rating distribution, 2000s movies, multilingual
+  films, decade genre breakdown, prolific actors by decade, runtime filter,
+  critical/commercial success, decade movie counts, contrarian raters,
+  untagged movies, top-grossing films
+
+- Additional Advanced (12 cases: rec-advanced-007 through rec-advanced-018)
+  Patterns: IMDb rating tiers by genre, actor genre diversity, power user picks,
+  co-star pairs, recent high-rated movies, user-exclusive movies, multi-genre
+  movies, recent ratings, prolific directors by genre, actor+director breakdown,
+  title CONTAINS filter, genre-crossing actors
+
+- Additional Complex (5 cases: rec-complex-005 through rec-complex-009)
+  Patterns: full movie profile (COLLECT subqueries), user similarity matrix,
+  actor collaboration network (QPE), genre co-occurrence pairs, personalised
+  watchlist pipeline
+
+- Additional Expert (5 cases: rec-expert-006 through rec-expert-010)
+  Patterns: QPE 3-degree separation from Pulp Fiction, ALL SHORTEST paths
+  Kevin Bacon/Tom Hanks, top-3-genre scoring pipeline, fulltext+subquery,
+  end-to-end CF recommendation pipeline with peer+genre scoring
+
+- Write Cases (2 cases: rec-write-001, rec-write-002)
+  Marked is_write_query: true; will SKIP on read-only demo server
+
+- Schema Introspection (2 cases: rec-schema-001, rec-schema-002)
+  SHOW INDEXES, SHOW CONSTRAINTS
+
+- Edge Cases (4 cases: rec-edge-001 through rec-edge-004)
+  Unrated movies, people with no films, single-rating users, missing plots
+
+- APOC Utility (2 cases: rec-apoc-001, rec-apoc-002)
+  Text normalization, multi-genre filter
+
+- Extra Cases (14 cases: rec-extra-001 through rec-extra-014)
+  Film credits totals, budget by decade, genre-time filter, dominant genre
+  per decade, blockbuster IMDb avg, director+actor same film, language analysis,
+  critic vs audience gap, Spielberg filmography, largest cast, plot completeness,
+  recent Action films, Matrix+PulpFiction connection, Inception cast
+
+All pattern categories covered (8/8):
+  ✅ Aggregations (avg, count, stddev, distribution)
+  ✅ Temporal (decade ranges, date filtering, timestamp ordering)
+  ✅ Multi-hop (actor→movie chains up to 3 hops, QPE)
+  ✅ Write (MERGE user rating, CREATE user — marked is_write_query: true)
+  ✅ Plugin (vector search via procedure, SEARCH clause min_version: 2026.02)
+  ✅ Edge cases (no ratings, minimal activity, null properties)
+  ✅ Schema introspection (SHOW INDEXES, SHOW CONSTRAINTS)
+  ✅ APOC (text utilities, multi-value filter)
+
+Also fixed:
+- neo4j_version updated from "2026.01" to "2026.02" to match demo server upgrade
+- rec-search-001 and rec-search-002 min_version updated to "2026.02"
+
+Validation: Dry-run passes with 101 cases (no YAML errors, no structural issues)
+
+Files Changed:
+- skill-generation-validation-tools/tests/cases/recommendations.yml
+  (33 → 101 test cases; neo4j_version 2026.01 → 2026.02; search min_version fixed)
+- .plans/tasks-agent-cypher-authoring-skill.yml (task-058 status → completed)

@@ -8,7 +8,7 @@ database:
   uri: neo4j+s://demo.neo4jlabs.com:7687
   username: recommendations
   database: recommendations
-  neo4j_version: "2026.01"
+  neo4j_version: "2026.02"
   cypher_version: "25"
   capabilities: [gds, apoc, apoc-extended, genai]
   read_only: true  # demo.neo4jlabs.com — write cases SKIP rather than FAIL
@@ -738,7 +738,7 @@ cases:
     max_allocated_memory_bytes: 20971520
     max_runtime_ms: 15000
     is_write_query: false
-    min_version: "2026.01"
+    min_version: "2026.02"
     notes: "SEARCH clause vector on Movie(plotEmbedding) using index 'moviePlotsEmbedding': MATCH (m:Movie) SEARCH (m) USING VECTOR INDEX moviePlotsEmbedding WITH QUERY VECTOR $embedding RETURN m.title, score LIMIT 5. Index is 'moviePlotsEmbedding' (NOT 'moviePlots')."
 
   - id: rec-search-002
@@ -752,5 +752,1411 @@ cases:
     max_allocated_memory_bytes: 20971520
     max_runtime_ms: 15000
     is_write_query: false
-    min_version: "2026.01"
+    min_version: "2026.02"
     notes: "SEARCH clause with WHERE score > 0.7 and extra property return: MATCH (m:Movie) SEARCH (m) USING VECTOR INDEX moviePlotsEmbedding WITH QUERY VECTOR $embedding WHERE score > 0.7 RETURN m.title, m.imdbRating, score LIMIT 10. Index: 'moviePlotsEmbedding'."
+
+  # ─── ADDITIONAL BASIC (10 cases) ──────────────────────────────────────────────
+
+  - id: rec-basic-007
+    question: "How many actors are in our database?"
+    database: recommendations
+    difficulty: basic
+    tags: [match, aggregation, count]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 10000
+    max_allocated_memory_bytes: 2097152
+    max_runtime_ms: 3000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (p:Person)-[:ACTED_IN]->(:Movie)
+      RETURN count(DISTINCT p) AS actorCount
+
+  - id: rec-basic-008
+    question: "Who directed Forrest Gump?"
+    database: recommendations
+    difficulty: basic
+    tags: [match, relationship, filter]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 10000
+    max_allocated_memory_bytes: 2097152
+    max_runtime_ms: 3000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (p:Person)-[:DIRECTED]->(m:Movie)
+      WHERE m.title CONTAINS 'Forrest Gump'
+      RETURN p.name AS director
+
+  - id: rec-basic-009
+    question: "Show me the 10 movies with the highest IMDb ratings."
+    database: recommendations
+    difficulty: basic
+    tags: [match, order-by, limit]
+    domain: recommendations
+    min_results: 10
+    max_db_hits: 20000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 5000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (m:Movie)
+      WHERE m.imdbRating IS NOT NULL
+      RETURN m.title AS title, m.imdbRating AS imdbRating
+      ORDER BY m.imdbRating DESC
+      LIMIT 10
+
+  - id: rec-basic-010
+    question: "What movies are in the Comedy genre?"
+    database: recommendations
+    difficulty: basic
+    tags: [match, relationship, filter]
+    domain: recommendations
+    min_results: 10
+    max_db_hits: 20000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 5000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (m:Movie)-[:IN_GENRE]->(g:Genre {name: 'Comedy'})
+      RETURN m.title AS title
+      ORDER BY m.title
+      LIMIT 20
+
+  - id: rec-basic-011
+    question: "What was Keanu Reeves in?"
+    database: recommendations
+    difficulty: basic
+    tags: [match, relationship, filter]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 10000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 5000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (p:Person {name: 'Keanu Reeves'})-[:ACTED_IN]->(m:Movie)
+      RETURN m.title AS title, m.released AS released
+      ORDER BY m.released DESC
+
+  - id: rec-basic-012
+    question: "How many users have submitted ratings in our system?"
+    database: recommendations
+    difficulty: basic
+    tags: [match, aggregation, count]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 10000
+    max_allocated_memory_bytes: 2097152
+    max_runtime_ms: 3000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (u:User)
+      RETURN count(u) AS userCount
+
+  - id: rec-basic-013
+    question: "How many genres does our catalogue cover?"
+    database: recommendations
+    difficulty: basic
+    tags: [match, aggregation, count]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 5000
+    max_allocated_memory_bytes: 2097152
+    max_runtime_ms: 3000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (g:Genre)
+      RETURN count(g) AS genreCount
+
+  - id: rec-basic-014
+    question: "Show me movies from the 1980s."
+    database: recommendations
+    difficulty: basic
+    tags: [match, filter, temporal]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 20000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 5000
+    is_write_query: false
+    notes: "1980s → released >= '1980-01-01' AND < '1990-01-01'; released is STRING in ISO-8601 format"
+    cypher: |
+      CYPHER 25
+      MATCH (m:Movie)
+      WHERE m.released >= '1980-01-01' AND m.released < '1990-01-01'
+      RETURN m.title AS title, m.released AS released
+      ORDER BY m.released DESC
+      LIMIT 20
+
+  - id: rec-basic-015
+    question: "What roles did Carrie-Anne Moss play in movies?"
+    database: recommendations
+    difficulty: basic
+    tags: [match, relationship, filter, property]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 10000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 5000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (p:Person {name: 'Carrie-Anne Moss'})-[r:ACTED_IN]->(m:Movie)
+      RETURN m.title AS movie, r.role AS role
+
+  - id: rec-basic-016
+    question: "Give me a list of all directors in our database."
+    database: recommendations
+    difficulty: basic
+    tags: [match, relationship, distinct]
+    domain: recommendations
+    min_results: 10
+    max_db_hits: 20000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 5000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (p:Person)-[:DIRECTED]->(:Movie)
+      RETURN DISTINCT p.name AS director
+      ORDER BY p.name
+      LIMIT 50
+
+  # ─── ADDITIONAL INTERMEDIATE (12 cases) ───────────────────────────────────────
+
+  - id: rec-intermediate-007
+    question: "What is the average rating users have given to each genre? Show genres with the highest average user ratings first."
+    database: recommendations
+    difficulty: intermediate
+    tags: [match, aggregation, avg, order-by, relationship]
+    domain: recommendations
+    min_results: 5
+    max_db_hits: 200000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 10000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (u:User)-[r:RATED]->(m:Movie)-[:IN_GENRE]->(g:Genre)
+      WITH g, avg(r.rating) AS avgUserRating, count(r) AS ratingCount
+      WHERE ratingCount >= 10
+      RETURN g.name AS genre, round(avgUserRating, 3) AS avgUserRating, ratingCount
+      ORDER BY avgUserRating DESC
+
+  - id: rec-intermediate-008
+    question: "How are user ratings distributed? Show the count of ratings for each star value (0.5 to 5 stars)."
+    database: recommendations
+    difficulty: intermediate
+    tags: [match, aggregation, count, group-by]
+    domain: recommendations
+    min_results: 5
+    max_db_hits: 200000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 10000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (u:User)-[r:RATED]->(m:Movie)
+      WITH r.rating AS rating, count(*) AS cnt
+      RETURN rating, cnt
+      ORDER BY rating
+
+  - id: rec-intermediate-009
+    question: "Which movies were released in the 2000s decade — from 2000 to 2009? Show them sorted by release date."
+    database: recommendations
+    difficulty: intermediate
+    tags: [match, filter, temporal, order-by]
+    domain: recommendations
+    min_results: 10
+    max_db_hits: 50000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 8000
+    is_write_query: false
+    notes: "2000s decade → released >= '2000-01-01' AND < '2010-01-01'; released is STRING"
+    cypher: |
+      CYPHER 25
+      MATCH (m:Movie)
+      WHERE m.released >= '2000-01-01' AND m.released < '2010-01-01'
+      RETURN m.title AS title, m.released AS released
+      ORDER BY m.released DESC
+      LIMIT 30
+
+  - id: rec-intermediate-010
+    question: "Which movies are available in multiple languages — more than just English? Show up to 20."
+    database: recommendations
+    difficulty: intermediate
+    tags: [match, filter, list-property, size]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 50000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 8000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (m:Movie)
+      WHERE m.languages IS NOT NULL AND size(m.languages) > 1
+      RETURN m.title AS title, m.languages AS languages
+      ORDER BY size(m.languages) DESC, m.title
+      LIMIT 20
+
+  - id: rec-intermediate-011
+    question: "How many movies in each genre were released per decade? Show the count for the 1990s and 2000s."
+    database: recommendations
+    difficulty: intermediate
+    tags: [match, filter, temporal, aggregation, count, relationship]
+    domain: recommendations
+    min_results: 5
+    max_db_hits: 100000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 10000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (m:Movie)-[:IN_GENRE]->(g:Genre)
+      WHERE m.released >= '1990-01-01' AND m.released < '2010-01-01'
+      WITH g.name AS genre,
+           CASE WHEN m.released >= '1990-01-01' AND m.released < '2000-01-01' THEN '1990s' ELSE '2000s' END AS decade,
+           count(m) AS cnt
+      RETURN genre, decade, cnt
+      ORDER BY genre, decade
+
+  - id: rec-intermediate-012
+    question: "Who were the most prolific actors in the 1990s — appearing in the most films released during that decade?"
+    database: recommendations
+    difficulty: intermediate
+    tags: [match, filter, temporal, aggregation, count, order-by]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 100000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 10000
+    is_write_query: false
+    notes: "1990s → m.released >= '1990-01-01' AND < '2000-01-01'"
+    cypher: |
+      CYPHER 25
+      MATCH (p:Person)-[:ACTED_IN]->(m:Movie)
+      WHERE m.released >= '1990-01-01' AND m.released < '2000-01-01'
+      WITH p, count(m) AS moviesInDecade
+      WHERE moviesInDecade >= 3
+      RETURN p.name AS actor, moviesInDecade
+      ORDER BY moviesInDecade DESC
+      LIMIT 15
+
+  - id: rec-intermediate-013
+    question: "What are the longest movies in the catalogue — show films over 2.5 hours with their runtime and IMDb rating?"
+    database: recommendations
+    difficulty: intermediate
+    tags: [match, filter, order-by, limit]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 50000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 8000
+    is_write_query: false
+    notes: "2.5 hours = 150 minutes; runtime is stored in minutes as INTEGER"
+    cypher: |
+      CYPHER 25
+      MATCH (m:Movie)
+      WHERE m.runtime IS NOT NULL AND m.runtime > 150
+      RETURN m.title AS title, m.runtime AS runtimeMinutes, m.imdbRating AS imdbRating
+      ORDER BY m.runtime DESC
+      LIMIT 20
+
+  - id: rec-intermediate-014
+    question: "Which movies have both strong critical acclaim and commercial success — high IMDb ratings and high revenue?"
+    database: recommendations
+    difficulty: intermediate
+    tags: [match, filter, aggregation]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 50000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 8000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (m:Movie)
+      WHERE m.imdbRating >= 7.5
+        AND m.revenue IS NOT NULL AND m.revenue > 100000000
+      RETURN m.title AS title, m.imdbRating AS imdbRating, m.revenue AS revenue
+      ORDER BY m.imdbRating DESC, m.revenue DESC
+      LIMIT 20
+
+  - id: rec-intermediate-015
+    question: "For each decade since 1960, how many movies are in our catalogue?"
+    database: recommendations
+    difficulty: intermediate
+    tags: [match, temporal, aggregation, count, group-by]
+    domain: recommendations
+    min_results: 3
+    max_db_hits: 50000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 8000
+    is_write_query: false
+    notes: "decade computed from released string using substring: toInteger(substring(m.released, 0, 4)) / 10 * 10"
+    cypher: |
+      CYPHER 25
+      MATCH (m:Movie)
+      WHERE m.released IS NOT NULL AND m.released >= '1960-01-01'
+      WITH (toInteger(substring(m.released, 0, 4)) / 10) * 10 AS decade, count(m) AS movieCount
+      RETURN toString(decade) + 's' AS decade, movieCount
+      ORDER BY decade
+
+  - id: rec-intermediate-016
+    question: "Which users gave a 5-star rating to a movie that most users rated poorly (below 3 stars on average)?"
+    database: recommendations
+    difficulty: intermediate
+    tags: [match, filter, aggregation, avg, relationship]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 300000
+    max_allocated_memory_bytes: 30000000
+    max_runtime_ms: 15000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (u2:User)-[r2:RATED]->(m:Movie)
+      WITH m, avg(r2.rating) AS avgRating, count(r2) AS ratingCount
+      WHERE avgRating < 3.0 AND ratingCount >= 5
+      MATCH (u:User)-[r:RATED]->(m)
+      WHERE r.rating = 5.0
+      RETURN u.name AS userName, m.title AS movie, r.rating AS userRating, round(avgRating, 2) AS communityAvg
+      ORDER BY m.title
+      LIMIT 20
+
+  - id: rec-intermediate-017
+    question: "Show actors and directors who are in the database but have not been associated with any Genre category (their movies have no genre tags)."
+    database: recommendations
+    difficulty: intermediate
+    tags: [match, optional-match, null, filter]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 100000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 10000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (p:Person)-[:ACTED_IN|DIRECTED]->(m:Movie)
+      WHERE NOT EXISTS { (m)-[:IN_GENRE]->(:Genre) }
+      RETURN DISTINCT p.name AS person, m.title AS movie
+      ORDER BY m.title
+      LIMIT 20
+
+  - id: rec-intermediate-018
+    question: "What are the top 5 highest-grossing movies of all time in our catalogue?"
+    database: recommendations
+    difficulty: intermediate
+    tags: [match, filter, order-by, limit]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 20000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 5000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (m:Movie)
+      WHERE m.revenue IS NOT NULL
+      RETURN m.title AS title, m.revenue AS revenue
+      ORDER BY m.revenue DESC
+      LIMIT 5
+
+  # ─── ADDITIONAL ADVANCED (12 cases) ───────────────────────────────────────────
+
+  - id: rec-advanced-007
+    question: "For each genre, what is the rating distribution — how many movies received each IMDb rating tier (below 5, 5-7, above 7)? Show a summary breakdown."
+    database: recommendations
+    difficulty: advanced
+    tags: [match, aggregation, case, relationship, count]
+    domain: recommendations
+    min_results: 5
+    max_db_hits: 200000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 15000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (m:Movie)-[:IN_GENRE]->(g:Genre)
+      WHERE m.imdbRating IS NOT NULL
+      WITH g.name AS genre,
+           count(CASE WHEN m.imdbRating < 5.0 THEN 1 END) AS lowRated,
+           count(CASE WHEN m.imdbRating >= 5.0 AND m.imdbRating <= 7.0 THEN 1 END) AS midRated,
+           count(CASE WHEN m.imdbRating > 7.0 THEN 1 END) AS highRated
+      RETURN genre, lowRated, midRated, highRated
+      ORDER BY highRated DESC
+
+  - id: rec-advanced-008
+    question: "Which actors have the most diverse career — appearing in the highest number of different genres?"
+    database: recommendations
+    difficulty: advanced
+    tags: [match, relationship, aggregation, count, distinct, order-by]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 200000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 15000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (p:Person)-[:ACTED_IN]->(m:Movie)-[:IN_GENRE]->(g:Genre)
+      WITH p, count(DISTINCT g) AS genreCount, count(DISTINCT m) AS movieCount
+      WHERE movieCount >= 5
+      RETURN p.name AS actor, genreCount, movieCount
+      ORDER BY genreCount DESC, movieCount DESC
+      LIMIT 15
+
+  - id: rec-advanced-009
+    question: "What movies did the user who gave the most ratings overall rate most highly? Find that user's personal 5-star picks."
+    database: recommendations
+    difficulty: advanced
+    tags: [match, aggregation, order-by, limit, subquery, collect]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 300000
+    max_allocated_memory_bytes: 31457280
+    max_runtime_ms: 20000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (u:User)-[r:RATED]->(m:Movie)
+      WITH u, count(r) AS totalRatings
+      ORDER BY totalRatings DESC
+      LIMIT 1
+      MATCH (u)-[r2:RATED]->(topMovie:Movie)
+      WHERE r2.rating = 5.0
+      RETURN u.name AS topRater, topMovie.title AS favMovie
+      ORDER BY topMovie.title
+
+  - id: rec-advanced-010
+    question: "Which pairs of actors frequently co-star together? Show actor duos who appeared in at least 3 of the same movies."
+    database: recommendations
+    difficulty: advanced
+    tags: [match, relationship, aggregation, count, filter, pairs]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 500000
+    max_allocated_memory_bytes: 52428800
+    max_runtime_ms: 20000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (a1:Person)-[:ACTED_IN]->(m:Movie)<-[:ACTED_IN]-(a2:Person)
+      WHERE a1.name < a2.name
+      WITH a1, a2, count(DISTINCT m) AS sharedMovies
+      WHERE sharedMovies >= 3
+      RETURN a1.name AS actor1, a2.name AS actor2, sharedMovies
+      ORDER BY sharedMovies DESC
+      LIMIT 20
+
+  - id: rec-advanced-011
+    question: "Show movies released in the last 20 years (after 2005) that also have a high IMDb rating (above 8.0) and list their genres."
+    database: recommendations
+    difficulty: advanced
+    tags: [match, filter, temporal, collect, relationship]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 100000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 10000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (m:Movie)
+      WHERE m.released > '2005-01-01' AND m.imdbRating > 8.0
+      WITH m,
+           COLLECT { MATCH (m)-[:IN_GENRE]->(g:Genre) RETURN g.name } AS genres
+      RETURN m.title AS title, m.released AS released, m.imdbRating AS imdbRating, genres
+      ORDER BY m.imdbRating DESC
+      LIMIT 20
+
+  - id: rec-advanced-012
+    question: "Which movies have been rated by User 534 but not by User 1? Show movies unique to User 534's viewing history."
+    database: recommendations
+    difficulty: advanced
+    tags: [match, filter, not-exists, relationship]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 200000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 15000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (u534:User {userId: '534'})-[r:RATED]->(m:Movie)
+      WHERE NOT EXISTS { (:User {userId: '1'})-[:RATED]->(m) }
+      RETURN m.title AS title, r.rating AS rating
+      ORDER BY r.rating DESC
+
+  - id: rec-advanced-013
+    question: "Which movies span multiple genres — belonging to 3 or more genre categories? Show their title and full genre list."
+    database: recommendations
+    difficulty: advanced
+    tags: [match, relationship, aggregation, count, collect, filter]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 100000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 10000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (m:Movie)-[:IN_GENRE]->(g:Genre)
+      WITH m, collect(g.name) AS genres, count(g) AS genreCount
+      WHERE genreCount >= 3
+      RETURN m.title AS title, genres, genreCount
+      ORDER BY genreCount DESC, m.title
+      LIMIT 30
+
+  - id: rec-advanced-014
+    question: "What were the most recently rated movies on our platform? Show the 15 most recently submitted user ratings with movie title and rating score."
+    database: recommendations
+    difficulty: advanced
+    tags: [match, order-by, limit, relationship, temporal, timestamp]
+    domain: recommendations
+    min_results: 15
+    max_db_hits: 200000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 15000
+    is_write_query: false
+    notes: "timestamp is Unix epoch INTEGER — ORDER BY r.timestamp DESC for most recent"
+    cypher: |
+      CYPHER 25
+      MATCH (u:User)-[r:RATED]->(m:Movie)
+      WHERE r.timestamp IS NOT NULL
+      RETURN u.name AS user, m.title AS movie, r.rating AS rating, r.timestamp AS ratingTime
+      ORDER BY r.timestamp DESC
+      LIMIT 15
+
+  - id: rec-advanced-015
+    question: "Which directors have worked across the most different genres in their filmography?"
+    database: recommendations
+    difficulty: advanced
+    tags: [match, relationship, aggregation, count, distinct, order-by]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 100000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 10000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (p:Person)-[:DIRECTED]->(m:Movie)-[:IN_GENRE]->(g:Genre)
+      WITH p, count(DISTINCT g) AS genreCount, count(DISTINCT m) AS movieCount
+      WHERE movieCount >= 2
+      RETURN p.name AS director, genreCount, movieCount
+      ORDER BY genreCount DESC, movieCount DESC
+      LIMIT 15
+
+  - id: rec-advanced-016
+    question: "Show me a breakdown of how many movies each person in the database directed versus acted in. Only include people who have done both."
+    database: recommendations
+    difficulty: advanced
+    tags: [match, aggregation, count, multiple-relationships, exists]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 100000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 10000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (p:Person)
+      WHERE EXISTS { (p)-[:ACTED_IN]->(:Movie) }
+        AND EXISTS { (p)-[:DIRECTED]->(:Movie) }
+      WITH p,
+           COUNT { (p)-[:ACTED_IN]->(:Movie) } AS actedIn,
+           COUNT { (p)-[:DIRECTED]->(:Movie) } AS directed
+      RETURN p.name AS person, actedIn, directed
+      ORDER BY (actedIn + directed) DESC
+      LIMIT 20
+
+  - id: rec-advanced-017
+    question: "Find movies whose title contains the word 'love' and show their user rating statistics."
+    database: recommendations
+    difficulty: advanced
+    tags: [match, filter, contains, aggregation, avg, count, relationship]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 100000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 10000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (m:Movie)
+      WHERE toLower(m.title) CONTAINS 'love'
+      OPTIONAL MATCH (u:User)-[r:RATED]->(m)
+      WITH m, avg(r.rating) AS avgUserRating, count(r) AS ratingCount
+      RETURN m.title AS title, m.imdbRating AS imdbRating, avgUserRating, ratingCount
+      ORDER BY avgUserRating DESC NULLS LAST
+      LIMIT 20
+
+  - id: rec-advanced-018
+    question: "What actors appeared in both Action and Drama genre movies? Show actors who have crossed these two genres."
+    database: recommendations
+    difficulty: advanced
+    tags: [match, relationship, filter, multiple-genres, exists]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 200000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 15000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (p:Person)-[:ACTED_IN]->(m1:Movie)-[:IN_GENRE]->(g1:Genre {name: 'Action'})
+      WHERE EXISTS { (p)-[:ACTED_IN]->(:Movie)-[:IN_GENRE]->(:Genre {name: 'Drama'}) }
+      RETURN DISTINCT p.name AS actor
+      ORDER BY p.name
+      LIMIT 30
+
+  # ─── ADDITIONAL COMPLEX (5 cases) ─────────────────────────────────────────────
+
+  - id: rec-complex-005
+    question: "Build a full movie profile: for each of the top 5 highest-rated movies, show the cast, director, genres, and average user rating in a single result."
+    database: recommendations
+    difficulty: complex
+    tags: [collect-subquery, aggregation, avg, relationship, multi-hop]
+    domain: recommendations
+    min_results: 5
+    max_db_hits: 500000
+    max_allocated_memory_bytes: 52428800
+    max_runtime_ms: 25000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (m:Movie)
+      WHERE m.imdbRating IS NOT NULL
+      WITH m
+      ORDER BY m.imdbRating DESC
+      LIMIT 5
+      WITH m,
+           COLLECT { MATCH (p:Person)-[:ACTED_IN]->(m) RETURN p.name LIMIT 5 } AS cast,
+           COLLECT { MATCH (p:Person)-[:DIRECTED]->(m) RETURN p.name } AS directors,
+           COLLECT { MATCH (m)-[:IN_GENRE]->(g:Genre) RETURN g.name } AS genres
+      OPTIONAL MATCH (u:User)-[r:RATED]->(m)
+      WITH m, cast, directors, genres, avg(r.rating) AS avgUserRating
+      RETURN m.title AS title, m.imdbRating AS imdbRating,
+             avgUserRating, directors, cast, genres
+
+  - id: rec-complex-006
+    question: "Create a user similarity matrix: for each pair of users who share at least 5 rated movies, calculate their similarity score (number of shared movies). Show the top 20 most similar pairs."
+    database: recommendations
+    difficulty: complex
+    tags: [match, aggregation, count, filter, pairs]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 1000000
+    max_allocated_memory_bytes: 104857600
+    max_runtime_ms: 30000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (u1:User)-[:RATED]->(m:Movie)<-[:RATED]-(u2:User)
+      WHERE u1.userId < u2.userId
+      WITH u1, u2, count(DISTINCT m) AS sharedMovies
+      WHERE sharedMovies >= 5
+      RETURN u1.name AS user1, u2.name AS user2, sharedMovies
+      ORDER BY sharedMovies DESC
+      LIMIT 20
+
+  - id: rec-complex-007
+    question: "Show a network of actor collaborations: starting from Tom Hanks, find actors who co-starred with him, then find actors those people co-starred with — two degrees out. Show all unique actors at each degree."
+    database: recommendations
+    difficulty: complex
+    tags: [match, qpe, quantified-path, multi-hop, relationship, depth]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 1000000
+    max_allocated_memory_bytes: 104857600
+    max_runtime_ms: 30000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (tom:Person {name: 'Tom Hanks'})
+      MATCH (tom)((:Person)-[:ACTED_IN]->(:Movie)<-[:ACTED_IN]-(:Person)){1,2}(colleague:Person)
+      WHERE colleague <> tom
+      RETURN DISTINCT colleague.name AS actor
+      ORDER BY colleague.name
+      LIMIT 50
+
+  - id: rec-complex-008
+    question: "Which genres are most frequently recommended together? Find pairs of genres that appear together in the same movie most often."
+    database: recommendations
+    difficulty: complex
+    tags: [match, relationship, aggregation, count, filter, pairs, genre]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 200000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 20000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (m:Movie)-[:IN_GENRE]->(g1:Genre), (m)-[:IN_GENRE]->(g2:Genre)
+      WHERE g1.name < g2.name
+      WITH g1, g2, count(DISTINCT m) AS coOccurrences
+      WHERE coOccurrences >= 5
+      RETURN g1.name AS genre1, g2.name AS genre2, coOccurrences
+      ORDER BY coOccurrences DESC
+      LIMIT 20
+
+  - id: rec-complex-009
+    question: "For User 1, find a personalised watchlist: movies from their favourite genres (top 3 genres they've rated highly) that they haven't seen yet, sorted by average community rating."
+    database: recommendations
+    difficulty: complex
+    tags: [match, aggregation, filter, not-exists, order-by, collaborative-filtering, genre]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 1000000
+    max_allocated_memory_bytes: 104857600
+    max_runtime_ms: 30000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (target:User {userId: '1'})-[r:RATED]->(m:Movie)-[:IN_GENRE]->(g:Genre)
+      WHERE r.rating >= 4
+      WITH target, g, avg(r.rating) AS genreScore
+      ORDER BY genreScore DESC
+      LIMIT 3
+      WITH target, collect(g) AS favGenres
+      UNWIND favGenres AS fg
+      MATCH (candidate:Movie)-[:IN_GENRE]->(fg)
+      WHERE NOT EXISTS { (target)-[:RATED]->(candidate) }
+      WITH DISTINCT candidate, target
+      OPTIONAL MATCH (u:User)-[r2:RATED]->(candidate)
+      WITH candidate, avg(r2.rating) AS communityRating, count(r2) AS numRatings
+      WHERE numRatings >= 3
+      RETURN candidate.title AS title, round(communityRating, 2) AS communityRating, numRatings
+      ORDER BY communityRating DESC
+      LIMIT 15
+
+  # ─── ADDITIONAL EXPERT (5 cases) ──────────────────────────────────────────────
+
+  - id: rec-expert-006
+    question: "Find all movies within 3 degrees of separation from Pulp Fiction in the actor collaboration network. Show how many unique actors and movies are reachable at each degree."
+    database: recommendations
+    difficulty: expert
+    tags: [qpe, quantified-path, match, relationship, depth, bounded, graph-analysis]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 2000000
+    max_allocated_memory_bytes: 209715200
+    max_runtime_ms: 60000
+    is_write_query: false
+    notes: "Pulp Fiction stored as 'Pulp Fiction' — no article inversion needed"
+    cypher: |
+      CYPHER 25
+      MATCH (start:Movie {title: 'Pulp Fiction'})
+      MATCH (start)((:Movie)<-[:ACTED_IN]-(:Person)-[:ACTED_IN]->(:Movie)){1,3}(reachable:Movie)
+      WHERE reachable <> start
+      RETURN count(DISTINCT reachable) AS reachableMovies
+      LIMIT 1
+
+  - id: rec-expert-007
+    question: "Which movies have Kevin Bacon in common with Tom Hanks — movies they've both appeared in, or movies connected by shared cast members up to 2 hops away?"
+    database: recommendations
+    difficulty: expert
+    tags: [shortest-path, qpe, match, relationship, path, multi-hop]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 1000000
+    max_allocated_memory_bytes: 104857600
+    max_runtime_ms: 30000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (kevin:Person {name: 'Kevin Bacon'}), (tom:Person {name: 'Tom Hanks'})
+      MATCH path = ALL SHORTEST (kevin)-[:ACTED_IN]->(m:Movie)<-[:ACTED_IN]-(tom)
+      RETURN [n IN nodes(path) WHERE n:Movie | n.title] AS sharedMovies,
+             length(path) AS pathLength
+      LIMIT 10
+
+  - id: rec-expert-008
+    question: "For the 3 most popular genres (by total ratings), rank all movies in each genre by their community score (weighted: 60% average user rating + 40% IMDb rating). Show the top 5 in each genre."
+    database: recommendations
+    difficulty: expert
+    tags: [collect-subquery, aggregation, avg, order-by, limit, relationship, scoring, genre]
+    domain: recommendations
+    min_results: 3
+    max_db_hits: 1000000
+    max_allocated_memory_bytes: 104857600
+    max_runtime_ms: 30000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (u:User)-[r:RATED]->(m:Movie)-[:IN_GENRE]->(g:Genre)
+      WITH g, count(r) AS totalRatings
+      ORDER BY totalRatings DESC
+      LIMIT 3
+      WITH collect(g) AS topGenres
+      UNWIND topGenres AS genre
+      WITH genre,
+           COLLECT {
+             MATCH (m2:Movie)-[:IN_GENRE]->(genre)
+             OPTIONAL MATCH (u2:User)-[r2:RATED]->(m2)
+             WITH m2, avg(r2.rating) AS avgUser, m2.imdbRating AS imdb
+             WHERE avgUser IS NOT NULL AND imdb IS NOT NULL
+             RETURN m2.title
+             ORDER BY (0.6 * avgUser + 0.4 * imdb) DESC
+             LIMIT 5
+           } AS topMovies
+      RETURN genre.name AS genre, topMovies
+
+  - id: rec-expert-009
+    question: "Using the fulltext index, find movies whose plot descriptions contain themes of 'artificial intelligence' or 'robot'. Then for each result, find the top 3 actors who have starred in the most similar-themed films."
+    database: recommendations
+    difficulty: expert
+    tags: [fulltext, index, match, relationship, aggregation, count, multi-hop]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 200000
+    max_allocated_memory_bytes: 52428800
+    max_runtime_ms: 20000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      CALL db.index.fulltext.queryNodes('movieFulltext', 'artificial intelligence robot') YIELD node AS m, score
+      WITH m, score
+      ORDER BY score DESC
+      LIMIT 5
+      CALL (m) {
+        MATCH (p:Person)-[:ACTED_IN]->(m)
+        RETURN p.name AS actor
+        LIMIT 3
+      }
+      RETURN m.title AS movie, score, collect(actor) AS topActors
+
+  - id: rec-expert-010
+    question: "Build an end-to-end recommendation pipeline for User 1: find peer users with most shared high-rated movies, get candidate films those peers rated highly that User 1 hasn't seen, score by peer support and genre affinity, and return the top 5 with an explanation of the recommendation reason."
+    database: recommendations
+    difficulty: expert
+    tags: [match, collaborative-filtering, genre-overlap, aggregation, filter, scoring, not-exists, order-by, limit, call-subquery]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 2000000
+    max_allocated_memory_bytes: 209715200
+    max_runtime_ms: 60000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (target:User {userId: '1'})-[r1:RATED]->(seen:Movie)<-[r2:RATED]-(peer:User)
+      WHERE target <> peer AND r1.rating >= 4 AND r2.rating >= 4
+      WITH target, peer, count(DISTINCT seen) AS sharedHighRated
+      ORDER BY sharedHighRated DESC
+      LIMIT 20
+      MATCH (peer)-[rp:RATED]->(candidate:Movie)
+      WHERE rp.rating >= 4
+        AND NOT EXISTS { (target)-[:RATED]->(candidate) }
+      WITH target, candidate,
+           count(DISTINCT peer) AS peerSupport,
+           avg(rp.rating) AS avgPeerRating
+      OPTIONAL MATCH (target)-[rt:RATED]->(seenM:Movie)-[:IN_GENRE]->(g:Genre)<-[:IN_GENRE]-(candidate)
+      WITH candidate, peerSupport, avgPeerRating, count(DISTINCT g) AS genreOverlap
+      WITH candidate,
+           (2.0 * peerSupport + 1.0 * genreOverlap) AS score,
+           peerSupport, avgPeerRating, genreOverlap
+      ORDER BY score DESC
+      LIMIT 5
+      WITH candidate, score, peerSupport, avgPeerRating, genreOverlap,
+           COLLECT { MATCH (candidate)-[:IN_GENRE]->(g:Genre) RETURN g.name } AS genres
+      RETURN candidate.title AS title,
+             genres,
+             peerSupport,
+             round(avgPeerRating, 2) AS avgPeerRating,
+             genreOverlap,
+             round(score, 2) AS score
+
+  # ─── WRITE CASES (skipped on read-only demo, included for skill training) ──────
+
+  - id: rec-write-001
+    question: "Add a new rating of 4.5 stars from user 999 for the movie Toy Story."
+    database: recommendations
+    difficulty: intermediate
+    tags: [merge, write, relationship, rating]
+    domain: recommendations
+    min_results: 0
+    max_db_hits: 10000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 5000
+    is_write_query: true
+    notes: "Demo DB is read-only — this case will be SKIPPED. Included for skill completeness. MERGE rating relationship with ON CREATE SET timestamp."
+    cypher: |
+      CYPHER 25
+      MATCH (u:User {userId: '999'}), (m:Movie)
+      WHERE m.title CONTAINS 'Toy Story'
+      MERGE (u)-[r:RATED]->(m)
+      ON CREATE SET r.rating = 4.5, r.timestamp = timestamp()
+      ON MATCH SET r.rating = 4.5, r.timestamp = timestamp()
+      RETURN u.name AS user, m.title AS movie, r.rating AS rating
+
+  - id: rec-write-002
+    question: "Create a new user named 'Alice Smith' with user ID 10001 in the system."
+    database: recommendations
+    difficulty: basic
+    tags: [create, write, user]
+    domain: recommendations
+    min_results: 0
+    max_db_hits: 5000
+    max_allocated_memory_bytes: 2097152
+    max_runtime_ms: 3000
+    is_write_query: true
+    notes: "Demo DB is read-only — this case will be SKIPPED. Included for skill completeness. CREATE or MERGE User node with userId as STRING."
+    cypher: |
+      CYPHER 25
+      MERGE (u:User {userId: '10001'})
+      ON CREATE SET u.name = 'Alice Smith'
+      ON MATCH SET u.name = 'Alice Smith'
+      RETURN u.userId AS userId, u.name AS name
+
+  # ─── SCHEMA INTROSPECTION CASES ────────────────────────────────────────────────
+
+  - id: rec-schema-001
+    question: "What indexes are available in our movie recommendation database?"
+    database: recommendations
+    difficulty: basic
+    tags: [schema, indexes, show]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 10000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 5000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      SHOW INDEXES
+      YIELD name, type, state, labelsOrTypes, properties
+      RETURN name, type, state, labelsOrTypes, properties
+      ORDER BY type, name
+
+  - id: rec-schema-002
+    question: "What constraints are defined on our database?"
+    database: recommendations
+    difficulty: basic
+    tags: [schema, constraints, show]
+    domain: recommendations
+    min_results: 0
+    max_db_hits: 5000
+    max_allocated_memory_bytes: 2097152
+    max_runtime_ms: 3000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      SHOW CONSTRAINTS
+      YIELD name, type, labelsOrTypes, properties
+      RETURN name, type, labelsOrTypes, properties
+
+  # ─── EDGE CASE CASES ───────────────────────────────────────────────────────────
+
+  - id: rec-edge-001
+    question: "Which movies in our catalogue have never been rated by any user?"
+    database: recommendations
+    difficulty: intermediate
+    tags: [match, optional-match, filter, null, not-exists]
+    domain: recommendations
+    min_results: 0
+    max_db_hits: 100000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 10000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (m:Movie)
+      WHERE NOT EXISTS { (:User)-[:RATED]->(m) }
+      RETURN m.title AS title, m.imdbRating AS imdbRating
+      ORDER BY m.title
+      LIMIT 20
+
+  - id: rec-edge-002
+    question: "Find people in our database who have no listed movies — neither as actor nor director."
+    database: recommendations
+    difficulty: intermediate
+    tags: [match, filter, not-exists, null]
+    domain: recommendations
+    min_results: 0
+    max_db_hits: 50000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 8000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (p:Person)
+      WHERE NOT EXISTS { (p)-[:ACTED_IN|DIRECTED]->(:Movie) }
+      RETURN p.name AS person
+      ORDER BY p.name
+      LIMIT 20
+
+  - id: rec-edge-003
+    question: "Show users who have only rated a single movie — the least active users in our system."
+    database: recommendations
+    difficulty: intermediate
+    tags: [match, aggregation, count, filter, relationship]
+    domain: recommendations
+    min_results: 0
+    max_db_hits: 200000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 10000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (u:User)-[r:RATED]->(m:Movie)
+      WITH u, count(r) AS ratingCount
+      WHERE ratingCount = 1
+      MATCH (u)-[r2:RATED]->(singleMovie:Movie)
+      RETURN u.name AS user, singleMovie.title AS onlyMovieRated
+      ORDER BY u.name
+      LIMIT 20
+
+  - id: rec-edge-004
+    question: "Which movies are missing plot descriptions in our catalogue?"
+    database: recommendations
+    difficulty: basic
+    tags: [match, filter, null]
+    domain: recommendations
+    min_results: 0
+    max_db_hits: 20000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 5000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (m:Movie)
+      WHERE m.plot IS NULL
+      RETURN m.title AS title, m.released AS released
+      ORDER BY m.title
+      LIMIT 20
+
+  # ─── APOC UTILITY CASES ────────────────────────────────────────────────────────
+
+  - id: rec-apoc-001
+    question: "Show me movies whose title, when normalized to lowercase and with articles removed, would match the word 'matrix'."
+    database: recommendations
+    difficulty: advanced
+    tags: [apoc, string, match, filter]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 50000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 10000
+    is_write_query: false
+    notes: "Use toLower() + CONTAINS; APOC not strictly required here but demonstrates text normalization pattern"
+    cypher: |
+      CYPHER 25
+      MATCH (m:Movie)
+      WHERE toLower(m.title) CONTAINS 'matrix'
+      RETURN m.title AS title, m.released AS released, m.imdbRating AS imdbRating
+
+  - id: rec-apoc-002
+    question: "For a list of genres — Action, Comedy, Drama — what is the average IMDb rating across all movies in those genres combined?"
+    database: recommendations
+    difficulty: intermediate
+    tags: [apoc, match, filter, aggregation, avg, list]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 100000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 8000
+    is_write_query: false
+    notes: "Use IN operator with a list — no APOC required; demonstrates multi-value filter"
+    cypher: |
+      CYPHER 25
+      MATCH (m:Movie)-[:IN_GENRE]->(g:Genre)
+      WHERE g.name IN ['Action', 'Comedy', 'Drama']
+        AND m.imdbRating IS NOT NULL
+      RETURN g.name AS genre, avg(m.imdbRating) AS avgImdbRating, count(m) AS movieCount
+      ORDER BY avgImdbRating DESC
+
+  # ─── ADDITIONAL CASES TO REACH 100 ─────────────────────────────────────────────
+
+  - id: rec-extra-001
+    question: "Which people in our database have the most total film credits combining both acting and directing roles?"
+    database: recommendations
+    difficulty: intermediate
+    tags: [match, aggregation, count, multiple-relationships, order-by]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 100000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 10000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (p:Person)
+      WITH p,
+           COUNT { (p)-[:ACTED_IN]->(:Movie) } AS actingCredits,
+           COUNT { (p)-[:DIRECTED]->(:Movie) } AS directingCredits
+      WITH p, actingCredits + directingCredits AS totalCredits
+      WHERE totalCredits > 0
+      RETURN p.name AS person, totalCredits
+      ORDER BY totalCredits DESC
+      LIMIT 20
+
+  - id: rec-extra-002
+    question: "What is the average movie budget by decade for films released since 1980?"
+    database: recommendations
+    difficulty: intermediate
+    tags: [match, temporal, aggregation, avg, group-by]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 50000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 8000
+    is_write_query: false
+    notes: "budget is INTEGER (USD); decade computed from released STRING; filter IS NOT NULL"
+    cypher: |
+      CYPHER 25
+      MATCH (m:Movie)
+      WHERE m.budget IS NOT NULL AND m.released >= '1980-01-01'
+      WITH (toInteger(substring(m.released, 0, 4)) / 10) * 10 AS decade,
+           avg(m.budget) AS avgBudget, count(m) AS movieCount
+      RETURN toString(decade) + 's' AS decade, round(avgBudget) AS avgBudget, movieCount
+      ORDER BY decade
+
+  - id: rec-extra-003
+    question: "Show me Thriller movies released after 2010 with a good IMDb score."
+    database: recommendations
+    difficulty: intermediate
+    tags: [match, filter, temporal, relationship, casual-language, value-translation]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 50000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 8000
+    is_write_query: false
+    notes: "casual 'good IMDb score' → imdbRating >= 7.0; Thriller = Genre.name = 'Thriller'"
+    cypher: |
+      CYPHER 25
+      MATCH (m:Movie)-[:IN_GENRE]->(g:Genre {name: 'Thriller'})
+      WHERE m.released > '2010-01-01' AND m.imdbRating >= 7.0
+      RETURN m.title AS title, m.released AS released, m.imdbRating AS imdbRating
+      ORDER BY m.imdbRating DESC, m.released DESC
+      LIMIT 20
+
+  - id: rec-extra-004
+    question: "Which genre has the most movies released in each decade from 1980 onwards? Show the dominant genre per decade."
+    database: recommendations
+    difficulty: advanced
+    tags: [match, temporal, aggregation, count, group-by, order-by, relationship]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 200000
+    max_allocated_memory_bytes: 20971520
+    max_runtime_ms: 15000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (m:Movie)-[:IN_GENRE]->(g:Genre)
+      WHERE m.released >= '1980-01-01'
+      WITH (toInteger(substring(m.released, 0, 4)) / 10) * 10 AS decade,
+           g.name AS genre, count(m) AS cnt
+      WITH decade, genre, cnt
+      ORDER BY decade, cnt DESC
+      WITH decade, collect({genre: genre, cnt: cnt})[0] AS topEntry
+      RETURN toString(decade) + 's' AS decade, topEntry.genre AS dominantGenre, topEntry.cnt AS movieCount
+      ORDER BY decade
+
+  - id: rec-extra-005
+    question: "What is the average IMDb rating for movies that were big box-office successes (revenue over 200 million dollars)?"
+    database: recommendations
+    difficulty: intermediate
+    tags: [match, filter, aggregation, avg]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 50000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 5000
+    is_write_query: false
+    notes: "casual 'big box-office successes' → revenue > 200000000; both revenue and imdbRating may be null"
+    cypher: |
+      CYPHER 25
+      MATCH (m:Movie)
+      WHERE m.revenue > 200000000 AND m.imdbRating IS NOT NULL
+      RETURN avg(m.imdbRating) AS avgImdbRating, count(m) AS movieCount
+
+  - id: rec-extra-006
+    question: "List all movies in our catalogue that star both an actor and their director — films where the same person directed and also appeared in the cast."
+    database: recommendations
+    difficulty: advanced
+    tags: [match, filter, exists, relationship]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 100000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 10000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (p:Person)-[:DIRECTED]->(m:Movie)<-[:ACTED_IN]-(p)
+      RETURN m.title AS movie, p.name AS directorAndStar
+      ORDER BY m.title
+
+  - id: rec-extra-007
+    question: "For each movie language, what is the average IMDb rating? Show me how English, French, and other language films compare."
+    database: recommendations
+    difficulty: advanced
+    tags: [match, filter, aggregation, avg, list-property, unwind]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 100000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 10000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (m:Movie)
+      WHERE m.languages IS NOT NULL AND m.imdbRating IS NOT NULL
+      UNWIND m.languages AS lang
+      WITH lang, avg(m.imdbRating) AS avgRating, count(DISTINCT m) AS movieCount
+      WHERE movieCount >= 5
+      RETURN lang AS language, round(avgRating, 2) AS avgImdbRating, movieCount
+      ORDER BY movieCount DESC
+      LIMIT 20
+
+  - id: rec-extra-008
+    question: "Find movies that received lower user ratings than their IMDb score would suggest — the biggest gaps between community user ratings and IMDb ratings."
+    database: recommendations
+    difficulty: advanced
+    tags: [match, aggregation, avg, filter, order-by]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 300000
+    max_allocated_memory_bytes: 31457280
+    max_runtime_ms: 15000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (u:User)-[r:RATED]->(m:Movie)
+      WHERE m.imdbRating IS NOT NULL
+      WITH m, avg(r.rating) AS avgUserRating, count(r) AS ratingCount
+      WHERE ratingCount >= 5
+      WITH m, avgUserRating, ratingCount,
+           m.imdbRating / 2.0 AS imdbNormalized
+      WITH m, avgUserRating, ratingCount, imdbNormalized,
+           (imdbNormalized - avgUserRating) AS gap
+      WHERE gap > 0.5
+      RETURN m.title AS title, round(m.imdbRating, 1) AS imdbRating,
+             round(avgUserRating, 2) AS avgUserRating,
+             ratingCount, round(gap, 2) AS ratingGap
+      ORDER BY gap DESC
+      LIMIT 15
+
+  - id: rec-extra-009
+    question: "Show me all the movies directed by Steven Spielberg that are available in our catalogue."
+    database: recommendations
+    difficulty: basic
+    tags: [match, relationship, filter]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 20000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 5000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (p:Person {name: 'Steven Spielberg'})-[:DIRECTED]->(m:Movie)
+      RETURN m.title AS title, m.released AS released, m.imdbRating AS imdbRating
+      ORDER BY m.released DESC
+
+  - id: rec-extra-010
+    question: "Which movies have the largest number of distinct cast members listed in our database?"
+    database: recommendations
+    difficulty: intermediate
+    tags: [match, aggregation, count, relationship, order-by]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 100000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 10000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (p:Person)-[:ACTED_IN]->(m:Movie)
+      WITH m, count(DISTINCT p) AS castSize
+      RETURN m.title AS title, castSize
+      ORDER BY castSize DESC
+      LIMIT 20
+
+  - id: rec-extra-011
+    question: "What percentage of movies in the catalogue have a plot description?"
+    database: recommendations
+    difficulty: intermediate
+    tags: [match, aggregation, count, null, percentage]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 20000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 5000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (m:Movie)
+      WITH count(m) AS totalMovies, count(m.plot) AS withPlot
+      RETURN totalMovies, withPlot, round(100.0 * withPlot / totalMovies, 1) AS percentWithPlot
+
+  - id: rec-extra-012
+    question: "Which Action movies released since 2010 have an IMDb rating above 7.5? Sort by highest rated first."
+    database: recommendations
+    difficulty: intermediate
+    tags: [match, filter, temporal, relationship, order-by, casual-language]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 100000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 8000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (m:Movie)-[:IN_GENRE]->(g:Genre {name: 'Action'})
+      WHERE m.released >= '2010-01-01' AND m.imdbRating > 7.5
+      RETURN m.title AS title, m.released AS released, m.imdbRating AS imdbRating
+      ORDER BY m.imdbRating DESC
+      LIMIT 20
+
+  - id: rec-extra-013
+    question: "What movies share a cast member with both The Matrix and Pulp Fiction? Find the connecting actors and the films they appeared in."
+    database: recommendations
+    difficulty: complex
+    tags: [match, relationship, filter, intersection, multi-hop]
+    domain: recommendations
+    min_results: 0
+    max_db_hits: 500000
+    max_allocated_memory_bytes: 52428800
+    max_runtime_ms: 20000
+    is_write_query: false
+    notes: "The Matrix stored as 'Matrix, The'; Pulp Fiction has no article inversion"
+    cypher: |
+      CYPHER 25
+      MATCH (p:Person)-[:ACTED_IN]->(matrix:Movie {title: 'Matrix, The'})
+      MATCH (p)-[:ACTED_IN]->(pulp:Movie {title: 'Pulp Fiction'})
+      MATCH (p)-[:ACTED_IN]->(shared:Movie)
+      WHERE shared <> matrix AND shared <> pulp
+      RETURN p.name AS connectingActor, collect(DISTINCT shared.title) AS otherMovies
+
+  - id: rec-extra-014
+    question: "Show the complete cast and crew for the movie Inception."
+    database: recommendations
+    difficulty: intermediate
+    tags: [match, relationship, filter, collect]
+    domain: recommendations
+    min_results: 1
+    max_db_hits: 20000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 5000
+    is_write_query: false
+    cypher: |
+      CYPHER 25
+      MATCH (m:Movie {title: 'Inception'})
+      WITH m,
+           COLLECT { MATCH (p:Person)-[:ACTED_IN]->(m) RETURN p.name } AS cast,
+           COLLECT { MATCH (p:Person)-[:DIRECTED]->(m) RETURN p.name } AS directors
+      RETURN m.title AS title, directors, cast
