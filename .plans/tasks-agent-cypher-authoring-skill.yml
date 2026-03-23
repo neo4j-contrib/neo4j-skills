@@ -1,7 +1,7 @@
 feature: agent-cypher-authoring-skill
 prd: ./prd-agent-cypher-authoring-skill.md
 created_at: 2026-03-19T00:00:00Z
-updated_at: 2026-03-23T12:00:00Z
+updated_at: 2026-03-23T14:30:00Z
 
 tasks:
   - id: task-001
@@ -1215,3 +1215,238 @@ tasks:
       - "Applicable vs non-applicable query types listed"
       - "SKILL.md decision tree has routing entry for parallel runtime"
       - "dry-run passes (318 cases)"
+
+  - id: task-056
+    title: "Add --model flag to runner.py and generator.py (REQ-F-046)"
+    description: |
+      Make the Claude model used in validation configurable via a --model flag.
+      Accepted values: sonnet (default), haiku, opus.
+      Map short names to full model IDs:
+        sonnet -> claude-sonnet-4-6
+        opus   -> claude-opus-4-6
+        haiku  -> claude-haiku-4-5-20251001
+      Pass --model <id> to the claude --print subprocess call in runner.py.
+      Apply same flag to generator.py for question generation.
+      Expose as MODEL= variable in Makefile targets (e.g. make run-all MODEL=haiku).
+      Default behaviour unchanged — omitting --model uses sonnet.
+    status: pending
+    dependencies: []
+    acceptance_criteria:
+      - "--model sonnet|haiku|opus accepted by runner.py and generator.py"
+      - "Model ID mapping correct for all three short names"
+      - "make run-all MODEL=haiku passes the correct model ID to claude subprocess"
+      - "Default (no --model flag) still uses claude-sonnet-4-6"
+      - "dry-run passes without errors"
+
+  - id: task-057
+    title: "Expand companies domain to ≥ 100 test cases (REQ-F-047)"
+    description: |
+      Use generator.py to sample real property values from the companies DB
+      (demo.neo4jlabs.com, database: companies) and generate question stubs.
+      Add cases covering patterns not yet represented:
+      - Aggregations: top-N by article count, sentiment averages by industry
+      - Temporal: articles published in date ranges, recent news recency filters
+      - Multi-hop: subsidiary chains 3+ levels deep, org→article→org co-mentions
+      - Write: MERGE organization upsert, CREATE article node
+      - Schema introspection: SHOW INDEXES, SHOW CONSTRAINTS
+      - Plugin: APOC path expander, GDS PageRank on org network, GenAI cosine similarity
+      - Edge cases: orgs with no subsidiaries (0-row), very large org networks (LIMIT)
+      All questions must use casual business language (no labels/rel-types/Cypher).
+      Target: ≥ 100 cases total, ≥ 90% pass rate after validation.
+    status: pending
+    dependencies: [task-056]
+    acceptance_criteria:
+      - "companies.yml has ≥ 100 test cases"
+      - "New cases cover ≥ 6 of the 8 pattern categories listed"
+      - "All questions pass business-user language rule (no technical graph terms)"
+      - "Harness validation: ≥ 90% pass rate on companies domain"
+
+  - id: task-058
+    title: "Expand recommendations domain to ≥ 100 test cases (REQ-F-047)"
+    description: |
+      Use generator.py against demo.neo4jlabs.com recommendations DB.
+      New patterns to cover:
+      - Aggregations: average rating by genre, rating count distributions
+      - Temporal: movies released in decade ranges, recently rated
+      - Multi-hop: user→movie→actor→movie recommendation chains
+      - Write: MERGE user rating, CREATE review relationship
+      - Plugin: vector similarity search (moviePlotsEmbedding), APOC collection utils
+      - Edge cases: movies with no ratings, users with minimal activity
+      All questions must use casual business language.
+      Target: ≥ 100 cases total, ≥ 90% pass rate.
+    status: pending
+    dependencies: [task-056]
+    acceptance_criteria:
+      - "recommendations.yml has ≥ 100 test cases"
+      - "New cases cover ≥ 6 of the 8 pattern categories"
+      - "Harness validation: ≥ 90% pass rate on recommendations domain"
+
+  - id: task-059
+    title: "Expand goodreads domain to ≥ 100 test cases (REQ-F-047)"
+    description: |
+      Use generator.py against demo.neo4jlabs.com goodreads DB.
+      New patterns to cover:
+      - Aggregations: books per author, average rating by genre, review counts
+      - Temporal: books published by decade, recent reviews
+      - Multi-hop: author collaboration via shared genre, SIMILAR_TO chains
+      - Write: MERGE book, CREATE review
+      - Schema introspection: SHOW INDEXES, SHOW CONSTRAINTS
+      - Edge cases: authors with 1 book, books with no reviews, unrated books
+      Note: SIMILAR_TO graph is sparse (424 edges) — avoid path queries requiring
+      multiple hops; document verified entities in case notes.
+      All questions must use casual business language.
+      Target: ≥ 100 cases total, ≥ 90% pass rate.
+    status: pending
+    dependencies: [task-056]
+    acceptance_criteria:
+      - "goodreads.yml has ≥ 100 test cases"
+      - "New cases cover ≥ 6 of the 8 pattern categories"
+      - "Harness validation: ≥ 90% pass rate on goodreads domain"
+
+  - id: task-060
+    title: "Expand legalcontracts domain to ≥ 100 test cases (REQ-F-047)"
+    description: |
+      Use generator.py against demo.neo4jlabs.com legalcontracts DB.
+      New patterns to cover:
+      - Aggregations: contracts by type, party involvement counts, clause coverage rates
+      - Temporal: contracts signed in date ranges, recently expired
+      - Multi-hop: party→contract→clause→obligation chains
+      - Write: MERGE party, CREATE contract relationship
+      - Plugin: vector similarity on contractSummary index, APOC string utilities
+      - Edge cases: parties with no active contracts, contracts with minimal clauses
+      All questions must use casual business language.
+      Target: ≥ 100 cases total, ≥ 90% pass rate.
+    status: pending
+    dependencies: [task-056]
+    acceptance_criteria:
+      - "legalcontracts.yml has ≥ 100 test cases"
+      - "New cases cover ≥ 6 of the 8 pattern categories"
+      - "Harness validation: ≥ 90% pass rate on legalcontracts domain"
+
+  - id: task-061
+    title: "Expand northwind domain to ≥ 100 test cases (REQ-F-047)"
+    description: |
+      Use generator.py against demo.neo4jlabs.com northwind DB.
+      New patterns to cover:
+      - Aggregations: revenue by category, order frequency, supplier product counts
+      - Temporal: orders by quarter, shipment delays, reorder patterns
+      - Multi-hop: customer→order→product→supplier→country traversal
+      - Write: MERGE product, CREATE order, UPDATE stock level
+      - Schema introspection: SHOW INDEXES
+      - Plugin: APOC path utilities, GDS community detection on product co-purchase
+      - Edge cases: discontinued products, customers with no orders, out-of-stock items
+      All questions must use casual business language.
+      Target: ≥ 100 cases total, ≥ 90% pass rate.
+    status: pending
+    dependencies: [task-056]
+    acceptance_criteria:
+      - "northwind.yml has ≥ 100 test cases"
+      - "New cases cover ≥ 6 of the 8 pattern categories"
+      - "Harness validation: ≥ 90% pass rate on northwind domain"
+
+  - id: task-062
+    title: "Expand stackoverflow domain to ≥ 100 test cases (REQ-F-047)"
+    description: |
+      Use generator.py against demo.neo4jlabs.com stackoverflow DB.
+      New patterns to cover:
+      - Aggregations: answers per question, tag co-occurrence counts, user rep bands
+      - Temporal: questions by year, answer response times, tag popularity trends
+      - Multi-hop: user→answer→question→tag→user expert networks
+      - Write: MERGE tag, CREATE question relationship
+      - Plugin: GDS tag similarity, APOC collection utilities
+      - Edge cases: unanswered questions, tags with 1 use, users with 0 answers
+      All questions must use casual business language.
+      Target: ≥ 100 cases total, ≥ 90% pass rate.
+    status: pending
+    dependencies: [task-056]
+    acceptance_criteria:
+      - "stackoverflow.yml has ≥ 100 test cases"
+      - "New cases cover ≥ 6 of the 8 pattern categories"
+      - "Harness validation: ≥ 90% pass rate on stackoverflow domain"
+
+  - id: task-063
+    title: "Expand twitter domain to ≥ 100 test cases (REQ-F-047)"
+    description: |
+      Use generator.py against demo.neo4jlabs.com twitter DB.
+      New patterns to cover:
+      - Aggregations: follower counts, retweet reach, hashtag frequency
+      - Temporal: tweet activity by hour/day, follower growth periods
+      - Multi-hop: FOLLOWS chains, retweet propagation paths, hashtag co-networks
+      - Write: MERGE user, CREATE follow relationship
+      - Plugin: GDS betweenness centrality on follow graph, APOC date utilities
+      - Edge cases: users with no followers, tweets with no retweets, isolated accounts
+      All questions must use casual business language.
+      Target: ≥ 100 cases total, ≥ 90% pass rate.
+    status: pending
+    dependencies: [task-056]
+    acceptance_criteria:
+      - "twitter.yml has ≥ 100 test cases"
+      - "New cases cover ≥ 6 of the 8 pattern categories"
+      - "Harness validation: ≥ 90% pass rate on twitter domain"
+
+  - id: task-064
+    title: "Expand retail domain to ≥ 100 test cases (REQ-F-047)"
+    description: |
+      Use generator.py against demo.neo4jlabs.com retail DB.
+      New patterns to cover:
+      - Aggregations: purchase frequency, spend per customer, article popularity
+      - Temporal: purchases by season, weekly trends, new customer cohorts
+      - Multi-hop: customer→transaction→article→VARIANT_OF→product family
+      - Write: MERGE customer, CREATE purchase transaction
+      - Plugin: GDS product recommendation via co-purchase, APOC utilities
+      - Edge cases: articles with no purchases, customers with 1 transaction, returns
+      All questions must use casual business language.
+      Target: ≥ 100 cases total, ≥ 90% pass rate.
+    status: pending
+    dependencies: [task-056]
+    acceptance_criteria:
+      - "retail.yml has ≥ 100 test cases"
+      - "New cases cover ≥ 6 of the 8 pattern categories"
+      - "Harness validation: ≥ 90% pass rate on retail domain"
+
+  - id: task-065
+    title: "Expand ucfraud domain to ≥ 100 test cases (REQ-F-047)"
+    description: |
+      Use generator.py against local Neo4j instance (bolt://localhost:7687, database: neo4j).
+      New patterns to cover:
+      - Aggregations: fraud flag rates, shared identifier counts per community
+      - Temporal: transaction velocity (txns per hour), fraud detection latency
+      - Multi-hop: identity ring traversal 3+ hops, device→account→merchant chains
+      - Write: MERGE customer, CREATE transaction, flag fraud case
+      - Schema: SHOW INDEXES, SHOW CONSTRAINTS on local instance
+      - Plugin: GDS Louvain (streaming — do not assume stored properties), WCC for
+        connected components, APOC path expander for fraud rings
+      - CALL IN TRANSACTIONS: bulk flagging patterns
+      - Edge cases: customers with no shared identifiers, isolated transaction nodes
+      All questions must use casual business language.
+      Target: ≥ 100 cases total, ≥ 90% pass rate.
+    status: pending
+    dependencies: [task-056]
+    acceptance_criteria:
+      - "ucfraud.yml has ≥ 100 test cases"
+      - "New cases cover ≥ 6 of the 8 pattern categories including CALL IN TRANSACTIONS"
+      - "Harness validation: ≥ 90% pass rate on ucfraud domain"
+
+  - id: task-066
+    title: "Expand ucnetwork domain to ≥ 100 test cases (REQ-F-047)"
+    description: |
+      Use generator.py against demo.neo4jlabs.com ucnetwork DB.
+      Note: ucnetwork has timeout issues on complex traversals — prefer bounded
+      queries with LIMIT; document timeout-prone patterns in case notes.
+      New patterns to cover:
+      - Aggregations: device counts by signal quality band, retry rates, data volume
+      - Temporal: snapshot comparisons, signal degradation over time windows
+      - Multi-hop: CONNECTED_TO device chains with signal quality filters
+      - Write: MERGE device snapshot, CREATE connection edge
+      - Plugin: GDS WCC for network partitioning, APOC date/time utilities
+      - Edge cases: isolated devices, devices with 0 connections, max signal devices
+      All questions must use casual business language.
+      Avoid unbounded variable-length traversals that caused prior timeouts.
+      Target: ≥ 100 cases total, ≥ 90% pass rate.
+    status: pending
+    dependencies: [task-056]
+    acceptance_criteria:
+      - "ucnetwork.yml has ≥ 100 test cases"
+      - "New cases avoid unbounded traversal patterns that cause timeouts"
+      - "New cases cover ≥ 6 of the 8 pattern categories"
+      - "Harness validation: ≥ 90% pass rate on ucnetwork domain"
