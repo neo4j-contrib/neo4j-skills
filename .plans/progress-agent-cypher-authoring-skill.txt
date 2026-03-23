@@ -1639,3 +1639,30 @@ Key Decisions:
 - Added "Prefer native Cypher" rule to prevent APOC over-use
 
 Next Task: task-050 (Add Neo4j GenAI plugin support)
+
+================================================================================
+TASK-050: Add Neo4j GenAI plugin support (ai.*) as optional capability in skill
+Date: 2026-03-23T17:00:00Z
+================================================================================
+
+Summary:
+Added Neo4j GenAI plugin (ai.*) as an optional capability-gated feature. Created
+the L3 reference file cypher25-genai.md in references/schema/ covering scalar
+similarity functions, embedding generation (Aura-only), provider map, and a
+critical scalar-vs-top-K distinction table. Updated SKILL.md with a concise
+GenAI section and decision tree routing row. The runner already handled the
+`capabilities` field from task-049 — no runner changes needed.
+
+Files Changed:
+- neo4j-cypher-authoring-skill/references/schema/cypher25-genai.md (created — 123 lines, ~900 tokens)
+- neo4j-cypher-authoring-skill/SKILL.md (modified — added GenAI section after GDS, added routing row)
+- .plans/tasks-agent-cypher-authoring-skill.yml (modified — task-050 marked completed)
+
+Key Decisions:
+- L3 file placed in schema/ (consistent with its GenAI capabilities being schema-level capabilities)
+- Critical distinction documented: ai.similarity.*() = scalar FLOAT; vector index search = top-K list
+- ai.embedding.* documented as Aura-only even when genai is in capabilities
+- SKILL.md section kept compact to minimize line growth (file now 405 lines — over 300-line soft budget but no hard limit in task-050 acceptance criteria)
+- No domain YAML changes needed — runner.py already injects capabilities from task-049
+
+Next Task: All tasks complete

@@ -239,6 +239,25 @@ RETURN n.name,
 
 ---
 
+### Neo4j GenAI Plugin (`ai.*`)
+
+> **Capability gate** — only use `ai.*` when the schema context `capabilities` list includes `"genai"`, **or** when the target is confirmed Aura (GenAI plugin is always-on in Aura; may be absent from capabilities list but still usable).
+
+**Scalar similarity vs top-K retrieval** — critical distinction:
+
+| Use case | Tool |
+|---|---|
+| Score similarity between **two known vectors** | `ai.similarity.cosine(vec1, vec2)` or `ai.similarity.euclidean(vec1, vec2)` — returns a single FLOAT |
+| Find **top-K most similar nodes** to a query vector | `db.index.vector.queryNodes()` or SEARCH clause — queries the index |
+
+**Never use `ai.similarity.*` for top-K ranking** — it has no index backing and forces a full scan.
+
+**`ai.embedding.*`** (Aura-only): generates embeddings inline during the query via a configured provider (OpenAI, Azure OpenAI, Vertex AI, Bedrock). Not available on self-managed Neo4j even with the genai plugin installed.
+
+Load `schema/cypher25-genai.md` for full signatures, provider map, and re-scoring patterns.
+
+---
+
 ### SEARCH Clause (Vector — GA in Neo4j 2026.02.1+)
 
 > **SEARCH is vector-only** — fulltext always uses `db.index.fulltext.queryNodes()`. **Version check required**: SEARCH clause is GA in Neo4j **2026.02.1+**; use the procedure fallback for older versions (pre-2026.02 databases).
@@ -344,6 +363,7 @@ CYPHER 25 USE myDatabase MATCH (n:Person) RETURN n.name LIMIT 5;
 | Batch writes, CALL IN TRANSACTIONS | `write/cypher25-call-in-transactions.md` |
 | GDS algorithms (`gds.*`) — only when `gds: true` in schema | `write/cypher25-gds.md` |
 | APOC procedures/functions (`apoc.*`) — only when `capabilities` includes `"apoc"` | `read/cypher25-apoc.md` |
+| GenAI similarity / embedding (`ai.*`) — only when `capabilities` includes `"genai"` or target is Aura | `schema/cypher25-genai.md` |
 | Index creation, SEARCH, fulltext, vector, hints | `schema/cypher25-indexes.md` |
 | GRAPH TYPE DDL (Enterprise Preview — 2026.02+) | `schema/cypher25-graph-types.md` |
 | Naming, casing, formatting (all categories) | `cypher-style-guide.md` |

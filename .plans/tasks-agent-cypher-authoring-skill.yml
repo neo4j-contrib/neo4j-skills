@@ -1084,7 +1084,8 @@ tasks:
          - When to use ai.* vs db.index.vector.queryNodes()
       3. SKILL.md: add capability-gating rule for ai.* functions
       4. Note that Aura always has GenAI plugin; local depends on genai plugin installation
-    status: pending
+    status: completed
+    completed_at: "2026-03-23T17:00:00Z"
     dependencies:
       - task-049
     acceptance_criteria:
