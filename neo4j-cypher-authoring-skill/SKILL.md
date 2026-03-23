@@ -255,6 +255,8 @@ RETURN n.name,
 
 **When GDS IS available** (schema block has `gds: true`): Use `CALL gds.*` procedures normally with `YIELD`. Load `write/cypher25-gds.md` for graph projection, algorithm streaming, write-back patterns, and `gds.util.asNode()` usage.
 
+> **NEVER assume stored GDS properties** — properties such as `louvainCommunity`, `pageRank`, `betweenness` do NOT exist on nodes unless schema context explicitly confirms a `.write` call was run. Always stream results via `.stream` procedures instead of filtering on assumed stored properties.
+
 ---
 
 ### Neo4j GenAI Plugin (`ai.*`)

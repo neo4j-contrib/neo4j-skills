@@ -161,6 +161,46 @@ YIELD name RETURN count(name) AS gdsProcs;
 // 0 → GDS not installed; > 0 → GDS available
 ```
 
+## 6. Streaming vs Write-Back — Critical Distinction
+
+> **IMPORTANT**: GDS algorithm `.stream` procedures return results **only during query execution** — they do NOT store any properties on database nodes. Assume no GDS-computed properties exist on nodes unless the schema context explicitly confirms a write-back was previously performed.
+
+### DO-NOT / DO examples
+
+```cypher
+// WRONG — assumes louvainCommunity is a stored node property (it is NOT unless written back)
+CYPHER 25
+MATCH (c:Customer)
+WHERE c.louvainCommunity = $community
+RETURN c.name AS name;
+
+// CORRECT — stream results from GDS algorithm at query time
+CYPHER 25
+CALL gds.louvain.stream('myGraph', { maxLevels: 10 })
+YIELD nodeId, communityId
+WHERE communityId = $community
+WITH gds.util.asNode(nodeId) AS c
+RETURN c.name AS name;
+```
+
+```cypher
+// WRONG — assumes pageRank is a stored node property
+CYPHER 25
+MATCH (p:Person)
+WHERE p.pageRank > 0.5
+RETURN p.name ORDER BY p.pageRank DESC LIMIT 10;
+
+// CORRECT — stream PageRank scores at query time
+CYPHER 25
+CALL gds.pageRank.stream('myGraph')
+YIELD nodeId, score
+WHERE score > 0.5
+WITH gds.util.asNode(nodeId) AS p, score
+RETURN p.name, score ORDER BY score DESC LIMIT 10;
+```
+
+**When stored properties are acceptable**: only when the schema context notes that a GDS write-back was performed (e.g., `"gds_written_properties": ["louvainCommunity", "pageRank"]`). Otherwise always stream.
+
 ## Key Rules
 
 - **Always drop the projection** after use: `CALL gds.graph.drop('name')` — projections consume JVM heap
@@ -169,3 +209,4 @@ YIELD name RETURN count(name) AS gdsProcs;
 - **`stream` vs `write`**: `stream` returns results without touching the DB; `write` persists results as node/rel properties and returns statistics
 - **`mutate`**: like `write` but only to the in-memory projection — use before chaining algorithms
 - **Weight properties** must be declared in the projection (`properties: ['weight']`) before algorithms can use them
+- **Never assume stored GDS properties** — properties like `louvainCommunity`, `pageRank`, `betweenness` do NOT exist on nodes unless a `.write` call was previously executed and confirmed in schema context

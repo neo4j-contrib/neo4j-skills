@@ -1699,3 +1699,24 @@ Key Decisions:
   the DDL check takes precedence because it is checked before Gate 1
 
 Next Task: task-051 (Fix zero-row test cases in goodreads, legalcontracts, retail, northwind)
+================================================================================
+TASK-052: Document GDS streaming-only default in cypher25-gds.md (REQ-F-042)
+Date: 2026-03-23T18:30:00Z
+================================================================================
+
+Summary:
+Added a prominent "Streaming vs Write-Back — Critical Distinction" section to
+references/write/cypher25-gds.md with DO-NOT/DO examples for louvainCommunity
+and pageRank property assumptions. Added a NEVER warning to SKILL.md's GDS
+section. The dry-run passes with 318 cases validated.
+
+Files Changed:
+- neo4j-cypher-authoring-skill/references/write/cypher25-gds.md (modified — added Section 6 with stream-vs-write-back distinction, DO-NOT louvainCommunity example, DO-NOT pageRank example, and Key Rules bullet)
+- neo4j-cypher-authoring-skill/SKILL.md (modified — added NEVER assume stored GDS properties callout in GDS section)
+
+Key Decisions:
+- Added two DO-NOT/DO code pair examples (louvain + pageRank) for clarity
+- Kept SKILL.md addition as a single-line blockquote to minimize line growth
+- Dry-run used as acceptance test since GDS requires a local instance to test live
+
+Next Task: task-051 (Fix zero-row test cases in goodreads/legalcontracts/retail/northwind)

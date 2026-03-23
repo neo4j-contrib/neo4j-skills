@@ -1133,7 +1133,8 @@ tasks:
         CALL gds.louvain.stream('myGraph') YIELD nodeId, communityId
         WHERE communityId = $community
         RETURN gds.util.asNode(nodeId) AS customer
-    status: pending
+    status: completed
+    completed_at: "2026-03-23T18:30:00Z"
     dependencies:
       - task-048
     acceptance_criteria:
