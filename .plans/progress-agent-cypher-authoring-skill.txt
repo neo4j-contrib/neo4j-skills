@@ -2221,3 +2221,45 @@ Files Changed:
 - skill-generation-validation-tools/tests/cases/northwind.yml (32 → 105 cases)
 - .plans/tasks-agent-cypher-authoring-skill.yml (task-061 status → completed)
 
+
+================================================================================
+TASK-070: Retrofit question_validator into existing generator.py (REQ-F-050)
+Date: 2026-03-23T22:30:00Z
+================================================================================
+Summary: Retrofitted question_validator.py into the legacy generator.py
+(tests/harness/generator.py) and created a new post-hoc audit script
+(scripts/audit_questions.py) with a corresponding Makefile target.
+
+Changes to generator.py:
+1. Added optional import of QuestionValidator at module level (graceful degradation
+   if unavailable — continues without validation, prints warning)
+2. Added _rewrite_question_for_business_language() — calls Claude once to rewrite
+   a non-compliant question in plain business English
+3. Set up QuestionValidator with schema-aware initialization before the generation loop
+4. After each question is extracted from Claude response: validate → rewrite (1 attempt)
+   → re-validate; persistent failures get status: needs_review + validation_failure fields
+5. Statistics counter (total/valid/rewritten/needs_review) printed after all stubs generated
+
+New file: scripts/audit_questions.py
+- Standalone audit script: reads all *.yml files from tests/cases/ (or a single file)
+- Builds schema-aware QuestionValidator per domain from dataset.schema
+- Produces a Markdown report: overall summary table, per-domain breakdown, violation
+  detail table (case ID, difficulty, question, reason), and remediation guidance
+- Accepts --fail-on-violations for CI gating
+- make audit-questions target added to Makefile
+- make smoke now also runs question_validator.py self-tests and audit_questions.py --help
+
+Audit results on current 660 cases: 110 violations found across 10 domains.
+These are pre-existing test cases that need manual remediation — no regressions from this change.
+
+Files Changed:
+- skill-generation-validation-tools/tests/harness/generator.py (modified)
+- skill-generation-validation-tools/scripts/audit_questions.py (created)
+- Makefile (audit-questions target + smoke update)
+- .plans/tasks-agent-cypher-authoring-skill.yml (task-070 status → completed)
+
+Key Decisions:
+- Validator import is optional — generator continues to work even without question_validator.py
+- Rewrite prompt instructs Claude to return only the rewritten question (no markdown)
+- Post-hoc audit script is a separate CLI, not integrated into the runner/harness
+- make smoke updated to include both question_validator self-test and audit --help

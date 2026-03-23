@@ -1593,7 +1593,8 @@ tasks:
       (tests/cases/*.yml) and produce a report of any questions that still fail
       validation. Questions flagged by the audit should be manually reviewed and
       rewritten before the next harness run.
-    status: pending
+    status: completed
+    completed_at: "2026-03-23T22:30:00Z"
     dependencies: [task-068]
     acceptance_criteria:
       - "generator.py imports and uses question_validator on every generated question"

@@ -30,10 +30,12 @@ test-extract:  ## Run the reference extraction unit tests
 	cd skill-generation-validation-tools && uv run python3 scripts/test-extract-references.py
 
 .PHONY: smoke
-smoke:  ## Smoke-test validator, reporter, and analyzer (no DB needed)
+smoke:  ## Smoke-test validator, reporter, analyzer, and question_validator (no DB needed)
 	uv run --project skill-generation-validation-tools python3 skill-generation-validation-tools/tests/harness/validator.py
 	uv run --project skill-generation-validation-tools python3 skill-generation-validation-tools/tests/harness/reporter.py
 	uv run --project skill-generation-validation-tools python3 skill-generation-validation-tools/scripts/analyze-results.py
+	uv run --project skill-generation-validation-tools python3 skill-generation-validation-tools/tests/harness/question_validator.py
+	uv run --project skill-generation-validation-tools python3 skill-generation-validation-tools/scripts/audit_questions.py --help > /dev/null
 
 # ── Per-domain harness runs ────────────────────────────────────────────────────
 
@@ -322,6 +324,23 @@ generate-questions:  ## Generate questions for a domain (requires DOMAIN=<name>)
 
 .PHONY: onboard-dataset
 onboard-dataset: register-dataset generate-questions  ## Register DB schema and generate initial questions (requires DB_URI, DB_USER, DB_PASS, DB_NAME)
+
+# ── Question language audit ────────────────────────────────────────────────────
+# Usage: make audit-questions [AUDIT_OUTPUT=path/to/report.md] [CASES_DIR=...]
+# Set FAIL_ON_VIOLATIONS=--fail-on-violations to exit non-zero when violations found
+
+AUDIT        := uv run --project skill-generation-validation-tools python3 \
+                  skill-generation-validation-tools/scripts/audit_questions.py
+AUDIT_OUTPUT ?=
+FAIL_ON_VIOLATIONS ?=
+
+.PHONY: audit-questions
+audit-questions:  ## Audit all domain YAML questions for business-language compliance
+	$(AUDIT) \
+	  --cases $(CASES_DIR) \
+	  $(if $(AUDIT_OUTPUT),--output $(AUDIT_OUTPUT),) \
+	  $(FAIL_ON_VIOLATIONS) \
+	  --verbose
 
 # ── Help ───────────────────────────────────────────────────────────────────────
 

@@ -48,6 +48,20 @@ _REPO_ROOT = _HERE.parent.parent
 sys.path.insert(0, str(_HERE))
 
 # ---------------------------------------------------------------------------
+# Question validator (optional import — graceful degradation if unavailable)
+# ---------------------------------------------------------------------------
+
+try:
+    from question_validator import QuestionValidator  # type: ignore
+    _VALIDATOR_AVAILABLE = True
+except ImportError:
+    try:
+        from tests.harness.question_validator import QuestionValidator  # type: ignore
+        _VALIDATOR_AVAILABLE = True
+    except ImportError:
+        _VALIDATOR_AVAILABLE = False
+
+# ---------------------------------------------------------------------------
 # YAML output helpers (stdlib only — no ruamel needed for generation)
 # ---------------------------------------------------------------------------
 
@@ -626,6 +640,63 @@ def _parse_generation_response(response_text: str) -> list[dict[str, Any]]:
 
 
 # ---------------------------------------------------------------------------
+# Question validation and rewrite
+# ---------------------------------------------------------------------------
+
+_REWRITE_SYSTEM_PROMPT = """\
+You are a technical writer rewriting database query descriptions for non-technical
+business users. Rewrite the given question so it reads as a casual, plain-English
+business question — the kind an analyst or product manager would ask.
+
+Rules for the rewrite:
+- Remove ALL technical database syntax: no Cypher keywords (MATCH, WHERE, RETURN,
+  WITH, CALL, MERGE, CREATE, etc.), no node labels (:Person, :Organization), no
+  relationship types ([:ACTED_IN], HAS_SUBSIDIARY), no dot-access (n.name), no
+  procedure calls (gds., apoc., db.index.)
+- Keep the business intent intact — same answer, just expressed in plain English
+- Use concrete business terms: "organizations" not "Organization nodes"
+- Phrasing should be a natural question, not a command
+
+Return ONLY the rewritten question as a single line of plain text.
+No explanation, no quotes, no markdown.
+"""
+
+
+def _rewrite_question_for_business_language(
+    question: str,
+    *,
+    model_id: str = _DEFAULT_MODEL_ID,
+    timeout_s: int = 60,
+) -> Optional[str]:
+    """
+    Ask Claude to rewrite a question in plain business language.
+
+    Returns the rewritten question string, or None on failure.
+    """
+    cmd = ["claude", "--model", model_id, "--print", "--output-format", "text"]
+    prompt = _REWRITE_SYSTEM_PROMPT + f"\n\nOriginal question: {question}"
+
+    try:
+        result = subprocess.run(
+            cmd,
+            input=prompt,
+            capture_output=True,
+            text=True,
+            timeout=timeout_s,
+            env={**os.environ},
+        )
+        if result.returncode != 0:
+            return None
+        rewritten = result.stdout.strip()
+        # Strip quotes if Claude wrapped the answer
+        if rewritten.startswith('"') and rewritten.endswith('"'):
+            rewritten = rewritten[1:-1].strip()
+        return rewritten if rewritten else None
+    except Exception:
+        return None
+
+
+# ---------------------------------------------------------------------------
 # YAML stub builder
 # ---------------------------------------------------------------------------
 
@@ -802,6 +873,29 @@ def generate(
         print(f"[generator] Would write to: {output_path}")
         return output_path
 
+    # Set up question validator (schema-aware if available)
+    _validator: Optional[Any] = None
+    if _VALIDATOR_AVAILABLE:
+        # Build a minimal schema dict compatible with QuestionValidator
+        _val_schema = {
+            "nodes": {label: {} for label in schema.get("labels", [])},
+            "relationships": [
+                {"type": rt} for rt in schema.get("relationship_types", [])
+            ],
+        }
+        _validator = QuestionValidator(schema=_val_schema)
+        print("[generator] Question validator active (schema-aware)", flush=True)
+    else:
+        print("[generator] WARNING: question_validator not available — skipping validation", file=sys.stderr)
+
+    # Validation statistics
+    _stats = {
+        "total": 0,
+        "valid": 0,
+        "rewritten": 0,
+        "needs_review": 0,
+    }
+
     # Generate questions per difficulty tier
     all_stubs: list[dict[str, Any]] = []
     difficulty_counters: dict[str, int] = {d: 0 for d in counts}
@@ -835,6 +929,47 @@ def generate(
                 print(f"  WARNING: Skipping case with missing question or cypher", file=sys.stderr)
                 continue
 
+            _stats["total"] += 1
+
+            # ── Question validation ───────────────────────────────────────────
+            question_status: Optional[str] = None  # None = ok, "needs_review" = flagged
+            validation_failure: Optional[str] = None
+
+            if _validator is not None:
+                ok, reason = _validator.validate(question)
+                if not ok:
+                    if verbose:
+                        print(f"    VALIDATION FAIL: {reason} — attempting rewrite", flush=True)
+                    # One rewrite attempt
+                    rewritten = _rewrite_question_for_business_language(
+                        question, model_id=model_id, timeout_s=60
+                    )
+                    if rewritten:
+                        ok2, reason2 = _validator.validate(rewritten)
+                        if ok2:
+                            question = rewritten
+                            _stats["rewritten"] += 1
+                            if verbose:
+                                print(f"    Rewritten to: {question[:60]}", flush=True)
+                        else:
+                            # Persistent failure — mark for human review
+                            question_status = "needs_review"
+                            validation_failure = f"Original: {reason}; Rewrite: {reason2}"
+                            _stats["needs_review"] += 1
+                            if verbose:
+                                print(f"    Rewrite still fails ({reason2}) — marking needs_review", flush=True)
+                    else:
+                        # Rewrite attempt failed
+                        question_status = "needs_review"
+                        validation_failure = reason
+                        _stats["needs_review"] += 1
+                        if verbose:
+                            print(f"    Rewrite failed — marking needs_review", flush=True)
+                else:
+                    _stats["valid"] += 1
+            else:
+                _stats["valid"] += 1  # can't validate, count as valid
+
             difficulty_counters[difficulty] += 1
             case_id = _build_case_id(domain, difficulty, difficulty_counters[difficulty])
 
@@ -865,7 +1000,24 @@ def generate(
                 thresholds=thresholds,
                 property_semantics=property_semantics,
             )
+
+            # Attach needs_review status if validation failed persistently
+            if question_status == "needs_review":
+                stub["status"] = "needs_review"
+                stub["validation_failure"] = validation_failure
+
             all_stubs.append(stub)
+
+    # ── Print validation statistics ──────────────────────────────────────────
+    if _validator is not None and _stats["total"] > 0:
+        print(
+            f"\n[generator] Validation statistics: "
+            f"total={_stats['total']} "
+            f"valid={_stats['valid']} "
+            f"rewritten={_stats['rewritten']} "
+            f"needs_review={_stats['needs_review']}",
+            flush=True,
+        )
 
     if not all_stubs:
         print("WARNING: No stubs generated — nothing to write.", file=sys.stderr)
