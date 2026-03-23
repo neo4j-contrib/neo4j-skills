@@ -259,7 +259,7 @@ cases:
   # ─── ADVANCED (6 cases) ──────────────────────────────────────────────────────
 
   - id: goodreads-advanced-001
-    question: "Find books that are linked to at least 1 similar book (SIMILAR_TO network is sparse with max 2 per book). Show the book title, its average rating, and the count of similar books it connects to."
+    question: "Find books that are linked to at least 1 similar book (note: most books have very few similarity links). Show the book title, its average rating, and the count of similar books it connects to."
     database: goodreads
     difficulty: advanced
     tags: [aggregation, relationship, filter, similar-to]

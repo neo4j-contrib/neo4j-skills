@@ -270,7 +270,7 @@ cases:
     is_write_query: false
 
   - id: ucnetwork-intermediate-002
-    question: "Which client devices have been observed by access points (seenbycount >= 1) and have changed signal strength between snapshots (signalchange <> 0)? Show MAC address, seenbycount, and signalchange from their latest snapshot."
+    question: "Which client devices have been observed by at least one access point and have shown a change in signal strength between snapshots? Show MAC address, how many access points have seen them, and the signal strength change from their latest snapshot."
     database: ucnetwork
     difficulty: intermediate
     tags: [relationship, filter, mobility]
@@ -306,7 +306,7 @@ cases:
     is_write_query: false
 
   - id: ucnetwork-intermediate-005
-    question: "Which devices have retry transmissions in their performance metrics (datasizeretry > 0)? These may be experiencing poor signal quality. Show MAC address and the datasizeretry value."
+    question: "Which devices have retry transmissions in their performance metrics? These may be experiencing poor signal quality. Show MAC address and the retry data size value."
     database: ucnetwork
     difficulty: intermediate
     tags: [relationship-chain, comparison, filter, performance]
@@ -344,7 +344,7 @@ cases:
     is_write_query: false
 
   - id: ucnetwork-advanced-002
-    question: "Find potentially suspicious devices: clients with retransmission retries (nretries > 0) in their security posture — high retry counts can indicate interference or probing attacks. Show device MAC, manufacturer, and nretries count."
+    question: "Find potentially suspicious devices: clients with retransmission retries in their security posture — high retry counts can indicate interference or probing attacks. Show device MAC, manufacturer, and retry count."
     database: ucnetwork
     difficulty: advanced
     tags: [relationship-chain, filter, security]
@@ -356,7 +356,7 @@ cases:
     is_write_query: false
 
   - id: ucnetwork-advanced-003
-    question: "Which pairs of devices have been directly connected to each other (via CONNECTED_TO between their snapshots)? Show the MAC addresses of both devices."
+    question: "Which pairs of devices have been directly connected to each other through observed network activity? Show the MAC addresses of both devices."
     database: ucnetwork
     difficulty: advanced
     tags: [relationship-chain, connected-to, graph-traversal]
@@ -442,7 +442,7 @@ cases:
     is_write_query: false
 
   - id: ucnetwork-complex-004
-    question: "Create a security risk summary: for each device, compute a risk score as nretries + nfrag from their security posture metrics (note: wpscount is 0 for all devices in this dataset so exclude it). Show top 10 highest risk devices."
+    question: "Create a security risk summary: for each device, compute a risk score combining their retransmission retry count and fragmented frame count from security posture metrics. Show the top 10 highest risk devices."
     database: ucnetwork
     difficulty: complex
     tags: [aggregation, math, scoring, relationship-chain, order]
@@ -468,7 +468,7 @@ cases:
     is_write_query: false
 
   - id: ucnetwork-expert-002
-    question: "Find all devices that are within 2 hops of each other in the CONNECTED_TO network. Show pairs of devices (by MAC address) and the number of distinct intermediate snapshots connecting them."
+    question: "Find all devices that are within 2 hops of each other in the device connectivity network. Show pairs of devices (by MAC address) and the number of distinct intermediate snapshots connecting them."
     database: ucnetwork
     difficulty: expert
     tags: [qpe, graph-traversal, two-hop, aggregation]
@@ -480,7 +480,7 @@ cases:
     is_write_query: false
 
   - id: ucnetwork-expert-003
-    question: "Find the shortest connected path between the client with the highest signal strength and the client with the lowest signal strength, traversing CONNECTED_TO snapshot links."
+    question: "Find the shortest connected path between the client with the highest signal strength and the client with the lowest signal strength, traversing observed device-to-device connection snapshots."
     database: ucnetwork
     difficulty: expert
     tags: [shortest-path, qpe, filter, signal]

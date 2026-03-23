@@ -544,7 +544,7 @@ cases:
     is_write_query: false
 
   - id: companies-expert-002
-    question: "Search for article text chunks related to 'renewable energy' using the full-text index on chunk text. For each matching chunk, show the article title it belongs to, the relevance score, and which companies the article mentions. Return up to 10 results ordered by relevance score."
+    question: "Find news article excerpts related to 'renewable energy'. For each matching excerpt, show the article title it belongs to, the relevance score, and which companies the article mentions. Return up to 10 results ordered by relevance score."
     database: companies
     difficulty: expert
     tags: [fulltext, procedure, graphrag, relationship]
@@ -659,7 +659,7 @@ cases:
   # ─── SEARCH CLAUSE VECTOR CASES (min_version: 2026.02) ───────────────────────
 
   - id: companies-search-001
-    question: "Find the 5 article segments most semantically similar to the concept of 'corporate mergers and acquisitions'. Use the news vector index. Return the text excerpt and its similarity score."
+    question: "Find the 5 article segments most semantically similar to the concept of 'corporate mergers and acquisitions'. Return the text excerpt and its similarity score."
     database: companies
     difficulty: advanced
     tags: [vector, search-clause, index, similarity]
@@ -692,7 +692,7 @@ cases:
   # REPEATABLE ELEMENTS requires bounded {m,n} quantifiers — not +, *, or {1,}.
 
   - id: companies-qpp-001
-    question: "How many distinct ownership walk paths of exactly 2 steps exist from Blackstone into its portfolio? Count all 2-hop walks through HAS_SUBSIDIARY, allowing paths that revisit companies."
+    question: "How many distinct ownership walk paths of exactly 2 steps exist from Blackstone into its portfolio? Count all 2-hop ownership walks, including paths that revisit companies."
     database: companies
     difficulty: expert
     tags: [qpe, repeatable-elements, match-mode, subsidiary, walk-counting]
@@ -720,7 +720,7 @@ cases:
     notes: "REPEATABLE ELEMENTS with {3,3}: MATCH REPEATABLE ELEMENTS (a:Organization) (()-[:HAS_SUBSIDIARY]->()){3,3} (b:Organization) WHERE a.name <> b.name RETURN a.name, b.name, COUNT(*) AS walkCount ORDER BY walkCount DESC LIMIT 10. Shows all walks including those revisiting intermediate nodes."
 
   - id: companies-qpp-003
-    question: "Find company pairs connected by exactly 2 ownership steps where each relationship in the path is used only once — ensuring no single ownership link is counted twice in the same path. Return the start company, end company, and number of such paths. Limit to 15 results."
+    question: "Find company pairs connected by exactly 2 ownership steps where each ownership link in the path is used only once — ensuring no single ownership connection is counted twice in the same path. Return the start company, end company, and number of such paths. Limit to 15 results."
     database: companies
     difficulty: advanced
     tags: [qpe, different-relationships, match-mode, subsidiary, path-counting]

@@ -458,7 +458,7 @@ cases:
     notes: "Tests MERGE ON CREATE SET / ON MATCH SET pattern for upsert. productID is the unique key. Use separate property assignments for ON CREATE and ON MATCH."
 
   - id: northwind-write-002
-    question: "Link product with productID 9901 to the Condiments category. First ensure both the product and category nodes exist, then create the PART_OF relationship between them."
+    question: "Link product with productID 9901 to the Condiments category. Make sure both the product and category exist first, then create the link between them as a separate step."
     database: northwind
     difficulty: intermediate
     tags: [merge, relationship, write, part-of]
@@ -484,7 +484,7 @@ cases:
     notes: "Simple MATCH + SET for property update. MATCH by productID (RANGE index exists), then SET both properties."
 
   - id: northwind-write-004
-    question: "Move product 'Chai' (productID 1) from its current category to the Beverages category: delete the existing PART_OF relationship and create a new PART_OF to Beverages."
+    question: "Move product 'Chai' (productID 1) from its current category to the Beverages category: remove its existing category link and create a new one pointing to Beverages."
     database: northwind
     difficulty: advanced
     tags: [delete, merge, relationship, write, category-reassign]
@@ -497,7 +497,7 @@ cases:
     notes: "Pattern: MATCH and DELETE existing PART_OF rel, then MATCH (or MERGE) the Beverages category node, then MERGE the new (p)-[:PART_OF]->(c) relationship."
 
   - id: northwind-write-005
-    question: "For all discontinued products, decrease their unitsInStock by 1 (simulating a stock decrement). Process them in batches of 10 rows using CALL IN TRANSACTIONS."
+    question: "For all discontinued products, decrease their units in stock by 1 (simulating a stock decrement). Process them in batches of 10 rows to avoid overloading the system."
     database: northwind
     difficulty: expert
     tags: [call-in-transactions, batch-write, set, write]

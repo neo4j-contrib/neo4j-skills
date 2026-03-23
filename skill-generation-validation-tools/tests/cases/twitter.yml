@@ -175,7 +175,7 @@ cases:
     is_write_query: false
 
   - id: twitter-basic-006
-    question: "Which users have posted tweets in the dataset? Show the top 10 users by number of tweets posted (using the POSTED relationship)."
+    question: "Which users have posted tweets in the dataset? Show the top 10 users by number of tweets posted."
     database: twitter
     difficulty: basic
     tags: [match, relationship, aggregation, limit]
@@ -189,7 +189,7 @@ cases:
   # ─── INTERMEDIATE (6 cases) ──────────────────────────────────────────────────
 
   - id: twitter-intermediate-001
-    question: "Which users have been mentioned in tweets AND have also posted their own tweets? Show their screen names. (Hint: use MENTIONS and POSTED relationships)"
+    question: "Which users have been mentioned in tweets AND have also posted their own tweets? Show their screen names."
     database: twitter
     difficulty: intermediate
     tags: [match, multiple-relationships, filter]
@@ -225,7 +225,7 @@ cases:
     is_write_query: false
 
   - id: twitter-intermediate-004
-    question: "Which users have more than 10,000 followers_count and have posted at least one tweet? Show their screen names and follower counts."
+    question: "Which users have more than 10,000 followers and have posted at least one tweet? Show their screen names and follower counts."
     database: twitter
     difficulty: intermediate
     tags: [match, relationship, filter, influencers]
@@ -237,7 +237,7 @@ cases:
     is_write_query: false
 
   - id: twitter-intermediate-005
-    question: "Find all tweets that contain a link (HAS_LINK) and use the hashtag (HAS_TAG) with tag 'trump'. Show the tweet text and the URL (expanded_url)."
+    question: "Find all tweets that contain a link and use the hashtag 'trump'. Show the tweet text and the full URL."
     database: twitter
     difficulty: intermediate
     tags: [match, multiple-relationships, filter]
@@ -275,7 +275,7 @@ cases:
     is_write_query: false
 
   - id: twitter-advanced-002
-    question: "For each user whose tweets have been retweeted, how many times total have their tweets been retweeted? (Pattern: (rt:Tweet)-[:RETWEETED]->(orig:Tweet)<-[:POSTED]-(author:User)) Show the top 10 most retweeted authors."
+    question: "For each user whose tweets have been retweeted, how many times total have their tweets been retweeted? Show the top 10 most retweeted authors."
     database: twitter
     difficulty: advanced
     tags: [aggregation, relationship-chain, order, limit]
@@ -311,7 +311,7 @@ cases:
     is_write_query: false
 
   - id: twitter-advanced-005
-    question: "Find users whose tweets have been retweeted (i.e., their tweet appears as the target of a RETWEETED relationship: (rt:Tweet)-[:RETWEETED]->(orig:Tweet)<-[:POSTED]-(user)) and whose followers_count is greater than 50000. Show screen_name and followers_count."
+    question: "Find users whose tweets have been retweeted and who have more than 50,000 followers. Show their screen name and follower count."
     database: twitter
     difficulty: advanced
     tags: [match, comparison, relationship, filter]
@@ -337,7 +337,7 @@ cases:
   # ─── COMPLEX (4 cases) ───────────────────────────────────────────────────────
 
   - id: twitter-complex-001
-    question: "Find users who are mentioned in tweets by users who retweeted a tweet originally posted by another user. The chain is: (rt:Tweet)-[:RETWEETED]->(orig:Tweet)<-[:POSTED]-(author:User)-[:POSTED]->(t2:Tweet)-[:MENTIONS]->(mentioned:User). Show up to 20 distinct screen names of the mentioned users."
+    question: "Find users who are mentioned in tweets posted by users who retweeted someone else's content. Show up to 20 distinct screen names of those mentioned users."
     database: twitter
     difficulty: complex
     tags: [graph-traversal, two-hop, not-exists, limit]
@@ -361,7 +361,7 @@ cases:
     is_write_query: false
 
   - id: twitter-complex-003
-    question: "Find all retweet chains — where tweet A retweets tweet B (A-[:RETWEETED]->B), and tweet B retweets tweet C (B-[:RETWEETED]->C). Show the three tweet IDs and the screen_name of the user who posted each tweet."
+    question: "Find all retweet chains of depth 2 — where tweet A retweets tweet B, and tweet B itself retweets tweet C. Show the three tweet IDs and the screen name of the user who posted each tweet."
     database: twitter
     difficulty: complex
     tags: [graph-traversal, chained-relationships, retweet-chain]
@@ -373,7 +373,7 @@ cases:
     is_write_query: false
 
   - id: twitter-complex-004
-    question: "For each hashtag used in retweet-tweets (retweet tweets that also have HAS_TAG), show how many unique users posted those retweet-tweets. The pattern: (poster:User)-[:POSTED]->(rt:Tweet)-[:RETWEETED]->(orig:Tweet), where rt also has (rt)-[:HAS_TAG]->(h:Hashtag). Show top 10 hashtags by unique poster count."
+    question: "For each hashtag used in retweets, show how many unique users posted those retweet-tweets. Show the top 10 hashtags by unique poster count."
     database: twitter
     difficulty: complex
     tags: [aggregation, relationship, order, limit]
@@ -387,7 +387,7 @@ cases:
   # ─── EXPERT (5 cases) ────────────────────────────────────────────────────────
 
   - id: twitter-expert-001
-    question: "Find the shortest retweet chain path between two users: find a user who retweeted a tweet originally posted by another user, traversing RETWEETED → POSTED relationships. Show the shortest path and all intermediate tweets."
+    question: "Find the shortest retweet chain path between two users: find a user who retweeted content originally posted by another user. Show the shortest path and all intermediate tweets."
     database: twitter
     difficulty: expert
     tags: [shortest-path, qpe, graph-traversal]
@@ -411,7 +411,7 @@ cases:
     is_write_query: false
 
   - id: twitter-expert-003
-    question: "Find all users reachable from troll accounts (Troll label) through a retweet chain of up to 2 hops: troll posts a tweet that retweets an original, original was posted by a non-troll user. Pattern: (troll:Troll)-[:POSTED]->(rt:Tweet)-[:RETWEETED]->(orig:Tweet)<-[:POSTED]-(reached:User). Show count of distinct reachable users and count of distinct trolls reaching them."
+    question: "Find all regular users reachable from identified troll accounts through a retweet chain of up to 2 hops — trolls posting retweets of content originally posted by non-troll users. Show the count of distinct reachable users and the count of distinct trolls reaching them."
     database: twitter
     difficulty: expert
     tags: [qpe, quantified-path, graph-traversal, aggregation]
@@ -435,7 +435,7 @@ cases:
     is_write_query: false
 
   - id: twitter-expert-005
-    question: "Find influential amplifiers: users whose tweets have been retweeted multiple times (pattern: (rt:Tweet)-[:RETWEETED]->(orig:Tweet)<-[:POSTED]-(author:User)) and who have high followers_count. Score each user as followers_count × retweet_count and show the top 10."
+    question: "Find influential amplifiers: users whose tweets have been retweeted multiple times and who have a large following. Score each user as follower count × retweet count and show the top 10."
     database: twitter
     difficulty: expert
     tags: [aggregation, math, relationship-chain, scoring, order, limit]
@@ -455,7 +455,7 @@ cases:
   #   - NEVER: MERGE (:User {user_key: $a})-[:HAS_TAG]->(:Hashtag {tag: $t}) — ghost nodes
 
   - id: twitter-write-001
-    question: "Add a new hashtag 'graphsummit' if it doesn't exist, then link it to an existing tweet with id '1234567890'. Use separate MERGE statements for the Hashtag node and the HAS_TAG relationship."
+    question: "Add a new hashtag 'graphsummit' if it doesn't exist, then link it to an existing tweet with id '1234567890'. Make sure to create the hashtag and the link to the tweet as separate operations."
     database: twitter
     difficulty: intermediate
     tags: [merge, relationship, write, hashtag]
@@ -481,7 +481,7 @@ cases:
     notes: "MERGE on user_key only (the lookup key). Set other properties via ON CREATE SET / ON MATCH SET. Never include name or screen_name in the MERGE pattern itself."
 
   - id: twitter-write-003
-    question: "Add a new Source node for 'Claude Code Bot' if it doesn't exist, then MERGE a POSTED_VIA relationship from the tweet with id '1234567890' to this Source."
+    question: "Add a new client app source 'Claude Code Bot' if it doesn't exist, then link it to the tweet with id '1234567890' as the source app that posted it."
     database: twitter
     difficulty: intermediate
     tags: [merge, relationship, write, source]
@@ -494,7 +494,7 @@ cases:
     notes: "MERGE Source by name (RANGE index). MERGE Tweet by id. Then MERGE the POSTED_VIA relationship between bound variables."
 
   - id: twitter-write-004
-    question: "Update the text of a specific tweet (id = '1234567890') to append '[UPDATED]' at the end of the existing text. Use MATCH to find the tweet and SET to update its text property."
+    question: "Update the text of the tweet with id '1234567890' to append '[UPDATED]' at the end of its existing text."
     database: twitter
     difficulty: basic
     tags: [set, write, property-update]
@@ -507,7 +507,7 @@ cases:
     notes: "Simple MATCH by Tweet.id (RANGE index) then SET t.text = t.text + ' [UPDATED]'."
 
   - id: twitter-write-005
-    question: "Delete all RETWEETED relationships where the original tweet (the target of RETWEETED) has no POSTED relationship pointing to it — i.e., orphaned retweet links. Use MATCH (rt:Tweet)-[r:RETWEETED]->(orig:Tweet) WHERE NOT EXISTS { ()-[:POSTED]->(orig) } then DELETE r."
+    question: "Clean up orphaned retweet links: delete all retweet connections where the original tweet being retweeted has no user who posted it — i.e., the original tweet is not connected to any author."
     database: twitter
     difficulty: expert
     tags: [delete, batch-write, not-exists, write]

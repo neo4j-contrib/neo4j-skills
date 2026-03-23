@@ -380,7 +380,7 @@ cases:
     is_write_query: false
 
   - id: legalcontracts-expert-002
-    question: "Using vector similarity on contract summaries, find the 5 contracts most semantically similar to a given query embedding. Return contract types and similarity scores. Use the 'contractSummary' vector index."
+    question: "Using semantic similarity on contract summaries, find the 5 contracts most similar in meaning to a given topic or description. Return contract types and similarity scores."
     database: legalcontracts
     difficulty: expert
     tags: [vector-search, similarity, semantic]

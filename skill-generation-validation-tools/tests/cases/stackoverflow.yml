@@ -335,7 +335,7 @@ cases:
   # ─── COMPLEX (4 cases) ───────────────────────────────────────────────────────
 
   - id: stackoverflow-complex-001
-    question: "What is the tag similarity cluster for 'machine-learning'? Find all tags reachable from 'machine-learning' through the SIMILAR relationship within 3 hops, and for each tag show its question count and how many hops away it is."
+    question: "What is the tag similarity cluster for 'machine-learning'? Find all tags reachable from 'machine-learning' through tag similarity connections within 3 hops, and for each tag show its question count and how many hops away it is."
     database: stackoverflow
     difficulty: complex
     tags: [qpe, bounded-quantifier, similar, tag, traversal, shortest]
@@ -397,7 +397,7 @@ cases:
     is_write_query: false
 
   - id: stackoverflow-expert-002
-    question: "Find all cycles of exactly 3 tags in the SIMILAR tag network — groups of 3 tags where tag A is similar to B, B to C, and C to A. Show the first 10 such triangles."
+    question: "Find all cycles of exactly 3 tags in the tag similarity network — groups of 3 tags where tag A is similar to B, B to C, and C back to A. Show the first 10 such triangles."
     database: stackoverflow
     difficulty: expert
     tags: [match, cycle, triangle, tag, similar, qpe]
@@ -409,7 +409,7 @@ cases:
     is_write_query: false
 
   - id: stackoverflow-expert-003
-    question: "Which tags form the 'backbone' of the tag similarity network — find the 10 tags with the highest number of SIMILAR connections (degree centrality in the tag graph)?"
+    question: "Which tags form the 'backbone' of the tag similarity network — find the 10 tags with the highest number of similarity connections to other tags (degree centrality in the tag network)?"
     database: stackoverflow
     difficulty: expert
     tags: [match, aggregation, count, order-by, tag, centrality]
