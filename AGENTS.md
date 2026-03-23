@@ -60,6 +60,7 @@
 - `null = null` → `null` (not `true`); `null <> null` → `null`. Always use `IS NULL` / `IS NOT NULL`.
 - `least()` / `greatest()` do NOT exist in Cypher — use `CASE WHEN a < b THEN a ELSE b END` instead.
 - Style guide keyword list (keywords.adoc) is 400 items — useless for agents. What agents need: UPPERCASE for clauses/operators, camelCase for functions, lowercase for `null`/`true`/`false`. Document this as a casing rules table, not a keyword enumeration.
+- GRAPH TYPE DDL (`ALTER CURRENT GRAPH TYPE`, `EXTEND GRAPH TYPE`, `SHOW GRAPH TYPES`, `CREATE GRAPH TYPE`, `DROP GRAPH TYPE`) cannot be `EXPLAIN`'d or `PROFILE`'d. Validator auto-PASSes Gates 1 and 4 for these; Gate 2 execution validates syntax. Detected via `_is_graph_type_ddl()` in validator.py.
 
 ## Python / uv
 

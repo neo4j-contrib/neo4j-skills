@@ -1156,7 +1156,8 @@ tasks:
       4. Re-run to confirm the cases now reach Gate 2 (DDL execution)
       5. If Gate 2 fails because local instance is Community edition, mark test cases with
          min_version: "2026.02" and edition: enterprise appropriately
-    status: pending
+    status: completed
+    completed_at: "2026-03-23T18:00:00Z"
     dependencies: []
     acceptance_criteria:
       - "ALTER CURRENT GRAPH TYPE queries no longer fail Gate 1"

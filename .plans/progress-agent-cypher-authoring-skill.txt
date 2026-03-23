@@ -1666,3 +1666,36 @@ Key Decisions:
 - No domain YAML changes needed — runner.py already injects capabilities from task-049
 
 Next Task: All tasks complete
+
+================================================================================
+TASK-053: Fix Gate 1 validator false positive for GRAPH TYPE DDL (REQ-F-043)
+Date: 2026-03-23T18:00:00Z
+================================================================================
+
+Summary:
+Added detection of GRAPH TYPE DDL statements (ALTER CURRENT GRAPH TYPE, EXTEND
+GRAPH TYPE, SHOW GRAPH TYPES, CREATE GRAPH TYPE, DROP GRAPH TYPE) to the
+validator. These DDL statements cannot be EXPLAIN'd or PROFILE'd in Neo4j, so
+running EXPLAIN/PROFILE on them produces a syntax error, causing spurious Gate 1
+failures. The fix introduces `_is_graph_type_ddl()` which auto-PASSes Gates 1
+and 4 for these statements, letting Gate 2 execution validate their syntax
+naturally. GQL-excluded clause detection is unaffected.
+
+Files Changed:
+- skill-generation-validation-tools/tests/harness/validator.py (modified — added
+  _GRAPH_TYPE_DDL_RE regex, _is_graph_type_ddl() function, Gate 1 EXPLAIN skip
+  branch, Gate 4 PROFILE skip branch, 14 new smoke tests)
+- .plans/tasks-agent-cypher-authoring-skill.yml (task-053 → completed)
+
+Key Decisions:
+- Used a multiline regex anchored to the start of the query (after optional
+  CYPHER 25 pragma) to detect DDL without false positives on MATCH queries
+  that mention "graph" or "type" in string literals
+- Gate 1 and Gate 4 both emit PASS (not SKIP) to keep the gate count consistent
+  and avoid changes to the reporter
+- Added 9 DDL detection cases + 5 GQL clause cases to smoke test, covering
+  positive matches, negatives (normal queries), and INSERT (GQL-excluded only)
+- CALL IN TRANSACTIONS and GRAPH TYPE DDL detection are now parallel exclusions;
+  the DDL check takes precedence because it is checked before Gate 1
+
+Next Task: task-051 (Fix zero-row test cases in goodreads, legalcontracts, retail, northwind)

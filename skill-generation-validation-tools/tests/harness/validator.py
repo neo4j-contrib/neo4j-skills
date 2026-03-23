@@ -96,6 +96,31 @@ def _is_call_in_transactions(cypher: str) -> bool:
 
 
 # ---------------------------------------------------------------------------
+# GRAPH TYPE DDL detection (Neo4j Enterprise 2026.02 Preview)
+# ---------------------------------------------------------------------------
+# These DDL statements cannot be prefixed with EXPLAIN or PROFILE —
+# running EXPLAIN on them causes a syntax error from the database.
+# Gate 1 is skipped (auto-PASS) for such queries; validation starts at Gate 2.
+
+_GRAPH_TYPE_DDL_RE = re.compile(
+    r"^\s*(?:CYPHER\s+25\s+)?"  # optional CYPHER 25 pragma
+    r"(?:"
+    r"ALTER\s+CURRENT\s+GRAPH\s+TYPE\b"
+    r"|EXTEND\s+GRAPH\s+TYPE\b"
+    r"|SHOW\s+GRAPH\s+TYPES?\b"
+    r"|CREATE\s+GRAPH\s+TYPE\b"
+    r"|DROP\s+GRAPH\s+TYPE\b"
+    r")",
+    re.IGNORECASE | re.MULTILINE,
+)
+
+
+def _is_graph_type_ddl(cypher: str) -> bool:
+    """Return True if the query is a GRAPH TYPE DDL statement that cannot be EXPLAIN'd."""
+    return bool(_GRAPH_TYPE_DDL_RE.search(cypher))
+
+
+# ---------------------------------------------------------------------------
 # Deprecated operator list (Gate 3 — EXPLAIN plan checks)
 # ---------------------------------------------------------------------------
 
@@ -442,28 +467,36 @@ def validate(
         return _build_result(cypher, gates, {})
 
     # ------------------------------------------------------------------
-    # Gate 1: Syntax — EXPLAIN
+    # Gate 1: Syntax — EXPLAIN (skipped for GRAPH TYPE DDL)
     # ------------------------------------------------------------------
-    explain_cypher = _prepend_explain(cypher)
     gate1 = GateResult(gate=1, verdict=PASS)
     plan_text = ""
 
-    try:
-        records, summary, _ = driver.execute_query(
-            explain_cypher, database_=database
-        )
-        # Capture the plan as text for Gate 3 operator scan
-        if hasattr(summary, "plan") and summary.plan:
-            plan_text = _plan_to_text(summary.plan)
-        gate1.verdict = PASS
-        gate1.reason = "EXPLAIN succeeded"
-    except Exception as exc:
-        gate1.verdict = FAIL
-        gate1.reason = f"Syntax error: {exc}"
+    if _is_graph_type_ddl(cypher):
+        # GRAPH TYPE DDL statements (ALTER CURRENT GRAPH TYPE, EXTEND GRAPH TYPE, etc.)
+        # cannot be prefixed with EXPLAIN — Neo4j rejects it as a syntax error.
+        # Skip Gate 1 with an auto-PASS and proceed directly to Gate 2 execution.
+        gate1.reason = "Gate 1 skipped: GRAPH TYPE DDL cannot be EXPLAIN'd; syntax validated by Gate 2 execution"
         gates.append(gate1)
-        return _build_result(cypher, gates, {})
+    else:
+        explain_cypher = _prepend_explain(cypher)
 
-    gates.append(gate1)
+        try:
+            records, summary, _ = driver.execute_query(
+                explain_cypher, database_=database
+            )
+            # Capture the plan as text for Gate 3 operator scan
+            if hasattr(summary, "plan") and summary.plan:
+                plan_text = _plan_to_text(summary.plan)
+            gate1.verdict = PASS
+            gate1.reason = "EXPLAIN succeeded"
+        except Exception as exc:
+            gate1.verdict = FAIL
+            gate1.reason = f"Syntax error: {exc}"
+            gates.append(gate1)
+            return _build_result(cypher, gates, {})
+
+        gates.append(gate1)
 
     # ------------------------------------------------------------------
     # Gate 2: Correctness — execute and check row count
@@ -528,9 +561,25 @@ def validate(
         gates.append(GateResult(gate=3, verdict=PASS, reason="No deprecated syntax or operators detected"))
 
     # ------------------------------------------------------------------
-    # Gate 4: Performance — PROFILE
+    # Gate 4: Performance — PROFILE (skipped for GRAPH TYPE DDL)
     # ------------------------------------------------------------------
     gate4_metrics: dict[str, Any] = {}
+
+    if _is_graph_type_ddl(cypher):
+        # GRAPH TYPE DDL statements cannot be prefixed with PROFILE.
+        # Skip Gate 4 with an auto-PASS (timing captured in Gate 2 elapsed_ms).
+        if elapsed_ms is not None:
+            gate4_metrics["elapsedTimeMs"] = round(elapsed_ms, 2)
+        gates.append(
+            GateResult(
+                gate=4,
+                verdict=PASS,
+                reason="Gate 4 skipped: GRAPH TYPE DDL cannot be PROFILE'd; no performance thresholds apply",
+                details=gate4_metrics,
+            )
+        )
+        return _build_result(cypher, gates, gate4_metrics)
+
     profile_cypher = _prepend_profile(cypher)
 
     try:
@@ -761,13 +810,48 @@ def _run_smoke_tests() -> None:
     assert _prepend_explain(q).startswith("CYPHER 25"), "CYPHER 25 pragma must come first in EXPLAIN"
     assert _prepend_profile(q).startswith("CYPHER 25"), "CYPHER 25 pragma must come first in PROFILE"
 
+    # --- GRAPH TYPE DDL detection ---
+    graph_type_ddl_cases = [
+        ("CYPHER 25\nALTER CURRENT GRAPH TYPE SET (::Customer { id :: STRING NOT NULL })", True),
+        ("CYPHER 25\nEXTEND GRAPH TYPE WITH (::Transaction { amount :: FLOAT NOT NULL })", True),
+        ("CYPHER 25\nSHOW GRAPH TYPES", True),
+        ("CYPHER 25\nSHOW GRAPH TYPE", True),
+        ("CYPHER 25\nCREATE GRAPH TYPE MyType (::Person { name :: STRING })", True),
+        ("CYPHER 25\nDROP GRAPH TYPE MyType", True),
+        # Must NOT match normal Cypher queries
+        ("CYPHER 25\nMATCH (n:Person) RETURN n", False),
+        ("CYPHER 25\nMATCH (n) WHERE n.type = 'graph' RETURN n", False),
+        # Must NOT match GQL-excluded INSERT keyword inside GRAPH TYPE context
+        ("CYPHER 25\nINSERT (p:Person {name: 'Alice'})", False),  # INSERT is GQL-excluded, not DDL
+    ]
+    for ddl_cypher, expect_match in graph_type_ddl_cases:
+        got = _is_graph_type_ddl(ddl_cypher)
+        if got != expect_match:
+            errors.append(
+                f"_is_graph_type_ddl({ddl_cypher[:60]!r}) = {got}, expected {expect_match}"
+            )
+
+    # Verify GQL-excluded clauses still correctly fire (not affected by DDL detection)
+    gql_test_cases = [
+        ("CYPHER 25\nLET x = 1 RETURN x", "LET"),
+        ("CYPHER 25\nFINISH", "FINISH"),
+        ("CYPHER 25\nFILTER n IN [1,2,3] RETURN n", "FILTER"),
+        ("CYPHER 25\nNEXT", "NEXT"),
+        ("CYPHER 25\nINSERT (p:Person)", "INSERT"),
+    ]
+    for cypher, clause in gql_test_cases:
+        issues = check_deprecated_syntax(cypher)
+        gql_fails = [g for g in issues if g.verdict == FAIL and "GQL-excluded" in g.reason]
+        if not gql_fails:
+            errors.append(f"Expected GQL-excluded FAIL for '{clause}' in: {cypher[:60]!r}")
+
     if errors:
         print("SMOKE TEST FAILURES:")
         for e in errors:
             print(f"  FAIL: {e}")
         raise SystemExit(1)
     else:
-        print(f"All smoke tests passed ({len(test_cases)} syntax cases + performance + operators)")
+        print(f"All smoke tests passed ({len(test_cases)} syntax cases + performance + operators + {len(graph_type_ddl_cases)} DDL detection + {len(gql_test_cases)} GQL clause checks)")
 
 
 if __name__ == "__main__":
