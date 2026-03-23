@@ -72,6 +72,97 @@ test-ucfraud:  ## Run ucfraud domain (bolt://localhost:7687, writeable, Neo4j 20
 	  --output $(RESULTS)/ucfraud-run-$(TIMESTAMP).md
 	@echo "\n→ Report: $(RESULTS)/ucfraud-run-$(TIMESTAMP).md"
 
+.PHONY: test-stackoverflow
+test-stackoverflow:  ## Run stackoverflow domain (demo.neo4jlabs.com, read-only)
+	$(HARNESS) \
+	  --cases $(CASES_DIR)/stackoverflow.yml \
+	  --skill $(SKILL) \
+	  --report $(RESULTS)/stackoverflow-run-$(TIMESTAMP).json \
+	  --workers $(WORKERS) \
+	  --verbose
+	$(REPORTER) \
+	  --input $(RESULTS)/stackoverflow-run-$(TIMESTAMP).json \
+	  --output $(RESULTS)/stackoverflow-run-$(TIMESTAMP).md
+	@echo "\n→ Report: $(RESULTS)/stackoverflow-run-$(TIMESTAMP).md"
+
+.PHONY: test-goodreads
+test-goodreads:  ## Run goodreads domain (demo.neo4jlabs.com, read-only)
+	$(HARNESS) \
+	  --cases $(CASES_DIR)/goodreads.yml \
+	  --skill $(SKILL) \
+	  --report $(RESULTS)/goodreads-run-$(TIMESTAMP).json \
+	  --workers $(WORKERS) \
+	  --verbose
+	$(REPORTER) \
+	  --input $(RESULTS)/goodreads-run-$(TIMESTAMP).json \
+	  --output $(RESULTS)/goodreads-run-$(TIMESTAMP).md
+	@echo "\n→ Report: $(RESULTS)/goodreads-run-$(TIMESTAMP).md"
+
+.PHONY: test-northwind
+test-northwind:  ## Run northwind domain (demo.neo4jlabs.com, read-only)
+	$(HARNESS) \
+	  --cases $(CASES_DIR)/northwind.yml \
+	  --skill $(SKILL) \
+	  --report $(RESULTS)/northwind-run-$(TIMESTAMP).json \
+	  --workers $(WORKERS) \
+	  --verbose
+	$(REPORTER) \
+	  --input $(RESULTS)/northwind-run-$(TIMESTAMP).json \
+	  --output $(RESULTS)/northwind-run-$(TIMESTAMP).md
+	@echo "\n→ Report: $(RESULTS)/northwind-run-$(TIMESTAMP).md"
+
+.PHONY: test-twitter
+test-twitter:  ## Run twitter domain (demo.neo4jlabs.com, read-only)
+	$(HARNESS) \
+	  --cases $(CASES_DIR)/twitter.yml \
+	  --skill $(SKILL) \
+	  --report $(RESULTS)/twitter-run-$(TIMESTAMP).json \
+	  --workers $(WORKERS) \
+	  --verbose
+	$(REPORTER) \
+	  --input $(RESULTS)/twitter-run-$(TIMESTAMP).json \
+	  --output $(RESULTS)/twitter-run-$(TIMESTAMP).md
+	@echo "\n→ Report: $(RESULTS)/twitter-run-$(TIMESTAMP).md"
+
+.PHONY: test-legalcontracts
+test-legalcontracts:  ## Run legalcontracts domain (demo.neo4jlabs.com, read-only)
+	$(HARNESS) \
+	  --cases $(CASES_DIR)/legalcontracts.yml \
+	  --skill $(SKILL) \
+	  --report $(RESULTS)/legalcontracts-run-$(TIMESTAMP).json \
+	  --workers $(WORKERS) \
+	  --verbose
+	$(REPORTER) \
+	  --input $(RESULTS)/legalcontracts-run-$(TIMESTAMP).json \
+	  --output $(RESULTS)/legalcontracts-run-$(TIMESTAMP).md
+	@echo "\n→ Report: $(RESULTS)/legalcontracts-run-$(TIMESTAMP).md"
+
+.PHONY: test-retail
+test-retail:  ## Run retail domain (demo.neo4jlabs.com, read-only)
+	$(HARNESS) \
+	  --cases $(CASES_DIR)/retail.yml \
+	  --skill $(SKILL) \
+	  --report $(RESULTS)/retail-run-$(TIMESTAMP).json \
+	  --workers $(WORKERS) \
+	  --verbose
+	$(REPORTER) \
+	  --input $(RESULTS)/retail-run-$(TIMESTAMP).json \
+	  --output $(RESULTS)/retail-run-$(TIMESTAMP).md
+	@echo "\n→ Report: $(RESULTS)/retail-run-$(TIMESTAMP).md"
+
+.PHONY: test-ucnetwork
+test-ucnetwork:  ## Run ucnetwork domain (demo.neo4jlabs.com, read-only)
+	$(HARNESS) \
+	  --cases $(CASES_DIR)/ucnetwork.yml \
+	  --skill $(SKILL) \
+	  --report $(RESULTS)/ucnetwork-run-$(TIMESTAMP).json \
+	  --workers $(WORKERS) \
+	  --verbose
+	$(REPORTER) \
+	  --input $(RESULTS)/ucnetwork-run-$(TIMESTAMP).json \
+	  --output $(RESULTS)/ucnetwork-run-$(TIMESTAMP).md
+	@echo "\n→ Report: $(RESULTS)/ucnetwork-run-$(TIMESTAMP).md"
+
 .PHONY: test-all
 test-all:  ## Run all domains sequentially (companies → recommendations → ucfraud)
 	@echo "=== companies ==="

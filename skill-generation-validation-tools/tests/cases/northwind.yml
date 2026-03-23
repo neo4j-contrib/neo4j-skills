@@ -5,12 +5,12 @@
 #             max_runtime_ms = observed × 5.
 
 database:
-  uri: neo4j+s://demo.neo4jlabs.com:7687
-  username: northwind
+  uri: bolt://localhost:7687
+  username: neo4j
   database: northwind
   neo4j_version: "2026.02"
   cypher_version: "25"
-  read_only: true  # demo.neo4jlabs.com — write cases SKIP rather than FAIL
+  read_only: false
 
 dataset:
   name: northwind
@@ -432,3 +432,73 @@ cases:
     max_allocated_memory_bytes: 10485760
     max_runtime_ms: 15000
     is_write_query: false
+
+  # ─── WRITE CASES (5 cases) ────────────────────────────────────────────────────
+  # Write queries are allowed on local bolt://localhost:7687 (read_only: false)
+  # MERGE rule: ALWAYS MERGE each node separately first, THEN MERGE the relationship.
+  # NEVER merge a relationship and unbound nodes in one MERGE statement.
+
+  - id: northwind-write-001
+    question: "Add a new product called 'Artisan Honey' with productID 9901, unit price of 12.50, and 50 units in stock. If it already exists, update its unitPrice and unitsInStock."
+    database: northwind
+    difficulty: intermediate
+    tags: [merge, on-create-set, on-match-set, write]
+    domain: northwind
+    min_results: 0
+    max_db_hits: 1000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 10000
+    is_write_query: true
+    notes: "Tests MERGE ON CREATE SET / ON MATCH SET pattern for upsert. productID is the unique key. Use separate property assignments for ON CREATE and ON MATCH."
+
+  - id: northwind-write-002
+    question: "Link product with productID 9901 to the Condiments category. First ensure both the product and category nodes exist, then create the PART_OF relationship between them."
+    database: northwind
+    difficulty: intermediate
+    tags: [merge, relationship, write, part-of]
+    domain: northwind
+    min_results: 0
+    max_db_hits: 1000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 10000
+    is_write_query: true
+    notes: "CRITICAL: Use three separate MERGE statements — first MERGE the product node, then MERGE the category node, then MERGE the relationship between the bound variables. NEVER merge nodes and relationship together in one MERGE."
+
+  - id: northwind-write-003
+    question: "Update product 'Chai' (productID 1) to set its unitPrice to 19.99 and unitsInStock to 45."
+    database: northwind
+    difficulty: basic
+    tags: [set, write, property-update]
+    domain: northwind
+    min_results: 0
+    max_db_hits: 500
+    max_allocated_memory_bytes: 2097152
+    max_runtime_ms: 5000
+    is_write_query: true
+    notes: "Simple MATCH + SET for property update. MATCH by productID (RANGE index exists), then SET both properties."
+
+  - id: northwind-write-004
+    question: "Move product 'Chai' (productID 1) from its current category to the Beverages category: delete the existing PART_OF relationship and create a new PART_OF to Beverages."
+    database: northwind
+    difficulty: advanced
+    tags: [delete, merge, relationship, write, category-reassign]
+    domain: northwind
+    min_results: 0
+    max_db_hits: 1000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 10000
+    is_write_query: true
+    notes: "Pattern: MATCH and DELETE existing PART_OF rel, then MATCH (or MERGE) the Beverages category node, then MERGE the new (p)-[:PART_OF]->(c) relationship."
+
+  - id: northwind-write-005
+    question: "For all discontinued products, decrease their unitsInStock by 1 (simulating a stock decrement). Process them in batches of 10 rows using CALL IN TRANSACTIONS."
+    database: northwind
+    difficulty: expert
+    tags: [call-in-transactions, batch-write, set, write]
+    domain: northwind
+    min_results: 0
+    max_db_hits: 5000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 30000
+    is_write_query: true
+    notes: "Use CALL (p) { SET p.unitsInStock = p.unitsInStock - 1 } IN TRANSACTIONS OF 10 ROWS pattern. Match all discontinued products first, then apply batch write."

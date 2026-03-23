@@ -8,7 +8,7 @@ database:
   uri: neo4j+s://demo.neo4jlabs.com:7687
   username: companies
   database: companies
-  neo4j_version: "2026.02"
+  neo4j_version: "2026.01"
   cypher_version: "25"
   read_only: true  # demo.neo4jlabs.com — write cases SKIP rather than FAIL
 

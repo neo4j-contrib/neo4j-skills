@@ -195,10 +195,37 @@ RETURN n.name,
 > **SEARCH is vector-only** — fulltext always uses `db.index.fulltext.queryNodes()`. **Version check required**: SEARCH clause is GA in Neo4j **2026.02.1+**; use the procedure fallback for older versions (pre-2026.02 databases).
 
 ```cypher
-// Vector 2026.02.1+: CYPHER 25 MATCH (c:Chunk) SEARCH (c) USING VECTOR INDEX news WITH QUERY VECTOR $embedding WHERE score > 0.8 RETURN c.text, score LIMIT 10;
-// Vector <2026.02:   CYPHER 25 CALL db.index.vector.queryNodes('news', 5, $embedding) YIELD node, score RETURN node.text, score;
-// Fulltext (all):    CYPHER 25 CALL db.index.fulltext.queryNodes('entity', $query) YIELD node, score RETURN node.name, score LIMIT 20;
+// Vector 2026.02.1+ (SEARCH clause):
+CYPHER 25
+MATCH (c:Chunk)
+SEARCH c IN (VECTOR INDEX news FOR $embedding LIMIT 10)
+SCORE AS score
+WHERE score > 0.8
+RETURN c.text, score
+ORDER BY score DESC
+
+// Vector <2026.02 (procedure fallback):
+CYPHER 25
+CALL db.index.vector.queryNodes('news', 5, $embedding)
+YIELD node AS c, score
+WHERE score > 0.8
+RETURN c.text, score
+
+// Fulltext (all versions — SEARCH clause never covers fulltext):
+CYPHER 25
+CALL db.index.fulltext.queryNodes('entity', $query)
+YIELD node, score
+RETURN node.name, score
+ORDER BY score DESC
+LIMIT 20
 ```
+
+**SEARCH syntax rules:**
+- Variable name only — NOT `SEARCH (n)`, must be `SEARCH n`
+- `IN (VECTOR INDEX index_name FOR $embedding LIMIT N)` — limit is required inside parens
+- `SCORE AS varname` — bind the similarity score after the closing paren
+- `WHERE score > 0.8` comes after `SCORE AS`, before `RETURN`
+- Only for node vector indexes — relationship vector indexes still require the procedure
 
 ---
 

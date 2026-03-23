@@ -25,7 +25,7 @@ dataset:
         properties:
           transactionID: {type: STRING,  description: "Unique transaction identifier"}
           amount:        {type: FLOAT,   min: 0.01, description: "Transaction amount in currency units"}
-          date:          {type: DATE,    sample: ["2025-01-15", "2025-06-30"]}
+          date:          {type: DATETIME, sample: ["2024-12-03T00:00:00Z", "2025-03-15T00:00:00Z"], description: "DateTime type — actual range is 2024-05-20 to 2025-05-09. Use datetime() for comparisons: WHERE t.date >= datetime('2024-01-01')"}
           type:          {type: STRING,  values: [Transfer, Deposit, Withdrawal], description: "Title case — 'Transfer' not 'transfer'"}
           status:        {type: STRING,  values: [Completed, Pending, Failed], description: "Title case — 'Completed' not 'completed'"}
       Account:
@@ -58,13 +58,12 @@ dataset:
         properties:
           phoneNumber: {type: STRING}
       Alert:
+        description: "A fraud alert linked to an account"
         properties:
-          alertId:     {type: STRING}
-          description: {type: STRING}
-          severity:    {type: STRING, values: [low, medium, high, critical]}
+          alertId: {type: STRING, description: "Unique alert identifier — NOTE: Alert nodes only have alertId, no description or severity"}
       AlertStatus:
         properties:
-          status: {type: STRING, values: [open, investigating, closed, false_positive]}
+          status: {type: STRING, values: ["01-New", "02-Validated", "03-ConfirmedValidated", "04-Recycled", "05-Rejected", "06-ConfirmedRejected"], description: "Status code with numeric prefix — e.g. '01-New', '02-Validated'. Use STARTS WITH '01' to match New status."}
       Jurisdiction:
         properties:
           name: {type: STRING}
@@ -263,14 +262,6 @@ cases:
     max_db_hits: 50000
     max_allocated_memory_bytes: 20971520
     max_runtime_ms: 10000
-    cypher: |
-      CYPHER 25
-      MATCH (t:Transaction)
-      WHERE t.date.year = 2025
-      RETURN t.type AS transactionType,
-             count(t) AS count,
-             sum(t.amount) AS totalAmount
-      ORDER BY totalAmount DESC
 
   - id: "ucf-intermediate-004"
     question: "Which customers appear to be linked to each other through shared personal details? Show the pairs of linked customer names."
@@ -675,7 +666,7 @@ cases:
     max_allocated_memory_bytes: 20971520
     max_runtime_ms: 10000
     is_write_query: false
-    notes: "casual 'open / critical' → Alert.severity = 'critical' (lowercase enum) + AlertStatus.status = 'open' (lowercase enum); both require schema-driven enum resolution"
+    notes: "Alert node only has alertId (no severity or status properties). AlertStatus.status values are formatted like '01-New', '02-Validated'. The query should look for accounts with any alerts in New status: (a:Account)-[:HAS_ALERT]->(al:Alert)-[:HAS_STATUS]->(as:AlertStatus) WHERE as.status STARTS WITH '01'"
 
   - id: "ucf-casual-002"
     question: "Which savings accounts are frozen right now? I need a list of accounts that are locked and can't transact."

@@ -74,9 +74,10 @@ CYPHER_25_PRAGMA = re.compile(r"^\s*CYPHER\s+25\b", re.IGNORECASE | re.MULTILINE
 
 # GQL clauses that must never appear in generated queries
 GQL_EXCLUDED_CLAUSES = ["LET", "FINISH", "FILTER", "NEXT", "INSERT"]
-# Built as word-boundary patterns to avoid false positives on substrings
+# Use negative lookbehind for ':' to avoid false positives on relationship type names
+# e.g. [:NEXT] is a valid relationship type, not the GQL NEXT clause
 _GQL_PATTERNS = [
-    (re.compile(rf"\b{clause}\b", re.IGNORECASE), clause)
+    (re.compile(rf"(?<!:)\b{clause}\b", re.IGNORECASE), clause)
     for clause in GQL_EXCLUDED_CLAUSES
 ]
 

@@ -77,7 +77,7 @@ dataset:
         properties:
           id:          {type: INTEGER}
           datasize:    {type: INTEGER, description: "Data transfer size"}
-          datasizeretry: {type: INTEGER, description: "Retry data size (indication of poor link quality)"}
+          datasizeretry: {type: INTEGER, description: "Retry data size (indication of poor link quality) — most nodes have 0; use datasizeretry > 0 to filter retransmitted frames (107 nodes, max 285323)"}
           linkmeasure: {type: INTEGER, description: "Link quality measurement"}
           maxtxpw:     {type: INTEGER, description: "Maximum transmit power"}
           mintxpw:     {type: INTEGER, description: "Minimum transmit power"}
@@ -87,16 +87,16 @@ dataset:
           id:          {type: INTEGER}
           lastbssid:   {type: STRING, description: "Last BSSID before current association"}
           signalchange: {type: INTEGER, description: "Signal strength change since last snapshot (dBm delta)"}
-          seenbycount: {type: INTEGER, description: "Number of access points that have observed this device"}
+          seenbycount: {type: INTEGER, description: "Number of access points that have observed this device — values are typically 1 in current dataset; use seenbycount >= 1 for traversed clients"}
           firstseen:   {type: INTEGER}
           lastseen:    {type: INTEGER}
       SecurityPosture:
         description: "Security-related metrics for a snapshot"
         properties:
           id:       {type: INTEGER}
-          nretries: {type: INTEGER, description: "Number of retransmission retries (high value = interference or attack)"}
+          nretries: {type: INTEGER, description: "Number of retransmission retries (high value = interference or attack) — 107 nodes have nretries > 0, max 358; use nretries > 0 for non-zero security metrics"}
           nfrag:    {type: INTEGER, description: "Number of fragmented frames (unusual fragmentation can indicate attacks)"}
-          wpscount: {type: INTEGER, description: "Number of WPS interactions (WPS vulnerabilities)"}
+          wpscount: {type: INTEGER, description: "Number of WPS interactions — NOTE: wpscount = 0 for ALL nodes in current dataset; do not filter by wpscount > 0. Use nretries > 0 instead for active security metrics."}
           wpslast:  {type: INTEGER, description: "Timestamp of last WPS interaction"}
           lastbssid: {type: STRING}
       WIFIBridge:
@@ -269,7 +269,7 @@ cases:
     is_write_query: false
 
   - id: ucnetwork-intermediate-002
-    question: "Which client devices have been seen by more than 2 access points (high seenbycount)? Show MAC address and seenby count from their latest snapshot."
+    question: "Which client devices have been observed by access points (seenbycount >= 1) and have changed signal strength between snapshots (signalchange <> 0)? Show MAC address, seenbycount, and signalchange from their latest snapshot."
     database: ucnetwork
     difficulty: intermediate
     tags: [relationship, filter, mobility]
@@ -305,7 +305,7 @@ cases:
     is_write_query: false
 
   - id: ucnetwork-intermediate-005
-    question: "Which devices have a high retry rate in their performance metrics (datasizeretry greater than datasize)? These may be experiencing poor signal quality."
+    question: "Which devices have retry transmissions in their performance metrics (datasizeretry > 0)? These may be experiencing poor signal quality. Show MAC address and the datasizeretry value."
     database: ucnetwork
     difficulty: intermediate
     tags: [relationship-chain, comparison, filter, performance]
@@ -343,7 +343,7 @@ cases:
     is_write_query: false
 
   - id: ucnetwork-advanced-002
-    question: "Find potentially suspicious devices: clients with high WPS interaction counts (wpscount above 5) in their security posture. Show device MAC, manufacturer, and WPS count."
+    question: "Find potentially suspicious devices: clients with retransmission retries (nretries > 0) in their security posture — high retry counts can indicate interference or probing attacks. Show device MAC, manufacturer, and nretries count."
     database: ucnetwork
     difficulty: advanced
     tags: [relationship-chain, filter, security]
@@ -441,7 +441,7 @@ cases:
     is_write_query: false
 
   - id: ucnetwork-complex-004
-    question: "Create a security risk summary: for each device, compute a risk score as retries + fragments + wps_interactions from their security posture metrics. Show top 10 highest risk devices."
+    question: "Create a security risk summary: for each device, compute a risk score as nretries + nfrag from their security posture metrics (note: wpscount is 0 for all devices in this dataset so exclude it). Show top 10 highest risk devices."
     database: ucnetwork
     difficulty: complex
     tags: [aggregation, math, scoring, relationship-chain, order]

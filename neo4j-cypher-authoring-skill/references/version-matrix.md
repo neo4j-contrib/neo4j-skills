@@ -20,8 +20,11 @@ Cross-reference with the `database.neo4j_version` in the injected schema context
 
 ## Notes
 
-- **SEARCH clause**: GA for **vector indexes only** in 2026.02.1. Fulltext indexes still require
-  `db.index.fulltext.queryNodes()` — SEARCH does not cover fulltext.
+- **SEARCH clause**: GA for **node vector indexes only** in 2026.02.1. Correct syntax:
+  `SEARCH n IN (VECTOR INDEX name FOR $vec LIMIT N) SCORE AS score` — variable name only (NOT `(n)`);
+  LIMIT required inside parens; `SCORE AS varname` binds the similarity score after closing paren.
+  Fulltext always requires `db.index.fulltext.queryNodes()`. Relationship vector indexes always
+  require `db.index.vector.queryRelationships()` — SEARCH clause is node-only.
 - **GRAPH TYPE**: Enterprise Edition only, Preview status. Not for production use.
 - **`+` / `*` QPE shorthands**: Availability as shorthand for `{1,}` / `{0,}` — confirm against
   target version. Use explicit `{1,}` / `{0,}` for maximum compatibility.

@@ -5,81 +5,75 @@
 #             max_runtime_ms = observed × 5.
 
 database:
-  uri: neo4j+s://demo.neo4jlabs.com:7687
-  username: twitter
+  uri: bolt://localhost:7687
+  username: neo4j
   database: twitter
   neo4j_version: "2026.02"
   cypher_version: "25"
-  read_only: true  # demo.neo4jlabs.com — write cases SKIP rather than FAIL
+  read_only: false
 
 dataset:
   name: twitter
   description: |
-    A social media knowledge graph based on Twitter/X activity, primarily around Neo4j and tech
-    topics from early 2021. Contains users, tweets, hashtags, links, and the social interactions
-    between them: follows, retweets, replies, mentions, and tag usage. A :Me node identifies the
-    central user account (Neo4j's official Twitter account). Use to explore influencer networks,
-    hashtag trends, retweet patterns, and follower graph topology.
-    Contains ~39K users, 2,407 tweets, 344 hashtags, and 44,630 FOLLOWS relationships.
+    A social media knowledge graph based on Twitter/X activity. Contains users, tweets, hashtags,
+    URLs, sources, and a special Troll label for identified troll accounts. Use to explore
+    influencer networks, hashtag trends, retweet patterns, and follower graph topology.
+    Contains 232,061 Tweets, 14,273 Users, 18 Sources, 12,919 Hashtags, 21,865 URLs, 453 Trolls.
   schema:
     nodes:
+      Tweet:
+        description: "A tweet post"
+        properties:
+          id:          {type: STRING, description: "Tweet ID string — RANGE index exists on Tweet.id"}
+          text:        {type: STRING, description: "Tweet content"}
+          created_at:  {type: INTEGER, description: "Unix timestamp of when tweet was created"}
+          created_str: {type: STRING, description: "Human-readable datetime string"}
       User:
         description: "A Twitter/X user account"
         properties:
-          screen_name:       {type: STRING, sample: ["neo4j", "NASAPersevere", "graphistas"], description: "Twitter handle (no @)"}
-          name:              {type: STRING, description: "Display name"}
-          followers:         {type: INTEGER, description: "Number of followers"}
-          following:         {type: INTEGER, description: "Number of accounts this user follows"}
-          statuses:          {type: INTEGER, description: "Total tweets/statuses posted"}
-          betweenness:       {type: FLOAT, description: "Betweenness centrality score in the follow graph (sparse)"}
-          location:          {type: STRING, description: "Self-reported location (sparse)"}
-          profile_image_url: {type: STRING}
-          url:               {type: STRING}
-      Me:
-        description: "The central user account in the dataset (Neo4j's official account: screen_name='neo4j'). Acts as the ego node of the social graph."
-        properties:
-          screen_name: {type: STRING, sample: ["neo4j"]}
-          followers:   {type: INTEGER}
-          following:   {type: INTEGER}
-          betweenness: {type: FLOAT}
-      Tweet:
-        description: "A tweet or retweet post"
-        properties:
-          id:            {type: STRING, description: "Tweet ID string"}
-          text:          {type: STRING, description: "Tweet content"}
-          favorites:     {type: INTEGER, description: "Number of likes (stored as INTEGER or STRING depending on tweet; use coalesce/toInteger)"}
-          created_at:    {type: STRING, description: "ISO datetime string of when tweet was created"}
-          import_method: {type: STRING, description: "How the tweet was imported into the graph"}
-      Hashtag:
-        description: "A Twitter hashtag"
-        properties:
-          name: {type: STRING, sample: ["neo4j", "graphdatabases", "antimoneylaundering", "cloud", "education"], description: "Hashtag text in lowercase without the # symbol"}
-      Link:
-        description: "A URL shared in a tweet"
-        properties:
-          url: {type: STRING}
+          id:               {type: STRING, description: "User ID — RANGE index exists on User.id"}
+          user_key:         {type: STRING, description: "Unique user key — RANGE index exists on User.user_key"}
+          screen_name:      {type: STRING, description: "Twitter handle (no @)"}
+          name:             {type: STRING, description: "Display name"}
+          followers_count:  {type: INTEGER, description: "Number of followers"}
+          friends_count:    {type: INTEGER, description: "Number of accounts this user follows"}
+          statuses_count:   {type: INTEGER, description: "Total tweets/statuses posted"}
+          favourites_count: {type: INTEGER, description: "Number of tweets this user has liked"}
+          listed_count:     {type: INTEGER, description: "Number of lists this user appears in"}
+          verified:         {type: BOOLEAN, description: "Whether the account is verified"}
+          lang:             {type: STRING, description: "Account language setting"}
+          location:         {type: STRING, description: "Self-reported location (sparse)"}
+          description:      {type: STRING, description: "User bio (sparse)"}
+          time_zone:        {type: STRING, description: "Account time zone (sparse)"}
+      Troll:
+        description: "A user identified as a troll account — has same properties as User. 453 Troll nodes."
+        note: "Troll nodes have the same properties as User nodes but are labeled :Troll instead of :User."
       Source:
         description: "The Twitter client app used to post (e.g. 'Twitter for iPhone')"
         properties:
-          name: {type: STRING, sample: ["TweetDeck", "Twitter for iPhone", "Twitter Web App"]}
+          name: {type: STRING, sample: ["Twitter for iPhone", "Twitter Web App", "TweetDeck"], description: "Client app name — RANGE index on Source.name"}
+      Hashtag:
+        description: "A Twitter hashtag"
+        properties:
+          tag: {type: STRING, description: "Hashtag text — RANGE index on Hashtag.tag"}
+      URL:
+        description: "A URL shared in a tweet"
+        properties:
+          expanded_url: {type: STRING, description: "Full expanded URL — RANGE index on URL.expanded_url"}
     relationships:
-      - type: FOLLOWS
-        from: User
-        to: User
-        description: "One user follows another (44,630 total)"
-      - type: POSTS
+      - type: POSTED
         from: User
         to: Tweet
         description: "User posted this tweet"
-      - type: TAGS
+      - type: RETWEETED
+        from: User
+        to: Tweet
+        description: "User retweeted this tweet"
+      - type: IN_REPLY_TO
         from: Tweet
-        to: Hashtag
-        description: "Tweet uses this hashtag"
-      - type: CONTAINS
-        from: Tweet
-        to: Link
-        description: "Tweet contains this URL link"
-      - type: USING
+        to: Tweet
+        description: "This tweet is a reply to another tweet"
+      - type: POSTED_VIA
         from: Tweet
         to: Source
         description: "Tweet was posted using this client app"
@@ -87,31 +81,32 @@ dataset:
         from: Tweet
         to: User
         description: "Tweet mentions this user with @handle"
-      - type: RETWEETS
+      - type: HAS_TAG
         from: Tweet
-        to: Tweet
-        description: "This tweet is a retweet of another tweet"
-      - type: REPLY_TO
+        to: Hashtag
+        description: "Tweet uses this hashtag"
+      - type: HAS_LINK
         from: Tweet
-        to: Tweet
-        description: "This tweet is a reply to another tweet"
-      - type: INTERACTS_WITH
-        from: User
-        to: User
-        description: "Aggregated interaction relationship between users"
-      - type: AMPLIFIES
-        from: User
-        to: User
-        description: "User amplifies (retweets/shares) content from another user"
-    indexes: []
+        to: URL
+        description: "Tweet contains this URL link"
+    indexes:
+      - {name: "Tweet.id", type: RANGE, on: "Tweet(id)"}
+      - {name: "User.user_key", type: RANGE, on: "User(user_key)"}
+      - {name: "User.id", type: RANGE, on: "User(id)"}
+      - {name: "Source.name", type: RANGE, on: "Source(name)"}
+      - {name: "Hashtag.tag", type: RANGE, on: "Hashtag(tag)"}
+      - {name: "URL.expanded_url", type: RANGE, on: "URL(expanded_url)"}
   notes:
-    - "The :Me node represents Neo4j's account (screen_name='neo4j') — it has both :Me and :User labels"
-    - "Hashtag names are lowercase and have no # prefix in the graph (e.g. 'neo4j', not '#neo4j')"
-    - "FOLLOWS is the main social graph relationship — 44,630 edges among ~39K users"
-    - "Tweet.favorites may be stored as INTEGER or STRING depending on import — use toInteger() for numeric comparisons"
-    - "No vector or fulltext indexes — use string matching for text search"
-    - "Dataset is from early 2021; temporal questions should account for fixed date range"
-    - "betweenness is sparse — most users have no betweenness score"
+    - "Hashtag property is 'tag' (not 'name') — use h.tag for hashtag text"
+    - "URL property is 'expanded_url' (not 'url') — use u.expanded_url"
+    - "User property for followers is 'followers_count' (not 'followers')"
+    - "Tweet timestamps: created_at is INTEGER (Unix epoch), created_str is human-readable STRING"
+    - "Relationship for posting is POSTED (not POSTS); for client app is POSTED_VIA (not USING)"
+    - "Relationship for hashtags is HAS_TAG (not TAGS); for URLs is HAS_LINK (not CONTAINS)"
+    - "Troll nodes are labeled :Troll (not :User) — 453 troll accounts in dataset"
+    - "No FOLLOWS relationship in this dataset — social graph uses POSTED/RETWEETED/MENTIONS"
+    - "No vector or fulltext indexes — use string matching with RANGE index lookups"
+    - "Write queries ARE ALLOWED on this local database (MERGE, SET, CALL IN TRANSACTIONS)"
 
 cases:
 
@@ -178,10 +173,10 @@ cases:
     is_write_query: false
 
   - id: twitter-basic-006
-    question: "List all users that the central Neo4j account directly follows. Show their screen names."
+    question: "Which users have posted tweets in the dataset? Show the top 10 users by number of tweets posted (using the POSTED relationship)."
     database: twitter
     difficulty: basic
-    tags: [match, relationship, me-node]
+    tags: [match, relationship, aggregation, limit]
     domain: twitter
     min_results: 1
     max_db_hits: 20000
@@ -192,10 +187,10 @@ cases:
   # ─── INTERMEDIATE (6 cases) ──────────────────────────────────────────────────
 
   - id: twitter-intermediate-001
-    question: "Which users both follow the Neo4j account and are followed back by the Neo4j account? Show their screen names."
+    question: "Which users have been mentioned in tweets AND have also posted their own tweets? Show their screen names. (Hint: use MENTIONS and POSTED relationships)"
     database: twitter
     difficulty: intermediate
-    tags: [match, mutual-follows, filter]
+    tags: [match, multiple-relationships, filter]
     domain: twitter
     min_results: 1
     max_db_hits: 30000
@@ -228,7 +223,7 @@ cases:
     is_write_query: false
 
   - id: twitter-intermediate-004
-    question: "How many of the users followed by the Neo4j account have more than 10,000 followers themselves? Show their screen names and follower counts."
+    question: "Which users have more than 10,000 followers_count and have posted at least one tweet? Show their screen names and follower counts."
     database: twitter
     difficulty: intermediate
     tags: [match, relationship, filter, influencers]
@@ -240,7 +235,7 @@ cases:
     is_write_query: false
 
   - id: twitter-intermediate-005
-    question: "Find all tweets that contain a link and use the hashtag 'graphdatabases'. Show the tweet text and the URL."
+    question: "Find all tweets that contain a link (HAS_LINK) and use the hashtag (HAS_TAG) with tag 'graphdatabases'. Show the tweet text and the URL (expanded_url)."
     database: twitter
     difficulty: intermediate
     tags: [match, multiple-relationships, filter]
@@ -266,10 +261,10 @@ cases:
   # ─── ADVANCED (6 cases) ──────────────────────────────────────────────────────
 
   - id: twitter-advanced-001
-    question: "Find users who follow each other (mutual follows). Show pairs of screen names. Limit to 20 pairs."
+    question: "Find pairs of users who have mutually mentioned each other — user A posted a tweet mentioning user B, AND user B posted a tweet mentioning user A. Show pairs of screen names. Limit to 20 pairs."
     database: twitter
     difficulty: advanced
-    tags: [bidirectional, mutual-follows, filter, limit]
+    tags: [bidirectional, mutual-mentions, filter, limit]
     domain: twitter
     min_results: 1
     max_db_hits: 100000
@@ -314,7 +309,7 @@ cases:
     is_write_query: false
 
   - id: twitter-advanced-005
-    question: "Find users who follow the Neo4j account but whose own follower count is greater than the Neo4j account's follower count."
+    question: "Find users who have been retweeted (their tweets appear in RETWEETED relationships) and whose followers_count is greater than 50000. Show screen_name and followers_count."
     database: twitter
     difficulty: advanced
     tags: [match, comparison, relationship, filter]
@@ -340,7 +335,7 @@ cases:
   # ─── COMPLEX (4 cases) ───────────────────────────────────────────────────────
 
   - id: twitter-complex-001
-    question: "Find users who are 2 hops away in the follower network from the Neo4j account — i.e. users followed by someone who follows Neo4j, but not directly followed by Neo4j. Show up to 20 distinct screen names."
+    question: "Find users who are mentioned in tweets posted by users who retweeted a specific tweet. Show the 2-hop mention chain: (user A) -[:RETWEETED]-> (tweet) <-[:POSTED]- (user B) -[:POSTED]-> (tweet2) -[:MENTIONS]-> (user C). Show up to 20 distinct screen names of the mentioned users (user C)."
     database: twitter
     difficulty: complex
     tags: [graph-traversal, two-hop, not-exists, limit]
@@ -376,10 +371,10 @@ cases:
     is_write_query: false
 
   - id: twitter-complex-004
-    question: "For each user followed by the Neo4j account, show how many of their followers also follow the Neo4j account (shared audience). Show top 10 by shared audience size."
+    question: "For each hashtag used in retweets (tweets posted via RETWEETED relationships), show how many unique users posted those retweets (user -[:RETWEETED]-> tweet -[:HAS_TAG]-> hashtag). Show top 10 hashtags by unique retweeting user count."
     database: twitter
     difficulty: complex
-    tags: [aggregation, relationship, common-follower, order, limit]
+    tags: [aggregation, relationship, order, limit]
     domain: twitter
     min_results: 1
     max_db_hits: 200000
@@ -390,7 +385,7 @@ cases:
   # ─── EXPERT (5 cases) ────────────────────────────────────────────────────────
 
   - id: twitter-expert-001
-    question: "Find the shortest path in the follower network between the user 'neo4j' and the user 'NASAPersevere'. Show all users in the path."
+    question: "Find the shortest retweet chain path between two users: find a user who retweeted a tweet originally posted by another user, traversing RETWEETED → POSTED relationships. Show the shortest path and all intermediate tweets."
     database: twitter
     difficulty: expert
     tags: [shortest-path, qpe, graph-traversal]
@@ -402,10 +397,10 @@ cases:
     is_write_query: false
 
   - id: twitter-expert-002
-    question: "Identify bridge users in the follower network — users who follow people in multiple distinct clusters. Use betweenness centrality if available, otherwise find users who follow at least 5 people who don't follow each other. Show top 10."
+    question: "Identify users who appear as influential hubs in the mention network — users who are mentioned by many distinct other users. Show top 10 by number of distinct users who mentioned them."
     database: twitter
     difficulty: expert
-    tags: [graph-analytics, betweenness, filter, order]
+    tags: [graph-analytics, aggregation, filter, order]
     domain: twitter
     min_results: 1
     max_db_hits: 100000
@@ -414,7 +409,7 @@ cases:
     is_write_query: false
 
   - id: twitter-expert-003
-    question: "Find all users reachable from Neo4j's account within 3 follow hops. Show how many distinct users are reachable at each hop distance (1, 2, 3)."
+    question: "Find all users reachable through the RETWEETED → POSTED chain within 2 hops from troll accounts (Troll label). Show how many distinct users are reachable and the count of Troll accounts that reach them."
     database: twitter
     difficulty: expert
     tags: [qpe, quantified-path, graph-traversal, aggregation]
@@ -438,7 +433,7 @@ cases:
     is_write_query: false
 
   - id: twitter-expert-005
-    question: "Find influential amplifiers: users who both have high follower counts and have been retweeted multiple times. Score each user as followers × retweet_count and show the top 10."
+    question: "Find influential amplifiers: users who both have high followers_count and have been retweeted multiple times (their tweets appear in RETWEETED rels). Score each user as followers_count × retweet_count and show the top 10."
     database: twitter
     difficulty: expert
     tags: [aggregation, math, relationship-chain, scoring, order, limit]
@@ -448,3 +443,76 @@ cases:
     max_allocated_memory_bytes: 20971520
     max_runtime_ms: 30000
     is_write_query: false
+
+  # ─── WRITE CASES (5 cases) ────────────────────────────────────────────────────
+  # Write queries are allowed on local bolt://localhost:7687 (read_only: false)
+  # CRITICAL MERGE RULES (from skill):
+  #   - ALWAYS MERGE each node separately by its unique key property ONLY
+  #   - THEN MERGE the relationship between the already-bound node variables
+  #   - NEVER: MERGE (u:User {user_key: $k, name: $n}) — multi-property = duplicates
+  #   - NEVER: MERGE (:User {user_key: $a})-[:HAS_TAG]->(:Hashtag {tag: $t}) — ghost nodes
+
+  - id: twitter-write-001
+    question: "Add a new hashtag 'graphsummit' if it doesn't exist, then link it to an existing tweet with id '1234567890'. Use separate MERGE statements for the Hashtag node and the HAS_TAG relationship."
+    database: twitter
+    difficulty: intermediate
+    tags: [merge, relationship, write, hashtag]
+    domain: twitter
+    min_results: 0
+    max_db_hits: 1000
+    max_allocated_memory_bytes: 5242880
+    max_runtime_ms: 10000
+    is_write_query: true
+    notes: "CRITICAL: Three separate MERGE statements — (1) MERGE (t:Tweet {id: $tweetId}), (2) MERGE (h:Hashtag {tag: $tag}), (3) MERGE (t)-[:HAS_TAG]->(h). NEVER merge nodes and relationship together."
+
+  - id: twitter-write-002
+    question: "Upsert a user with user_key 'u_99999': if new, set name='Test User' and screen_name='testuser99'; if already exists, update their followers_count to 500."
+    database: twitter
+    difficulty: intermediate
+    tags: [merge, on-create-set, on-match-set, write]
+    domain: twitter
+    min_results: 0
+    max_db_hits: 500
+    max_allocated_memory_bytes: 2097152
+    max_runtime_ms: 5000
+    is_write_query: true
+    notes: "MERGE on user_key only (the lookup key). Set other properties via ON CREATE SET / ON MATCH SET. Never include name or screen_name in the MERGE pattern itself."
+
+  - id: twitter-write-003
+    question: "Add a new Source node for 'Claude Code Bot' if it doesn't exist, then MERGE a POSTED_VIA relationship from the tweet with id '1234567890' to this Source."
+    database: twitter
+    difficulty: intermediate
+    tags: [merge, relationship, write, source]
+    domain: twitter
+    min_results: 0
+    max_db_hits: 500
+    max_allocated_memory_bytes: 2097152
+    max_runtime_ms: 5000
+    is_write_query: true
+    notes: "MERGE Source by name (RANGE index). MERGE Tweet by id. Then MERGE the POSTED_VIA relationship between bound variables."
+
+  - id: twitter-write-004
+    question: "Update the text of a specific tweet (id = '1234567890') to append '[UPDATED]' at the end of the existing text. Use MATCH to find the tweet and SET to update its text property."
+    database: twitter
+    difficulty: basic
+    tags: [set, write, property-update]
+    domain: twitter
+    min_results: 0
+    max_db_hits: 500
+    max_allocated_memory_bytes: 2097152
+    max_runtime_ms: 5000
+    is_write_query: true
+    notes: "Simple MATCH by Tweet.id (RANGE index) then SET t.text = t.text + ' [UPDATED]'."
+
+  - id: twitter-write-005
+    question: "Delete all RETWEETED relationships for tweets where the original tweet no longer exists (i.e., the tweet being retweeted has no POSTED relationship pointing to it). Use MATCH to find orphaned RETWEETED rels and DELETE them in batch."
+    database: twitter
+    difficulty: expert
+    tags: [delete, batch-write, not-exists, write]
+    domain: twitter
+    min_results: 0
+    max_db_hits: 50000
+    max_allocated_memory_bytes: 10485760
+    max_runtime_ms: 30000
+    is_write_query: true
+    notes: "Find (:User)-[r:RETWEETED]->(t:Tweet) WHERE NOT EXISTS { (:User)-[:POSTED]->(t) } then DELETE r. Can use CALL IN TRANSACTIONS for large batches."

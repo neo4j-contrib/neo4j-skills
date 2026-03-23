@@ -281,17 +281,48 @@ Index usage can be enforced when Cypher uses a suboptimal index, or when more th
 
 # SEARCH clause (vector index query)
 
-> **Available: Neo4j 2026.02.1+** — GA for vector indexes only. Not available on older versions.
+> **Available: Neo4j 2026.02.1+** — GA for node vector indexes only. Not available on older versions.
 > For pre-2026.02 databases, use `db.index.vector.queryNodes()` instead.
 > Fulltext indexes do NOT support SEARCH clause — always use `db.index.fulltext.queryNodes()`.
+> Relationship vector indexes do NOT support SEARCH clause — always use `db.index.vector.queryRelationships()`.
 
-Vector query procedure (works on all versions):
+## SEARCH clause syntax (2026.02.1+)
+
+```cypher
+CYPHER 25
+MATCH (c:Chunk)
+SEARCH c IN (VECTOR INDEX news FOR $embedding LIMIT 10)
+SCORE AS score
+WHERE score > 0.8
+RETURN c.text, score
+ORDER BY score DESC
+```
+
+**Key syntax rules:**
+- Variable name only — NOT `SEARCH (n)`, must be `SEARCH n`
+- `IN (VECTOR INDEX index_name FOR $embedding LIMIT N)` — LIMIT is required inside parens
+- `SCORE AS varname` — bind the similarity score **after** the closing paren, before WHERE/RETURN
+- `WHERE` and `ORDER BY` come after `SCORE AS`
+
+## Procedure fallback (all versions)
+
+Node vector index (pre-2026.02 or relationship indexes):
 
 ```cypher
 CYPHER 25
 CALL db.index.vector.queryNodes('moviePlotsEmbedding', 10, $embedding)
 YIELD node, score
 RETURN node.title, score
+ORDER BY score DESC
+```
+
+Relationship vector index (always use procedure — no SEARCH support):
+
+```cypher
+CYPHER 25
+CALL db.index.vector.queryRelationships('review-embeddings', 10, $embedding)
+YIELD relationship, score
+RETURN relationship.text, score
 ORDER BY score DESC
 ```
 

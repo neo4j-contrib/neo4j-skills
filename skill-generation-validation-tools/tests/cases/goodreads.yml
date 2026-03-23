@@ -26,7 +26,7 @@ dataset:
         description: "A book in the Goodreads catalogue"
         properties:
           book_id:        {type: STRING, description: "Goodreads internal book identifier"}
-          title:          {type: STRING, sample: ["The Hunger Games", "To Kill a Mockingbird", "Harry Potter and the Sorcerer's Stone"]}
+          title:          {type: STRING, sample: ["The Name of the Wind (The Kingkiller Chronicle, #1)", "To Kill a Mockingbird", "Harry Potter and the Sorcerer's Stone", "Betrayed (House of Night, #2)"], description: "NOTE: 'The Hunger Games' and 'Divergent' do NOT exist in this dataset. Use verified titles such as 'The Name of the Wind (The Kingkiller Chronicle, #1)' (416634 ratings) or 'Betrayed (House of Night, #2)' (206646 ratings)."}
           average_rating: {type: FLOAT, min: 0.0, max: 5.0, description: "Average reader rating on a 0–5 scale"}
           ratings_count:  {type: INTEGER, description: "Total number of ratings received"}
           text_reviews_count: {type: INTEGER, description: "Total number of text reviews"}
@@ -75,7 +75,7 @@ dataset:
       - type: SIMILAR_TO
         from: Book
         to: Book
-        description: "Two books are similar (based on reader co-ratings)"
+        description: "Two books are similar (based on reader co-ratings) — sparse network: max 2 SIMILAR_TO relationships per book. Use >= 1 or >= 2 (not >= 3) when filtering by similarity count."
     indexes:
       - name: book-descriptions
         type: VECTOR
@@ -96,9 +96,12 @@ dataset:
     - "publication_year is stored as STRING (e.g. '2009'), not an integer — use string comparison or toInteger()"
     - "average_rating on Author is also STRING — use toFloat() to compare"
     - "language_code is sparse — many books have null. Use IS NOT NULL when filtering by language."
-    - "SIMILAR_TO is directed: (b1:Book)-[:SIMILAR_TO]->(b2:Book)"
+    - "SIMILAR_TO is directed: (b1:Book)-[:SIMILAR_TO]->(b2:Book) — max 2 SIMILAR_TO per book (sparse network)"
     - "User connects to Review via PUBLISHED; Review connects to Book via WRITTEN_FOR — two hops to get user's reviewed books"
-    - "SEARCH clause is GA on demo.neo4jlabs.com 2026.02.x — use SEARCH syntax for vector queries"
+    - "Vector search: use CALL db.index.vector.queryNodes('book-descriptions', N, $vec) YIELD node, score — the SEARCH clause is NOT valid Cypher 25 syntax"
+    - "Labels Genre, Publisher, and Series do NOT exist in this dataset — do not reference them"
+    - "Books confirmed to exist: 'The Name of the Wind (The Kingkiller Chronicle, #1)', 'Betrayed (House of Night, #2)', 'To Kill a Mockingbird', 'Harry Potter and the Sorcerer\\'s Stone'"
+    - "Books that do NOT exist: 'The Hunger Games', 'Divergent' — do not use these in test queries"
 
 cases:
 
@@ -253,7 +256,7 @@ cases:
   # ─── ADVANCED (6 cases) ──────────────────────────────────────────────────────
 
   - id: goodreads-advanced-001
-    question: "Find books that are linked to at least 3 similar books. Show the book title, its average rating, and the count of similar books it connects to."
+    question: "Find books that are linked to at least 1 similar book (SIMILAR_TO network is sparse with max 2 per book). Show the book title, its average rating, and the count of similar books it connects to."
     database: goodreads
     difficulty: advanced
     tags: [aggregation, relationship, filter, similar-to]
@@ -351,7 +354,7 @@ cases:
     is_write_query: false
 
   - id: goodreads-complex-003
-    question: "Find books that have at least 2 similar books which are themselves rated above 4.5. Show the original book title, its rating, and the titles of those highly-rated similar books."
+    question: "Find books that have at least 1 similar book (use >= 1, max is 2 in this sparse network) which is rated above 4.5. Show the original book title, its rating, and the titles of those highly-rated similar books."
     database: goodreads
     difficulty: complex
     tags: [collect, filter, relationship-chain, subquery]
@@ -377,7 +380,7 @@ cases:
   # ─── EXPERT (5 cases) ────────────────────────────────────────────────────────
 
   - id: goodreads-expert-001
-    question: "Find the shortest recommendation chain between the book 'The Hunger Games' and 'Divergent' through similar book links. Show all books in the path."
+    question: "Find the shortest recommendation chain between the book 'The Name of the Wind (The Kingkiller Chronicle, #1)' and 'Betrayed (House of Night, #2)' through similar book links. Show all books in the path."
     database: goodreads
     difficulty: expert
     tags: [shortest-path, qpe, graph-traversal]
@@ -389,7 +392,7 @@ cases:
     is_write_query: false
 
   - id: goodreads-expert-002
-    question: "Using vector similarity on book descriptions, find the 5 books most semantically similar to 'The Hunger Games'. Return book titles and similarity scores."
+    question: "Using vector similarity on book descriptions, find the 5 books most semantically similar to 'The Name of the Wind (The Kingkiller Chronicle, #1)'. Return book titles and similarity scores."
     database: goodreads
     difficulty: expert
     tags: [vector-search, similarity, semantic]
@@ -399,10 +402,10 @@ cases:
     max_allocated_memory_bytes: 20971520
     max_runtime_ms: 15000
     is_write_query: false
-    notes: "Requires embedding vector for 'The Hunger Games' — the harness cannot inject a runtime vector. Model should acknowledge this and show the query structure using a parameter placeholder."
+    notes: "Requires embedding vector for 'The Name of the Wind' — the harness cannot inject a runtime vector. Model should use CALL db.index.vector.queryNodes('book-descriptions', 5, $embedding) YIELD node, score with a $embedding parameter placeholder. Do NOT use SEARCH clause."
 
   - id: goodreads-expert-003
-    question: "Find all books reachable from 'The Hunger Games' within 3 hops through the similar-books network, including the direct connections and indirect ones. Show distinct book titles."
+    question: "Find all books reachable from 'The Name of the Wind (The Kingkiller Chronicle, #1)' within 3 hops through the similar-books network, including the direct connections and indirect ones. Show distinct book titles."
     database: goodreads
     difficulty: expert
     tags: [qpe, graph-traversal, quantified-path]
