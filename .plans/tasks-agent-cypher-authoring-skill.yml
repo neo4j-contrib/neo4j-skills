@@ -1557,7 +1557,8 @@ tasks:
 
       COUNT defaults to 25 per invocation (not 100 — users run multiple times
       or pass COUNT=75 to top up to 100).
-    status: pending
+    status: completed
+    completed_at: "2026-03-23T23:59:00Z"
     dependencies: [task-067]
     acceptance_criteria:
       - "question_validator.py exists as importable module in tests/harness/"

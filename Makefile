@@ -298,6 +298,31 @@ register-dataset:  ## Register a Neo4j DB as a dataset: block in tests/cases/<do
 	  --output-dir $(CASES_DIR) \
 	  $(READ_ONLY) $(NO_CLAUDE)
 
+# ── Question generation ────────────────────────────────────────────────────────
+# Usage: make generate-questions DOMAIN=companies COUNT=25 MODEL=haiku
+# Optional: DIFFICULTIES=basic,intermediate (default: all five tiers)
+# Optional: SKILL=neo4j-cypher-authoring-skill (default)
+
+COUNT         ?= 25
+DIFFICULTIES  ?= basic,intermediate,advanced,complex,expert
+GENERATE_SKILL ?= $(SKILL)
+
+GENERATE  := uv run --project skill-generation-validation-tools python3 \
+               skill-generation-validation-tools/scripts/generate_questions.py
+
+.PHONY: generate-questions
+generate-questions:  ## Generate questions for a domain (requires DOMAIN=<name>)
+	$(GENERATE) \
+	  --domain $(DOMAIN) \
+	  --count $(COUNT) \
+	  --model $(MODEL) \
+	  --difficulties $(DIFFICULTIES) \
+	  --cases-dir $(CASES_DIR) \
+	  --skill $(GENERATE_SKILL)
+
+.PHONY: onboard-dataset
+onboard-dataset: register-dataset generate-questions  ## Register DB schema and generate initial questions (requires DB_URI, DB_USER, DB_PASS, DB_NAME)
+
 # ── Help ───────────────────────────────────────────────────────────────────────
 
 .PHONY: help

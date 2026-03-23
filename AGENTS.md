@@ -86,6 +86,16 @@
 - `skill-generation-validation-tools/scripts/test-extract-references.py` — test suite. Run from the tools dir: `uv run python3 scripts/test-extract-references.py`
 - `skill-generation-validation-tools/scripts/extract-changelog.py` — parse changelog adoc → Markdown. Usage: `uv run python3 scripts/extract-changelog.py --src ../../docs-cypher/modules/ROOT/pages/deprecations-additions-removals-compatibility.adoc --out path/changelog.md [--since 2026.01]`
 - `skill-generation-validation-tools/scripts/register_dataset.py` — discover Neo4j DB schema, capabilities, indexes/constraints, sample property values, call Claude for description, write dataset: YAML block to tests/cases/<domain>.yml. Makefile target: `make register-dataset DB_URI=... DB_USER=... DB_PASS=... DB_NAME=<db>`.
+- `skill-generation-validation-tools/scripts/generate_questions.py` — generate test questions for a domain using Claude, validate as business-language, generate candidate Cypher, execute for baselines, append to domain YAML. Makefile target: `make generate-questions DOMAIN=<db> COUNT=25 MODEL=haiku`. Combines with register-dataset via `make onboard-dataset`.
+- `skill-generation-validation-tools/tests/harness/question_validator.py` — importable module for validating that questions are phrased as casual business-user questions. `validate(question, schema)` returns `(bool, reason)`. Schema-aware: rejects known label/rel-type names from schema dict.
+
+### generate_questions.py / question_validator.py — Gotchas
+
+- **Keyword list is intentionally minimal**: Only high-signal Cypher keywords are rejected (MATCH, MERGE, CREATE, DELETE, FOREACH, UNWIND, RETURN, UNION, CALL, YIELD, COLLECT, DISTINCT, SHORTEST, PROFILE, EXPLAIN, CYPHER, FINISH, INSERT). Common English words like `in`, `is`, `not`, `set`, `show`, `where`, `with`, `order`, `skip`, `limit`, `use`, `and`, `or`, `as` are excluded to avoid false positives on natural language questions.
+- **Dot-access pattern excludes short words**: `word.property` requires ≥2 chars before the dot to avoid matching abbreviations like `U.S.` or `i.e.`. Also requires lowercase initial char after the dot.
+- **Question auto-rewrite**: Failed questions get one Claude rewrite attempt. If the rewrite still fails validation, the case gets `status: needs_review` (not dropped). This prevents silent data loss.
+- **Cypher generation falls back to plain claude**: If `--skill` flag fails (e.g. skill not installed), generate_questions.py falls back to plain `claude --model` invocation without the skill.
+- **Connection priority**: neo4j URI/credentials resolved as CLI args > NEO4J_* env vars > YAML database: block. If all three are absent, defaults to bolt://localhost:7687.
 
 ### register_dataset.py — Gotchas
 

@@ -2126,3 +2126,54 @@ Feedback loops:
 - register_dataset.py syntax: PASS (ast.parse OK)
 
 Next Task: task-068 (generate_questions.py + question_validator.py)
+
+================================================================================
+TASK-068: Build question generation CLI: make generate-questions (REQ-F-049 + REQ-F-050)
+Date: 2026-03-23T23:59:00Z
+================================================================================
+
+Summary:
+Created the question generation CLI and reusable question_validator module.
+
+Files Created:
+- skill-generation-validation-tools/tests/harness/question_validator.py
+  - QuestionValidator class with schema-aware validation
+  - Rejects Cypher keywords (high-signal subset: MATCH, MERGE, CREATE, DELETE,
+    FOREACH, UNWIND, RETURN, UNION, CALL, YIELD, COLLECT, DISTINCT, SHORTEST,
+    PROFILE, EXPLAIN, CYPHER, FINISH, INSERT)
+  - Rejects :Label syntax, ALL_CAPS_UNDERSCORE rel-type patterns
+  - Rejects dot-access property syntax (word.property)
+  - Rejects procedure prefixes (gds., apoc., db.index., ai., etc.)
+  - Schema-aware: checks known label and rel-type names from passed schema dict
+  - Module-level validate(question, schema) convenience function
+  - Self-tests included (10/10 passing)
+
+- skill-generation-validation-tools/scripts/generate_questions.py
+  - Loads domain YAML and requires dataset: block (errors if missing)
+  - Resolves Neo4j connection from CLI args > env vars > YAML database: block
+  - Calls Claude to generate COUNT questions as JSON
+  - Validates each question with QuestionValidator
+  - Auto-rewrites failed questions once via Claude rewrite prompt
+  - Persistent failures get status: needs_review + validation_failure note
+  - Generates candidate Cypher per question via Claude (skill-aware)
+  - Executes queries against live DB for baseline row count + timing
+  - 0-row or execution-error queries marked needs_review (not dropped)
+  - Sequential ID assignment avoids duplicates with existing cases
+  - Appends new cases to domain YAML preserving existing content
+  - Prints validation statistics at end (total/rewritten/flagged)
+
+Files Modified:
+- Makefile: added generate-questions and onboard-dataset targets
+  - generate-questions: wraps generate_questions.py with COUNT, MODEL,
+    DIFFICULTIES, CASES_DIR, GENERATE_SKILL variables
+  - onboard-dataset: runs register-dataset then generate-questions
+
+Key Decisions:
+- Cypher keyword list kept minimal (high-signal only) — common English words
+  like "in", "is", "show", "where" excluded to avoid false positives
+- Rewrite-once strategy: failed questions get one Claude rewrite attempt;
+  if still invalid → needs_review flag, not dropped
+- Cypher generation tries with --skill flag first, falls back to plain claude
+  (handles environments where skill is not available)
+- Write query execution uses rolled-back transaction to avoid side effects
+- All acceptance criteria verified via make smoke + dry-run (587 cases loaded)
