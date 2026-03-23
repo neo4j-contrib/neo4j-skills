@@ -318,7 +318,7 @@ cases:
     is_write_query: false
 
   - id: ucnetwork-intermediate-006
-    question: "For each WiFi network (SSID) that has a name, how many client devices are probing for it? Show networks probed by at least 2 devices."
+    question: "For each named wireless network, how many client devices are probing for it? Show networks probed by at least 2 devices."
     database: ucnetwork
     difficulty: intermediate
     tags: [aggregation, relationship-chain, filter, null-handling]
@@ -392,7 +392,7 @@ cases:
     is_write_query: false
 
   - id: ucnetwork-advanced-006
-    question: "Find client devices that probe for networks but whose probed networks have no advertiser (no access point broadcasting that SSID). These may be looking for networks not present in this environment."
+    question: "Find client devices that probe for networks but whose probed networks have no advertiser (no access point broadcasting that network name). These may be looking for networks not present in this environment."
     database: ucnetwork
     difficulty: advanced
     tags: [not-exists, relationship-chain, filter]
@@ -406,7 +406,7 @@ cases:
   # ─── COMPLEX (4 cases) ───────────────────────────────────────────────────────
 
   - id: ucnetwork-complex-001
-    question: "For each client device, traverse its complete snapshot timeline (FIRST → NEXT chain) and report the total number of snapshots recorded. Show device MAC and snapshot count."
+    question: "For each client device, traverse its complete snapshot timeline following the earliest-to-latest chain and report the total number of snapshots recorded. Show device MAC and snapshot count."
     database: ucnetwork
     difficulty: complex
     tags: [qpe, linked-list, traversal, aggregation]
@@ -430,7 +430,7 @@ cases:
     is_write_query: false
 
   - id: ucnetwork-complex-003
-    question: "Identify client devices that have interacted (via snapshots) with more than 3 distinct SSIDs. Show device MAC, manufacturer, and the list of SSID names they have interacted with."
+    question: "Identify client devices that have interacted (via snapshots) with more than 3 distinct wireless networks. Show device MAC, manufacturer, and the list of network names they have interacted with."
     database: ucnetwork
     difficulty: complex
     tags: [aggregation, collect, filter, relationship-chain]
@@ -456,7 +456,7 @@ cases:
   # ─── EXPERT (5 cases) ────────────────────────────────────────────────────────
 
   - id: ucnetwork-expert-001
-    question: "Trace the full snapshot history for the client device with MAC address '08:55:31:6A:FF:5' — traverse the FIRST-to-NEXT linked list and return all snapshots with their signal strength and timestamps."
+    question: "Trace the full snapshot history for the client device with MAC address '08:55:31:6A:FF:5' — traverse the earliest-to-latest linked list and return all snapshots with their signal strength and timestamps."
     database: ucnetwork
     difficulty: expert
     tags: [qpe, linked-list, traversal, filter]
@@ -492,7 +492,7 @@ cases:
     is_write_query: false
 
   - id: ucnetwork-expert-004
-    question: "Detect potentially rogue access points: access points whose SSIDs are also being probed by more than 5 client devices but have no RESPONDING_FOR snapshots. List their names and MAC addresses."
+    question: "Detect potentially rogue access points: access points whose wireless network names are also being probed by more than 5 client devices but have no recorded response activity snapshots. List their names and MAC addresses."
     database: ucnetwork
     difficulty: expert
     tags: [not-exists, filter, security, relationship-chain]

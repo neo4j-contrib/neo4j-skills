@@ -376,7 +376,7 @@ cases:
       LIMIT 10
 
   - id: rec-advanced-003
-    question: "What movies would you recommend to User 1 based on what similar users enjoyed? Suggest films that User 1 hasn't seen yet but were highly rated by people with overlapping tastes. Show the top 10."
+    question: "What movies would you recommend to the member with ID 1 based on what similar members enjoyed? Suggest films that the member with ID 1 hasn't seen yet but were highly rated by people with overlapping tastes. Show the top 10."
     database: recommendations
     difficulty: advanced
     tags: [match, filter, aggregation, count, collaborative-filtering, not-exists]
@@ -464,7 +464,7 @@ cases:
   # ─── COMPLEX (4 cases) ───────────────────────────────────────────────────────
 
   - id: rec-complex-001
-    question: "What are the top 5 movies I should recommend to User 534? Base it on what users with similar viewing histories rated highly, excluding anything User 534 has already seen."
+    question: "What are the top 5 movies I should recommend to the member with ID 534? Base it on what members with similar viewing histories rated highly, excluding anything the member with ID 534 has already seen."
     database: recommendations
     difficulty: complex
     tags: [match, collaborative-filtering, aggregation, count, not-exists, filter, order-by, limit]
@@ -620,7 +620,7 @@ cases:
       LIMIT 5
 
   - id: rec-expert-004
-    question: "What are the top 10 movies to recommend to User 1, factoring in both what similar users enjoyed and whether the movie's genres match their viewing history? Weight peer ratings more heavily than genre overlap."
+    question: "What are the top 10 movies to recommend to the member with ID 1, factoring in both what similar members enjoyed and whether the movie's genres match their viewing history? Weight peer ratings more heavily than genre overlap."
     database: recommendations
     difficulty: expert
     tags: [match, collaborative-filtering, genre-overlap, aggregation, filter, scoring, not-exists, order-by, limit]
@@ -1134,7 +1134,7 @@ cases:
       LIMIT 20
 
   - id: rec-intermediate-017
-    question: "Show actors and directors who are in the database but have not been associated with any Genre category (their movies have no genre tags)."
+    question: "Show actors and directors who are in the database but have not been associated with any film category (their movies have no category tags)."
     database: recommendations
     difficulty: intermediate
     tags: [match, optional-match, null, filter]
@@ -1280,7 +1280,7 @@ cases:
       LIMIT 20
 
   - id: rec-advanced-012
-    question: "Which movies have been rated by User 534 but not by User 1? Show movies unique to User 534's viewing history."
+    question: "Which movies have been rated by the member with ID 534 but not by the member with ID 1? Show movies unique to member 534's viewing history."
     database: recommendations
     difficulty: advanced
     tags: [match, filter, not-exists, relationship]
@@ -1512,7 +1512,7 @@ cases:
       LIMIT 20
 
   - id: rec-complex-009
-    question: "For User 1, find a personalised watchlist: movies from their favourite genres (top 3 genres they've rated highly) that they haven't seen yet, sorted by average community rating."
+    question: "For the member with ID 1, find a personalised watchlist: movies from their favourite film categories (top 3 categories they've rated highly) that they haven't seen yet, sorted by average community rating."
     database: recommendations
     difficulty: complex
     tags: [match, aggregation, filter, not-exists, order-by, collaborative-filtering, genre]
@@ -1638,7 +1638,7 @@ cases:
       RETURN m.title AS movie, score, collect(actor) AS topActors
 
   - id: rec-expert-010
-    question: "Build an end-to-end recommendation pipeline for User 1: find peer users with most shared high-rated movies, get candidate films those peers rated highly that User 1 hasn't seen, score by peer support and genre affinity, and return the top 5 with an explanation of the recommendation reason."
+    question: "Build an end-to-end recommendation pipeline for the member with ID 1: find peer members with the most shared high-rated movies, get candidate films those peers rated highly that the member with ID 1 hasn't seen, score by peer support and category affinity, and return the top 5 with an explanation of the recommendation reason."
     database: recommendations
     difficulty: expert
     tags: [match, collaborative-filtering, genre-overlap, aggregation, filter, scoring, not-exists, order-by, limit, call-subquery]

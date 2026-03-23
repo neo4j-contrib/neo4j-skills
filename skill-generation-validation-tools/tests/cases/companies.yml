@@ -1408,7 +1408,7 @@ cases:
     notes: "Native Cypher fallback (no GDS needed): sum COUNT { (n)-[]->() } + COUNT { ()-[]->(n) } or use SIZE((n)--()) — no GDS required unless gds: true"
 
   - id: companies-plugin-004
-    question: "Using the GenAI vector similarity capability, compute the cosine similarity between the embedding of the first Chunk in the database and the embeddings of the next 5 chunks. Return the pairs and their similarity scores."
+    question: "Using the GenAI vector similarity capability, compute the cosine similarity between the embedding of the first article excerpt in the database and the embeddings of the next 5 article excerpts. Return the pairs and their similarity scores."
     database: companies
     difficulty: expert
     tags: [genai, ai-similarity, vector, plugin, cosine]

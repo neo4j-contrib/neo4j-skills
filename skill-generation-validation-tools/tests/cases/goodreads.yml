@@ -969,7 +969,7 @@ cases:
     is_write_query: false
 
   - id: goodreads-advanced-010
-    question: "Which books have a significantly higher average rating on Goodreads than similar books? Find books that are rated at least 0.5 stars above the average rating of the books they are linked to via SIMILAR_TO (in any direction). Only consider books with at least 1 similar link."
+    question: "Which books have a significantly higher average rating on Goodreads than similar books? Find books that are rated at least 0.5 stars above the average rating of the books they are linked to via recommendation links (in any direction). Only consider books with at least 1 such link."
     database: goodreads
     difficulty: advanced
     tags: [relationship, aggregation, math, filter, similar-to]
@@ -1177,7 +1177,7 @@ cases:
     is_write_query: false
 
   - id: goodreads-complex-009
-    question: "Find author pairs who have at least 3 books that are mutually linked as similar (via SIMILAR_TO in any direction). Show the two author names and the count of book pairs connecting them."
+    question: "Find author pairs who have at least 3 books that are mutually linked as similar (via similarity connections in any direction). Show the two author names and the count of book pairs connecting them."
     database: goodreads
     difficulty: complex
     tags: [multi-hop, aggregation, filter, similar-to, relationship-chain]
@@ -1328,7 +1328,7 @@ cases:
     is_write_query: false
 
   - id: goodreads-expert-010
-    question: "Using REPEATABLE ELEMENTS traversal, find all walks of exactly 2 steps through the SIMILAR_TO network starting from 'Night Visions 5' (undirected). Count how many unique books appear across all walks, including the starting book. This counts all cyclic and acyclic walks separately."
+    question: "Using REPEATABLE ELEMENTS traversal, find all walks of exactly 2 steps through the book similarity network starting from 'Night Visions 5' (undirected). Count how many unique books appear across all walks, including the starting book. This counts all cyclic and acyclic walks separately."
     database: goodreads
     difficulty: expert
     tags: [qpe, repeatable-elements, bounded-quantifier, graph-traversal]

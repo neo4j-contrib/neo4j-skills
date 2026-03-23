@@ -237,7 +237,7 @@ cases:
     is_write_query: false
 
   - id: twitter-intermediate-005
-    question: "Find all tweets that contain a link and use the hashtag 'trump'. Show the tweet text and the full URL."
+    question: "Find all tweets that contain a web link and use the hashtag 'trump'. Show the tweet text and the full web address."
     database: twitter
     difficulty: intermediate
     tags: [match, multiple-relationships, filter]
@@ -468,7 +468,7 @@ cases:
     notes: "CRITICAL: Three separate MERGE statements — (1) MERGE (t:Tweet {id: $tweetId}), (2) MERGE (h:Hashtag {tag: $tag}), (3) MERGE (t)-[:HAS_TAG]->(h). NEVER merge nodes and relationship together."
 
   - id: twitter-write-002
-    question: "Upsert a user with user_key 'u_99999': if new, set name='Test User' and screen_name='testuser99'; if already exists, update their followers_count to 500."
+    question: "Upsert an account with user_key 'u_99999': if new, set name='Test Account' and screen_name='testuser99'; if already exists, update their followers_count to 500."
     database: twitter
     difficulty: intermediate
     tags: [merge, on-create-set, on-match-set, write]
