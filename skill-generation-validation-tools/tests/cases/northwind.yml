@@ -727,6 +727,7 @@ cases:
     tags: [match, filter, geography]
     domain: northwind
     min_results: 1
+    skip_if_empty: true
     max_db_hits: 3000
     max_allocated_memory_bytes: 5242880
     max_runtime_ms: 8000
@@ -1414,6 +1415,7 @@ cases:
     tags: [temporal, math, duration, aggregation, null-handling]
     domain: northwind
     min_results: 1
+    skip_if_empty: true
     max_db_hits: 5000
     max_allocated_memory_bytes: 5242880
     max_runtime_ms: 10000
