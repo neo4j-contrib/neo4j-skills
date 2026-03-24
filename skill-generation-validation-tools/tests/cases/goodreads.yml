@@ -542,6 +542,7 @@ cases:
     max_allocated_memory_bytes: 5242880
     max_runtime_ms: 5000
     is_write_query: false
+    notes: "CRITICAL: num_pages is stored as STRING — must use avg(toInteger(b.num_pages)) NOT avg(b.num_pages)"
 
   - id: goodreads-basic-015
     question: "Show the 10 books with the most text reviews."
@@ -773,6 +774,7 @@ cases:
     max_allocated_memory_bytes: 5242880
     max_runtime_ms: 8000
     is_write_query: false
+    notes: "CRITICAL: num_pages is stored as STRING — must use avg(toInteger(b.num_pages)) NOT avg(b.num_pages). publication_year also STRING — use toInteger(b.publication_year) for comparisons."
 
   - id: goodreads-intermediate-017
     question: "How many books have at least one highly helpful review — a review with more than 50 helpful votes?"
@@ -999,10 +1001,12 @@ cases:
     tags: [relationship, temporal, string-comparison, aggregation, order]
     domain: goodreads
     min_results: 1
+    skip_if_empty: true
     max_db_hits: 200000
     max_allocated_memory_bytes: 20971520
     max_runtime_ms: 20000
     is_write_query: false
+    notes: "Review.date_added is a ZONED_DATETIME, not a string — use r.date_added.year to get year integer. Do NOT use substring() or trim() on date_added."
 
   - id: goodreads-advanced-013
     question: "Which books in the library have the highest ratio of 5-star reviews to total reviews? Only consider books with at least 50 total reviews. Show top 10."
