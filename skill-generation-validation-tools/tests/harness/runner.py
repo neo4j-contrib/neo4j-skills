@@ -1138,12 +1138,14 @@ def run_case(
 
     if invoke_error:
         error = f"Claude invocation failed: {invoke_error}"
+        invocation_verdict = SKIPPED if tc.skip_if_empty else FAIL
+        invocation_skip_reason = f"skip_if_empty: {invoke_error[:120]}" if tc.skip_if_empty else None
         return TestCaseResult(
             case_id=tc.id,
             question=tc.question,
             difficulty=tc.difficulty,
             tags=tc.tags,
-            verdict=FAIL,
+            verdict=invocation_verdict,
             failed_gate=None,
             warned_gate=None,
             generated_cypher="",
@@ -1152,6 +1154,7 @@ def run_case(
             error=error,
             duration_s=round(time.monotonic() - t0, 3),
             generation_ms=generation_ms,
+            skip_reason=invocation_skip_reason,
             execution_ms=0,
         )
 

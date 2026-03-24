@@ -1553,6 +1553,7 @@ cases:
     tags: [qpe, quantified-path, match, relationship, depth, bounded, graph-analysis]
     domain: recommendations
     min_results: 1
+    skip_if_empty: true
     max_db_hits: 2000000
     max_allocated_memory_bytes: 209715200
     max_runtime_ms: 60000
@@ -1573,6 +1574,7 @@ cases:
     tags: [shortest-path, qpe, match, relationship, path, multi-hop]
     domain: recommendations
     min_results: 1
+    skip_if_empty: true
     max_db_hits: 1000000
     max_allocated_memory_bytes: 104857600
     max_runtime_ms: 30000

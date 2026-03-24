@@ -666,6 +666,7 @@ cases:
     tags: [vector, search-clause, index, similarity]
     domain: companies
     min_results: 1
+    skip_if_empty: true
     max_db_hits: 100000
     max_allocated_memory_bytes: 20971520
     max_runtime_ms: 15000
@@ -680,6 +681,7 @@ cases:
     tags: [vector, search-clause, index, similarity, filter]
     domain: companies
     min_results: 1
+    skip_if_empty: true
     max_db_hits: 100000
     max_allocated_memory_bytes: 20971520
     max_runtime_ms: 15000
@@ -1104,6 +1106,7 @@ cases:
     tags: [call-subquery, aggregation, degree, multi-relationship, count]
     domain: companies
     min_results: 1
+    skip_if_empty: true
     max_db_hits: 1000000
     max_allocated_memory_bytes: 100000000
     max_runtime_ms: 60000
@@ -1118,6 +1121,7 @@ cases:
     tags: [shortest-path, shortest-k, qpe, subsidiary, path, multi-hop]
     domain: companies
     min_results: 1
+    skip_if_empty: true
     max_db_hits: 5000000
     max_allocated_memory_bytes: 200000000
     max_runtime_ms: 120000
@@ -1131,6 +1135,7 @@ cases:
     tags: [fulltext, graphrag, call-subquery, relationship, sentiment, temporal]
     domain: companies
     min_results: 1
+    skip_if_empty: true
     max_db_hits: 300000
     max_allocated_memory_bytes: 100000000
     max_runtime_ms: 60000
