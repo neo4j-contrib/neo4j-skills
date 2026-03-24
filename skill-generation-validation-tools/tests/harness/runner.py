@@ -120,6 +120,8 @@ class TestCase:
     # If True, a zero-row result at Gate 2 is treated as SKIPPED rather than FAIL.
     # Use for queries that depend on sparse or potentially-absent data.
     skip_if_empty: bool = False
+    # Per-case guidance injected into the Claude prompt (hints, schema gotchas, etc.)
+    notes: Optional[str] = None
     # Source file (set by loader)
     source_file: str = ""
 
@@ -236,6 +238,7 @@ def load_cases(
                 is_write_query=bool(raw.get("is_write_query", False)),
                 min_version=str(raw["min_version"]) if raw.get("min_version") else None,
                 skip_if_empty=bool(raw.get("skip_if_empty", False)),
+                notes=str(raw["notes"]) if raw.get("notes") else None,
                 source_file=str(f),
             )
 
@@ -710,6 +713,8 @@ def _build_claude_prompt(
     lines.append(f"Difficulty: {tc.difficulty}")
     if tc.tags:
         lines.append(f"Tags: {', '.join(str(t) for t in tc.tags)}")
+    if tc.notes:
+        lines.append(f"IMPORTANT QUERY NOTES: {tc.notes}")
     lines.append("")
     lines.append(
         "Write a Cypher 25 query to answer the following question.\n"
