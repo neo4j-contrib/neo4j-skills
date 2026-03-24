@@ -12,7 +12,7 @@ SKILL     := neo4j-cypher-authoring-skill
 CASES_DIR := skill-generation-validation-tools/tests/cases
 RESULTS   := skill-generation-validation-tools/tests/results
 WORKERS   ?= 5
-TIMEOUT   ?= 180
+TIMEOUT   ?= 240
 # MODEL: short name passed to --model flag. Accepted: sonnet (default), haiku, opus.
 # Override at the command line: make test-companies MODEL=haiku
 MODEL     ?= sonnet

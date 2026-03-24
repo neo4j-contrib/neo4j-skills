@@ -38,6 +38,12 @@ Non-negotiable defaults — apply before writing any query:
 11. **Comments use `//` only** — `--` (SQL-style) is **not valid Cypher** and will cause a parse error. Always use `// comment text` for inline or line comments.
 12. **`CYPHER 25` prefix is a single-query prefix** — never repeat it after `UNION`, `UNION ALL`, or within a subquery. One `CYPHER 25` per query, at the very top.
 13. **SHOW commands cannot be combined with UNION** — `SHOW PROCEDURES ... UNION ALL SHOW FUNCTIONS ...` is a syntax error. Use two separate queries when you need results from multiple SHOW commands.
+14. **Map-property access in MATCH is invalid** — you cannot use `p.peer` or any property-access expression directly as a node in a MATCH pattern. Unpack the map first:
+    - `UNWIND peers AS p WITH p.peer AS peer MATCH (peer)-[...]` ✓
+    - `MATCH (p.peer)-[...]` ✗ **SYNTAX ERROR**
+15. **`collect(x ORDER BY y)` is NOT valid Cypher** — the built-in `collect()` aggregation does not accept inline `ORDER BY`. Use either:
+    - A preceding `ORDER BY y` clause before `... collect(x)` ✓
+    - A COLLECT subquery: `COLLECT { MATCH (a)-[]->(b) RETURN b.name ORDER BY b.name }` ✓
 
 ---
 

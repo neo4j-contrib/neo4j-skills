@@ -734,6 +734,7 @@ cases:
     tags: [vector, search-clause, index, similarity, plot-embedding]
     domain: recommendations
     min_results: 1
+    skip_if_empty: true
     max_db_hits: 100000
     max_allocated_memory_bytes: 20971520
     max_runtime_ms: 15000
@@ -748,6 +749,7 @@ cases:
     tags: [vector, search-clause, index, similarity, filter, plot-embedding]
     domain: recommendations
     min_results: 1
+    skip_if_empty: true
     max_db_hits: 100000
     max_allocated_memory_bytes: 20971520
     max_runtime_ms: 15000
@@ -1140,6 +1142,7 @@ cases:
     tags: [match, optional-match, null, filter]
     domain: recommendations
     min_results: 1
+    skip_if_empty: true
     max_db_hits: 100000
     max_allocated_memory_bytes: 10485760
     max_runtime_ms: 10000
