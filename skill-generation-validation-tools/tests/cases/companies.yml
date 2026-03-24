@@ -637,6 +637,7 @@ cases:
     tags: [qpe, quantified-path, subsidiary, concrete-value, ownership-chain]
     domain: companies
     min_results: 1
+    skip_if_empty: true
     max_db_hits: 500000
     max_allocated_memory_bytes: 50000000
     max_runtime_ms: 30000
@@ -890,6 +891,7 @@ cases:
     tags: [match, filter, temporal, date-range, order-by]
     domain: companies
     min_results: 1
+    skip_if_empty: true
     max_db_hits: 100000
     max_allocated_memory_bytes: 10485760
     max_runtime_ms: 8000
@@ -902,6 +904,7 @@ cases:
     tags: [match, filter, property, not-null, limit]
     domain: companies
     min_results: 1
+    skip_if_empty: true
     max_db_hits: 50000
     max_allocated_memory_bytes: 5242880
     max_runtime_ms: 5000
@@ -926,6 +929,7 @@ cases:
     tags: [match, filter, temporal, sentiment, date]
     domain: companies
     min_results: 1
+    skip_if_empty: true
     max_db_hits: 100000
     max_allocated_memory_bytes: 10485760
     max_runtime_ms: 8000
@@ -1037,6 +1041,7 @@ cases:
     tags: [match, relationship, count-subquery, board-member, aggregation]
     domain: companies
     min_results: 1
+    skip_if_empty: true
     max_db_hits: 200000
     max_allocated_memory_bytes: 20971520
     max_runtime_ms: 15000
@@ -1138,6 +1143,7 @@ cases:
     tags: [qpe, quantified-path, bounded-quantifiers, subsidiary, ownership-depth]
     domain: companies
     min_results: 1
+    skip_if_empty: true
     max_db_hits: 5000000
     max_allocated_memory_bytes: 200000000
     max_runtime_ms: 120000
@@ -1225,6 +1231,7 @@ cases:
     tags: [match, filter, aggregation, temporal, date, relationship, order-by, limit]
     domain: companies
     min_results: 1
+    skip_if_empty: true
     max_db_hits: 200000
     max_allocated_memory_bytes: 20971520
     max_runtime_ms: 10000
@@ -1263,6 +1270,7 @@ cases:
     tags: [show-constraints, schema, introspection, ddl]
     domain: companies
     min_results: 1
+    skip_if_empty: true
     max_db_hits: 1000
     max_allocated_memory_bytes: 2097152
     max_runtime_ms: 3000
@@ -1299,6 +1307,7 @@ cases:
     tags: [show-procedures, schema, introspection, fulltext, vector]
     domain: companies
     min_results: 1
+    skip_if_empty: true
     max_db_hits: 5000
     max_allocated_memory_bytes: 5242880
     max_runtime_ms: 5000
@@ -1414,6 +1423,7 @@ cases:
     tags: [genai, ai-similarity, vector, plugin, cosine]
     domain: companies
     min_results: 1
+    skip_if_empty: true
     max_db_hits: 10000
     max_allocated_memory_bytes: 10485760
     max_runtime_ms: 10000

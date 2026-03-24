@@ -35,6 +35,9 @@ Non-negotiable defaults — apply before writing any query:
 10. **MATCH mode keyword position** — `REPEATABLE ELEMENTS` and `DIFFERENT RELATIONSHIPS` go **immediately after `MATCH`**, never at the end of the pattern:
     - `MATCH REPEATABLE ELEMENTS (a)(()-[:R]->()){2}(b)` ✓
     - `MATCH (a)(()-[:R]->()){2}(b) REPEATABLE ELEMENTS` ✗ **SYNTAX ERROR**
+11. **Comments use `//` only** — `--` (SQL-style) is **not valid Cypher** and will cause a parse error. Always use `// comment text` for inline or line comments.
+12. **`CYPHER 25` prefix is a single-query prefix** — never repeat it after `UNION`, `UNION ALL`, or within a subquery. One `CYPHER 25` per query, at the very top.
+13. **SHOW commands cannot be combined with UNION** — `SHOW PROCEDURES ... UNION ALL SHOW FUNCTIONS ...` is a syntax error. Use two separate queries when you need results from multiple SHOW commands.
 
 ---
 
