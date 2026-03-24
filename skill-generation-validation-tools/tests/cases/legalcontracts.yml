@@ -1099,6 +1099,7 @@ cases:
     max_allocated_memory_bytes: 20971520
     max_runtime_ms: 15000
     is_write_query: false
+    skip_if_empty: true
     notes: "Use CALL db.index.vector.queryNodes('contractSummary', 5, $embedding) YIELD node AS c, score — NOT SEARCH clause (server 2026.01.x). $embedding is a parameter placeholder for the 1536-dim embedding vector. min_results=0 because the harness cannot inject a real vector — Gate 1 syntax validation is the goal."
 
   - id: legalcontracts-expert-003
@@ -1177,6 +1178,7 @@ cases:
     max_allocated_memory_bytes: 20971520
     max_runtime_ms: 20000
     is_write_query: false
+    notes: "CRITICAL: Do NOT use min(2, size(list)-1) — min() is an AGGREGATION function in Cypher, not a scalar. For scalar minimum use CASE WHEN: `CASE WHEN size(ranked_parties) < 3 THEN size(ranked_parties) - 1 ELSE 2 END`. Pattern for top-3 per group: WITH contract_type, collect({party:party, total:total}) AS ranked_parties UNWIND range(0, CASE WHEN size(ranked_parties) < 3 THEN size(ranked_parties) - 1 ELSE 2 END) AS idx."
 
   - id: legalcontracts-expert-009
     question: "Identify 'bridge parties' — parties who connect otherwise-separate groups in the contract network. For each party, count how many distinct other parties they can reach via one shared contract (direct co-signatories). Show the top 5 parties with the most direct co-signatories."
@@ -1227,6 +1229,7 @@ cases:
     max_allocated_memory_bytes: 20971520
     max_runtime_ms: 15000
     is_write_query: false
+    skip_if_empty: true
     notes: "Use CALL db.index.vector.queryNodes('contractSummary', 10, $embedding) YIELD node AS c, score. SEARCH clause NOT available (server 2026.01.x). min_results=0 — harness cannot inject a real 1536-dim vector, Gate 1 syntax check is the goal."
 
   - id: legalcontracts-expert-013

@@ -160,6 +160,7 @@ cases:
     max_allocated_memory_bytes: 5242880
     max_runtime_ms: 5000
     is_write_query: false
+    notes: "IMPORTANT: Use CASE p.salesChannelId WHEN 1 THEN 'in-store' WHEN 2 THEN 'online' ELSE 'unknown' END AS channel with count(*) AS purchases. ORDER BY must use the RETURN alias (ORDER BY channel), NOT the pre-aggregation variable (NOT ORDER BY p.salesChannelId)."
 
   - id: retail-basic-005
     question: "List all active loyalty club members in the database."

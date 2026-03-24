@@ -44,6 +44,8 @@ Non-negotiable defaults — apply before writing any query:
 15. **`collect(x ORDER BY y)` is NOT valid Cypher** — the built-in `collect()` aggregation does not accept inline `ORDER BY`. Use either:
     - A preceding `ORDER BY y` clause before `... collect(x)` ✓
     - A COLLECT subquery: `COLLECT { MATCH (a)-[]->(b) RETURN b.name ORDER BY b.name }` ✓
+16. **`ORDER BY expr AS alias` is ILLEGAL in Cypher** — `AS` is not allowed in ORDER BY items. Write `ORDER BY b.average_rating DESC`, never `ORDER BY b.average_rating AS average_rating DESC`.
+17. **SQL window functions do not exist in Cypher** — `rank() OVER (PARTITION BY ...)`, `ROW_NUMBER() OVER (...)`, `DENSE_RANK() OVER (...)` are SQL syntax and will cause a syntax error. For "rank within group" use: `WITH cat, collect({supplier:s, value:v}) AS ranked UNWIND range(0, size(ranked)-1) AS idx RETURN cat, ranked[idx].supplier, idx+1 AS rank`.
 
 ---
 
@@ -373,6 +375,8 @@ LIMIT 20
 | `ORDER BY n.prop AS alias DESC` | `ORDER BY n.prop DESC` — `AS` is **not** allowed inside `ORDER BY` items |
 | `MATCH (a)(p){n}(b) REPEATABLE ELEMENTS` | `MATCH REPEATABLE ELEMENTS (a)(p){n}(b)` — mode goes after MATCH |
 | `COLLECT { (a)-[:R]->(b) }` | `COLLECT { MATCH (a)-[:R]->(b) RETURN x }` — COLLECT requires full MATCH+RETURN; bare pattern is syntax error |
+| `UNWIND range(0, min(2, size(lst)-1))` | `UNWIND range(0, CASE WHEN size(lst) < 3 THEN size(lst)-1 ELSE 2 END)` — `min()` is an **aggregation function**, not a scalar; use `CASE WHEN` for scalar minimum |
+| `rank() OVER (PARTITION BY x ORDER BY y)` | Not valid Cypher — use `WITH cat, collect({v:v, s:s}) AS ranked UNWIND range(0, size(ranked)-1) AS idx` for ranking within groups |
 
 ---
 

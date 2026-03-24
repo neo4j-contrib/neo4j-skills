@@ -34,7 +34,7 @@ dataset:
           publication_year: {type: STRING, description: "Year published as a string (e.g. '2009')"}
           language_code:  {type: STRING, sample: ["eng", "en-US", "fre", "spa"], description: "ISO language code (sparse — many books have null)"}
           publisher:      {type: STRING, description: "Publisher name (sparse)"}
-          num_pages:      {type: INTEGER, description: "Page count (sparse)"}
+          num_pages:      {type: STRING, description: "Page count stored as a string (sparse) — use toInteger(b.num_pages) for numeric operations"}
           is_ebook:       {type: STRING, values: ["true", "false"], description: "Whether this edition is digital"}
           format:         {type: STRING, sample: ["Hardcover", "Paperback", "Mass Market Paperback", "Kindle Edition"]}
           embedding:      {type: VECTOR, dimensions: 1536, similarity: cosine, description: "Book description embedding for semantic search"}
@@ -54,7 +54,7 @@ dataset:
           n_votes:    {type: INTEGER, description: "Number of helpful votes on the review"}
           n_comments: {type: INTEGER, description: "Number of comments on the review"}
           text:       {type: STRING, description: "Review text content"}
-          date_added: {type: STRING, description: "Date review was added (string format)"}
+          date_added: {type: ZONED_DATETIME, description: "Date review was added — use .year/.month/.day accessors, NOT substring()"}
           embedding:  {type: VECTOR, dimensions: 1536, similarity: cosine, description: "Review text embedding for semantic search"}
       User:
         description: "A Goodreads user who has written reviews"
@@ -919,6 +919,7 @@ cases:
     max_allocated_memory_bytes: 5242880
     max_runtime_ms: 8000
     is_write_query: false
+    notes: "ORDER BY must NOT include AS alias — write ORDER BY b.publication_year DESC, b.average_rating DESC (not ORDER BY b.publication_year AS year DESC). publication_year is stored as STRING — use toInteger(b.publication_year) for numeric comparison."
 
   - id: goodreads-intermediate-029
     question: "Show me the schema — what indexes exist on this database?"

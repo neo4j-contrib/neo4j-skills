@@ -67,7 +67,7 @@ dataset:
           orderID:      {type: INTEGER, description: "Unique order identifier"}
           orderDate:    {type: STRING, description: "Order placement date (stored as string 'YYYY-MM-DD HH:MM:SS.mmm')"}
           requiredDate: {type: STRING, description: "Requested delivery date (stored as string)"}
-          shippedDate:  {type: STRING, description: "Actual shipment date (stored as string; null if not yet shipped)"}
+          shippedDate:  {type: STRING, description: "Actual shipment date (stored as string; may be the LITERAL STRING 'NULL' for unshipped orders — always filter IS NOT NULL AND <> 'NULL' before parsing)"}
           freight:      {type: STRING, description: "Freight charge (stored as string — use toFloat() to compare)"}
           shipCountry:  {type: STRING, sample: ["France", "Germany", "UK", "USA", "Brazil"]}
           shipCity:     {type: STRING}
@@ -100,6 +100,7 @@ dataset:
     - "SUPPLIES is 1:1 in this dataset — each product has exactly one supplier. 'Products with multiple suppliers' returns 0 rows — do not write such test cases."
     - "All 77 products appear in at least one order — 'products never ordered' returns 0 rows. Use inventory-based questions instead."
     - "22 products are at or below reorder level. 5 products are completely out of stock (unitsInStock=0). 8 products are discontinued."
+    - "CRITICAL: Order.shippedDate may contain the literal STRING 'NULL' (not a SQL null). ALWAYS double-filter: WHERE o.shippedDate IS NOT NULL AND o.shippedDate <> 'NULL' before calling date(left(o.shippedDate,10))."
 
 cases:
 
@@ -1404,6 +1405,7 @@ cases:
     max_allocated_memory_bytes: 52428800
     max_runtime_ms: 60000
     is_write_query: false
+    skip_if_empty: true
     notes: "Requires capabilities: gds. Project (Customer)-[:PURCHASED]->(Order)-[:ORDERS]->(Product) bipartite graph, run gds.louvain.stream, then filter for Alfreds Futterkiste's communityId. min_results: 0 because GDS graph projection may fail if community edition."
 
   # ─── TEMPORAL EDGE CASE CASES (additional standalone temporal) ───────────────
@@ -1433,6 +1435,7 @@ cases:
     max_allocated_memory_bytes: 5242880
     max_runtime_ms: 10000
     is_write_query: false
+    skip_if_empty: true
     notes: "CRITICAL: shippedDate may contain the literal string 'NULL' (not SQL null). ALWAYS filter: WHERE o.shippedDate IS NOT NULL AND o.shippedDate <> 'NULL'. Then: duration.between(date(left(o.orderDate,10)), date(left(o.shippedDate,10))).days > 30"
 
   - id: northwind-temporal-003

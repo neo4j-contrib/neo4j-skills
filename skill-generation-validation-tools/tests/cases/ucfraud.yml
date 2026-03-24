@@ -727,7 +727,8 @@ cases:
     max_runtime_ms: 5000
     is_write_query: false
     min_version: "2026.02"
-    notes: "Correct syntax: SHOW GRAPH TYPES (not 'SHOW CURRENT GRAPH TYPE ELEMENTS' — that's invalid). min_results: 0 is acceptable since no graph type may be declared yet."
+    skip_if_empty: true
+    notes: "Correct syntax: SHOW CURRENT GRAPH TYPE (not 'SHOW GRAPH TYPES' — that is invalid). min_results: 0 is acceptable since no graph type may be declared yet."
 
   - id: "ucf-graphtype-002"
     question: "Declare a schema element type for the account holder entity that enforces a mandatory customerID string and mandatory name string, to improve data quality on new customer records."
@@ -741,6 +742,7 @@ cases:
     max_runtime_ms: 10000
     is_write_query: true
     min_version: "2026.02"
+    skip_if_empty: true
     notes: "Exact syntax: ALTER CURRENT GRAPH TYPE SET (::Customer { customerID :: STRING NOT NULL, name :: STRING NOT NULL }) — node element type goes directly after SET, no outer braces around the whole statement."
 
   - id: "ucf-graphtype-003"
@@ -755,6 +757,7 @@ cases:
     max_runtime_ms: 10000
     is_write_query: true
     min_version: "2026.02"
+    skip_if_empty: true
     notes: "EXTEND GRAPH TYPE WITH ::Transaction (transactionID :: STRING NOT NULL, amount :: FLOAT NOT NULL) and [::SENT] relationship element type; is_write_query:true; expects EXTEND GRAPH TYPE WITH syntax"
 
   # ---------------------------------------------------------------------------

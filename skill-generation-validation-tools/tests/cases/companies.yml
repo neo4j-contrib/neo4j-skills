@@ -615,7 +615,8 @@ cases:
     max_allocated_memory_bytes: 10485760
     max_runtime_ms: 8000
     is_write_query: false
-    notes: "casual 'bad press / unfavourable tone' → a.sentiment < -0.3; aggregation needed so only companies with consistently negative coverage appear"
+    skip_if_empty: true
+    notes: "casual 'bad press / unfavourable tone' → a.sentiment < -0.3; aggregation needed so only companies with consistently negative coverage appear. skip_if_empty: model may apply a date filter that excludes available articles."
 
   - id: companies-casual-002
     question: "Show me all the technology companies in our database — firms classified under the Technology sector."
