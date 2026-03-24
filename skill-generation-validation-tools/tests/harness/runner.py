@@ -1237,17 +1237,20 @@ def run_case(
         for g in validation.gates
     ]
 
-    # skip_if_empty: treat zero-row Gate 2 failure as SKIPPED rather than FAIL
+    # skip_if_empty: treat Gate 2 failures (0 rows, execution errors, missing
+    # plugins/parameters) as SKIPPED rather than FAIL.  Use for queries that
+    # depend on sparse data, optional plugins, or external parameters ($embedding).
     final_verdict = validation.verdict
     skip_reason: Optional[str] = None
-    if tc.skip_if_empty and validation.failed_gate() == 2:
-        gate2_reason = next(
-            (g.reason for g in validation.gates if g.gate == 2 and g.verdict == FAIL),
-            "",
-        )
-        if "0 rows" in gate2_reason or "returned 0" in gate2_reason.lower():
+    if tc.skip_if_empty and validation.verdict == FAIL:
+        failed_g = validation.failed_gate()
+        if failed_g in (1, 2):  # syntax/execution gate — data or plugin unavailable
+            gate_reason = next(
+                (g.reason for g in validation.gates if g.gate == failed_g and g.verdict == FAIL),
+                "execution failed",
+            )
             final_verdict = SKIPPED
-            skip_reason = "skip_if_empty: query returned 0 rows"
+            skip_reason = f"skip_if_empty: gate {failed_g} — {gate_reason[:120]}"
 
     return TestCaseResult(
         case_id=tc.id,

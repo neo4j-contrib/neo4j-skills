@@ -189,11 +189,13 @@ Quantifier goes **outside** the group: `(pattern){N,M}` ✓ — never `(pattern{
 
 Cypher does **not** support `NULLS LAST` / `NULLS FIRST` (SQL syntax — will cause a syntax error). Use plain `ORDER BY x DESC` or `ORDER BY x ASC`. NULLs sort last in ascending order and first in descending order by default — no modifier needed.
 
-`ORDER BY` items must be **expressions only** — never append `AS alias` to a sort key:
+`ORDER BY` items must be **expressions only** — never append `AS alias` to a sort key. After an aggregating `RETURN`, use the **RETURN alias** (not the pre-aggregation variable):
 
 ```cypher
 // DO:     ORDER BY n.publication_year DESC, n.rating DESC
+// DO:     RETURN decade, count(*) AS cnt  ORDER BY decade    // reference RETURN alias after aggregation
 // DON'T: ORDER BY n.publication_year DESC, n.rating AS rating DESC   // SYNTAX ERROR — AS not allowed in ORDER BY
+// DON'T: ORDER BY decade_start   // decade_start was a pre-aggregation variable — use the RETURN alias 'decade'
 // DON'T: ORDER BY n.score DESC NULLS LAST   // SYNTAX ERROR — not valid Cypher
 ```
 
@@ -368,6 +370,7 @@ LIMIT 20
 | `-- SQL comment` | `// Cypher comment` |
 | `ACYCLIC / TRAIL / WALK` path modes | Not supported in Neo4j 2026.x — omit; use `WHERE` guards |
 | `ORDER BY x DESC NULLS LAST` | `ORDER BY x DESC` — `NULLS LAST`/`FIRST` is SQL, not valid Cypher |
+| `ORDER BY n.prop AS alias DESC` | `ORDER BY n.prop DESC` — `AS` is **not** allowed inside `ORDER BY` items |
 | `MATCH (a)(p){n}(b) REPEATABLE ELEMENTS` | `MATCH REPEATABLE ELEMENTS (a)(p){n}(b)` — mode goes after MATCH |
 | `COLLECT { (a)-[:R]->(b) }` | `COLLECT { MATCH (a)-[:R]->(b) RETURN x }` — COLLECT requires full MATCH+RETURN; bare pattern is syntax error |
 
