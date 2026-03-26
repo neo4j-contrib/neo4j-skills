@@ -30,7 +30,6 @@ dataset:
           nbrEmployees: {type: INTEGER, min: 1, max: 2400000}
           revenue:      {type: FLOAT,   min: 0, description: "Annual revenue in USD"}
           summary:      {type: STRING}
-          wikipediaUrl: {type: STRING}
       Article:
         description: "A news article that may mention one or more companies"
         properties:
@@ -38,8 +37,7 @@ dataset:
           text:      {type: STRING}
           summary:   {type: STRING}
           sentiment: {type: FLOAT,  min: -1.0, max: 1.0, description: "negative<0, neutral≈0, positive>0"}
-          url:       {type: STRING}
-          date:      {type: DATE,   sample: ["2023-01-15", "2024-06-03"]}
+          date:      {type: DATETIME, sample: ["2022-11-15T00:00:00", "2023-05-20T00:00:00"], description: "Articles are from late 2022 through H1 2023. IMPORTANT: stored as DATETIME not DATE — use a.date.year / a.date.month for filtering, NOT date() literals or date range comparisons which fail due to type mismatch"}
       Chunk:
         description: "A text segment from an Article, with vector embedding for semantic search"
         properties:
@@ -84,6 +82,9 @@ dataset:
     - "Largest subsidiary owner: Blackstone (~1037 direct subsidiaries)"
     - "Company names include legal suffixes ('Corporation', 'Inc.', 'Ltd.') — use CONTAINS or fulltext index 'entity' for name matching, avoid exact match"
     - "Sentiment filter: positive = a.sentiment > 0, negative = a.sentiment < 0"
+    - "HAS_BOARD_MEMBER and HAS_SUPPLIER relationships exist in schema but have NO data — never query these"
+    - "Inline node predicates (WHERE inside node patterns like '(:Label WHERE prop=x)') are valid in MATCH clauses but NOT in WHERE pattern expressions — use EXISTS { MATCH (n:Label) WHERE n.prop = x } instead"
+    - "Article dates: late 2022 through H1 2023 only — no H2 2023 or 2024 articles exist. Dates are DATETIME type — use a.date.year / a.date.month for filtering, NOT date() range comparisons"
     - "FULLTEXT INDEX 'entity' is on Organization(name) and Person(name) ONLY — do NOT use it to search Article content; filtering CALL db.index.fulltext.queryNodes('entity',...) with WHERE node:Article returns 0 rows"
     - "FULLTEXT INDEX 'news_fulltext' is on Chunk(text) — use for keyword/topic search in article text; returns Chunk nodes; traverse to Article with MATCH (a:Article)-[:HAS_CHUNK]->(chunk)"
 
@@ -631,17 +632,17 @@ cases:
     notes: "casual 'technology sector' → IndustryCategory names are multi-word phrases (e.g. 'Software Companies', 'Internet Companies') — use WHERE c.name CONTAINS 'Software' OR c.name CONTAINS 'Internet' OR c.name CONTAINS 'Technology', not exact match"
 
   - id: companies-casual-003
-    question: "Which companies are part of Comcast's business empire — everything it owns, directly or through subsidiaries?"
+    question: "Which companies are part of Blackstone's business empire — everything it owns, directly or through subsidiaries? Show up to 25 company names."
     database: companies
     difficulty: advanced
     tags: [qpe, quantified-path, subsidiary, concrete-value, ownership-chain]
     domain: companies
-    min_results: 1
-    max_db_hits: 500000
-    max_allocated_memory_bytes: 50000000
-    max_runtime_ms: 30000
+    min_results: 10
+    max_db_hits: 5000000
+    max_allocated_memory_bytes: 200000000
+    max_runtime_ms: 60000
     is_write_query: false
-    notes: "Company is stored as 'Comcast Corporation' — use CONTAINS 'Comcast' or fulltext index 'entity' to match by partial name; ownership chain at any depth → QPE {1,} on HAS_SUBSIDIARY"
+    notes: "Blackstone has ~1037 direct subsidiaries — confirmed root company. Use CONTAINS 'Blackstone' to match. Ownership chain → QPE {1,} on HAS_SUBSIDIARY with LIMIT 25. Do NOT add NOT EXISTS parent check."
 
   - id: companies-casual-004
     question: "Are there any energy or utilities companies in our corporate database? List them."
@@ -786,7 +787,7 @@ cases:
     is_write_query: false
 
   - id: companies-basic-015
-    question: "How many articles were published in 2024? Give me the total count."
+    question: "How many articles were published in 2023? Give me the total count."
     database: companies
     difficulty: basic
     tags: [match, filter, temporal, date, count]
@@ -886,7 +887,7 @@ cases:
     is_write_query: false
 
   - id: companies-intermediate-013
-    question: "Show me all news articles published in the second half of 2023 — between July and December 2023. Include their titles and publication dates."
+    question: "Show me all news articles published in the first half of 2023 — January through June. Include their titles and publication dates."
     database: companies
     difficulty: intermediate
     tags: [match, filter, temporal, date-range, order-by]
@@ -896,9 +897,10 @@ cases:
     max_allocated_memory_bytes: 10485760
     max_runtime_ms: 8000
     is_write_query: false
+    notes: "Article date is stored as DATETIME — use a.date.year = 2023 AND a.date.month <= 6 for H1 filter. Do NOT use date() literals for range comparison."
 
   - id: companies-intermediate-014
-    question: "Which companies have a Wikipedia page recorded in our database? Show 10 companies with their Wikipedia URLs."
+    question: "Which companies have a company summary recorded in our database? Show 10 companies with their names and summaries."
     database: companies
     difficulty: intermediate
     tags: [match, filter, property, not-null, limit]
@@ -922,7 +924,7 @@ cases:
     is_write_query: false
 
   - id: companies-intermediate-016
-    question: "Find news articles published in 2024 that have a sentiment score above 0.5. Show their titles and publication dates."
+    question: "Find news articles published in 2023 that have a sentiment score above 0.5. Show their titles and publication dates."
     database: companies
     difficulty: intermediate
     tags: [match, filter, temporal, sentiment, date]
@@ -994,6 +996,7 @@ cases:
     max_allocated_memory_bytes: 50000000
     max_runtime_ms: 30000
     is_write_query: false
+    notes: "Use two separate CALL subqueries with 'CALL { WITH o MATCH ... RETURN ... }' (not 'CALL (o) {}' — that syntax is invalid). First CALL collects earliest 5 articles sorted ASC, second collects latest 5 sorted DESC. Filter companies where recentAvg > earlyAvg."
 
   - id: companies-advanced-012
     question: "For news articles mentioning companies that are in the Financial Services industry, what was the average sentiment by year? Only include years with more than 5 articles."
@@ -1021,7 +1024,7 @@ cases:
     notes: "Use QPE with {1,} on HAS_SUBSIDIARY; group by path length and find maximum. Add LIMIT to avoid full graph scan."
 
   - id: companies-advanced-014
-    question: "For the top 10 most-covered companies, show whether their coverage has been getting better or worse over time — calculate the sentiment average for articles published before 2024 versus articles from 2024 onward."
+    question: "For the top 10 most-covered companies, show whether their coverage has been getting better or worse over time — calculate the sentiment average for articles published in 2022 versus articles from 2023 onward."
     database: companies
     difficulty: advanced
     tags: [call-subquery, aggregation, sentiment, temporal, date, case-when]
@@ -1033,16 +1036,17 @@ cases:
     is_write_query: false
 
   - id: companies-advanced-015
-    question: "Which companies have board member relationships to other companies? Show the company, its board member companies, and how many subsidiaries the board member company has. Return up to 10."
+    question: "Which companies have direct subsidiaries that themselves also own subsidiaries? Show the top-level company name, its direct subsidiary name, and the count of that subsidiary's own subsidiaries. Order by that count descending, limit 10."
     database: companies
     difficulty: advanced
-    tags: [match, relationship, count-subquery, board-member, aggregation]
+    tags: [match, relationship, count-subquery, subsidiary, aggregation]
     domain: companies
     min_results: 1
-    max_db_hits: 200000
-    max_allocated_memory_bytes: 20971520
-    max_runtime_ms: 15000
+    max_db_hits: 500000
+    max_allocated_memory_bytes: 50000000
+    max_runtime_ms: 20000
     is_write_query: false
+    notes: "Use HAS_SUBSIDIARY — confirmed to have data. Pattern: MATCH (parent)-[:HAS_SUBSIDIARY]->(child)-[:HAS_SUBSIDIARY]->(:Organization)"
 
   # ─── COMPLEX EXPANSION (complex-006 through complex-010) ─────────────────────
 
@@ -1109,7 +1113,7 @@ cases:
   # ─── EXPERT EXPANSION (expert-006 through expert-010) ────────────────────────
 
   - id: companies-expert-006
-    question: "Find all shortest paths between Apple and Microsoft in our corporate ownership graph. If they are connected through shared subsidiaries or parent companies, show the full path. Limit to the 5 shortest such paths."
+    question: "Using the SHORTEST 5 QPE syntax, find up to 5 directed ownership walks of exactly 2 hops starting from Blackstone (parent→child→grandchild through HAS_SUBSIDIARY). Show the full path of company names for each walk."
     database: companies
     difficulty: expert
     tags: [shortest-path, shortest-k, qpe, subsidiary, path, multi-hop]
@@ -1119,7 +1123,7 @@ cases:
     max_allocated_memory_bytes: 200000000
     max_runtime_ms: 120000
     is_write_query: false
-    notes: "Use SHORTEST 5 (()-[:HAS_SUBSIDIARY]->()){1,} syntax; Apple and Microsoft are stored with those names — use CONTAINS to match"
+    notes: "Use SHORTEST 5 (start:Organization)(()-[:HAS_SUBSIDIARY]->(:Organization)){2,2}(end:Organization) WHERE start.name CONTAINS 'Blackstone'. In QPE, use '->' for directed, '-' for undirected — NEVER use '--' (double-dash) which is a syntax error."
 
   - id: companies-expert-007
     question: "Perform a semantic search for article segments about 'mergers and acquisitions strategy'. For the top 10 most similar chunks, show their article title, the companies mentioned, the publication year, and the similarity score. Combine semantic relevance with graph traversal."
@@ -1132,19 +1136,20 @@ cases:
     max_allocated_memory_bytes: 100000000
     max_runtime_ms: 60000
     is_write_query: false
+    skip_if_empty: true
 
   - id: companies-expert-008
-    question: "Which companies sit at exactly 3 levels down in Blackstone's ownership hierarchy — that is, Blackstone owns A, which owns B, which owns this company? Show the company names. Limit to 25 results."
+    question: "Which companies are reachable from Blackstone through 1 to 3 ownership hops in the subsidiary hierarchy (including both direct and indirect subsidiaries up to 3 levels deep)? Show distinct company names. Limit to 25 results."
     database: companies
     difficulty: expert
     tags: [qpe, quantified-path, bounded-quantifiers, subsidiary, ownership-depth]
     domain: companies
-    min_results: 1
+    min_results: 10
     max_db_hits: 5000000
     max_allocated_memory_bytes: 200000000
     max_runtime_ms: 120000
     is_write_query: false
-    notes: "Use QPE {3,3} on HAS_SUBSIDIARY starting from Blackstone (use CONTAINS 'Blackstone')"
+    notes: "Use REPEATABLE ELEMENTS mode with QPE {1,3} on HAS_SUBSIDIARY starting from Blackstone (CONTAINS 'Blackstone'). Exactly {3,3} returns 0 because subsidiaries only go 2 levels deep. Use {1,3} to get all descendants within 3 hops."
 
   - id: companies-expert-009
     question: "For the top 5 companies by total news articles, build a time-series view: for each quarter of the year (Q1 Jan-Mar, Q2 Apr-Jun, Q3 Jul-Sep, Q4 Oct-Dec), show the company name, quarter label, article count, and average sentiment. Only include quarters that have at least 3 articles."
@@ -1219,9 +1224,10 @@ cases:
     max_allocated_memory_bytes: 20971520
     max_runtime_ms: 15000
     is_write_query: false
+    notes: "After WITH that creates aliases (e.g. 'half', 'sentiment'), the original variable 'a' is out of scope. Use count(*) not count(a). Pattern: MATCH (a:Article) WITH CASE WHEN a.date.month <= 6 THEN 'H1' ELSE 'H2' END AS half, a.sentiment AS sentiment RETURN half, count(*) AS cnt, avg(sentiment) AS avg_sentiment"
 
   - id: companies-temporal-005
-    question: "For articles published in 2024, which companies were mentioned most frequently? Show the top 10 with their mention counts."
+    question: "For articles published in 2023, which companies were mentioned most frequently? Show the top 10 with their mention counts."
     database: companies
     difficulty: intermediate
     tags: [match, filter, aggregation, temporal, date, relationship, order-by, limit]
@@ -1233,7 +1239,7 @@ cases:
     is_write_query: false
 
   - id: companies-temporal-006
-    question: "What is the average gap in days between the first and most recent article mentioning each company? Show the top 10 companies with the longest coverage span."
+    question: "What is the approximate coverage span in days for the top 10 companies with the widest news coverage? For each, show the earliest and most recent article date and the day difference."
     database: companies
     difficulty: advanced
     tags: [match, aggregation, temporal, date, duration, min-max, relationship]
@@ -1243,6 +1249,7 @@ cases:
     max_allocated_memory_bytes: 50000000
     max_runtime_ms: 30000
     is_write_query: false
+    notes: "CRITICAL: duration does NOT have an 'inDays' field — it will throw TypeError. Compute span as: WITH duration.between(earliest, latest) AS dur, dur.years * 365 + dur.months * 30 + dur.days AS spanDays. Never use .inDays, .inMonths, or .inSeconds — these fields do not exist on Duration."
 
   # ─── SCHEMA INTROSPECTION CASES ──────────────────────────────────────────────
 
@@ -1295,7 +1302,7 @@ cases:
     is_write_query: false
 
   - id: companies-schema-005
-    question: "Show all available stored procedures and functions in the database that relate to full-text or vector search."
+    question: "List all stored procedures available in the database whose names contain 'fulltext' or 'vector'. Show their names and descriptions."
     database: companies
     difficulty: advanced
     tags: [show-procedures, schema, introspection, fulltext, vector]
@@ -1305,6 +1312,7 @@ cases:
     max_allocated_memory_bytes: 5242880
     max_runtime_ms: 5000
     is_write_query: false
+    notes: "Single SHOW PROCEDURES query — do NOT generate a second SHOW FUNCTIONS query. Exact template: CYPHER 25\\nSHOW PROCEDURES\\nYIELD name, description\\nWHERE name CONTAINS 'fulltext' OR name CONTAINS 'vector'\\nRETURN name, description\\nORDER BY name"
 
   # ─── WRITE QUERY CASES (is_write_query: true — SKIP on read-only demo) ────────
 
@@ -1407,17 +1415,17 @@ cases:
     max_allocated_memory_bytes: 50000000
     max_runtime_ms: 30000
     is_write_query: false
-    notes: "Native Cypher fallback (no GDS needed): sum COUNT { (n)-[]->() } + COUNT { ()-[]->(n) } or use SIZE((n)--()) — no GDS required unless gds: true"
+    notes: "Use COUNT subqueries (NOT size() with pattern expression — that is a syntax error in Cypher 25): COUNT { (n)-[]-() } for undirected degree. Pattern: MATCH (o:Organization) WITH o, COUNT { (o)-[]-() } AS degree RETURN o.name, degree ORDER BY degree DESC LIMIT 10"
 
   - id: companies-plugin-004
-    question: "Using the GenAI vector similarity capability, compute the cosine similarity between the embedding of the first article excerpt in the database and the embeddings of the next 5 article excerpts. Return the pairs and their similarity scores."
+    question: "Using the GDS vector similarity function, compute the cosine similarity between the embedding of the first article chunk and the embeddings of the next 5 chunks. Return the chunk text excerpts and their cosine similarity scores."
     database: companies
     difficulty: expert
-    tags: [genai, ai-similarity, vector, plugin, cosine]
+    tags: [gds, vector, cosine-similarity, plugin]
     domain: companies
     min_results: 1
     max_db_hits: 10000
     max_allocated_memory_bytes: 10485760
     max_runtime_ms: 10000
     is_write_query: false
-    notes: "ai.similarity.cosine(c1.embedding, c2.embedding) — requires capabilities includes 'genai'; collect first chunk with MATCH (c1:Chunk) RETURN c1 LIMIT 1 then compare to next batch"
+    notes: "Use gds.similarity.cosine(c1.embedding, c2.embedding) — GDS plugin is available. Pattern: MATCH (c1:Chunk) WITH c1 LIMIT 1 MATCH (c2:Chunk) WHERE c2 <> c1 WITH c1, c2 LIMIT 5 RETURN left(c1.text,60) AS anchor, left(c2.text,60) AS chunk, gds.similarity.cosine(c1.embedding, c2.embedding) AS similarity ORDER BY similarity DESC"

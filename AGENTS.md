@@ -316,6 +316,7 @@ PASS if the output format is implied naturally ("show", "list", "how many", "ran
 
 ## Value-Grounded and Casual-Language Test Case Authoring
 
+- **`notes:` field is NOT injected into the Claude prompt** — it is for human documentation and debugging only. Adding per-case `notes:` to guide generation is pointless because the runner never passes case-level `notes:` to Claude. To influence generation: (1) add data type/range corrections to the `dataset.schema` property descriptions, (2) add usage guidance to `dataset.notes[]` (which IS injected), or (3) add general Cypher rules to `SKILL.md`. Per-case `notes:` should only document human-readable context (expected value translations, why a question is worded a certain way, confirmed baseline counts).
 - Use a `notes:` field on casual-language cases to document the expected value translation (e.g. `"casual 'bad press' → a.sentiment < -0.3"`). This helps human reviewers verify the case without running the harness.
 - Watch out for temporal questions that reference relative periods ("last year", "this month") when the dataset has a fixed date range. If the dataset only covers 2025, "last year" in 2026 → 0 rows. Either drop the temporal constraint or use a fixed year.
 - Casual-language enum cases: always verify the exact case of enum values against the `values:` field in the domain YAML schema.

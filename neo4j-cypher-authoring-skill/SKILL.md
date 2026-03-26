@@ -37,8 +37,12 @@ Non-negotiable defaults — apply before writing any query:
     - `MATCH (a)(()-[:R]->()){2}(b) REPEATABLE ELEMENTS` ✗ **SYNTAX ERROR**
 11. **Comments use `//` only** — `--` (SQL-style) is **not valid Cypher** and will cause a parse error. Always use `// comment text` for inline or line comments.
 12. **`CYPHER 25` prefix is a single-query prefix** — never repeat it after `UNION`, `UNION ALL`, or within a subquery. One `CYPHER 25` per query, at the very top.
-13. **SHOW commands cannot be combined with UNION** — `SHOW PROCEDURES ... UNION ALL SHOW FUNCTIONS ...` is a syntax error. Use two separate queries when you need results from multiple SHOW commands.
-14. **Map-property access in MATCH is invalid** — you cannot use `p.peer` or any property-access expression directly as a node in a MATCH pattern. Unpack the map first:
+13. **SHOW commands: YIELD before WHERE** — in all SHOW commands (`SHOW PROCEDURES`, `SHOW INDEXES`, `SHOW CONSTRAINTS`, etc.), `YIELD` must come **before** `WHERE`. Correct: `SHOW PROCEDURES YIELD name WHERE name CONTAINS 'apoc'`. Wrong: `SHOW PROCEDURES WHERE name CONTAINS 'apoc' YIELD name` (syntax error).
+14. **SHOW commands cannot be combined with UNION** — `SHOW PROCEDURES ... UNION ALL SHOW FUNCTIONS ...` is a syntax error. Use two separate queries when you need results from multiple SHOW commands.
+15. **Inline node predicates only valid in MATCH** — `WHERE condition` inside a node pattern like `(:Label WHERE prop = x)` is valid in a `MATCH` clause, but **not** in a WHERE pattern expression or EXISTS check. Use `EXISTS { MATCH (n:Label) WHERE n.prop = x }` instead:
+    - `MATCH (n:Label WHERE n.prop = x)` ✓ (MATCH clause)
+    - `WHERE (n)-[:R]->(:Label WHERE prop = x)` ✗ **SYNTAX ERROR** — use `WHERE EXISTS { (n)-[:R]->(m:Label) WHERE m.prop = x }` ✓
+15. **Map-property access in MATCH is invalid** — you cannot use `p.peer` or any property-access expression directly as a node in a MATCH pattern. Unpack the map first:
     - `UNWIND peers AS p WITH p.peer AS peer MATCH (peer)-[...]` ✓
     - `MATCH (p.peer)-[...]` ✗ **SYNTAX ERROR**
 15. **`collect(x ORDER BY y)` is NOT valid Cypher** — the built-in `collect()` aggregation does not accept inline `ORDER BY`. Use either:
@@ -62,8 +66,8 @@ Every query begins with `CYPHER 25` (enables QPEs, SEARCH, CALL scope clauses, t
 CYPHER 25 CALL db.schema.visualization() YIELD nodes, relationships RETURN nodes, relationships;
 CYPHER 25 SHOW INDEXES YIELD name, type, labelsOrTypes, properties, options, state WHERE state = 'ONLINE' RETURN name, type, labelsOrTypes, properties, options;
 CYPHER 25 SHOW CONSTRAINTS YIELD name, type, labelsOrTypes, properties RETURN name, type, labelsOrTypes, properties;
-// Detect APOC:
-CYPHER 25 SHOW PROCEDURES WHERE name = 'apoc.meta.schema' YIELD name RETURN count(name) > 0 AS apocAvailable;
+// Detect APOC (YIELD must come BEFORE WHERE in SHOW commands):
+CYPHER 25 SHOW PROCEDURES YIELD name WHERE name = 'apoc.meta.schema' RETURN count(name) > 0 AS apocAvailable;
 // If APOC: CYPHER 25 CALL apoc.meta.schema() YIELD value RETURN value;
 // Else:    CYPHER 25 CALL db.schema.nodeTypeProperties() YIELD nodeLabels, propertyName, propertyTypes, mandatory RETURN nodeLabels, propertyName, propertyTypes, mandatory;
 ```
@@ -459,7 +463,7 @@ Do **not** load all files — select only what the current query type requires.
 **TypeErrors:** prefer `toIntegerOrNull`/`toFloatOrNull` over base casting; guard with `IS NOT NULL` before coercion.
 **No `least()`/`greatest()`** — these SQL functions do not exist in Cypher. Use `CASE WHEN a < b THEN a ELSE b END`.
 **DateTime vs date() mismatch** — `DateTime >= date('2025-01-01')` returns 0 rows: use `.year` accessor (`t.date.year = 2025`) or `datetime()` literals for DateTime-typed properties.
-**Date arithmetic** — to compute the number of days between two DATE values: `duration.between(date1, date2).days`. Do NOT use `date.epochDays` (no such field) or `(date2 - date1).days` (type error). For STRING dates like `'1996-07-04 00:00:00.000'`, parse first: `duration.between(date(left(strDate, 10)), date(left(otherDate, 10))).days`.
+**Date arithmetic** — to compute total days between two DATE/DATETIME values: use `WITH duration.between(d1, d2) AS dur RETURN dur.years * 365 + dur.months * 30 + dur.days AS spanDays`. **CRITICAL: `.inDays`, `.inMonths`, `.inSeconds` do NOT exist on Duration — they throw TypeError.** `.days` alone gives only the days *component* (not total). Do NOT use `date.epochDays` (no such field) or `(date2 - date1).days` (type error). For STRING dates, parse first: `date(left(strDate, 10))`.
 **Timeouts:** EXPLAIN → fix AllNodesScan/CartesianProduct → add LIMIT → switch to `CALL IN TRANSACTIONS OF 1000 ROWS`.
 
 ---
