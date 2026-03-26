@@ -1692,7 +1692,8 @@ tasks:
         expert:       max_db_hits=2000000,max_runtime_ms=60000
 
       max_allocated_memory_bytes can default to 50MB for all tiers.
-    status: pending
+    status: completed
+    completed_at: "2026-03-26T12:00:00Z"
     dependencies: []
     acceptance_criteria:
       - "_build_case() sets max_db_hits, max_allocated_memory_bytes, max_runtime_ms on every generated case"

@@ -536,6 +536,17 @@ def _generate_cypher(
 # Execute query and capture basic metrics
 # ---------------------------------------------------------------------------
 
+# Difficulty-based performance defaults for Gate 4 thresholds.
+# Used when PROFILE metrics are unavailable (0-row, error, or write queries).
+_DIFFICULTY_DEFAULTS: dict[str, dict[str, int]] = {
+    "basic":        {"max_db_hits": 10_000,    "max_runtime_ms": 5_000},
+    "intermediate": {"max_db_hits": 50_000,    "max_runtime_ms": 10_000},
+    "advanced":     {"max_db_hits": 200_000,   "max_runtime_ms": 20_000},
+    "complex":      {"max_db_hits": 500_000,   "max_runtime_ms": 30_000},
+    "expert":       {"max_db_hits": 2_000_000, "max_runtime_ms": 60_000},
+}
+_DEFAULT_MAX_MEMORY_BYTES = 50 * 1024 * 1024  # 50 MB for all tiers
+
 
 def _execute_query(
     driver: Any,
@@ -547,9 +558,15 @@ def _execute_query(
     Execute a query against the DB and return basic metrics.
 
     For write queries: executes in a rolled-back transaction.
-    Returns dict with: actual_rows, execution_ms, error.
+    Returns dict with: actual_rows, execution_ms, db_hits, error.
+    db_hits is populated via a PROFILE run for read queries.
     """
-    result: dict[str, Any] = {"actual_rows": None, "execution_ms": None, "error": None}
+    result: dict[str, Any] = {
+        "actual_rows": None,
+        "execution_ms": None,
+        "db_hits": None,
+        "error": None,
+    }
 
     try:
         t0 = time.monotonic()
@@ -563,13 +580,48 @@ def _execute_query(
                     finally:
                         tx.rollback()
         else:
-            records, _, _ = driver.execute_query(cypher, database_=database)
+            records, summary, _ = driver.execute_query(cypher, database_=database)
             result["actual_rows"] = len(records)
+            # Attempt PROFILE to capture db_hits for read queries
+            try:
+                profile_cypher = _prepend_profile(cypher)
+                _, profile_summary, _ = driver.execute_query(profile_cypher, database_=database)
+                if profile_summary and profile_summary.profile:
+                    result["db_hits"] = _sum_plan_db_hits(profile_summary.profile)
+            except Exception:
+                pass  # PROFILE not critical — continue without db_hits
         result["execution_ms"] = round((time.monotonic() - t0) * 1000, 1)
     except Exception as exc:
         result["error"] = str(exc)
 
     return result
+
+
+def _prepend_profile(cypher: str) -> str:
+    """Prepend PROFILE to a Cypher query, handling CYPHER 25 pragma."""
+    stripped = cypher.strip()
+    pragma_match = re.match(r"^(CYPHER\s+\S+)\s*\n", stripped, re.IGNORECASE)
+    if pragma_match:
+        pragma = pragma_match.group(1)
+        rest = stripped[pragma_match.end():]
+        return f"{pragma}\nPROFILE\n{rest}"
+    return f"PROFILE\n{stripped}"
+
+
+def _sum_plan_db_hits(plan: Any) -> int:
+    """Recursively sum dbHits from a ProfiledPlan object or dict."""
+    if hasattr(plan, "db_hits"):
+        # Neo4j driver ProfiledPlan
+        total = plan.db_hits or 0
+        for child in (plan.children or []):
+            total += _sum_plan_db_hits(child)
+        return total
+    if isinstance(plan, dict):
+        total = plan.get("dbHits", 0) or 0
+        for child in (plan.get("children") or []):
+            total += _sum_plan_db_hits(child)
+        return total
+    return 0
 
 
 # ---------------------------------------------------------------------------
@@ -625,6 +677,24 @@ def _build_case(
 
     if execution.get("error"):
         case["execution_error"] = execution["error"]
+
+    # ---- Gate 4 performance thresholds ----
+    # Prefer observed metrics (multiplied by tolerance factor) when available;
+    # fall back to difficulty-based conservative defaults.
+    defaults = _DIFFICULTY_DEFAULTS.get(difficulty, _DIFFICULTY_DEFAULTS["expert"])
+
+    observed_db_hits = execution.get("db_hits")
+    if observed_db_hits is not None and observed_db_hits > 0:
+        case["max_db_hits"] = observed_db_hits * 3
+    else:
+        case["max_db_hits"] = defaults["max_db_hits"]
+
+    if exec_ms is not None and exec_ms > 0 and not execution.get("error"):
+        case["max_runtime_ms"] = int(exec_ms * 5)
+    else:
+        case["max_runtime_ms"] = defaults["max_runtime_ms"]
+
+    case["max_allocated_memory_bytes"] = _DEFAULT_MAX_MEMORY_BYTES
 
     if cypher:
         case["candidate_cypher"] = cypher
