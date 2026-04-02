@@ -101,13 +101,17 @@ dataset:
     - "PURCHASED is on (Customer)-[:PURCHASED]->(Article) — NOT to Product directly"
     - "FROM_DEPARTMENT is on (Article)-[:FROM_DEPARTMENT]->(Department)"
     - "Purchase price is normalised (0–1 scale) — not a real currency amount"
-    - "salesChannelId: 1 = in-store, 2 = online"
+    - "salesChannelId is INTEGER: 1 = in-store, 2 = online (NOT a string)"
     - "Customer age may be null (NaN stored as null in graph) — use IS NOT NULL guards"
-    - "clubMemberStatus values: 'ACTIVE' or 'PRE-CREATE'"
+    - "clubMemberStatus values are ALL_CAPS: 'ACTIVE' or 'PRE-CREATE'"
+    - "fashionNewsFrequency values: 'Regularly' or 'NONE'"
     - "article_graph_embeddings uses 128 dimensions (not 1536) — do not mix with product vector index"
     - "Vector search: use CALL db.index.vector.queryNodes('article_graph_embeddings', N, $vec) YIELD node AS a, score — SEARCH clause is NOT available (server is 2026.01.x)"
-    - "All 13,351 articles have at least 1 purchase — 'articles never purchased' returns 0 rows. Use 'articles never purchased online' (3,568 results) instead."
+    - "All 13,351 articles have at least 1 purchase — 'articles never purchased' returns 0 rows. Use 'articles never purchased online' (salesChannelId <> 2, gives 3,568 results) instead."
     - "Verified customer ID for Strap top collaborative filtering: 'a95794754e2b0a93f7830ada52a8f75cb2090d0829c5c2c9b40f940b28345035' (2 Strap top variants purchased)"
+    - "PURCHASED.tDat is DATE type (not STRING) — use date() for comparisons: WHERE r.tDat >= date('2020-01-01')"
+    - "Demo DB is read-only — write cases SKIP rather than FAIL"
+    - "GDS/APOC procedures may not be available to the retail demo user — prefer pure Cypher for analysis"
 
 cases:
 

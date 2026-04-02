@@ -186,6 +186,9 @@ dataset:
     - "ADVERTISING_FOR connects Snapshot-to-SSIDSnapshot (AP broadcasting a network); PROBING_FOR connects Snapshot-to-SSIDSnapshot (client looking for a network); RESPONDING_FOR connects Snapshot-to-SSIDSnapshot (AP responding to probe)"
     - "To link AP manufacturer to client signal strength: (ap:AccessPoint)-[:FIRST|LAST]->(apSnap)-[:ADVERTISING_FOR]->(ss:SSIDSnapshot)<-[:PROBING_FOR]-(cSnap:Snapshot) WHERE cSnap.signalstr IS NOT NULL"
     - "Avoid unbounded variable-length traversals on NEXT chains for large datasets — use LIMIT or bounded {0,N} quantifiers"
+    - "FIRST and LAST relationships also exist on AccessPoint nodes (in addition to Client) — use (ap:AccessPoint)-[:FIRST|LAST]->(s:Snapshot) to access AP snapshot history"
+    - "WIFIBridge nodes also use FIRST/LAST relationships to Snapshot — same traversal pattern as Client and AccessPoint"
+    - "Demo DB is read-only — write cases SKIP rather than FAIL"
 
 cases:
 

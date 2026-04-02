@@ -65,6 +65,10 @@ dataset:
       AlertStatus:
         properties:
           status: {type: STRING, values: ["01-New", "02-Validated", "03-ConfirmedValidated", "04-Recycled", "05-Rejected", "06-ConfirmedRejected"], description: "Status code with numeric prefix — e.g. '01-New', '02-Validated'. Use STARTS WITH '01' to match New status."}
+      Scenario:
+        description: "A fraud investigation scenario grouping related alerts — Scenario nodes are NOT directly linked to Accounts"
+        properties:
+          scenarioId: {type: STRING, description: "Unique scenario identifier"}
       Jurisdiction:
         properties:
           name: {type: STRING}
@@ -106,6 +110,10 @@ dataset:
     - "Customer.fraudFlag is a STRING 'True'/'False' — NOT a boolean. Use: WHERE c.fraudFlag = 'True'"
     - "All enum values are Title case: Account.status='Active'/'Closed'/'Frozen', Transaction.type='Transfer'/'Deposit'/'Withdrawal', Transaction.status='Completed'/'Pending'/'Failed'"
     - "louvainCommunity groups accounts into suspected fraud clusters — same integer = same cluster"
+    - "HAS_ALERT goes from Scenario to Alert (NOT Account): (s:Scenario)-[:HAS_ALERT]->(al:Alert)-[:HAS_STATUS]->(as:AlertStatus). Always traverse via Scenario, never directly from Account or Customer to Alert."
+    - "Transaction.date is DATETIME type — use datetime() comparisons: WHERE t.date >= datetime('2024-01-01T00:00:00'). Date range in dataset: 2024-05-20 to 2025-05-09."
+    - "Customer.dateOfBirth is DATE type (not STRING) — use date() for comparisons: WHERE c.dateOfBirth <= date('2000-01-01') for adults under 25"
+    - "GDS procedures (gds.*) are available on this local instance — use gds.louvain.stream(), gds.pageRank.stream() etc. Do NOT filter by louvainCommunity/pagerank unless you first confirmed write-back was performed; the stored properties ARE pre-computed GDS write-back results."
 
 cases:
   # ---------------------------------------------------------------------------

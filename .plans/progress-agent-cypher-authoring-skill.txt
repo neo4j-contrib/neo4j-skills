@@ -2431,3 +2431,67 @@ Files Changed:
     northwind-plugin-002: min_results: 0, notes updated for GDS CE limitation
 - skill-generation-validation-tools/tests/cases/recommendations.yml:
     rec-expert-004: added notes field documenting non-deterministic behavior
+
+================================================================================
+TASK-075: Verify and improve dataset.notes[] for the 5 remaining domains
+Date: 2026-04-02T10:00:00Z
+================================================================================
+
+Summary:
+Reviewed all 5 remaining domains (stackoverflow, twitter, retail, ucfraud,
+ucnetwork) and enriched their dataset.notes[] and schema blocks to provide
+better generation context for generate_questions.py.
+
+Key changes per domain:
+
+ucfraud (10→14 notes):
+- Added Scenario node to schema.nodes block (was missing — HAS_ALERT had
+  from: Scenario but no Scenario node entry)
+- Added HAS_ALERT direction note (Scenario→Alert, never Account→Alert)
+- Added Transaction.date DATETIME type + comparison pattern + date range
+- Added Customer.dateOfBirth DATE type + comparison example
+- Added GDS note: louvainCommunity/pagerank ARE stored properties (pre-computed
+  write-back), so filtering on them IS valid in this DB
+
+stackoverflow (8→12 notes):
+- Added GDS restriction caveat (demo user may not have gds.* access)
+- Added Question.createdAt/User.createdAt DATETIME type + comparison pattern
+- Added User.age sparse note (IS NOT NULL guard)
+- Added User.location sparse text note (CONTAINS/STARTS WITH, not exact match)
+- Changed "No vector or fulltext index" note to include explicit instruction
+  not to generate SEARCH or db.index.vector/fulltext queries
+
+twitter (11→14 notes):
+- Clarified created_at as INTEGER (Unix epoch milliseconds), not just "epoch"
+- Strengthened Troll note: Troll and User are SEPARATE labels, need UNION
+  or (u:User|Troll) to include both
+- Added User.verified BOOLEAN type note (true not 'true')
+- Added troll retweet amplification traversal pattern
+- Added Tweet.id and User.id are STRING type note
+
+retail (11→15 notes):
+- Clarified salesChannelId is INTEGER (not string) more prominently
+- Added clubMemberStatus values ALL_CAPS note
+- Added fashionNewsFrequency values: 'Regularly' or 'NONE'
+- Added PURCHASED.tDat DATE type + date() comparison pattern
+- Added demo read-only explicit note
+- Added GDS/APOC restriction caveat for demo user
+
+ucnetwork (16→19 notes):
+- Added FIRST/LAST relationships also exist on AccessPoint nodes
+- Added WIFIBridge nodes also use FIRST/LAST
+- Added demo read-only note
+
+AGENTS.md:
+- Added note: "Per-case notes: field is NOT injected into generators"
+  (reminder to put generation guidance in dataset.notes[] not per-case notes)
+
+Dry-run: 660 cases validated OK
+
+Acceptance criteria:
+✓ Each domain YAML has ≥ 8 notes[] (stackoverflow=12, twitter=14, retail=15,
+  ucfraud=14, ucnetwork=19)
+✓ ucfraud schema includes Scenario node with HAS_ALERT direction documented
+✓ All domains: property types and formats documented (datetime, date, int, bool,
+  string types all explicitly noted for non-obvious properties)
+

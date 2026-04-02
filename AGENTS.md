@@ -101,6 +101,7 @@
 - **generator.py vs generate_questions.py**: Two separate generators. `generator.py` (harness dir) writes to `{domain}-generated.yml` requiring human promotion; `generate_questions.py` (scripts dir) appends directly to `{domain}.yml`. Both now use question_validator for auto-rewrite.
 - **audit_questions.py**: Reads schema from `dataset.schema.nodes/relationships` (new structure) with fallback to `schema.nodes/relationships` (legacy). Reports violations per domain. Current baseline: 110 violations in 660 questions across 10 domains — pre-existing, not regressions.
 - **Dedup prompt shows ALL existing questions**: `_build_generation_prompt()` passes the full `existing_questions` list (question text only, no metadata). No [:20] cap. `_extract_existing_questions()` already strips to text only — no extra truncation needed.
+- **Per-case `notes:` field is NOT injected into generators**: The `notes:` field on individual test cases is for human reviewers only. The question generator only sees `dataset.notes[]` (domain-level). Put generation guidance in `dataset.notes[]` or SKILL.md, not in per-case `notes:`.
 
 ### register_dataset.py — Gotchas
 

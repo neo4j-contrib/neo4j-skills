@@ -101,14 +101,17 @@ dataset:
     - "Hashtag property is 'tag' (not 'name') — use h.tag for hashtag text"
     - "URL property is 'expanded_url' (not 'url') — use u.expanded_url"
     - "User property for followers is 'followers_count' (not 'followers')"
-    - "Tweet timestamps: created_at is INTEGER (Unix epoch), created_str is human-readable STRING"
+    - "Tweet timestamps: created_at is INTEGER (Unix epoch milliseconds), created_str is human-readable STRING — use created_str for display, created_at for numeric range comparisons"
     - "Relationship for posting is POSTED (not POSTS); for client app is POSTED_VIA (not USING)"
     - "Relationship for hashtags is HAS_TAG (not TAGS); for URLs is HAS_LINK (not CONTAINS)"
-    - "Troll nodes are labeled :Troll (not :User) — 453 troll accounts in dataset"
+    - "Troll nodes are labeled :Troll (not :User) — 453 troll accounts in dataset. Troll and User are separate labels — use UNION or (u:User|Troll) to include both"
     - "No FOLLOWS relationship in this dataset — social graph uses POSTED/RETWEETED/MENTIONS"
     - "RETWEETED is Tweet→Tweet (NOT User→Tweet): (retweetTweet)-[:RETWEETED]->(originalTweet). To find 'users who retweeted': MATCH (poster:User)-[:POSTED]->(rt:Tweet)-[:RETWEETED]->(orig:Tweet). To find 'most retweeted users': MATCH (rt:Tweet)-[:RETWEETED]->(orig:Tweet)<-[:POSTED]-(author:User)"
     - "No vector or fulltext indexes — use string matching with RANGE index lookups"
     - "Write queries ARE ALLOWED on this local database (MERGE, SET, CALL IN TRANSACTIONS)"
+    - "User.verified is BOOLEAN (true/false) — use WHERE u.verified = true (not = 'true')"
+    - "To find troll retweet amplification: MATCH (t:Troll)-[:POSTED]->(rt:Tweet)-[:RETWEETED]->(orig:Tweet)<-[:POSTED]-(author:User)"
+    - "Tweet.id and User.id are STRING type — always quote in comparisons: WHERE t.id = '123456789'"
 
 cases:
 

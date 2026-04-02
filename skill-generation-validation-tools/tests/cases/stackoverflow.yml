@@ -105,8 +105,12 @@ dataset:
     - "Tag.count is denormalized (pre-computed) — faster than counting via TAGGED relationships"
     - "Demo DB is read-only — write cases SKIP"
     - "QPE '+' quantifier NOT supported on demo server — use {1,} instead"
-    - "No vector or fulltext index in this database"
+    - "No vector or fulltext index in this database — do not generate SEARCH or db.index.vector/fulltext queries"
     - "LIMIT is mandatory for most queries on this DB to avoid full scans on 41M nodes"
+    - "GDS procedures (gds.*) are listed in capabilities but may not be usable by the stackoverflow demo user — prefer pure Cypher for network analysis"
+    - "Question.createdAt and User.createdAt are DATETIME type — use datetime() for comparisons: WHERE q.createdAt > datetime('2020-01-01')"
+    - "User.age is sparse (many nulls) — always guard with IS NOT NULL before numeric comparisons"
+    - "User.location is sparse text — use CONTAINS or STARTS WITH for location filtering, never exact match"
 
 cases:
 

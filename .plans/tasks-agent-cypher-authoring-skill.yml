@@ -1725,7 +1725,8 @@ tasks:
         - twitter: RETWEETS relationship name in schema vs RETWEETS→RETWEETED discrepancy
         - ucnetwork: 7 failures suggest schema/data bugs need documentation
         - retail: salesChannelId is INTEGER not STRING; tDat is DATE type
-    status: pending
+    status: completed
+    completed_at: "2026-04-02T10:00:00Z"
     dependencies: [task-071]
     acceptance_criteria:
       - "Each domain YAML has ≥ 8 notes[] entries covering: entity naming, data types, forbidden ops, empty rels"
