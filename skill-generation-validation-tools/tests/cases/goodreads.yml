@@ -92,6 +92,27 @@ dataset:
         similarity: cosine
         call: "CALL db.index.vector.queryNodes('review-text', N, $vec) YIELD node, score"
         description: "Vector similarity search on review content"
+      - label: Book
+        property: id
+        type: RANGE
+      - label: Book
+        property: book_id
+        type: RANGE
+      - label: Author
+        property: author_id
+        type: RANGE
+      - label: User
+        property: user_id
+        type: RANGE
+      - label: Review
+        property: review_id
+        type: RANGE
+      - label: Review
+        property: id
+        type: RANGE
+      - label: Review
+        property: user_id
+        type: RANGE
   notes:
     - "Review ratings: 0=unrated, 1–5 stars. Many reviews have rating=0 (unrated shelves)."
     - "publication_year is stored as STRING (e.g. '2009'), not an integer — use string comparison or toInteger()"
@@ -99,7 +120,8 @@ dataset:
     - "language_code is sparse — many books have null. Use IS NOT NULL when filtering by language."
     - "SIMILAR_TO is directed: (b1:Book)-[:SIMILAR_TO]->(b2:Book) — but for traversal use UNDIRECTED pattern (()-[:SIMILAR_TO]-(:Book)) to find all reachable books regardless of direction. Max 2 outgoing per book, but many books have only incoming links."
     - "User connects to Review via PUBLISHED; Review connects to Book via WRITTEN_FOR — two hops to get user's reviewed books"
-    - "Vector search: use CALL db.index.vector.queryNodes('book-descriptions', N, $vec) YIELD node, score — the SEARCH clause is NOT valid Cypher 25 syntax"
+    - "Vector search: SEARCH clause IS available on demo.neo4jlabs.com 2026.02.x (vector-only). Syntax: MATCH (b:Book) SEARCH b IN (VECTOR INDEX `book-descriptions` FOR $vec LIMIT N) SCORE AS score. Alternatively CALL db.index.vector.queryNodes('book-descriptions', N, $vec) YIELD node, score also works."
+    - "Book.id and Book.book_id are both RANGE indexed — prefer either for lookup by ID. Author.author_id, User.user_id, Review.review_id are also RANGE indexed."
     - "Labels Genre, Publisher, and Series do NOT exist in this dataset — do not reference them"
     - "Books confirmed to exist: 'The Name of the Wind (The Kingkiller Chronicle, #1)', 'Betrayed (House of Night, #2)', 'Harry Potter and the Sorcerer\\'s Stone', 'Night Visions 5', 'The Tommyknockers', 'The Berlin Stories: The Last of Mr Norris/Goodbye to Berlin', 'Mrs. Dalloway'"
     - "Books that do NOT exist: 'The Hunger Games', 'Divergent', 'To Kill a Mockingbird' — do not use these in test queries"

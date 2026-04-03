@@ -89,13 +89,28 @@ dataset:
         from: Order
         to: Product
         description: "Order contains this product"
-    indexes: []
+    indexes:
+      - label: Customer
+        property: customerID
+        type: RANGE
+      - label: Category
+        property: categoryID
+        type: RANGE
+      - label: Order
+        property: orderID
+        type: RANGE
+      - label: Supplier
+        property: supplierID
+        type: RANGE
+      - label: Product
+        property: productID
+        type: RANGE
   notes:
     - "Order.orderDate, Order.freight are stored as STRING — use toFloat(o.freight) for numeric comparisons"
     - "Product.discontinued is BOOLEAN — filter with p.discontinued = true or p.discontinued = false"
     - "Category names are exact: 'Beverages', 'Condiments', 'Confections', 'Dairy Products', 'Grains/Cereals', 'Meat/Poultry', 'Produce', 'Seafood'"
-    - "Customer.customerID is a 5-character string (e.g. 'ALFKI'), not an integer"
-    - "No vector or fulltext indexes — all queries use RANGE indexes or label scans"
+    - "Customer.customerID is a 5-character string (e.g. 'ALFKI'), not an integer — RANGE indexed"
+    - "No vector or fulltext indexes — use RANGE indexes on primary ID properties (Customer.customerID, Order.orderID, Product.productID, Category.categoryID, Supplier.supplierID) for direct lookups; all other properties require label scans"
     - "ORDERS relationship goes (Order)-[:ORDERS]->(Product), NOT (Customer)-[:ORDERS]->(Product)"
     - "SUPPLIES is 1:1 in this dataset — each product has exactly one supplier. 'Products with multiple suppliers' returns 0 rows — do not write such test cases."
     - "All 77 products appear in at least one order — 'products never ordered' returns 0 rows. Use inventory-based questions instead."

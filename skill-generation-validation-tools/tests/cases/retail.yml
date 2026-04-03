@@ -1,466 +1,1758 @@
-# retail.yml — Test cases for neo4j-cypher-authoring-skill
-# NOTE: retail-generated.yml (generator output) is gitignored.
-# Promote stubs from generated → this file after human review.
-# Thresholds: max_db_hits = observed × 3, max_allocated_memory_bytes = observed × 3,
-#             max_runtime_ms = observed × 5.
-
 database:
   uri: neo4j+s://demo.neo4jlabs.com:7687
   username: retail
+  password: retail
   database: retail
-  neo4j_version: "2026.01"
-  cypher_version: "25"
-  capabilities: [gds, apoc, apoc-extended, genai]
-  read_only: true  # demo.neo4jlabs.com — write cases SKIP rather than FAIL
-
+  neo4j_version: '2026.01'
+  cypher_version: '25'
+  capabilities:
+  - gds
+  - apoc
+  - apoc-extended
+  - genai
+  read_only: true
 dataset:
   name: retail
-  description: |
-    A fashion retail knowledge graph based on the H&M Kaggle dataset. Covers fashion products,
+  description: 'A fashion retail knowledge graph based on the H&M Kaggle dataset. Covers fashion products,
+
     product articles (specific variants), departments, and customer purchase transactions.
+
     Each purchase is represented as a PURCHASED relationship with a transaction date, price, and
+
     sales channel. Two vector indexes support semantic search on product descriptions and visual
+
     article graph embeddings. Use to explore product catalogues, department structure, customer
+
     purchasing patterns, and product similarity.
+
     Contains 8,044 products, 13,351 articles, 266 departments, 1,000 customers, and 23,199 purchases.
+
+    '
   schema:
     nodes:
       Product:
-        description: "A base fashion product (master record covering all colour/size variants)"
+        description: A base fashion product (master record covering all colour/size variants)
         properties:
-          productCode:       {type: INTEGER, description: "Unique product code"}
-          prodName:          {type: STRING, sample: ["Strap top", "OP T-shirt (Idro)", "Shape Up 30 den 1p Tights"]}
-          productGroupName:  {type: STRING, sample: ["Garment Upper body", "Underwear", "Socks & Tights", "Garment Lower body", "Accessories"]}
-          productTypeName:   {type: STRING, sample: ["Vest top", "Bra", "Leggings/Tights", "Trousers", "T-shirt"]}
-          garmentGroupName:  {type: STRING, sample: ["Jersey Basic", "Under-, Nightwear", "Socks and Tights", "Jersey Fancy"]}
-          garmentGroupNo:    {type: INTEGER}
-          text:              {type: STRING, description: "Detailed product description for search"}
-          detailDesc:        {type: STRING, description: "Short description"}
-          url:               {type: STRING}
-          textEmbedding:     {type: VECTOR, dimensions: 1536, description: "Text embedding of product description"}
+          productCode:
+            type: INTEGER
+            description: Unique product code
+          prodName:
+            type: STRING
+            sample:
+            - Strap top
+            - OP T-shirt (Idro)
+            - Shape Up 30 den 1p Tights
+          productGroupName:
+            type: STRING
+            sample:
+            - Garment Upper body
+            - Underwear
+            - Socks & Tights
+            - Garment Lower body
+            - Accessories
+          productTypeName:
+            type: STRING
+            sample:
+            - Vest top
+            - Bra
+            - Leggings/Tights
+            - Trousers
+            - T-shirt
+          garmentGroupName:
+            type: STRING
+            sample:
+            - Jersey Basic
+            - Under-, Nightwear
+            - Socks and Tights
+            - Jersey Fancy
+          garmentGroupNo:
+            type: INTEGER
+          text:
+            type: STRING
+            description: Detailed product description for search
+          detailDesc:
+            type: STRING
+            description: Short description
+          url:
+            type: STRING
+          textEmbedding:
+            type: VECTOR
+            dimensions: 1536
+            description: Text embedding of product description
       Article:
-        description: "A specific product variant (specific colour/style combination)"
+        description: A specific product variant (specific colour/style combination)
         properties:
-          articleId:               {type: INTEGER, description: "Unique article identifier"}
-          prodName:                {type: STRING, description: "Article product name (same as parent Product in most cases)"}
-          productTypeName:         {type: STRING}
-          colourGroupCode:         {type: STRING}
-          colourGroupName:         {type: STRING, sample: ["Black", "White", "Blue", "Grey", "Beige", "Pink", "Red"]}
-          graphicalAppearanceNo:   {type: INTEGER}
-          graphicalAppearanceName: {type: STRING, sample: ["Solid", "Stripe", "Melange"]}
-          graphEmbedding:          {type: VECTOR, dimensions: 128, description: "Visual graph embedding of the article"}
+          articleId:
+            type: INTEGER
+            description: Unique article identifier
+          prodName:
+            type: STRING
+            description: Article product name (same as parent Product in most cases)
+          productTypeName:
+            type: STRING
+          colourGroupCode:
+            type: STRING
+          colourGroupName:
+            type: STRING
+            sample:
+            - Black
+            - White
+            - Blue
+            - Grey
+            - Beige
+            - Pink
+            - Red
+          graphicalAppearanceNo:
+            type: INTEGER
+          graphicalAppearanceName:
+            type: STRING
+            sample:
+            - Solid
+            - Stripe
+            - Melange
+          graphEmbedding:
+            type: VECTOR
+            dimensions: 128
+            description: Visual graph embedding of the article
       Department:
-        description: "A store department and section classification"
+        description: A store department and section classification
         properties:
-          departmentNo:   {type: INTEGER}
-          departmentName: {type: STRING, sample: ["Jersey Basic", "Clean Lingerie", "Tights basic", "Jersey"]}
-          sectionNo:      {type: INTEGER}
-          sectionName:    {type: STRING, sample: ["Womens Everyday Basics", "Womens Lingerie", "Men Underwear", "Mama"]}
+          departmentNo:
+            type: INTEGER
+          departmentName:
+            type: STRING
+            sample:
+            - Jersey Basic
+            - Clean Lingerie
+            - Tights basic
+            - Jersey
+          sectionNo:
+            type: INTEGER
+          sectionName:
+            type: STRING
+            sample:
+            - Womens Everyday Basics
+            - Womens Lingerie
+            - Men Underwear
+            - Mama
       Customer:
-        description: "A retail customer"
+        description: A retail customer
         properties:
-          customerId:           {type: STRING, description: "Unique customer identifier string"}
-          age:                  {type: FLOAT, description: "Customer age in years (sparse — some customers have null age)"}
-          clubMemberStatus:     {type: STRING, values: ["ACTIVE", "PRE-CREATE"], description: "Loyalty club status"}
-          fashionNewsFrequency: {type: STRING, values: ["Regularly", "NONE"], description: "Frequency of fashion newsletter subscription"}
-          active:               {type: FLOAT, values: [1.0], description: "Whether the customer is active (1.0 = active; null = inactive)"}
+          customerId:
+            type: STRING
+            description: Unique customer identifier string
+          age:
+            type: FLOAT
+            description: Customer age in years (sparse — some customers have null age)
+          clubMemberStatus:
+            type: STRING
+            values:
+            - ACTIVE
+            - PRE-CREATE
+            description: Loyalty club status
+          fashionNewsFrequency:
+            type: STRING
+            values:
+            - Regularly
+            - NONE
+            description: Frequency of fashion newsletter subscription
+          active:
+            type: FLOAT
+            values:
+            - 1.0
+            description: Whether the customer is active (1.0 = active; null = inactive)
     relationships:
-      - type: PURCHASED
-        from: Customer
-        to: Article
-        description: "Customer purchased this article — relationship has transaction properties"
-        properties:
-          tDat:         {type: DATE, description: "Transaction date"}
-          price:        {type: FLOAT, description: "Purchase price (normalised 0–1 scale)"}
-          salesChannelId: {type: INTEGER, values: [1, 2], description: "1 = store, 2 = online"}
-      - type: VARIANT_OF
-        from: Article
-        to: Product
-        description: "This article is a variant of the parent product"
-      - type: FROM_DEPARTMENT
-        from: Article
-        to: Department
-        description: "This article belongs to this department"
+    - type: PURCHASED
+      from: Customer
+      to: Article
+      description: Customer purchased this article — relationship has transaction properties
+      properties:
+        tDat:
+          type: DATE
+          description: Transaction date
+        price:
+          type: FLOAT
+          description: Purchase price (normalised 0–1 scale)
+        salesChannelId:
+          type: INTEGER
+          values:
+          - 1
+          - 2
+          description: 1 = store, 2 = online
+    - type: VARIANT_OF
+      from: Article
+      to: Product
+      description: This article is a variant of the parent product
+    - type: FROM_DEPARTMENT
+      from: Article
+      to: Department
+      description: This article belongs to this department
     indexes:
-      - name: product_text_embeddings
-        type: VECTOR
-        on: Product(textEmbedding)
-        dimensions: 1536
-        similarity: cosine
-        call: "CALL db.index.vector.queryNodes('product_text_embeddings', N, $vec) YIELD node, score"
-        description: "Vector similarity search on product text descriptions"
-      - name: article_graph_embeddings
-        type: VECTOR
-        on: Article(graphEmbedding)
-        dimensions: 128
-        similarity: cosine
-        call: "CALL db.index.vector.queryNodes('article_graph_embeddings', N, $vec) YIELD node, score"
-        description: "Graph embedding similarity search on article visual features"
+    - name: product_text_embeddings
+      type: VECTOR
+      on: Product(textEmbedding)
+      dimensions: 1536
+      similarity: cosine
+      call: CALL db.index.vector.queryNodes('product_text_embeddings', N, $vec) YIELD node, score
+      description: Vector similarity search on product text descriptions
+    - name: article_graph_embeddings
+      type: VECTOR
+      on: Article(graphEmbedding)
+      dimensions: 128
+      similarity: cosine
+      call: CALL db.index.vector.queryNodes('article_graph_embeddings', N, $vec) YIELD node, score
+      description: Graph embedding similarity search on article visual features
+    - label: Article
+      property: articleId
+      type: RANGE
+    - label: Customer
+      property: customerId
+      type: RANGE
+    - label: Department
+      property: departmentNo
+      type: RANGE
+    - label: Product
+      property: productCode
+      type: RANGE
   notes:
-    - "Articles are specific colour/style variants — each article belongs to a parent Product via VARIANT_OF"
-    - "PURCHASED is on (Customer)-[:PURCHASED]->(Article) — NOT to Product directly"
-    - "FROM_DEPARTMENT is on (Article)-[:FROM_DEPARTMENT]->(Department)"
-    - "Purchase price is normalised (0–1 scale) — not a real currency amount"
-    - "salesChannelId is INTEGER: 1 = in-store, 2 = online (NOT a string)"
-    - "Customer age may be null (NaN stored as null in graph) — use IS NOT NULL guards"
-    - "clubMemberStatus values are ALL_CAPS: 'ACTIVE' or 'PRE-CREATE'"
-    - "fashionNewsFrequency values: 'Regularly' or 'NONE'"
-    - "article_graph_embeddings uses 128 dimensions (not 1536) — do not mix with product vector index"
-    - "Vector search: use CALL db.index.vector.queryNodes('article_graph_embeddings', N, $vec) YIELD node AS a, score — SEARCH clause is NOT available (server is 2026.01.x)"
-    - "All 13,351 articles have at least 1 purchase — 'articles never purchased' returns 0 rows. Use 'articles never purchased online' (salesChannelId <> 2, gives 3,568 results) instead."
-    - "Verified customer ID for Strap top collaborative filtering: 'a95794754e2b0a93f7830ada52a8f75cb2090d0829c5c2c9b40f940b28345035' (2 Strap top variants purchased)"
-    - "PURCHASED.tDat is DATE type (not STRING) — use date() for comparisons: WHERE r.tDat >= date('2020-01-01')"
-    - "Demo DB is read-only — write cases SKIP rather than FAIL"
-    - "GDS/APOC procedures may not be available to the retail demo user — prefer pure Cypher for analysis"
-
+  - Articles are specific colour/style variants — each article belongs to a parent Product via VARIANT_OF
+  - PURCHASED is on (Customer)-[:PURCHASED]->(Article) — NOT to Product directly
+  - FROM_DEPARTMENT is on (Article)-[:FROM_DEPARTMENT]->(Department)
+  - Purchase price is normalised (0–1 scale) — not a real currency amount
+  - 'salesChannelId is INTEGER: 1 = in-store, 2 = online (NOT a string)'
+  - Customer age may be null (NaN stored as null in graph) — use IS NOT NULL guards
+  - 'clubMemberStatus values are ALL_CAPS: ''ACTIVE'' or ''PRE-CREATE'''
+  - 'fashionNewsFrequency values: ''Regularly'' or ''NONE'''
+  - article_graph_embeddings uses 128 dimensions (not 1536) — do not mix with product vector index
+  - 'Vector search: SEARCH clause IS available on demo.neo4jlabs.com 2026.02.x (vector-only). Syntax: MATCH (p:Product) SEARCH p IN (VECTOR INDEX product_text_embeddings FOR $vec LIMIT N) SCORE AS score. Alternatively CALL db.index.vector.queryNodes(''product_text_embeddings'', N, $vec) YIELD node, score also works.'
+  - 'Article.articleId, Customer.customerId, Product.productCode, Department.departmentNo are RANGE indexed — use these for efficient lookups'
+  - All 13,351 articles have at least 1 purchase — 'articles never purchased' returns 0 rows. Use 'articles never purchased
+    online' (salesChannelId <> 2, gives 3,568 results) instead.
+  - 'Verified customer ID for Strap top collaborative filtering: ''a95794754e2b0a93f7830ada52a8f75cb2090d0829c5c2c9b40f940b28345035''
+    (2 Strap top variants purchased)'
+  - 'PURCHASED.tDat is DATE type (not STRING) — use date() for comparisons: WHERE r.tDat >= date(''2020-01-01'')'
+  - Demo DB is read-only — write cases SKIP rather than FAIL
+  - GDS/APOC procedures may not be available to the retail demo user — prefer pure Cypher for analysis
 cases:
-
-  # ─── BASIC (6 cases) ─────────────────────────────────────────────────────────
-
-  - id: retail-basic-001
-    question: "How many customers are in the database?"
-    database: retail
-    difficulty: basic
-    tags: [count, nodes]
-    domain: retail
-    min_results: 1
-    max_db_hits: 2000
-    max_allocated_memory_bytes: 2097152
-    max_runtime_ms: 5000
-    is_write_query: false
-
-  - id: retail-basic-002
-    question: "How many distinct product types are available in the catalogue?"
-    database: retail
-    difficulty: basic
-    tags: [count, distinct]
-    domain: retail
-    min_results: 1
-    max_db_hits: 10000
-    max_allocated_memory_bytes: 5242880
-    max_runtime_ms: 5000
-    is_write_query: false
-
-  - id: retail-basic-003
-    question: "Which colour groups are available for articles? List each colour and how many articles come in that colour."
-    database: retail
-    difficulty: basic
-    tags: [aggregation, group-by, order]
-    domain: retail
-    min_results: 1
-    max_db_hits: 15000
-    max_allocated_memory_bytes: 5242880
-    max_runtime_ms: 5000
-    is_write_query: false
-
-  - id: retail-basic-004
-    question: "How many purchases were made online versus in-store?"
-    database: retail
-    difficulty: basic
-    tags: [aggregation, filter, sales-channel]
-    domain: retail
-    min_results: 1
-    max_db_hits: 30000
-    max_allocated_memory_bytes: 5242880
-    max_runtime_ms: 5000
-    is_write_query: false
-    notes: "IMPORTANT: Use CASE p.salesChannelId WHEN 1 THEN 'in-store' WHEN 2 THEN 'online' ELSE 'unknown' END AS channel with count(*) AS purchases. ORDER BY must use the RETURN alias (ORDER BY channel), NOT the pre-aggregation variable (NOT ORDER BY p.salesChannelId)."
-
-  - id: retail-basic-005
-    question: "List all active loyalty club members in the database."
-    database: retail
-    difficulty: basic
-    tags: [match, filter, membership]
-    domain: retail
-    min_results: 1
-    max_db_hits: 2000
-    max_allocated_memory_bytes: 5242880
-    max_runtime_ms: 5000
-    is_write_query: false
-
-  - id: retail-basic-006
-    question: "Which departments are in the 'Womens Everyday Basics' section?"
-    database: retail
-    difficulty: basic
-    tags: [match, filter, department]
-    domain: retail
-    min_results: 1
-    max_db_hits: 500
-    max_allocated_memory_bytes: 2097152
-    max_runtime_ms: 5000
-    is_write_query: false
-
-  # ─── INTERMEDIATE (6 cases) ──────────────────────────────────────────────────
-
-  - id: retail-intermediate-001
-    question: "Which product groups (like 'Garment Upper body', 'Underwear', etc.) have the most articles? Show top 10 by article count."
-    database: retail
-    difficulty: intermediate
-    tags: [aggregation, relationship-chain, group-by, order]
-    domain: retail
-    min_results: 10
-    max_db_hits: 50000
-    max_allocated_memory_bytes: 10485760
-    max_runtime_ms: 10000
-    is_write_query: false
-
-  - id: retail-intermediate-002
-    question: "Which customers have made more than 10 purchases? Show customer ID and purchase count."
-    database: retail
-    difficulty: intermediate
-    tags: [aggregation, relationship, filter, order]
-    domain: retail
-    min_results: 1
-    max_db_hits: 30000
-    max_allocated_memory_bytes: 10485760
-    max_runtime_ms: 10000
-    is_write_query: false
-
-  - id: retail-intermediate-003
-    question: "What was the total number of purchases made in 2020? Group by month and show the trend."
-    database: retail
-    difficulty: intermediate
-    tags: [aggregation, temporal, date, group-by]
-    domain: retail
-    min_results: 1
-    max_db_hits: 30000
-    max_allocated_memory_bytes: 10485760
-    max_runtime_ms: 10000
-    is_write_query: false
-
-  - id: retail-intermediate-004
-    question: "Find the most purchased article — the specific product variant that has been bought the most times. Show article name, colour, and purchase count."
-    database: retail
-    difficulty: intermediate
-    tags: [aggregation, relationship, order, limit]
-    domain: retail
-    min_results: 1
-    max_db_hits: 30000
-    max_allocated_memory_bytes: 10485760
-    max_runtime_ms: 10000
-    is_write_query: false
-
-  - id: retail-intermediate-005
-    question: "How many articles does each department have? Show department name, section name, and article count. Order by article count descending."
-    database: retail
-    difficulty: intermediate
-    tags: [aggregation, relationship, group-by, order]
-    domain: retail
-    min_results: 1
-    max_db_hits: 50000
-    max_allocated_memory_bytes: 10485760
-    max_runtime_ms: 10000
-    is_write_query: false
-
-  - id: retail-intermediate-006
-    question: "Which customers subscribed to the fashion newsletter regularly? Show their IDs and age if known."
-    database: retail
-    difficulty: intermediate
-    tags: [match, filter, null-handling]
-    domain: retail
-    min_results: 1
-    max_db_hits: 2000
-    max_allocated_memory_bytes: 5242880
-    max_runtime_ms: 8000
-    is_write_query: false
-
-  # ─── ADVANCED (6 cases) ──────────────────────────────────────────────────────
-
-  - id: retail-advanced-001
-    question: "Which customers have purchased both black and white articles? Show customer ID and count of each colour purchased."
-    database: retail
-    difficulty: advanced
-    tags: [match, filter, aggregation, set-intersection]
-    domain: retail
-    min_results: 1
-    max_db_hits: 50000
-    max_allocated_memory_bytes: 20971520
-    max_runtime_ms: 15000
-    is_write_query: false
-
-  - id: retail-advanced-002
-    question: "For each product type, what percentage of purchases were made online? Show product type, total purchases, online purchases, and online percentage."
-    database: retail
-    difficulty: advanced
-    tags: [aggregation, conditional, percentage, relationship-chain]
-    domain: retail
-    min_results: 1
-    max_db_hits: 80000
-    max_allocated_memory_bytes: 20971520
-    max_runtime_ms: 15000
-    is_write_query: false
-
-  - id: retail-advanced-003
-    question: "Find customers who have purchased from at least 5 different departments. Show customer ID and the list of department names."
-    database: retail
-    difficulty: advanced
-    tags: [aggregation, collect, filter, relationship-chain]
-    domain: retail
-    min_results: 1
-    max_db_hits: 100000
-    max_allocated_memory_bytes: 20971520
-    max_runtime_ms: 20000
-    is_write_query: false
-
-  - id: retail-advanced-004
-    question: "Which articles have only been purchased in physical stores (salesChannelId=1) and never online (salesChannelId=2)? Show article ID, product name, and colour for the top 20 such articles ordered by article ID."
-    database: retail
-    difficulty: advanced
-    tags: [not-exists, filter, sales-channel]
-    domain: retail
-    min_results: 1
-    max_db_hits: 50000
-    max_allocated_memory_bytes: 10485760
-    max_runtime_ms: 15000
-    is_write_query: false
-    notes: "Verified: 3,568 articles exist that have only store purchases and no online purchases. Pattern: MATCH (a:Article) WHERE EXISTS { ()-[:PURCHASED {salesChannelId: 1}]->(a) } AND NOT EXISTS { ()-[:PURCHASED {salesChannelId: 2}]->(a) }"
-
-  - id: retail-advanced-005
-    question: "For each customer age group (under 25, 25–40, 40–55, over 55), what is the total number of purchases and average purchase price? Exclude customers with no age recorded."
-    database: retail
-    difficulty: advanced
-    tags: [aggregation, conditional, age-group, filter, null-handling]
-    domain: retail
-    min_results: 1
-    max_db_hits: 50000
-    max_allocated_memory_bytes: 20971520
-    max_runtime_ms: 15000
-    is_write_query: false
-
-  - id: retail-advanced-006
-    question: "What are the top 5 most popular products (by total article purchases) in each section? Show section name, product name, and total purchases."
-    database: retail
-    difficulty: advanced
-    tags: [aggregation, ranking, top-n-per-group, relationship-chain]
-    domain: retail
-    min_results: 1
-    max_db_hits: 100000
-    max_allocated_memory_bytes: 20971520
-    max_runtime_ms: 20000
-    is_write_query: false
-
-  # ─── COMPLEX (4 cases) ───────────────────────────────────────────────────────
-
-  - id: retail-complex-001
-    question: "Find customers who show seasonal buying patterns — customers who made purchases in both the first half of the year (January–June) and the second half (July–December) in 2019. Show customer ID and purchase counts for each half."
-    database: retail
-    difficulty: complex
-    tags: [temporal, aggregation, conditional, filter]
-    domain: retail
-    min_results: 1
-    max_db_hits: 30000
-    max_allocated_memory_bytes: 20971520
-    max_runtime_ms: 20000
-    is_write_query: false
-
-  - id: retail-complex-002
-    question: "For each department, find the most loyal customers — customers who have purchased from that department more than 3 times. Show department name, customer ID, and their purchase count in that department."
-    database: retail
-    difficulty: complex
-    tags: [aggregation, filter, relationship-chain, group-by]
-    domain: retail
-    min_results: 1
-    max_db_hits: 100000
-    max_allocated_memory_bytes: 20971520
-    max_runtime_ms: 25000
-    is_write_query: false
-
-  - id: retail-complex-003
-    question: "Find articles that were purchased together by the same customer in the same month. Show pairs of article names that co-appear in at least 5 customer baskets."
-    database: retail
-    difficulty: complex
-    tags: [co-purchase, aggregation, temporal, filter, limit]
-    domain: retail
-    min_results: 1
-    max_db_hits: 200000
-    max_allocated_memory_bytes: 52428800
-    max_runtime_ms: 60000
-    is_write_query: false
-    notes: |
-      PURCHASED relationship has tDat: DATE property. To extract month, use: p.tDat.month (DATE field accessor, not a function call).
-      Pattern for same-customer same-month baskets:
-        MATCH (c:Customer)-[p1:PURCHASED]->(a1:Article), (c)-[p2:PURCHASED]->(a2:Article)
-        WHERE a1.articleId < a2.articleId AND p1.tDat.year = p2.tDat.year AND p1.tDat.month = p2.tDat.month
-        WITH a1.prodName AS item1, a2.prodName AS item2, count(DISTINCT c) AS co_buy_count
-        WHERE co_buy_count >= 5
-        RETURN item1, item2, co_buy_count ORDER BY co_buy_count DESC LIMIT 20
-      IMPORTANT: do NOT use collect() + UNWIND to compute baskets — use direct cross-join on two MATCH clauses on the same customer.
-
-  - id: retail-complex-004
-    question: "Build a collaborative product recommendation for customer 'a95794754e2b0a93f7830ada52a8f75cb2090d0829c5c2c9b40f940b28345035': find all customers who bought the same 'Strap top' article variants as this customer, then identify what other articles those similar customers purchased. Show recommended article names and how many similar customers bought each article (excluding articles already bought by the target customer)."
-    database: retail
-    difficulty: complex
-    tags: [collaborative-filtering, relationship-chain, aggregation, recommendation]
-    domain: retail
-    min_results: 1
-    max_db_hits: 100000
-    max_allocated_memory_bytes: 20971520
-    max_runtime_ms: 30000
-    is_write_query: false
-    notes: "Customer 'a95794754e2b0a93f7830ada52a8f75cb2090d0829c5c2c9b40f940b28345035' is verified to have purchased 2 'Strap top' article variants. There are at least 8 other customers who bought the same article. Pattern: MATCH (target:Customer {customerId: '...'})-[:PURCHASED]->(a:Article)-[:VARIANT_OF]->(:Product {prodName: 'Strap top'}) to find the target's Strap top articles, then find other customers who bought those same articles."
-
-  # ─── EXPERT (5 cases) ────────────────────────────────────────────────────────
-
-  - id: retail-expert-001
-    question: "Using vector similarity on product text descriptions, find the 5 products most similar to 'Strap top'. Return product names and similarity scores."
-    database: retail
-    difficulty: expert
-    tags: [vector-search, similarity, semantic]
-    domain: retail
-    min_results: 1
-    max_db_hits: 10000
-    max_allocated_memory_bytes: 20971520
-    max_runtime_ms: 15000
-    is_write_query: false
-    notes: "Requires embedding vector for 'Strap top' — model should show the query structure using a parameter placeholder."
-
-  - id: retail-expert-002
-    question: "Find customers whose purchase history spans the widest range of garment groups. Show the top 10 customers by distinct garment groups purchased, along with the list of groups."
-    database: retail
-    difficulty: expert
-    tags: [aggregation, collect, distinct, relationship-chain, order]
-    domain: retail
-    min_results: 10
-    max_db_hits: 100000
-    max_allocated_memory_bytes: 20971520
-    max_runtime_ms: 30000
-    is_write_query: false
-
-  - id: retail-expert-003
-    question: "Identify the top 10 articles purchased together most often within the same transaction date for the same customer. Show the two article names and the count of customers who bought both on the same day."
-    database: retail
-    difficulty: expert
-    tags: [co-purchase, temporal, aggregation, filter, limit]
-    domain: retail
-    min_results: 1
-    max_db_hits: 200000
-    max_allocated_memory_bytes: 52428800
-    max_runtime_ms: 60000
-    is_write_query: false
-
-  - id: retail-expert-004
-    question: "Compute a customer loyalty score: for each customer, define the score as total_purchases × 0.5 + distinct_departments × 2 + (1 if regularly subscribing to newsletter else 0) × 5. Show the top 20 customers by loyalty score."
-    database: retail
-    difficulty: expert
-    tags: [aggregation, scoring, conditional, math, relationship-chain]
-    domain: retail
-    min_results: 20
-    max_db_hits: 100000
-    max_allocated_memory_bytes: 20971520
-    max_runtime_ms: 30000
-    is_write_query: false
-
-  - id: retail-expert-005
-    question: "For the 10 most purchased product types, use the SEARCH clause to find articles with visual embeddings similar to the top-selling black article in each product type. Show the product type, top seller, and the top 3 similar articles by visual similarity."
-    database: retail
-    difficulty: expert
-    tags: [vector-search, search-clause, aggregation, relationship-chain]
-    domain: retail
-    min_results: 1
-    skip_if_empty: true
-    max_db_hits: 50000
-    max_allocated_memory_bytes: 52428800
-    max_runtime_ms: 30000
-    is_write_query: false
-    min_version: "2026.01"
-    notes: "Uses SEARCH clause (GA in 2026.02+) with article_graph_embeddings (128-dim) index."
+- id: retail-basic-001
+  question: How many customers are in the database?
+  database: retail
+  difficulty: basic
+  tags:
+  - count
+  - nodes
+  domain: retail
+  min_results: 1
+  max_db_hits: 2000
+  max_allocated_memory_bytes: 2097152
+  max_runtime_ms: 5000
+  is_write_query: false
+- id: retail-basic-002
+  question: How many distinct product types are available in the catalogue?
+  database: retail
+  difficulty: basic
+  tags:
+  - count
+  - distinct
+  domain: retail
+  min_results: 1
+  max_db_hits: 10000
+  max_allocated_memory_bytes: 5242880
+  max_runtime_ms: 5000
+  is_write_query: false
+- id: retail-basic-003
+  question: Which colour groups are available for articles? List each colour and how many articles come in that colour.
+  database: retail
+  difficulty: basic
+  tags:
+  - aggregation
+  - group-by
+  - order
+  domain: retail
+  min_results: 1
+  max_db_hits: 15000
+  max_allocated_memory_bytes: 5242880
+  max_runtime_ms: 5000
+  is_write_query: false
+- id: retail-basic-004
+  question: How many purchases were made online versus in-store?
+  database: retail
+  difficulty: basic
+  tags:
+  - aggregation
+  - filter
+  - sales-channel
+  domain: retail
+  min_results: 1
+  max_db_hits: 30000
+  max_allocated_memory_bytes: 5242880
+  max_runtime_ms: 5000
+  is_write_query: false
+  notes: 'IMPORTANT: Use CASE p.salesChannelId WHEN 1 THEN ''in-store'' WHEN 2 THEN ''online'' ELSE ''unknown'' END AS channel
+    with count(*) AS purchases. ORDER BY must use the RETURN alias (ORDER BY channel), NOT the pre-aggregation variable (NOT
+    ORDER BY p.salesChannelId).'
+- id: retail-basic-005
+  question: List all active loyalty club members in the database.
+  database: retail
+  difficulty: basic
+  tags:
+  - match
+  - filter
+  - membership
+  domain: retail
+  min_results: 1
+  max_db_hits: 2000
+  max_allocated_memory_bytes: 5242880
+  max_runtime_ms: 5000
+  is_write_query: false
+- id: retail-basic-006
+  question: Which departments are in the 'Womens Everyday Basics' section?
+  database: retail
+  difficulty: basic
+  tags:
+  - match
+  - filter
+  - department
+  domain: retail
+  min_results: 1
+  max_db_hits: 500
+  max_allocated_memory_bytes: 2097152
+  max_runtime_ms: 5000
+  is_write_query: false
+- id: retail-intermediate-001
+  question: Which product groups (like 'Garment Upper body', 'Underwear', etc.) have the most articles? Show top 10 by article
+    count.
+  database: retail
+  difficulty: intermediate
+  tags:
+  - aggregation
+  - relationship-chain
+  - group-by
+  - order
+  domain: retail
+  min_results: 10
+  max_db_hits: 50000
+  max_allocated_memory_bytes: 10485760
+  max_runtime_ms: 10000
+  is_write_query: false
+- id: retail-intermediate-002
+  question: Which customers have made more than 10 purchases? Show customer ID and purchase count.
+  database: retail
+  difficulty: intermediate
+  tags:
+  - aggregation
+  - relationship
+  - filter
+  - order
+  domain: retail
+  min_results: 1
+  max_db_hits: 30000
+  max_allocated_memory_bytes: 10485760
+  max_runtime_ms: 10000
+  is_write_query: false
+- id: retail-intermediate-003
+  question: What was the total number of purchases made in 2020? Group by month and show the trend.
+  database: retail
+  difficulty: intermediate
+  tags:
+  - aggregation
+  - temporal
+  - date
+  - group-by
+  domain: retail
+  min_results: 1
+  max_db_hits: 30000
+  max_allocated_memory_bytes: 10485760
+  max_runtime_ms: 10000
+  is_write_query: false
+- id: retail-intermediate-004
+  question: Find the most purchased article — the specific product variant that has been bought the most times. Show article
+    name, colour, and purchase count.
+  database: retail
+  difficulty: intermediate
+  tags:
+  - aggregation
+  - relationship
+  - order
+  - limit
+  domain: retail
+  min_results: 1
+  max_db_hits: 30000
+  max_allocated_memory_bytes: 10485760
+  max_runtime_ms: 10000
+  is_write_query: false
+- id: retail-intermediate-005
+  question: How many articles does each department have? Show department name, section name, and article count. Order by article
+    count descending.
+  database: retail
+  difficulty: intermediate
+  tags:
+  - aggregation
+  - relationship
+  - group-by
+  - order
+  domain: retail
+  min_results: 1
+  max_db_hits: 50000
+  max_allocated_memory_bytes: 10485760
+  max_runtime_ms: 10000
+  is_write_query: false
+- id: retail-intermediate-006
+  question: Which customers subscribed to the fashion newsletter regularly? Show their IDs and age if known.
+  database: retail
+  difficulty: intermediate
+  tags:
+  - match
+  - filter
+  - null-handling
+  domain: retail
+  min_results: 1
+  max_db_hits: 2000
+  max_allocated_memory_bytes: 5242880
+  max_runtime_ms: 8000
+  is_write_query: false
+- id: retail-advanced-001
+  question: Which customers have purchased both black and white articles? Show customer ID and count of each colour purchased.
+  database: retail
+  difficulty: advanced
+  tags:
+  - match
+  - filter
+  - aggregation
+  - set-intersection
+  domain: retail
+  min_results: 1
+  max_db_hits: 50000
+  max_allocated_memory_bytes: 20971520
+  max_runtime_ms: 15000
+  is_write_query: false
+- id: retail-advanced-002
+  question: For each product type, what percentage of purchases were made online? Show product type, total purchases, online
+    purchases, and online percentage.
+  database: retail
+  difficulty: advanced
+  tags:
+  - aggregation
+  - conditional
+  - percentage
+  - relationship-chain
+  domain: retail
+  min_results: 1
+  max_db_hits: 80000
+  max_allocated_memory_bytes: 20971520
+  max_runtime_ms: 15000
+  is_write_query: false
+- id: retail-advanced-003
+  question: Find customers who have purchased from at least 5 different departments. Show customer ID and the list of department
+    names.
+  database: retail
+  difficulty: advanced
+  tags:
+  - aggregation
+  - collect
+  - filter
+  - relationship-chain
+  domain: retail
+  min_results: 1
+  max_db_hits: 100000
+  max_allocated_memory_bytes: 20971520
+  max_runtime_ms: 20000
+  is_write_query: false
+- id: retail-advanced-004
+  question: Which articles have only been purchased in physical stores (salesChannelId=1) and never online (salesChannelId=2)?
+    Show article ID, product name, and colour for the top 20 such articles ordered by article ID.
+  database: retail
+  difficulty: advanced
+  tags:
+  - not-exists
+  - filter
+  - sales-channel
+  domain: retail
+  min_results: 1
+  max_db_hits: 50000
+  max_allocated_memory_bytes: 10485760
+  max_runtime_ms: 15000
+  is_write_query: false
+  notes: 'Verified: 3,568 articles exist that have only store purchases and no online purchases. Pattern: MATCH (a:Article)
+    WHERE EXISTS { ()-[:PURCHASED {salesChannelId: 1}]->(a) } AND NOT EXISTS { ()-[:PURCHASED {salesChannelId: 2}]->(a) }'
+- id: retail-advanced-005
+  question: For each customer age group (under 25, 25–40, 40–55, over 55), what is the total number of purchases and average
+    purchase price? Exclude customers with no age recorded.
+  database: retail
+  difficulty: advanced
+  tags:
+  - aggregation
+  - conditional
+  - age-group
+  - filter
+  - null-handling
+  domain: retail
+  min_results: 1
+  max_db_hits: 50000
+  max_allocated_memory_bytes: 20971520
+  max_runtime_ms: 15000
+  is_write_query: false
+- id: retail-advanced-006
+  question: What are the top 5 most popular products (by total article purchases) in each section? Show section name, product
+    name, and total purchases.
+  database: retail
+  difficulty: advanced
+  tags:
+  - aggregation
+  - ranking
+  - top-n-per-group
+  - relationship-chain
+  domain: retail
+  min_results: 1
+  max_db_hits: 100000
+  max_allocated_memory_bytes: 20971520
+  max_runtime_ms: 20000
+  is_write_query: false
+- id: retail-complex-001
+  question: Find customers who show seasonal buying patterns — customers who made purchases in both the first half of the
+    year (January–June) and the second half (July–December) in 2019. Show customer ID and purchase counts for each half.
+  database: retail
+  difficulty: complex
+  tags:
+  - temporal
+  - aggregation
+  - conditional
+  - filter
+  domain: retail
+  min_results: 1
+  max_db_hits: 30000
+  max_allocated_memory_bytes: 20971520
+  max_runtime_ms: 20000
+  is_write_query: false
+- id: retail-complex-002
+  question: For each department, find the most loyal customers — customers who have purchased from that department more than
+    3 times. Show department name, customer ID, and their purchase count in that department.
+  database: retail
+  difficulty: complex
+  tags:
+  - aggregation
+  - filter
+  - relationship-chain
+  - group-by
+  domain: retail
+  min_results: 1
+  max_db_hits: 100000
+  max_allocated_memory_bytes: 20971520
+  max_runtime_ms: 25000
+  is_write_query: false
+- id: retail-complex-003
+  question: Find articles that were purchased together by the same customer in the same month. Show pairs of article names
+    that co-appear in at least 5 customer baskets.
+  database: retail
+  difficulty: complex
+  tags:
+  - co-purchase
+  - aggregation
+  - temporal
+  - filter
+  - limit
+  domain: retail
+  min_results: 1
+  max_db_hits: 200000
+  max_allocated_memory_bytes: 52428800
+  max_runtime_ms: 60000
+  is_write_query: false
+  notes: "PURCHASED relationship has tDat: DATE property. To extract month, use: p.tDat.month (DATE field accessor, not a\
+    \ function call).\nPattern for same-customer same-month baskets:\n  MATCH (c:Customer)-[p1:PURCHASED]->(a1:Article), (c)-[p2:PURCHASED]->(a2:Article)\n\
+    \  WHERE a1.articleId < a2.articleId AND p1.tDat.year = p2.tDat.year AND p1.tDat.month = p2.tDat.month\n  WITH a1.prodName\
+    \ AS item1, a2.prodName AS item2, count(DISTINCT c) AS co_buy_count\n  WHERE co_buy_count >= 5\n  RETURN item1, item2,\
+    \ co_buy_count ORDER BY co_buy_count DESC LIMIT 20\nIMPORTANT: do NOT use collect() + UNWIND to compute baskets — use\
+    \ direct cross-join on two MATCH clauses on the same customer.\n"
+- id: retail-complex-004
+  question: 'Build a collaborative product recommendation for customer ''a95794754e2b0a93f7830ada52a8f75cb2090d0829c5c2c9b40f940b28345035'':
+    find all customers who bought the same ''Strap top'' article variants as this customer, then identify what other articles
+    those similar customers purchased. Show recommended article names and how many similar customers bought each article (excluding
+    articles already bought by the target customer).'
+  database: retail
+  difficulty: complex
+  tags:
+  - collaborative-filtering
+  - relationship-chain
+  - aggregation
+  - recommendation
+  domain: retail
+  min_results: 1
+  max_db_hits: 100000
+  max_allocated_memory_bytes: 20971520
+  max_runtime_ms: 30000
+  is_write_query: false
+  notes: 'Customer ''a95794754e2b0a93f7830ada52a8f75cb2090d0829c5c2c9b40f940b28345035'' is verified to have purchased 2 ''Strap
+    top'' article variants. There are at least 8 other customers who bought the same article. Pattern: MATCH (target:Customer
+    {customerId: ''...''})-[:PURCHASED]->(a:Article)-[:VARIANT_OF]->(:Product {prodName: ''Strap top''}) to find the target''s
+    Strap top articles, then find other customers who bought those same articles.'
+- id: retail-expert-001
+  question: Using vector similarity on product text descriptions, find the 5 products most similar to 'Strap top'. Return
+    product names and similarity scores.
+  database: retail
+  difficulty: expert
+  tags:
+  - vector-search
+  - similarity
+  - semantic
+  domain: retail
+  min_results: 1
+  max_db_hits: 10000
+  max_allocated_memory_bytes: 20971520
+  max_runtime_ms: 15000
+  is_write_query: false
+  notes: Requires embedding vector for 'Strap top' — model should show the query structure using a parameter placeholder.
+- id: retail-expert-002
+  question: Find customers whose purchase history spans the widest range of garment groups. Show the top 10 customers by distinct
+    garment groups purchased, along with the list of groups.
+  database: retail
+  difficulty: expert
+  tags:
+  - aggregation
+  - collect
+  - distinct
+  - relationship-chain
+  - order
+  domain: retail
+  min_results: 10
+  max_db_hits: 100000
+  max_allocated_memory_bytes: 20971520
+  max_runtime_ms: 30000
+  is_write_query: false
+- id: retail-expert-003
+  question: Identify the top 10 articles purchased together most often within the same transaction date for the same customer.
+    Show the two article names and the count of customers who bought both on the same day.
+  database: retail
+  difficulty: expert
+  tags:
+  - co-purchase
+  - temporal
+  - aggregation
+  - filter
+  - limit
+  domain: retail
+  min_results: 1
+  max_db_hits: 200000
+  max_allocated_memory_bytes: 52428800
+  max_runtime_ms: 60000
+  is_write_query: false
+- id: retail-expert-004
+  question: 'Compute a customer loyalty score: for each customer, define the score as total_purchases × 0.5 + distinct_departments
+    × 2 + (1 if regularly subscribing to newsletter else 0) × 5. Show the top 20 customers by loyalty score.'
+  database: retail
+  difficulty: expert
+  tags:
+  - aggregation
+  - scoring
+  - conditional
+  - math
+  - relationship-chain
+  domain: retail
+  min_results: 20
+  max_db_hits: 100000
+  max_allocated_memory_bytes: 20971520
+  max_runtime_ms: 30000
+  is_write_query: false
+- id: retail-expert-005
+  question: For the 10 most purchased product types, use the SEARCH clause to find articles with visual embeddings similar
+    to the top-selling black article in each product type. Show the product type, top seller, and the top 3 similar articles
+    by visual similarity.
+  database: retail
+  difficulty: expert
+  tags:
+  - vector-search
+  - search-clause
+  - aggregation
+  - relationship-chain
+  domain: retail
+  min_results: 1
+  skip_if_empty: true
+  max_db_hits: 50000
+  max_allocated_memory_bytes: 52428800
+  max_runtime_ms: 30000
+  is_write_query: false
+  min_version: '2026.01'
+  notes: Uses SEARCH clause (GA in 2026.02+) with article_graph_embeddings (128-dim) index.
+- id: retail-basic-007
+  question: How many articles come in white color?
+  database: retail
+  domain: retail
+  difficulty: basic
+  tags: []
+  is_write_query: false
+  notes: Simple count of articles filtered by color group
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 10000
+  max_runtime_ms: 5000
+  max_allocated_memory_bytes: 52428800
+- id: retail-basic-008
+  question: What is the average age of all customers in the database?
+  database: retail
+  domain: retail
+  difficulty: basic
+  tags: []
+  is_write_query: false
+  notes: Basic aggregation on customer property
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 10000
+  max_runtime_ms: 5000
+  max_allocated_memory_bytes: 52428800
+- id: retail-basic-009
+  question: How many products are classified as 'Underwear'?
+  database: retail
+  domain: retail
+  difficulty: basic
+  tags: []
+  is_write_query: false
+  notes: Filter products by product group name
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 10000
+  max_runtime_ms: 5000
+  max_allocated_memory_bytes: 52428800
+- id: retail-basic-010
+  question: What garment group names are represented in the product catalogue?
+  database: retail
+  domain: retail
+  difficulty: basic
+  tags: []
+  is_write_query: false
+  notes: Distinct values of a single property
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 10000
+  max_runtime_ms: 5000
+  max_allocated_memory_bytes: 52428800
+- id: retail-basic-011
+  question: How many customers have unknown age?
+  database: retail
+  domain: retail
+  difficulty: basic
+  tags: []
+  is_write_query: false
+  notes: Count records where property is null
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 10000
+  max_runtime_ms: 5000
+  max_allocated_memory_bytes: 52428800
+- id: retail-basic-012
+  question: How many articles have a 'Stripe' graphical appearance?
+  database: retail
+  domain: retail
+  difficulty: basic
+  tags: []
+  is_write_query: false
+  notes: Filter articles by graphical appearance
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 10000
+  max_runtime_ms: 5000
+  max_allocated_memory_bytes: 52428800
+- id: retail-basic-013
+  question: How many store purchases were made versus online purchases?
+  database: retail
+  domain: retail
+  difficulty: basic
+  tags: []
+  is_write_query: false
+  notes: Count by categorical channel property
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 10000
+  max_runtime_ms: 5000
+  max_allocated_memory_bytes: 52428800
+- id: retail-basic-014
+  question: What is the highest normalized purchase price in the database?
+  database: retail
+  domain: retail
+  difficulty: basic
+  tags: []
+  is_write_query: false
+  notes: Find maximum value of numeric property
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 10000
+  max_runtime_ms: 5000
+  max_allocated_memory_bytes: 52428800
+- id: retail-basic-015
+  question: How many customers prefer to receive fashion news regularly?
+  database: retail
+  domain: retail
+  difficulty: basic
+  tags: []
+  is_write_query: false
+  notes: Count by categorical newsletter preference
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 10000
+  max_runtime_ms: 5000
+  max_allocated_memory_bytes: 52428800
+- id: retail-basic-016
+  question: How many unique product type names exist in the catalogue?
+  database: retail
+  domain: retail
+  difficulty: basic
+  tags: []
+  is_write_query: false
+  notes: Count distinct values
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 10000
+  max_runtime_ms: 5000
+  max_allocated_memory_bytes: 52428800
+- id: retail-basic-017
+  question: Which product type names appear in the database? List all of them.
+  database: retail
+  domain: retail
+  difficulty: basic
+  tags: []
+  is_write_query: false
+  notes: Retrieve all distinct property values
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 10000
+  max_runtime_ms: 5000
+  max_allocated_memory_bytes: 52428800
+- id: retail-basic-018
+  question: How many articles are classified as 'Solid' in appearance?
+  database: retail
+  domain: retail
+  difficulty: basic
+  tags: []
+  is_write_query: false
+  notes: Count by single property value
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 10000
+  max_runtime_ms: 5000
+  max_allocated_memory_bytes: 52428800
+- id: retail-basic-019
+  question: What is the lowest purchase price recorded in the database?
+  database: retail
+  domain: retail
+  difficulty: basic
+  tags: []
+  is_write_query: false
+  notes: Find minimum of numeric property
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 10000
+  max_runtime_ms: 5000
+  max_allocated_memory_bytes: 52428800
+- id: retail-basic-020
+  question: How many pre-create loyalty club members are in the database?
+  database: retail
+  domain: retail
+  difficulty: basic
+  tags: []
+  is_write_query: false
+  notes: Count by categorical status
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 10000
+  max_runtime_ms: 5000
+  max_allocated_memory_bytes: 52428800
+- id: retail-basic-021
+  question: How many customers are currently marked as active?
+  database: retail
+  domain: retail
+  difficulty: basic
+  tags: []
+  is_write_query: false
+  notes: Count by boolean-like property
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 10000
+  max_runtime_ms: 5000
+  max_allocated_memory_bytes: 52428800
+- id: retail-intermediate-007
+  question: Which product has the most article variants?
+  database: retail
+  domain: retail
+  difficulty: intermediate
+  tags: []
+  is_write_query: false
+  notes: Count relationship per parent node
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 50000
+  max_runtime_ms: 10000
+  max_allocated_memory_bytes: 52428800
+- id: retail-intermediate-008
+  question: What is the average number of purchases per customer?
+  database: retail
+  domain: retail
+  difficulty: intermediate
+  tags: []
+  is_write_query: false
+  notes: Count relationships per node and average
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 50000
+  max_runtime_ms: 10000
+  max_allocated_memory_bytes: 52428800
+- id: retail-intermediate-009
+  question: Which articles were purchased the most in 2020?
+  database: retail
+  domain: retail
+  difficulty: intermediate
+  tags: []
+  is_write_query: false
+  notes: Filter relationships by date and aggregate
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 50000
+  max_runtime_ms: 10000
+  max_allocated_memory_bytes: 52428800
+- id: retail-intermediate-010
+  question: For each color group, how many total purchases were made?
+  database: retail
+  domain: retail
+  difficulty: intermediate
+  tags: []
+  is_write_query: false
+  notes: Traverse article and count related purchases
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 50000
+  max_runtime_ms: 10000
+  max_allocated_memory_bytes: 52428800
+- id: retail-intermediate-011
+  question: Which departments had the highest number of purchases?
+  database: retail
+  domain: retail
+  difficulty: intermediate
+  tags: []
+  is_write_query: false
+  notes: Traverse from articles to departments and count
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 50000
+  max_runtime_ms: 10000
+  max_allocated_memory_bytes: 52428800
+- id: retail-intermediate-012
+  question: What is the average purchase price across all transactions?
+  database: retail
+  domain: retail
+  difficulty: intermediate
+  tags: []
+  is_write_query: false
+  notes: Aggregate relationship property
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 50000
+  max_runtime_ms: 10000
+  max_allocated_memory_bytes: 52428800
+- id: retail-intermediate-013
+  question: How many product types are represented in each color group?
+  database: retail
+  domain: retail
+  difficulty: intermediate
+  tags: []
+  is_write_query: false
+  notes: Multi-hop aggregation with grouping
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 50000
+  max_runtime_ms: 10000
+  max_allocated_memory_bytes: 52428800
+- id: retail-intermediate-014
+  question: Which sections have the fewest articles available?
+  database: retail
+  domain: retail
+  difficulty: intermediate
+  tags: []
+  is_write_query: false
+  notes: Group articles by section and order
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 50000
+  max_runtime_ms: 10000
+  max_allocated_memory_bytes: 52428800
+- id: retail-intermediate-015
+  question: What is the median customer age for club members?
+  database: retail
+  domain: retail
+  difficulty: intermediate
+  tags: []
+  is_write_query: false
+  notes: Filter and aggregate numeric property
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 50000
+  max_runtime_ms: 10000
+  max_allocated_memory_bytes: 52428800
+- id: retail-intermediate-016
+  question: How many distinct product groups does each section carry?
+  database: retail
+  domain: retail
+  difficulty: intermediate
+  tags: []
+  is_write_query: false
+  notes: Traverse and count distinct values per node
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 50000
+  max_runtime_ms: 10000
+  max_allocated_memory_bytes: 52428800
+- id: retail-intermediate-017
+  question: Which color is most represented in each product type?
+  database: retail
+  domain: retail
+  difficulty: intermediate
+  tags: []
+  is_write_query: false
+  notes: Multi-level grouping and finding max
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 50000
+  max_runtime_ms: 10000
+  max_allocated_memory_bytes: 52428800
+- id: retail-intermediate-018
+  question: For customers over 35, what is their average number of purchases?
+  database: retail
+  domain: retail
+  difficulty: intermediate
+  tags: []
+  is_write_query: false
+  notes: Filter node by property then count relationships
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 50000
+  max_runtime_ms: 10000
+  max_allocated_memory_bytes: 52428800
+- id: retail-intermediate-019
+  question: Which articles belong to departments that have more than 50 articles total?
+  database: retail
+  domain: retail
+  difficulty: intermediate
+  tags: []
+  is_write_query: false
+  notes: Filtered relationship traversal with aggregation
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 50000
+  max_runtime_ms: 10000
+  max_allocated_memory_bytes: 52428800
+- id: retail-intermediate-020
+  question: How many customers bought more than 20 articles in 2021?
+  database: retail
+  domain: retail
+  difficulty: intermediate
+  tags: []
+  is_write_query: false
+  notes: Filter relationships by date and count per customer
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 50000
+  max_runtime_ms: 10000
+  max_allocated_memory_bytes: 52428800
+- id: retail-advanced-007
+  question: Which customers have purchased from every section in the store?
+  database: retail
+  domain: retail
+  difficulty: advanced
+  tags: []
+  is_write_query: false
+  notes: Count distinct related entities per node and filter
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 200000
+  max_runtime_ms: 20000
+  max_allocated_memory_bytes: 52428800
+- id: retail-advanced-008
+  question: For each department, which article has been purchased by the most different customers?
+  database: retail
+  domain: retail
+  difficulty: advanced
+  tags: []
+  is_write_query: false
+  notes: Multi-hop aggregation with grouping and ranking
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 200000
+  max_runtime_ms: 20000
+  max_allocated_memory_bytes: 52428800
+- id: retail-advanced-009
+  question: Which customers have purchased both the most expensive and least expensive articles?
+  database: retail
+  domain: retail
+  difficulty: advanced
+  tags: []
+  is_write_query: false
+  notes: Multi-condition path finding
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 200000
+  max_runtime_ms: 20000
+  max_allocated_memory_bytes: 52428800
+- id: retail-advanced-010
+  question: What is the purchase frequency distribution for newsletter subscribers versus non-subscribers?
+  database: retail
+  domain: retail
+  difficulty: advanced
+  tags: []
+  is_write_query: false
+  notes: Split group aggregation with comparison
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 200000
+  max_runtime_ms: 20000
+  max_allocated_memory_bytes: 52428800
+- id: retail-advanced-011
+  question: For each product group, what percentage of its articles have been sold online?
+  database: retail
+  domain: retail
+  difficulty: advanced
+  tags: []
+  is_write_query: false
+  notes: Conditional relationship counting with percentage calculation
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 200000
+  max_runtime_ms: 20000
+  max_allocated_memory_bytes: 52428800
+- id: retail-advanced-012
+  question: Which customers have purchased articles from the same department in both 2020 and 2021?
+  database: retail
+  domain: retail
+  difficulty: advanced
+  tags: []
+  is_write_query: false
+  notes: Path finding with temporal filtering
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 200000
+  max_runtime_ms: 20000
+  max_allocated_memory_bytes: 52428800
+- id: retail-advanced-013
+  question: Find the most popular article in each color group based on purchase count.
+  database: retail
+  domain: retail
+  difficulty: advanced
+  tags: []
+  is_write_query: false
+  notes: Grouped ranking by property
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 200000
+  max_runtime_ms: 20000
+  max_allocated_memory_bytes: 52428800
+- id: retail-advanced-014
+  question: Which articles have never been purchased online, only in stores?
+  database: retail
+  domain: retail
+  difficulty: advanced
+  tags: []
+  is_write_query: false
+  notes: Relationship path analysis with exclusion
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 200000
+  max_runtime_ms: 20000
+  max_allocated_memory_bytes: 52428800
+- id: retail-advanced-015
+  question: For customers aged 30-50, which product groups dominate their purchases?
+  database: retail
+  domain: retail
+  difficulty: advanced
+  tags: []
+  is_write_query: false
+  notes: Filtered multi-hop aggregation
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 200000
+  max_runtime_ms: 20000
+  max_allocated_memory_bytes: 52428800
+- id: retail-advanced-016
+  question: Which pairs of articles are frequently purchased together by the same customer?
+  database: retail
+  domain: retail
+  difficulty: advanced
+  tags: []
+  is_write_query: false
+  notes: Self-join on shared customer
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 200000
+  max_runtime_ms: 20000
+  max_allocated_memory_bytes: 52428800
+- id: retail-advanced-017
+  question: Rank departments by the average customer age of their buyers.
+  database: retail
+  domain: retail
+  difficulty: advanced
+  tags: []
+  is_write_query: false
+  notes: Relationship-based aggregation with ranking
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 200000
+  max_runtime_ms: 20000
+  max_allocated_memory_bytes: 52428800
+- id: retail-advanced-018
+  question: Which product types have representation across all color groups in the catalogue?
+  database: retail
+  domain: retail
+  difficulty: advanced
+  tags: []
+  is_write_query: false
+  notes: Existence checking across grouped relationships
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 200000
+  max_runtime_ms: 20000
+  max_allocated_memory_bytes: 52428800
+- id: retail-advanced-019
+  question: For each customer, what is their most frequently purchased department?
+  database: retail
+  domain: retail
+  difficulty: advanced
+  tags: []
+  is_write_query: false
+  notes: Ranked relationship aggregation per node
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 200000
+  max_runtime_ms: 20000
+  max_allocated_memory_bytes: 52428800
+- id: retail-advanced-020
+  question: Which articles show a clear price difference between store and online sales?
+  database: retail
+  domain: retail
+  difficulty: advanced
+  tags: []
+  is_write_query: false
+  notes: Comparative relationship property analysis
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 200000
+  max_runtime_ms: 20000
+  max_allocated_memory_bytes: 52428800
+- id: retail-complex-005
+  question: Find customers who have purchased all articles from at least one product?
+  database: retail
+  domain: retail
+  difficulty: complex
+  tags: []
+  is_write_query: false
+  notes: Path closure checking with COLLECT
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 500000
+  max_runtime_ms: 30000
+  max_allocated_memory_bytes: 52428800
+- id: retail-complex-006
+  question: 'Identify customer shopping patterns: who buys items in seasonal clusters (concentrated purchases in certain months)?'
+  database: retail
+  domain: retail
+  difficulty: complex
+  tags: []
+  is_write_query: false
+  notes: Temporal clustering with COLLECT subquery
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 500000
+  max_runtime_ms: 30000
+  max_allocated_memory_bytes: 52428800
+- id: retail-complex-007
+  question: Which customers show consistent color preferences across multiple purchases?
+  database: retail
+  domain: retail
+  difficulty: complex
+  tags: []
+  is_write_query: false
+  notes: Pattern consistency checking with COLLECT
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 500000
+  max_runtime_ms: 30000
+  max_allocated_memory_bytes: 52428800
+- id: retail-complex-008
+  question: For each article, identify customers who bought it and their total spending across all purchases.
+  database: retail
+  domain: retail
+  difficulty: complex
+  tags: []
+  is_write_query: false
+  notes: Multi-property relationship analysis
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 500000
+  max_runtime_ms: 30000
+  max_allocated_memory_bytes: 52428800
+- id: retail-complex-009
+  question: Find product type combinations that frequently appear in the same customer's purchase history.
+  database: retail
+  domain: retail
+  difficulty: complex
+  tags: []
+  is_write_query: false
+  notes: Co-occurrence of multi-level entities
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 500000
+  max_runtime_ms: 30000
+  max_allocated_memory_bytes: 52428800
+- id: retail-complex-010
+  question: Identify sections where customers tend to spend the most money (total purchase value).
+  database: retail
+  domain: retail
+  difficulty: complex
+  tags: []
+  is_write_query: false
+  notes: Aggregated relationship value per grouped path
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 500000
+  max_runtime_ms: 30000
+  max_allocated_memory_bytes: 52428800
+- id: retail-complex-011
+  question: Which customers have increased their purchase frequency month-over-month in the most recent 6 months?
+  database: retail
+  domain: retail
+  difficulty: complex
+  tags: []
+  is_write_query: false
+  notes: Temporal trend detection with COLLECT
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 500000
+  max_runtime_ms: 30000
+  max_allocated_memory_bytes: 52428800
+- id: retail-complex-012
+  question: For each department, identify the customer segment (by age) responsible for the most purchases.
+  database: retail
+  domain: retail
+  difficulty: complex
+  tags: []
+  is_write_query: false
+  notes: Grouped ranking with multi-level filtering
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 500000
+  max_runtime_ms: 30000
+  max_allocated_memory_bytes: 52428800
+- id: retail-complex-013
+  question: 'Find articles that create ''bridging purchases'': customers who buy article A then article B but never A after
+    B.'
+  database: retail
+  domain: retail
+  difficulty: complex
+  tags: []
+  is_write_query: false
+  notes: Temporal precedence path analysis
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 500000
+  max_runtime_ms: 30000
+  max_allocated_memory_bytes: 52428800
+- id: retail-complex-014
+  question: Which product groups show the highest customer diversification (purchased by widest age range)?
+  database: retail
+  domain: retail
+  difficulty: complex
+  tags: []
+  is_write_query: false
+  notes: Span calculation across grouped relationships
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 500000
+  max_runtime_ms: 30000
+  max_allocated_memory_bytes: 52428800
+- id: retail-complex-015
+  question: Identify customers who purchase articles from the same department at regular intervals (subscription-like behavior).
+  database: retail
+  domain: retail
+  difficulty: complex
+  tags: []
+  is_write_query: false
+  notes: Temporal regularity detection
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 500000
+  max_runtime_ms: 30000
+  max_allocated_memory_bytes: 52428800
+- id: retail-complex-016
+  question: For each color preference, rank customers by how exclusively they stick to that color.
+  database: retail
+  domain: retail
+  difficulty: complex
+  tags: []
+  is_write_query: false
+  notes: Preference concentration metric
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 500000
+  max_runtime_ms: 30000
+  max_allocated_memory_bytes: 52428800
+- id: retail-complex-017
+  question: Find sections where customers typically buy from multiple departments versus concentrating on one.
+  database: retail
+  domain: retail
+  difficulty: complex
+  tags: []
+  is_write_query: false
+  notes: Behavior pattern analysis within grouped data
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 500000
+  max_runtime_ms: 30000
+  max_allocated_memory_bytes: 52428800
+- id: retail-complex-018
+  question: 'Identify cross-selling opportunities: articles that when bought together significantly increase total purchase
+    value.'
+  database: retail
+  domain: retail
+  difficulty: complex
+  tags: []
+  is_write_query: false
+  notes: Co-purchase value analysis
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 500000
+  max_runtime_ms: 30000
+  max_allocated_memory_bytes: 52428800
+- id: retail-expert-006
+  question: Compute a customer loyalty score for each customer combining purchase frequency, department diversity, and purchase
+    recency over 2 years.
+  database: retail
+  domain: retail
+  difficulty: expert
+  tags: []
+  is_write_query: false
+  notes: Multi-dimensional scoring with temporal weighting
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 2000000
+  max_runtime_ms: 60000
+  max_allocated_memory_bytes: 52428800
+- id: retail-expert-007
+  question: 'Identify emerging fashion trends: articles that increased in purchase volume by the largest percentage in the
+    last 3 months.'
+  database: retail
+  domain: retail
+  difficulty: expert
+  tags: []
+  is_write_query: false
+  notes: Temporal trend acceleration analysis
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 2000000
+  max_runtime_ms: 60000
+  max_allocated_memory_bytes: 52428800
+- id: retail-expert-008
+  question: Find the shortest purchase path between two customers based on shared article purchases and common departments.
+  database: retail
+  domain: retail
+  difficulty: expert
+  tags: []
+  is_write_query: false
+  notes: Graph distance calculation through shared relationships
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 2000000
+  max_runtime_ms: 60000
+  max_allocated_memory_bytes: 52428800
+- id: retail-expert-009
+  question: 'Identify customers at risk of churn: those whose purchase frequency has declined significantly in recent months
+    compared to historical average.'
+  database: retail
+  domain: retail
+  difficulty: expert
+  tags: []
+  is_write_query: false
+  notes: Anomaly detection with temporal segments
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 2000000
+  max_runtime_ms: 60000
+  max_allocated_memory_bytes: 52428800
+- id: retail-expert-010
+  question: For each product, calculate a 'network value' score based on how many other products it's purchased alongside
+    and by how many customers.
+  database: retail
+  domain: retail
+  difficulty: expert
+  tags: []
+  is_write_query: false
+  notes: Graph centrality in purchase co-occurrence network
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 2000000
+  max_runtime_ms: 60000
+  max_allocated_memory_bytes: 52428800
+- id: retail-expert-011
+  question: 'Identify customer communities: groups of customers with highly similar purchase patterns across products and
+    departments.'
+  database: retail
+  domain: retail
+  difficulty: expert
+  tags: []
+  is_write_query: false
+  notes: Graph clustering on purchase behavior
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 2000000
+  max_runtime_ms: 60000
+  max_allocated_memory_bytes: 52428800
+- id: retail-expert-012
+  question: Predict the next purchase category for a customer based on their purchase history sequence and similar customer
+    trajectories.
+  database: retail
+  domain: retail
+  difficulty: expert
+  tags: []
+  is_write_query: false
+  notes: Sequential pattern prediction with collaborative filtering
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 2000000
+  max_runtime_ms: 60000
+  max_allocated_memory_bytes: 52428800
+- id: retail-expert-013
+  question: Calculate customer lifetime value potential based on current purchase patterns, frequency trends, and segment
+    benchmarks.
+  database: retail
+  domain: retail
+  difficulty: expert
+  tags: []
+  is_write_query: false
+  notes: Predictive metric with comparative analysis
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 2000000
+  max_runtime_ms: 60000
+  max_allocated_memory_bytes: 52428800
+- id: retail-expert-014
+  question: Find the optimal product assortment for each department that maximizes both customer diversity and total purchase
+    value.
+  database: retail
+  domain: retail
+  difficulty: expert
+  tags: []
+  is_write_query: false
+  notes: Multi-objective optimization through graph analysis
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 2000000
+  max_runtime_ms: 60000
+  max_allocated_memory_bytes: 52428800
+- id: retail-expert-015
+  question: Identify articles that serve as entry points for first-time customers versus articles that drive repeat purchases.
+  database: retail
+  domain: retail
+  difficulty: expert
+  tags: []
+  is_write_query: false
+  notes: Purchase progression analysis
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 2000000
+  max_runtime_ms: 60000
+  max_allocated_memory_bytes: 52428800
+- id: retail-expert-016
+  question: For each customer age group, model the 'style evolution' by tracking how color and appearance preferences change
+    over time.
+  database: retail
+  domain: retail
+  difficulty: expert
+  tags: []
+  is_write_query: false
+  notes: Temporal preference trajectory analysis
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 2000000
+  max_runtime_ms: 60000
+  max_allocated_memory_bytes: 52428800
+- id: retail-expert-017
+  question: 'Identify articles with substitute relationships: when one is purchased, customers are less likely to purchase
+    the other in the same month.'
+  database: retail
+  domain: retail
+  difficulty: expert
+  tags: []
+  is_write_query: false
+  notes: Negative co-occurrence detection
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 2000000
+  max_runtime_ms: 60000
+  max_allocated_memory_bytes: 52428800
+- id: retail-expert-018
+  question: 'Calculate the ''network effect'' for each product: how many new customers discover it through recommendations
+    from existing customers.'
+  database: retail
+  domain: retail
+  difficulty: expert
+  tags: []
+  is_write_query: false
+  notes: Referral network propagation analysis
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 2000000
+  max_runtime_ms: 60000
+  max_allocated_memory_bytes: 52428800
+- id: retail-expert-019
+  question: Determine the optimal pricing strategy for articles by analyzing price sensitivity across customer segments and
+    purchase frequencies.
+  database: retail
+  domain: retail
+  difficulty: expert
+  tags: []
+  is_write_query: false
+  notes: Price elasticity analysis through grouped data
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 2000000
+  max_runtime_ms: 60000
+  max_allocated_memory_bytes: 52428800
+- id: retail-basic-022
+  question: Which product type has the smallest variety of article options (fewest total articles)?
+  database: retail
+  domain: retail
+  difficulty: basic
+  tags: []
+  is_write_query: false
+  notes: Tests grouping products by type and finding minimum article count
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 10000
+  max_runtime_ms: 5000
+  max_allocated_memory_bytes: 52428800
+- id: retail-intermediate-021
+  question: For each color group, how many unique customers have made purchases from that color, ordered by customer count
+    from fewest to most?
+  database: retail
+  domain: retail
+  difficulty: intermediate
+  tags: []
+  is_write_query: false
+  notes: Tests aggregation across relationships with count distinct and ordering
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 50000
+  max_runtime_ms: 10000
+  max_allocated_memory_bytes: 52428800
+- id: retail-advanced-021
+  question: Which products have all their variants available, but none of them have been purchased online—only in physical
+    stores?
+  database: retail
+  domain: retail
+  difficulty: advanced
+  tags: []
+  is_write_query: false
+  notes: Tests multi-hop traversal from product to articles to purchases, filtering for absence of online sales channel
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 200000
+  max_runtime_ms: 20000
+  max_allocated_memory_bytes: 52428800
+- id: retail-complex-019
+  question: For each department, identify the top 3 most loyal customers (by purchase count in that specific department),
+    and determine what percentage of each customer's total purchases come from that department.
+  database: retail
+  domain: retail
+  difficulty: complex
+  tags: []
+  is_write_query: false
+  notes: Tests multi-pattern matching with conditional aggregation and percentage calculation across scopes
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 500000
+  max_runtime_ms: 30000
+  max_allocated_memory_bytes: 52428800
+- id: retail-expert-020
+  question: Using product description similarity, identify which products attract overlapping customers (where 60% or more
+    of customers purchase both products), then analyze whether these product clusters correlate with customer newsletter subscription
+    preferences or loyalty club status.
+  database: retail
+  domain: retail
+  difficulty: expert
+  tags: []
+  is_write_query: false
+  notes: Tests hybrid vector search on product embeddings combined with graph pattern analysis of shared customer bases and
+    behavioral segmentation
+  status: needs_review
+  skip_if_empty: true
+  min_results: 0
+  max_db_hits: 2000000
+  max_runtime_ms: 60000
+  max_allocated_memory_bytes: 52428800

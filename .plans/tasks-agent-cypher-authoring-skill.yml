@@ -1750,7 +1750,7 @@ tasks:
         - Commit with descriptive message
 
       Note: use haiku for cost efficiency on bulk generation.
-    status: pending
+    status: in_progress
     dependencies: [task-073, task-074, task-075, task-078]
     acceptance_criteria:
       - "stackoverflow.yml has ≥ 100 cases, 0 FAIL on harness run"
@@ -2252,3 +2252,130 @@ tasks:
       - "Schema Annotation Workflow output for companies produces a dataset: YAML block compatible with harness"
       - "make validate-schema-retrieval target added to Makefile"
       - "make dry-run passes after all schema-retrieval.md changes committed"
+
+  - id: task-087
+    title: "Audit and fix indexes block in all domain YAML schemas"
+    description: |
+      The stackoverflow schema had 6 indexes documented but 20 actually exist in the DB.
+      Run SHOW INDEXES YIELD labelsOrTypes, properties, type against every domain DB
+      and compare to the indexes: block in each domain YAML. Update each YAML to match
+      reality.
+
+      Domains and connection details:
+        - stackoverflow: neo4j+s://demo.neo4jlabs.com:7687 (user: stackoverflow)
+        - twitter: neo4j+s://demo.neo4jlabs.com:7687 (user: twitter)
+        - retail: neo4j+s://demo.neo4jlabs.com:7687 (user: retail)
+        - companies: neo4j+s://demo.neo4jlabs.com:7687 (user: companies)
+        - recommendations: neo4j+s://demo.neo4jlabs.com:7687 (user: recommendations)
+        - northwind: neo4j+s://demo.neo4jlabs.com:7687 (user: northwind)
+        - goodreads: neo4j+s://demo.neo4jlabs.com:7687 (user: goodreads)
+        - legalcontracts: neo4j+s://demo.neo4jlabs.com:7687 (user: legalcontracts)
+        - ucfraud: bolt://localhost:7687 (user: neo4j, db: neo4j)
+        - ucnetwork: bolt://localhost:7687 (user: neo4j, db: neo4j)
+
+      For each domain:
+        1. Run SHOW INDEXES YIELD labelsOrTypes, properties, type
+        2. Diff against existing indexes: block in the YAML
+        3. Add missing indexes, remove stale ones
+        4. Update node property descriptions to note which are indexed
+        5. Update notes[] if any "always use indexed properties" guidance is now wrong
+           or can be made more specific
+
+      Also check: Answer-equivalent nodes (nodes without property indexes) in each
+      domain — document the "no index" caveat so the generator avoids direct scans.
+    status: completed
+    completed_at: "2026-04-03T10:30:00Z"
+    dependencies: []
+    priority: high
+    acceptance_criteria:
+      - "All 10 domain YAMLs have indexes: block matching SHOW INDEXES output"
+      - "Node properties with RANGE indexes have indexed: true in their description"
+      - "Notes updated to name specific indexed properties rather than generic advice"
+      - "Any large-label nodes with no property indexes documented with avoidance note"
+
+  - id: task-088
+    title: "Refactor generate_questions.py to batch JSONL generation via single claude invocation"
+    description: |
+      Prototype confirmed (2026-04-03): calling claude once with --plugin-dir + --allowedTools Write
+      to generate all N questions for a domain and write each to a JSONL file works correctly.
+      10 questions → 10 JSONL lines, all with CYPHER 25, skill loaded via --plugin-dir.
+
+      Current approach: one `claude` subprocess per question (N calls, N cold starts, N plugin loads).
+      New approach: one `claude` call per domain, generates all questions, writes each to JSONL
+      via Write tool, then reads back and parses.
+
+      ## Prototype findings (from /tmp/neo4j-batch-test.jsonl)
+      Command that worked:
+        cat prompt.txt | claude --model claude-sonnet-4-6 --print --output-format text \
+          --plugin-dir skill-generation-validation-tools/test-plugin \
+          --allowedTools Write,Read
+
+      Output format per line:
+        {"id": "stackoverflow-basic-001", "cypher": "CYPHER 25\n...", "is_write_query": false}
+
+      Notes:
+      - File is written at the end (not incrementally); all N lines appear at once
+      - --allowedTools must include Write (and optionally Read for JSONL append verification)
+      - The skill /neo4j-skills-test-plugin:neo4j-cypher-authoring-skill must be the first line
+        of stdin, followed by the full schema + all N question specs
+      - --append-system-prompt with JSON format rules still needed to enforce output format
+
+      ## Implementation steps
+
+      1. In `generate_questions.py`, add `_generate_batch_cypher(questions, schema, domain, db_config)`
+         that:
+         - Builds a single prompt: skill slash command + schema + all N (question, difficulty,
+           expected_description) specs + instruction to write one JSONL line per question to
+           a temp file path (passed in the prompt)
+         - Calls claude once with --plugin-dir + --allowedTools Write +
+           --append-system-prompt with JSON enforcement rules
+         - After claude exits, reads the temp JSONL file line by line
+         - Returns list of {id, cypher, is_write_query} dicts
+
+      2. Replace the `_generate_cypher()` per-question loop in `generate_domain()` with a single
+         call to `_generate_batch_cypher()`. Pass the full question list for the domain in one shot.
+
+      3. Keep `_generate_cypher()` as a fallback for single-question regeneration (used when
+         a generated case fails validation and needs to be re-attempted individually).
+
+      4. Prompt structure for the batch call:
+         ```
+         /neo4j-skills-test-plugin:neo4j-cypher-authoring-skill
+
+         ## Schema
+         <full YAML schema block>
+
+         ## Task
+         Generate Cypher queries for the following questions. For each question, write one
+         JSON line to the file at <tmpfile>. Format exactly:
+         {"id": "<domain>-<difficulty>-<NNN>", "cypher": "CYPHER 25\n...", "is_write_query": <bool>}
+
+         ## Questions
+         1. [basic-001] How many questions are in the database?
+         2. [basic-002] ...
+         ...
+         ```
+
+      5. After reading back JSONL, run the existing `_validate_case()` pipeline on each result.
+         Cases that fail validation get queued for individual retry via `_generate_cypher()`.
+
+      6. Update `generate_domain()` to:
+         - Call `_generate_batch_cypher()` for the initial generation pass
+         - Call `_generate_cypher()` for individual retries only
+         - Log "batch mode: N questions → 1 claude invocation" at INFO level
+
+      Acceptance criteria:
+      - `python generate_questions.py stackoverflow 10` produces 10 validated cases with
+        exactly 1 claude invocation for generation (plus N validation calls to Neo4j)
+      - Fallback to per-question mode if batch JSONL file is empty or missing
+      - All generated queries start with CYPHER 25
+
+    status: pending
+    dependencies:
+      - task-078
+    priority: medium
+    acceptance_criteria:
+      - "generate_questions.py uses 1 claude call per domain instead of N calls"
+      - "JSONL temp file is read back and parsed correctly"
+      - "Failed cases fall back to per-question _generate_cypher() retry"
+      - "All output queries start with CYPHER 25"

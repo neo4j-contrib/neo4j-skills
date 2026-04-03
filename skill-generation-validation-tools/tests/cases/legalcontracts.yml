@@ -77,6 +77,12 @@ dataset:
         similarity: cosine
         call: "CALL db.index.vector.queryNodes('contractSummary', N, $vec) YIELD node, score"
         description: "Vector similarity search on contract summaries"
+      - label: Contract
+        property: file_id
+        type: RANGE
+      - label: Party
+        property: name
+        type: RANGE
   notes:
     - "PARTY_TO direction: (Party)-[:PARTY_TO]->(Contract) — NOT (Contract)-[:PARTY_TO]->(Party)"
     - "total_amount is sparse — many contracts have null. Use IS NOT NULL when filtering by amount."
@@ -85,7 +91,8 @@ dataset:
     - "Party names are typically in UPPER CASE — use CONTAINS or toLower() for flexible matching"
     - "Contract types are exact strings — use full values from the values list above"
     - "Clause types: exactly 5 distinct values as listed in the type values list"
-    - "Vector search: use CALL db.index.vector.queryNodes('contractSummary', N, $vec) YIELD node AS c, score — SEARCH clause is NOT available (server is 2026.01.x)"
+    - "Vector search: SEARCH clause IS available on demo.neo4jlabs.com 2026.02.x (vector-only). Syntax: MATCH (c:Contract) SEARCH c IN (VECTOR INDEX contractSummary FOR $vec LIMIT N) SCORE AS score. Alternatively CALL db.index.vector.queryNodes('contractSummary', N, $vec) YIELD node AS c, score also works."
+    - "Contract.file_id and Party.name are RANGE indexed — use these for direct lookups"
     - "Confirmed co-signing combinations: 'Strategic Alliance'+'License Agreement' have shared parties (Xencor, Inc.; Beijing Yisheng Leju). 'Service'+'License Agreement' have NO shared parties — do not use this combination in test cases."
     - "Party with most connections: 'THE VÄRDE FUND VI-A, L.P.' has 23 direct co-signatories (all Joint Venture). Good for path traversal tests."
     - "HONEYWELL INTERNATIONAL INC. has only 1 co-signer (GARRETT MOTION INC., IP contract) and is NOT connected to JV parties — avoid using Honeywell in shortest-path test cases."

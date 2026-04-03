@@ -2523,3 +2523,36 @@ Key Decisions:
 - Gate 4 timeout raises FAIL (not WARN) since a hanging PROFILE is as dangerous as a hanging execution
 
 Next Task: task-076a (expand stackoverflow to ≥100 cases)
+
+================================================================================
+TASK-087: Audit and fix indexes block in all domain YAML schemas
+Date: 2026-04-03T10:30:00Z
+================================================================================
+
+Summary:
+Ran SHOW INDEXES against all 10 domain databases and updated each YAML's indexes:
+block to match reality. northwind had empty indexes (now has 5 RANGE). goodreads,
+recommendations, retail, companies, and legalcontracts all had missing RANGE indexes.
+Recommendations also had many missing RANGE indexes on Movie/Person/Genre/User.
+Companies gained 4 additional vector indexes (news_google, news_google_004, news_sbert,
+fewshot) and 4 RANGE indexes. Also updated stale vector search notes in goodreads,
+legalcontracts, and retail from "SEARCH NOT available (2026.01.x)" to correct 2026.02.x
+availability, with correct SEARCH clause syntax.
+
+Files Changed:
+- skill-generation-validation-tools/tests/cases/northwind.yml (modified — added 5 RANGE indexes, updated notes)
+- skill-generation-validation-tools/tests/cases/retail.yml (modified — added 4 RANGE indexes, fixed SEARCH note)
+- skill-generation-validation-tools/tests/cases/goodreads.yml (modified — added 7 RANGE indexes, fixed SEARCH note)
+- skill-generation-validation-tools/tests/cases/legalcontracts.yml (modified — added 2 RANGE indexes, fixed SEARCH note)
+- skill-generation-validation-tools/tests/cases/companies.yml (modified — added 4 VECTOR + 4 RANGE indexes, added notes)
+- skill-generation-validation-tools/tests/cases/recommendations.yml (modified — added 13 RANGE indexes, added note)
+- .plans/tasks-agent-cypher-authoring-skill.yml (modified — task-087 status completed)
+
+Key Decisions:
+- stackoverflow (20 indexes) and twitter (6 indexes) already correct — no changes needed
+- ucnetwork confirmed: no non-LOOKUP indexes on demo.neo4jlabs.com — indexes: [] is correct
+- ucfraud local DB empty (no data loaded); 2 FULLTEXT indexes kept unchanged from prior task work
+- All demo servers confirmed on 2026.02.3 — corrected stale "SEARCH not available (2026.01.x)" notes
+- SEARCH clause correct syntax: SEARCH var IN (VECTOR INDEX name FOR $vec LIMIT N) SCORE AS score
+
+Next Task: task-088 (batch JSONL generation in generate_questions.py)

@@ -72,7 +72,38 @@ dataset:
         dimensions: 1536
         similarity: cosine
         call: "CALL db.index.vector.queryNodes('news', N, $vec) YIELD node, score"
-        description: "Vector similarity search on article text chunks"
+        description: "Vector similarity search on article text chunks (OpenAI ada-002)"
+      - name: news_google
+        type: VECTOR
+        on: Chunk(embedding_google)
+        call: "CALL db.index.vector.queryNodes('news_google', N, $vec) YIELD node, score"
+        description: "Vector similarity search on article text chunks (Google embedding)"
+      - name: news_google_004
+        type: VECTOR
+        on: Chunk(embedding_google_004)
+        call: "CALL db.index.vector.queryNodes('news_google_004', N, $vec) YIELD node, score"
+        description: "Vector similarity search on article text chunks (Google text-embedding-004)"
+      - name: news_sbert
+        type: VECTOR
+        on: Chunk(embedding_sbert)
+        call: "CALL db.index.vector.queryNodes('news_sbert', N, $vec) YIELD node, score"
+        description: "Vector similarity search on article text chunks (SBERT)"
+      - name: fewshot
+        type: VECTOR
+        on: Fewshot(embedding)
+        description: "Vector index on few-shot examples for RAG — internal use"
+      - label: Article
+        property: id
+        type: RANGE
+      - label: Organization
+        property: id
+        type: RANGE
+      - label: Person
+        property: id
+        type: RANGE
+      - label: IndustryCategory
+        property: id
+        type: RANGE
   notes:
     - "CRITICAL: Companies are :Organization nodes — NEVER use :Company"
     - "QPE '+' quantifier NOT supported on demo.neo4jlabs.com — always use {1,} instead"
@@ -87,6 +118,8 @@ dataset:
     - "Article dates: late 2022 through H1 2023 only — no H2 2023 or 2024 articles exist. Dates are DATETIME type — use a.date.year / a.date.month for filtering, NOT date() range comparisons"
     - "FULLTEXT INDEX 'entity' is on Organization(name) and Person(name) ONLY — do NOT use it to search Article content; filtering CALL db.index.fulltext.queryNodes('entity',...) with WHERE node:Article returns 0 rows"
     - "FULLTEXT INDEX 'news_fulltext' is on Chunk(text) — use for keyword/topic search in article text; returns Chunk nodes; traverse to Article with MATCH (a:Article)-[:HAS_CHUNK]->(chunk)"
+    - "RANGE indexes exist on Organization.id, Person.id, Article.id, IndustryCategory.id — use these for direct ID lookups. Name-based lookup requires fulltext index (Organization/Person names) or CONTAINS (articles)."
+    - "Multiple vector indexes on Chunk: 'news' (OpenAI ada-002), 'news_google', 'news_google_004', 'news_sbert' — default to 'news' unless a specific embedding model is specified"
 
 cases:
 

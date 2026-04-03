@@ -98,6 +98,45 @@ dataset:
         on: Person(name, bio)
         call: "CALL db.index.fulltext.queryNodes('personFulltext', $q) YIELD node, score"
         description: "Full-text search on person names and bios"
+      - label: User
+        property: userId
+        type: RANGE
+      - label: Movie
+        property: movieId
+        type: RANGE
+      - label: Movie
+        property: tmdbId
+        type: RANGE
+      - label: Movie
+        property: imdbId
+        type: RANGE
+      - label: Movie
+        property: title
+        type: RANGE
+      - label: Movie
+        property: released
+        type: RANGE
+      - label: Movie
+        property: year
+        type: RANGE
+      - label: Movie
+        property: imdbRating
+        type: RANGE
+      - label: Movie
+        property: tagline
+        type: RANGE
+      - label: Person
+        property: tmdbId
+        type: RANGE
+      - label: Person
+        property: name
+        type: RANGE
+      - label: Genre
+        property: name
+        type: RANGE
+      - label: User
+        property: name
+        type: RANGE
   notes:
     - "CRITICAL: Movie.released is a STRING in 'YYYY-MM-DD' format (e.g. '1994-09-23') — use string comparison: WHERE m.released > '2000-01-01', NOT integer comparison"
     - "CRITICAL: User.userId is a STRING — always match with WHERE u.userId = '1' (quoted), not = 1"
@@ -110,6 +149,7 @@ dataset:
     - "Movie title stored as 'Matrix, The' (article-inversion format) — use CONTAINS or fulltext for natural language titles"
     - "Tom Hanks and Kevin Bacon are both in the database (Kevin Bacon shortest-path problem is valid)"
     - "Collaborative filtering: find users who rated the same movies as User X → find movies those users rated that X has not"
+    - "RANGE indexes available: Movie.title, Movie.released, Movie.year, Movie.imdbRating, Movie.imdbId, Movie.tagline, Movie.movieId, Movie.tmdbId — use these for efficient property filters. Also Person.name, Person.tmdbId, Genre.name, User.userId, User.name."
 
 cases:
 
