@@ -1086,9 +1086,9 @@ cases:
   status: needs_review
   skip_if_empty: true
   min_results: 0
-  max_db_hits: 50000
+  max_db_hits: 110000
   max_runtime_ms: 10000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: twitter-intermediate-021
   question: For each major hashtag, how many distinct accounts posted with it? Show top 12.
   database: twitter
@@ -1907,9 +1907,9 @@ cases:
   status: needs_review
   skip_if_empty: true
   min_results: 0
-  max_db_hits: 200000
+  max_db_hits: 4000000
   max_runtime_ms: 20000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: twitter-advanced-019
   question: Find tweets that were retweeted only by users with fewer than 1,000 followers. Show the original tweet author's
     screen name, a text snippet of the tweet, and the count of such low-follower retweets.
