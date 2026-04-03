@@ -314,13 +314,26 @@ def extract_profile_metrics(profile_result: Any) -> dict[str, Any]:
     # neo4j Python driver: summary.profile has .db_hits, .rows, .children
     # summary.result_available_after / summary.result_consumed_after for timing
     # summary.profile.arguments has 'GlobalMemory'
+    #
+    # neo4j driver 6.x changed: summary.profile and summary.plan are now plain dicts
+    # with keys 'dbHits', 'rows', 'children', 'args' (not .db_hits / .arguments attrs)
     if hasattr(profile_result, "db_hits"):
+        # Driver 5.x: ProfiledPlan object with .db_hits, .rows, .children, .arguments
         # Recurse through plan tree to total up all db_hits and rows
         metrics["totalDbHits"] = _sum_plan_attr(profile_result, "db_hits")
         metrics["totalRows"] = _sum_plan_attr(profile_result, "rows")
 
         # GlobalMemory is on root plan arguments
         args = getattr(profile_result, "arguments", {}) or {}
+        if "GlobalMemory" in args:
+            metrics["totalAllocatedMemory"] = args["GlobalMemory"]
+
+    elif isinstance(profile_result, dict) and "dbHits" in profile_result:
+        # Driver 6.x: plan/profile is a dict with 'dbHits', 'rows', 'children', 'args'
+        metrics["totalDbHits"] = _sum_plan_attr_dict(profile_result, "dbHits")
+        metrics["totalRows"] = _sum_plan_attr_dict(profile_result, "rows")
+        # GlobalMemory is in root node's args dict
+        args = profile_result.get("args", {}) or {}
         if "GlobalMemory" in args:
             metrics["totalAllocatedMemory"] = args["GlobalMemory"]
 
@@ -339,10 +352,18 @@ def extract_profile_metrics(profile_result: Any) -> dict[str, Any]:
 
 
 def _sum_plan_attr(plan: Any, attr: str) -> int:
-    """Recursively sum an attribute across all nodes of a plan tree."""
+    """Recursively sum an attribute across all nodes of a plan tree (driver 5.x object form)."""
     total = getattr(plan, attr, 0) or 0
     for child in getattr(plan, "children", []) or []:
         total += _sum_plan_attr(child, attr)
+    return total
+
+
+def _sum_plan_attr_dict(plan: dict, attr: str) -> int:
+    """Recursively sum an attribute across all nodes of a plan tree (driver 6.x dict form)."""
+    total = plan.get(attr, 0) or 0
+    for child in plan.get("children", []) or []:
+        total += _sum_plan_attr_dict(child, attr)
     return total
 
 
@@ -523,7 +544,13 @@ def validate(
             if hasattr(summary, "plan") and summary.plan:
                 plan_text = _plan_to_text(summary.plan)
                 # EstimatedRows pre-check: reject queries likely to full-scan the graph
-                estimated_rows = summary.plan.arguments.get("EstimatedRows", 0)
+                # Driver 5.x: summary.plan.arguments dict; Driver 6.x: summary.plan['args'] dict
+                _plan_obj = summary.plan
+                if isinstance(_plan_obj, dict):
+                    _plan_args = _plan_obj.get("args", {}) or {}
+                else:
+                    _plan_args = getattr(_plan_obj, "arguments", {}) or {}
+                estimated_rows = _plan_args.get("EstimatedRows", 0)
                 if estimated_rows > _MAX_EXPLAIN_ESTIMATED_ROWS:
                     gate1.verdict = FAIL
                     gate1.reason = (
@@ -758,13 +785,24 @@ def _prepend_profile(cypher: str) -> str:
 
 
 def _plan_to_text(plan: Any) -> str:
-    """Convert a Neo4j plan object to a flat string for operator scanning."""
+    """Convert a Neo4j plan object to a flat string for operator scanning.
+
+    Handles both driver 5.x (object with .operator_type / .children attrs)
+    and driver 6.x (dict with 'operatorType' / 'children' keys).
+    """
     parts: list[str] = []
 
     def _walk(node: Any) -> None:
-        op_type = getattr(node, "operator_type", "") or ""
+        if isinstance(node, dict):
+            # Driver 6.x: plan is a dict with 'operatorType' key
+            op_type = node.get("operatorType", "") or ""
+            children = node.get("children", []) or []
+        else:
+            # Driver 5.x: plan is an object with .operator_type and .children
+            op_type = getattr(node, "operator_type", "") or ""
+            children = getattr(node, "children", []) or []
         parts.append(op_type)
-        for child in getattr(node, "children", []) or []:
+        for child in children:
             _walk(child)
 
     _walk(plan)

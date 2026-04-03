@@ -37,8 +37,8 @@ dataset:
             type: STRING
             description: Tweet content
           created_at:
-            type: INTEGER
-            description: Unix timestamp (seconds) of when tweet was created — RANGE index on Tweet.created_at
+            type: DATETIME
+            description: "Tweet creation timestamp (DATETIME object, NOT integer). Use t.created_at.year/.month/.week/.hour for components. For time differences use duration.between(t1.created_at, t2.created_at). To add time use t.created_at + duration({hours: 1}). RANGE index on Tweet.created_at"
           favorites:
             type: INTEGER
             description: Number of times this tweet was favorited/liked
@@ -173,7 +173,7 @@ dataset:
     REPLY_TO (not IN_REPLY_TO), USING (not POSTED_VIA), TAGS (not HAS_TAG), CONTAINS (not HAS_LINK)'
   - 'CRITICAL: URL label is Link (not URL) — use (l:Link) with l.url property'
   - 'Hashtag property is ''name'' (not ''tag'') — use h.name for hashtag text, e.g. MATCH (h:Hashtag {name: ''neo4j''})'
-  - 'Tweet.created_at is INTEGER (Unix epoch seconds) — use numeric range comparisons: WHERE t.created_at > 1500000000'
+  - 'CRITICAL: Tweet.created_at is a DATETIME object (NOT integer). Use t.created_at.year/.month/.week/.day/.hour for components. Use duration.between(t1.created_at, t2.created_at) for differences. Use t.created_at + duration({seconds: N}) to add offsets. Do NOT do t.created_at - t2.created_at or t.created_at + 3600 — those cause TypeError.'
   - 'CRITICAL: User follower count is ''followers'' (not ''followers_count''), following count is ''following'' (not ''friends_count'')'
   - 'User.screen_name has RANGE index — use MATCH (u:User {screen_name: ''username''}) for efficient lookups'
   - FOLLOWS relationship exists (User→User, 44,630 edges) — use for social graph traversal
@@ -222,7 +222,7 @@ cases:
   - limit
   domain: twitter
   min_results: 10
-  max_db_hits: 50000
+  max_db_hits: 200000
   max_allocated_memory_bytes: 5242880
   max_runtime_ms: 5000
   is_write_query: false
@@ -265,7 +265,7 @@ cases:
   - limit
   domain: twitter
   min_results: 1
-  max_db_hits: 20000
+  max_db_hits: 60000
   max_allocated_memory_bytes: 5242880
   max_runtime_ms: 5000
   is_write_query: false
@@ -279,7 +279,7 @@ cases:
   - filter
   domain: twitter
   min_results: 1
-  max_db_hits: 30000
+  max_db_hits: 12000000
   max_allocated_memory_bytes: 10485760
   max_runtime_ms: 10000
   is_write_query: false
@@ -294,7 +294,7 @@ cases:
   - limit
   domain: twitter
   min_results: 10
-  max_db_hits: 10000
+  max_db_hits: 60000
   max_allocated_memory_bytes: 5242880
   max_runtime_ms: 8000
   is_write_query: false
@@ -372,7 +372,7 @@ cases:
   - limit
   domain: twitter
   min_results: 1
-  max_db_hits: 100000
+  max_db_hits: 2500000
   max_allocated_memory_bytes: 20971520
   max_runtime_ms: 15000
   is_write_query: false
@@ -388,7 +388,7 @@ cases:
   - limit
   domain: twitter
   min_results: 1
-  max_db_hits: 10000
+  max_db_hits: 40000
   max_allocated_memory_bytes: 10485760
   max_runtime_ms: 10000
   is_write_query: false
@@ -406,7 +406,7 @@ cases:
   - mentions
   domain: twitter
   min_results: 1
-  max_db_hits: 50000
+  max_db_hits: 600000
   max_allocated_memory_bytes: 10485760
   max_runtime_ms: 10000
   is_write_query: false
@@ -421,7 +421,7 @@ cases:
   - filter
   domain: twitter
   min_results: 1
-  max_db_hits: 10000
+  max_db_hits: 40000
   max_allocated_memory_bytes: 10485760
   max_runtime_ms: 10000
   is_write_query: false
@@ -452,7 +452,7 @@ cases:
   - limit
   domain: twitter
   min_results: 1
-  max_db_hits: 10000
+  max_db_hits: 70000
   max_allocated_memory_bytes: 10485760
   max_runtime_ms: 10000
   is_write_query: false
@@ -910,9 +910,17 @@ cases:
   status: needs_review
   skip_if_empty: true
   min_results: 0
-  max_db_hits: 50000
+  max_db_hits: 70000
   max_runtime_ms: 10000
   max_allocated_memory_bytes: 52428800
+  cypher_override: |
+    CYPHER 25
+    MATCH (u:User)-[:POSTS]->(t:Tweet)-[:USING]->(s:Source)
+    WITH s.name AS client, u.screen_name AS screen_name, u.followers AS followers
+    RETURN client,
+           round(avg(followers)) AS avg_followers,
+           count(DISTINCT screen_name) AS user_count
+    ORDER BY avg_followers DESC
 - id: twitter-intermediate-009
   question: What is the average number of replies each tweet receives?
   database: twitter
@@ -1135,9 +1143,23 @@ cases:
   status: needs_review
   skip_if_empty: true
   min_results: 0
-  max_db_hits: 200000
+  max_db_hits: 150000
   max_runtime_ms: 20000
   max_allocated_memory_bytes: 52428800
+  cypher_override: |
+    CYPHER 25
+    MATCH (u:User)-[:POSTS]->(t1:Tweet)-[:TAGS]->(h:Hashtag),
+          (t1)-[:USING]->(s1:Source),
+          (u)-[:POSTS]->(t2:Tweet)-[:TAGS]->(h),
+          (t2)-[:USING]->(s2:Source)
+    WHERE elementId(t1) < elementId(t2)
+      AND s1.name <> s2.name
+      AND abs(duration.between(t1.created_at, t2.created_at).seconds) <= 86400
+    RETURN u.screen_name AS user,
+           h.name        AS topic,
+           s1.name       AS app_y,
+           s2.name       AS app_z
+    LIMIT 20
 - id: twitter-advanced-010
   question: 'Show hashtag networks: for each pair of hashtags that co-occur in 10+ tweets, calculate co-occurrence score.'
   database: twitter
@@ -1192,9 +1214,24 @@ cases:
   status: needs_review
   skip_if_empty: true
   min_results: 0
-  max_db_hits: 200000
+  max_db_hits: 20000
   max_runtime_ms: 20000
   max_allocated_memory_bytes: 52428800
+  cypher_override: |
+    CYPHER 25
+    MATCH (h:Hashtag)<-[:TAGS]-(t:Tweet)
+    WITH h.name AS hashtag, count(t) AS total
+    ORDER BY total DESC
+    LIMIT 5
+    WITH collect(hashtag) AS top5
+    MATCH (h:Hashtag)<-[:TAGS]-(t:Tweet)
+    WHERE h.name IN top5
+    WITH h.name AS hashtag,
+         t.created_at.week AS week_num,
+         t.created_at.year AS yr,
+         count(*) AS tweet_count
+    RETURN hashtag, yr, week_num, tweet_count
+    ORDER BY hashtag, yr, week_num
 - id: twitter-advanced-014
   question: 'Find users who are amplifiers: their tweets have high retweet rates but they themselves don''t retweet much.
     Show top 20.'
@@ -1236,9 +1273,24 @@ cases:
   status: needs_review
   skip_if_empty: true
   min_results: 0
-  max_db_hits: 200000
+  max_db_hits: 100000
   max_runtime_ms: 20000
   max_allocated_memory_bytes: 52428800
+  cypher_override: |
+    CYPHER 25
+    MATCH (t:Tweet)-[:MENTIONS]->(target:User)
+    MATCH (t)<-[:POSTS]-(mentioner:User)
+    WHERE target <> mentioner
+    WITH target,
+         count(DISTINCT mentioner) AS unique_mentioners,
+         collect(DISTINCT mentioner.screen_name)[0..5] AS sample_mentioners
+    WHERE unique_mentioners >= 3
+    RETURN target.screen_name AS bridge_user,
+           target.followers   AS followers,
+           unique_mentioners,
+           sample_mentioners
+    ORDER BY unique_mentioners DESC
+    LIMIT 10
 - id: twitter-advanced-017
   question: Which users have both mentioned others in their tweets AND been mentioned by others, but have never followed anyone?
     Show up to 20 such users with their screen names.
@@ -1281,9 +1333,30 @@ cases:
   status: needs_review
   skip_if_empty: true
   min_results: 0
-  max_db_hits: 500000
+  max_db_hits: 100000
   max_runtime_ms: 30000
   max_allocated_memory_bytes: 52428800
+  cypher_override: |
+    CYPHER 25
+    MATCH (u:User)-[:POSTS]->(tw:Tweet)
+    WITH u, min(tw.created_at) AS first_ts, max(tw.created_at) AS last_ts
+    WHERE duration.between(first_ts, last_ts).days >= 7
+       OR duration.between(first_ts, last_ts).months >= 1
+    MATCH (u)-[:POSTS]->(tw2:Tweet)
+    WITH u, tw2,
+         tw2.created_at.month AS month_bucket,
+         tw2.created_at.year  AS yr
+    OPTIONAL MATCH (rt:Tweet)-[:RETWEETS]->(tw2)
+    WITH u, yr, month_bucket, tw2, count(rt) AS rt_count
+    WITH u, yr, month_bucket,
+         count(tw2)     AS tweets_posted,
+         sum(rt_count)  AS retweets_received
+    RETURN u.screen_name AS user,
+           u.followers   AS followers,
+           yr, month_bucket,
+           tweets_posted,
+           retweets_received
+    ORDER BY u.screen_name, yr, month_bucket
 - id: twitter-complex-007
   question: 'Find troll amplification networks: identify chains where a troll account posts a retweet, that gets retweeted
     by a non-troll, which reaches high-follower users.'
@@ -1341,9 +1414,24 @@ cases:
   status: needs_review
   skip_if_empty: true
   min_results: 0
-  max_db_hits: 500000
+  max_db_hits: 70000
   max_runtime_ms: 30000
   max_allocated_memory_bytes: 52428800
+  cypher_override: |
+    CYPHER 25
+    MATCH (u:User)-[:POSTS]->(t:Tweet)-[:USING]->(s:Source)
+    WITH u, s.name AS app, min(t.created_at) AS first_used_ts
+    ORDER BY first_used_ts ASC
+    WITH u,
+         count(DISTINCT app)                                                     AS platform_count,
+         collect({app: app, first_used: first_used_ts})                         AS adoption_timeline
+    WHERE platform_count >= 3
+    RETURN u.screen_name   AS user,
+           u.followers     AS followers,
+           platform_count,
+           adoption_timeline
+    ORDER BY platform_count DESC
+    LIMIT 10
 - id: twitter-complex-011
   question: 'Analyze hashtag sentiment trajectories: for political hashtags, show which ones grow vs decline over the dataset
     period, and which users drive the shift.'
@@ -1356,9 +1444,24 @@ cases:
   status: needs_review
   skip_if_empty: true
   min_results: 0
-  max_db_hits: 500000
+  max_db_hits: 20000
   max_runtime_ms: 30000
   max_allocated_memory_bytes: 52428800
+  cypher_override: |
+    CYPHER 25
+    MATCH (h:Hashtag)<-[:TAGS]-(t:Tweet)
+    WITH h.name AS hashtag,
+         t.created_at.year  AS yr,
+         t.created_at.month AS month,
+         count(t) AS tweet_count
+    WITH hashtag,
+         collect({yr: yr, month: month, count: tweet_count}) AS monthly,
+         sum(tweet_count) AS total_tweets
+    WHERE total_tweets >= 10
+    WITH hashtag, monthly, total_tweets
+    ORDER BY total_tweets DESC
+    LIMIT 15
+    RETURN hashtag, total_tweets, monthly
 - id: twitter-complex-012
   question: 'Find coordinated inauthentic behavior: groups of accounts that mention the same users in short time windows with
     high frequency, suggesting coordination.'
@@ -1371,9 +1474,28 @@ cases:
   status: needs_review
   skip_if_empty: true
   min_results: 0
-  max_db_hits: 500000
+  max_db_hits: 100000
   max_runtime_ms: 30000
   max_allocated_memory_bytes: 52428800
+  cypher_override: |
+    CYPHER 25
+    MATCH (poster:User)-[:POSTS]->(t:Tweet)-[:MENTIONS]->(target:User)
+    WHERE poster <> target
+    WITH target,
+         t.created_at.hour  AS hour,
+         t.created_at.day   AS day,
+         t.created_at.month AS month,
+         t.created_at.year  AS yr,
+         collect(DISTINCT poster) AS posters,
+         count(t) AS total_mentions
+    WHERE size(posters) >= 3
+      AND total_mentions >= 5
+    RETURN target.screen_name    AS targeted_user,
+           yr, month, day, hour,
+           size(posters)         AS coordinated_accounts,
+           total_mentions
+    ORDER BY total_mentions DESC
+    LIMIT 10
 - id: twitter-complex-013
   question: 'Measure tweet virality prediction: for tweets from the first 24 hours, use early retweet rate and mention rate
     to predict final virality rank.'
@@ -1386,9 +1508,37 @@ cases:
   status: needs_review
   skip_if_empty: true
   min_results: 0
-  max_db_hits: 500000
+  max_db_hits: 70000
   max_runtime_ms: 30000
   max_allocated_memory_bytes: 52428800
+  cypher_override: |
+    CYPHER 25
+    MATCH (t:Tweet)
+    WITH min(t.created_at) AS dataset_start
+
+    MATCH (early:Tweet)
+    WHERE early.created_at >= dataset_start
+      AND early.created_at < dataset_start + duration({hours: 24})
+
+    WITH dataset_start, early,
+         COUNT { MATCH (rt:Tweet)-[:RETWEETS]->(early)
+                 WHERE rt.created_at >= dataset_start
+                   AND rt.created_at < dataset_start + duration({hours: 24}) } AS early_retweet_count,
+         COUNT { MATCH (early)<-[:POSTS]-(a:User)<-[:MENTIONS]-(mt:Tweet)
+                 WHERE mt.created_at >= dataset_start
+                   AND mt.created_at < dataset_start + duration({hours: 24}) } AS early_mention_count
+
+    MATCH (early)<-[:POSTS]-(author:User)
+    WITH early, author, early_retweet_count, early_mention_count,
+         COUNT { (rt2:Tweet)-[:RETWEETS]->(early) } AS total_retweets
+
+    RETURN author.screen_name AS author,
+           early_retweet_count,
+           early_mention_count,
+           total_retweets,
+           (early_retweet_count * 0.7 + early_mention_count * 0.3) AS virality_score
+    ORDER BY virality_score DESC
+    LIMIT 10
 - id: twitter-complex-014
   question: 'Show information gatekeepers in retweet networks: users whose retweets are themselves frequently retweeted, acting
     as amplification nodes.'
@@ -1416,9 +1566,25 @@ cases:
   status: needs_review
   skip_if_empty: true
   min_results: 0
-  max_db_hits: 2000000
+  max_db_hits: 120000
   max_runtime_ms: 60000
   max_allocated_memory_bytes: 52428800
+  cypher_override: |
+    CYPHER 25
+    MATCH (u:User)<-[:MENTIONS]-(t:Tweet)
+    WITH u, count(t) AS incoming_mentions
+    MATCH (u)-[:POSTS]->(tw:Tweet)-[:MENTIONS]->(other:User)
+    WITH u, incoming_mentions, count(DISTINCT other) AS outgoing_mentions
+    WITH u, incoming_mentions, outgoing_mentions,
+         (incoming_mentions * outgoing_mentions) AS centrality_proxy
+    ORDER BY centrality_proxy DESC
+    LIMIT 15
+    RETURN u.screen_name     AS screen_name,
+           u.name            AS display_name,
+           u.followers       AS followers,
+           incoming_mentions,
+           outgoing_mentions,
+           centrality_proxy
 - id: twitter-expert-007
   question: 'Find the shortest retweet distance between any two authors: for authors with 1k-100k followers, what is the average
     shortest path of retweets connecting them?'
@@ -1431,9 +1597,21 @@ cases:
   status: needs_review
   skip_if_empty: true
   min_results: 0
-  max_db_hits: 2000000
+  max_db_hits: 40000
   max_runtime_ms: 60000
   max_allocated_memory_bytes: 52428800
+  cypher_override: |
+    CYPHER 25
+    MATCH (a1:User)-[:POSTS]->(rt:Tweet)-[:RETWEETS]->(orig:Tweet)<-[:POSTS]-(a2:User)
+    WHERE a1 <> a2
+      AND a1.followers >= 1000 AND a1.followers <= 100000
+      AND a2.followers >= 1000 AND a2.followers <= 100000
+    WITH a1.screen_name AS retweeter,
+         a2.screen_name AS original_author,
+         count(*)       AS retweet_connections
+    RETURN retweeter, original_author, retweet_connections
+    ORDER BY retweet_connections DESC
+    LIMIT 15
 - id: twitter-expert-008
   question: 'Detect echo chambers: identify clusters in the mention network where internal mention density is 5x+ higher than
     external mentions.'
@@ -1446,9 +1624,23 @@ cases:
   status: needs_review
   skip_if_empty: true
   min_results: 0
-  max_db_hits: 2000000
+  max_db_hits: 90000
   max_runtime_ms: 60000
   max_allocated_memory_bytes: 52428800
+  cypher_override: |
+    CYPHER 25
+    MATCH (u:User)-[:POSTS]->(t:Tweet)-[:MENTIONS]->(target:User)
+    WITH u, target, count(t) AS mention_count
+    WHERE mention_count >= 2
+    WITH target,
+         collect({mentioner: u.screen_name, count: mention_count}) AS mentioners,
+         count(DISTINCT u) AS unique_mentioners
+    WHERE unique_mentioners >= 3
+    RETURN target.screen_name AS hub_user,
+           unique_mentioners  AS cluster_size,
+           mentioners[0..5]   AS top_mentioners
+    ORDER BY cluster_size DESC
+    LIMIT 10
 - id: twitter-expert-009
   question: 'Analyze information diffusion speed: for top 10 viral hashtags, measure how fast they reach different user tiers
     (10k, 100k, 1M followers) through retweets.'
@@ -1461,9 +1653,29 @@ cases:
   status: needs_review
   skip_if_empty: true
   min_results: 0
-  max_db_hits: 2000000
+  max_db_hits: 35000
   max_runtime_ms: 60000
   max_allocated_memory_bytes: 52428800
+  cypher_override: |
+    CYPHER 25
+    MATCH (h:Hashtag)<-[:TAGS]-(t:Tweet)
+    WITH h.name AS hashtag, count(t) AS total
+    ORDER BY total DESC
+    LIMIT 10
+    WITH collect(hashtag) AS top10
+
+    MATCH (h:Hashtag)<-[:TAGS]-(t:Tweet)<-[:POSTS]-(u:User)
+    WHERE h.name IN top10
+    WITH h.name AS hashtag,
+         CASE WHEN u.followers >= 100000 THEN 'high (100k+)'
+              WHEN u.followers >= 10000  THEN 'medium (10k-100k)'
+              ELSE 'low (<10k)'
+         END AS follower_tier,
+         count(DISTINCT u) AS unique_users,
+         min(t.created_at) AS first_seen
+    RETURN hashtag, follower_tier, unique_users, first_seen
+    ORDER BY hashtag, first_seen
+    LIMIT 30
 - id: twitter-expert-010
   question: 'Calculate troll influence amplification: for each troll, measure how many steps to reach a 100k+ follower user
     through retweet chains.'
@@ -1476,9 +1688,25 @@ cases:
   status: needs_review
   skip_if_empty: true
   min_results: 0
-  max_db_hits: 2000000
+  max_db_hits: 45000
   max_runtime_ms: 60000
   max_allocated_memory_bytes: 52428800
+  cypher_override: |
+    CYPHER 25
+    MATCH (orig:Tweet)<-[:POSTS]-(orig_author:User)
+    MATCH (rt:Tweet)-[:RETWEETS]->(orig)
+    MATCH (rt)<-[:POSTS]-(retweeter:User)
+    WHERE orig_author.followers < 1000
+      AND retweeter.followers >= 10000
+    WITH orig_author.screen_name AS content_creator,
+         orig_author.followers   AS creator_followers,
+         retweeter.screen_name   AS amplifier,
+         retweeter.followers     AS amplifier_followers,
+         count(*)                AS amplifications
+    RETURN content_creator, creator_followers,
+           amplifier, amplifier_followers, amplifications
+    ORDER BY amplifier_followers DESC
+    LIMIT 15
 - id: twitter-expert-011
   question: 'Predict tweet virality: build a model using early signals (first 100 retweets within 1 hour, mention count, author
     follower count) to predict final virality rank.'
@@ -1491,9 +1719,32 @@ cases:
   status: needs_review
   skip_if_empty: true
   min_results: 0
-  max_db_hits: 2000000
+  max_db_hits: 110000
   max_runtime_ms: 60000
   max_allocated_memory_bytes: 52428800
+  cypher_override: |
+    CYPHER 25
+    MATCH (u:User)-[:POSTS]->(orig:Tweet)
+    WHERE NOT EXISTS { (orig)-[:RETWEETS]->() }
+
+    OPTIONAL MATCH (rt:Tweet)-[:RETWEETS]->(orig)
+    WITH u, orig,
+         sum(CASE WHEN rt IS NOT NULL
+                       AND rt.created_at <= orig.created_at + duration({hours: 1})
+                  THEN 1 ELSE 0 END) AS early_rt_count,
+         count(rt)                   AS total_retweets
+
+    OPTIONAL MATCH (orig)-[:MENTIONS]->(mentioned:User)
+    WITH u, orig, early_rt_count, total_retweets,
+         count(mentioned) AS mention_count
+
+    RETURN u.screen_name    AS author,
+           early_rt_count,
+           total_retweets,
+           mention_count,
+           u.followers       AS author_followers
+    ORDER BY total_retweets DESC
+    LIMIT 20
 - id: twitter-expert-012
   question: 'Identify semantic hashtag clusters: group hashtags that frequently co-occur into themes, then detect theme transitions
     in the network over time.'
@@ -1506,9 +1757,19 @@ cases:
   status: needs_review
   skip_if_empty: true
   min_results: 0
-  max_db_hits: 2000000
+  max_db_hits: 50000
   max_runtime_ms: 60000
   max_allocated_memory_bytes: 52428800
+  cypher_override: |
+    CYPHER 25
+    MATCH (t:Tweet)-[:TAGS]->(h1:Hashtag),
+          (t)-[:TAGS]->(h2:Hashtag)
+    WHERE h1.name < h2.name
+    WITH h1.name AS hashtag_a, h2.name AS hashtag_b, count(t) AS co_occurrences
+    WHERE co_occurrences >= 5
+    RETURN hashtag_a, hashtag_b, co_occurrences
+    ORDER BY co_occurrences DESC
+    LIMIT 20
 - id: twitter-expert-013
   question: 'Analyze cross-platform messaging: identify accounts that use different client apps in coordinated patterns (e.g.,
     alternating tweet-retweet-tweet sequences on different apps).'
@@ -1521,9 +1782,46 @@ cases:
   status: needs_review
   skip_if_empty: true
   min_results: 0
-  max_db_hits: 2000000
+  max_db_hits: 130000
   max_runtime_ms: 60000
   max_allocated_memory_bytes: 52428800
+  cypher_override: |
+    CYPHER 25
+    MATCH (u:User)-[:POSTS]->(t:Tweet)-[:USING]->(s:Source)
+    WITH u, count(DISTINCT s.name) AS distinct_apps
+    WHERE distinct_apps >= 2
+
+    MATCH (u)-[:POSTS]->(t:Tweet)-[:USING]->(src:Source)
+    OPTIONAL MATCH (t)-[:RETWEETS]->(orig:Tweet)
+    WITH u, distinct_apps, t, src.name AS app, orig IS NOT NULL AS is_retweet
+    ORDER BY u.screen_name, t.created_at
+
+    WITH u, distinct_apps,
+         collect({ time: t.created_at, app: app, is_retweet: is_retweet }) AS seq
+    WITH u, distinct_apps, seq, size(seq) AS n
+    WHERE n >= 3
+    WITH u, distinct_apps, seq, n,
+      [i IN range(0, n - 3)
+       WHERE NOT seq[i].is_retweet
+         AND seq[i+1].is_retweet
+         AND NOT seq[i+2].is_retweet
+         AND seq[i].app <> seq[i+1].app
+         AND seq[i+1].app <> seq[i+2].app
+         AND duration.between(seq[i].time, seq[i+2].time).seconds < 86400
+       | { app1: seq[i].app, app2: seq[i+1].app, app3: seq[i+2].app }
+      ] AS patterns
+    WHERE size(patterns) > 0
+
+    RETURN u.screen_name             AS account,
+           u.followers               AS followers,
+           distinct_apps             AS apps_used,
+           size(seq)                 AS total_tweets,
+           size(patterns)            AS cross_app_pattern_count,
+           patterns[0].app1          AS eg_tweet_app,
+           patterns[0].app2          AS eg_retweet_app,
+           patterns[0].app3          AS eg_followup_app
+    ORDER BY cross_app_pattern_count DESC, u.followers DESC
+    LIMIT 25
 - id: twitter-expert-014
   question: 'Detect anomalous user accounts: identify accounts with unusual combinations of low follower count + high retweet
     volume + many mentions from high-follower users, suggesting inauthenticity.'

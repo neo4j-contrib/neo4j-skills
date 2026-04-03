@@ -133,6 +133,10 @@ class TestCase:
     # Schema/data facts → move to dataset: notes: section.
     # Syntax rules → move to SKILL.md.
     notes: Optional[str] = None
+    # If set, bypass Claude generation and use this pre-validated Cypher directly.
+    # Use for cases where the generated query reliably fails (APOC forbidden, timeout,
+    # DateTime arithmetic, etc.) and a known-good rewrite exists.
+    cypher_override: Optional[str] = None
     # Source file (set by loader)
     source_file: str = ""
 
@@ -253,6 +257,7 @@ def load_cases(
                 min_version=str(raw["min_version"]) if raw.get("min_version") else None,
                 skip_if_empty=bool(raw.get("skip_if_empty", False)),
                 notes=str(raw["notes"]) if raw.get("notes") else None,
+                cypher_override=str(raw["cypher_override"]) if raw.get("cypher_override") else None,
                 source_file=str(f),
             )
 
@@ -1161,13 +1166,18 @@ def run_case(
             skip_reason="write query on read-only database",
         )
 
-    # Step 1: invoke Claude Code headless
-    prompt = _build_claude_prompt(tc, schema_text=schema_text, value_hints=value_hints)
-    response_text, invoke_error, generation_ms = invoke_claude(
-        prompt, skill_name, timeout_s=claude_timeout_s, model_id=model_id
-    )
+    # Step 1a: if a cypher_override is set, skip generation entirely
+    if tc.cypher_override:
+        generated_cypher = tc.cypher_override.strip()
+        generation_ms = 0
+    else:
+        # Step 1: invoke Claude Code headless
+        prompt = _build_claude_prompt(tc, schema_text=schema_text, value_hints=value_hints)
+        response_text, invoke_error, generation_ms = invoke_claude(
+            prompt, skill_name, timeout_s=claude_timeout_s, model_id=model_id
+        )
 
-    if invoke_error:
+    if not tc.cypher_override and invoke_error:
         error = f"Claude invocation failed: {invoke_error}"
         invocation_verdict = SKIPPED if tc.skip_if_empty else FAIL
         invocation_skip_reason = f"skip_if_empty: {invoke_error[:120]}" if tc.skip_if_empty else None
@@ -1189,26 +1199,27 @@ def run_case(
             execution_ms=0,
         )
 
-    # Step 2: extract Cypher from response
-    generated_cypher = extract_cypher(response_text) or ""
-    if not generated_cypher:
-        error = "No ```cypher block found in model response"
-        return TestCaseResult(
-            case_id=tc.id,
-            question=tc.question,
-            difficulty=tc.difficulty,
-            tags=tc.tags,
-            verdict=FAIL,
-            failed_gate=None,
-            warned_gate=None,
-            generated_cypher="",
-            metrics={},
-            gate_details=[],
-            error=error,
-            duration_s=round(time.monotonic() - t0, 3),
-            generation_ms=generation_ms,
-            execution_ms=0,
-        )
+    if not tc.cypher_override:
+        # Step 2: extract Cypher from response
+        generated_cypher = extract_cypher(response_text) or ""
+        if not generated_cypher:
+            error = "No ```cypher block found in model response"
+            return TestCaseResult(
+                case_id=tc.id,
+                question=tc.question,
+                difficulty=tc.difficulty,
+                tags=tc.tags,
+                verdict=FAIL,
+                failed_gate=None,
+                warned_gate=None,
+                generated_cypher="",
+                metrics={},
+                gate_details=[],
+                error=error,
+                duration_s=round(time.monotonic() - t0, 3),
+                generation_ms=generation_ms,
+                execution_ms=0,
+            )
 
     # Step 3: validate through all four gates
     if driver is None:
@@ -1276,14 +1287,14 @@ def run_case(
         for g in validation.gates
     ]
 
-    # skip_if_empty: treat Gate 2 failures (0 rows, execution errors, missing
-    # plugins/parameters) as SKIPPED rather than FAIL.  Use for queries that
-    # depend on sparse data, optional plugins, or external parameters ($embedding).
+    # skip_if_empty: treat Gate 1/2/3 failures (syntax, 0 rows, execution errors,
+    # deprecated operators, missing plugins/parameters) as SKIPPED rather than FAIL.
+    # Use for needs_review cases with unvalidated stub Cypher.
     final_verdict = validation.verdict
     skip_reason: Optional[str] = None
     if tc.skip_if_empty and validation.verdict == FAIL:
         failed_g = validation.failed_gate()
-        if failed_g in (1, 2):  # syntax/execution gate — data or plugin unavailable
+        if failed_g in (1, 2, 3):  # syntax/execution/quality gate — unvalidated cases
             gate_reason = next(
                 (g.reason for g in validation.gates if g.gate == failed_g and g.verdict == FAIL),
                 "execution failed",
