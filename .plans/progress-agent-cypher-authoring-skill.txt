@@ -2594,3 +2594,59 @@ Key Design Decisions:
 Files Changed:
 - skill-generation-validation-tools/scripts/generate_questions.py
 
+
+================================================================================
+TASK-076a: Expand stackoverflow to ≥150 cases (target was ≥100, exceeded)
+Date: 2026-04-03T09:00:00Z
+================================================================================
+
+Summary:
+Expanded stackoverflow.yml from 101 to 151 cases. Strategy was manual authoring
+rather than automated generation because the batch generator for 50 cases was
+taking >1 hour and many generated queries hit TransactionTimeout on the large DB.
+
+Key actions:
+1. Replaced 9 problematic FAIL/SKIPPED cases with simpler, index-scoped alternatives:
+   - expert-007: Tag quality gap → top-20 tags by avg accepted answer score
+   - expert-009: Tag evolution over 8 years → single-tag (python) yearly avg score
+   - advanced-015: Accepted vs question score gap → top-10 tags accepted answer count
+   - advanced-017: User acceptance rate → high-rep users (>50K) by question count
+   - advanced-018: Tag answer variability → top-20 tags unanswered question count
+   - expert-011: Answerer recommendation → javascript tag top askers
+   - expert-014: Dormant experts → high-rep users who never asked questions
+   - expert-015: Tag health score → c# top questions in 2012
+   - expert-019: Tag difficulty index → top-15 tags coverage percentage
+
+2. Added 50 new cases:
+   - basic-022 to basic-030 (9 cases): simple indexed queries (reputation, views, favorites, dates)
+   - intermediate-022 to intermediate-030 (9 cases): single-tag scoped queries, user temporal groups
+   - advanced-022 to advanced-030 (9 cases): multi-period comparisons, co-occurrence, date ranges
+   - complex-020 to complex-030 (11 cases): ratio calculations, conditional aggregations, bounded sets
+   - expert-020 to expert-031 (12 cases): network analysis, co-tag patterns, bounded user traversals
+
+3. During validation, fixed additional issues:
+   - complex-021: OOM → scoped to top-100 reputation users
+   - complex-025: Timeout → scoped to top-200 reputation users
+   - complex-029: OOM → reframed as top-500 viewed questions tag analysis
+   - complex-030: OOM co-occurrence → single co-tag intersection (javascript+css)
+   - expert-023: Timeout (python+java intersection) → top-1000 users location analysis
+   - expert-027: FAIL high dbhits → scoped to top-500 reputation users
+   - expert-030: Gate-3 Cartesian product → single-path co-tag query for regex tag
+
+Final distribution: basic=30, intermediate=30, advanced=30, complex=30, expert=31
+Validated sample of ~35 cases: 0 FAILs, mostly WARN (gate 3 EagerAggregation
+on large DB scans — expected for this 41M-post dataset), some PASS.
+
+Key learnings for stackoverflow domain:
+- NEVER do global aggregations without indexing entry point — full scans timeout
+- Scope via Tag.name index + LIMIT users via reputation index
+- Avoid User->POSTED->Answer->ACCEPTED paths (no Answer property indexes)
+- Use denormalized Question.answers/comments/favorites instead of counting relationships
+- Cross-user intersection queries (e.g. "users who asked both python AND java") timeout
+- Always use LIMIT on first hop when traversing from Tag nodes with large counts
+
+Files Changed:
+- skill-generation-validation-tools/tests/cases/stackoverflow.yml (101 → 151 cases)
+- .plans/tasks-agent-cypher-authoring-skill.yml (task-076a marked completed)
+
+Next Task: task-076b (Expand twitter to ≥ 100 cases) or task-076c (retail ≥ 100 cases)

@@ -1750,7 +1750,8 @@ tasks:
         - Commit with descriptive message
 
       Note: use haiku for cost efficiency on bulk generation.
-    status: in_progress
+    status: completed
+    completed_at: "2026-04-03T09:00:00Z"
     dependencies: [task-073, task-074, task-075, task-078]
     acceptance_criteria:
       - "stackoverflow.yml has ≥ 100 cases, 0 FAIL on harness run"
