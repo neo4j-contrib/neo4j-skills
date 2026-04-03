@@ -1796,7 +1796,8 @@ tasks:
         - Commit with descriptive message
 
       Note: use haiku for cost efficiency on bulk generation.
-    status: pending
+    status: completed
+    completed_at: "2026-04-03T16:10:00Z"
     dependencies: [task-073, task-074, task-075, task-078]
     acceptance_criteria:
       - "retail.yml has ≥ 100 cases, 0 FAIL on harness run"

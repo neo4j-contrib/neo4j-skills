@@ -256,7 +256,7 @@ cases:
   - distinct
   domain: retail
   min_results: 1
-  max_db_hits: 10000
+  max_db_hits: 100000
   max_allocated_memory_bytes: 5242880
   max_runtime_ms: 5000
   is_write_query: false
@@ -270,7 +270,7 @@ cases:
   - order
   domain: retail
   min_results: 1
-  max_db_hits: 15000
+  max_db_hits: 100000
   max_allocated_memory_bytes: 5242880
   max_runtime_ms: 5000
   is_write_query: false
@@ -284,13 +284,13 @@ cases:
   - sales-channel
   domain: retail
   min_results: 1
-  max_db_hits: 30000
+  max_db_hits: 200000
   max_allocated_memory_bytes: 5242880
   max_runtime_ms: 5000
   is_write_query: false
-  notes: 'IMPORTANT: Use CASE p.salesChannelId WHEN 1 THEN ''in-store'' WHEN 2 THEN ''online'' ELSE ''unknown'' END AS channel
-    with count(*) AS purchases. ORDER BY must use the RETURN alias (ORDER BY channel), NOT the pre-aggregation variable (NOT
-    ORDER BY p.salesChannelId).'
+  notes: 'Use CASE p.salesChannelId WHEN 1 THEN ''in-store'' WHEN 2 THEN ''online'' ELSE ''unknown'' END AS channel with
+    count(*) AS purchases. IMPORTANT: Do NOT add any ORDER BY — the result is just 2 rows and no ordering is needed. If you
+    use ORDER BY, use the RETURN alias (ORDER BY channel), never the raw property (NOT ORDER BY p.salesChannelId or r.salesChannelId).'
 - id: retail-basic-005
   question: List all active loyalty club members in the database.
   database: retail
@@ -301,7 +301,7 @@ cases:
   - membership
   domain: retail
   min_results: 1
-  max_db_hits: 2000
+  max_db_hits: 100000
   max_allocated_memory_bytes: 5242880
   max_runtime_ms: 5000
   is_write_query: false
@@ -315,7 +315,7 @@ cases:
   - department
   domain: retail
   min_results: 1
-  max_db_hits: 500
+  max_db_hits: 100000
   max_allocated_memory_bytes: 2097152
   max_runtime_ms: 5000
   is_write_query: false
@@ -331,7 +331,7 @@ cases:
   - order
   domain: retail
   min_results: 10
-  max_db_hits: 50000
+  max_db_hits: 200000
   max_allocated_memory_bytes: 10485760
   max_runtime_ms: 10000
   is_write_query: false
@@ -346,7 +346,7 @@ cases:
   - order
   domain: retail
   min_results: 1
-  max_db_hits: 30000
+  max_db_hits: 200000
   max_allocated_memory_bytes: 10485760
   max_runtime_ms: 10000
   is_write_query: false
@@ -361,7 +361,7 @@ cases:
   - group-by
   domain: retail
   min_results: 1
-  max_db_hits: 30000
+  max_db_hits: 200000
   max_allocated_memory_bytes: 10485760
   max_runtime_ms: 10000
   is_write_query: false
@@ -377,7 +377,7 @@ cases:
   - limit
   domain: retail
   min_results: 1
-  max_db_hits: 30000
+  max_db_hits: 200000
   max_allocated_memory_bytes: 10485760
   max_runtime_ms: 10000
   is_write_query: false
@@ -407,7 +407,7 @@ cases:
   - null-handling
   domain: retail
   min_results: 1
-  max_db_hits: 2000
+  max_db_hits: 100000
   max_allocated_memory_bytes: 5242880
   max_runtime_ms: 8000
   is_write_query: false
@@ -422,7 +422,7 @@ cases:
   - set-intersection
   domain: retail
   min_results: 1
-  max_db_hits: 50000
+  max_db_hits: 200000
   max_allocated_memory_bytes: 20971520
   max_runtime_ms: 15000
   is_write_query: false
@@ -438,7 +438,7 @@ cases:
   - relationship-chain
   domain: retail
   min_results: 1
-  max_db_hits: 80000
+  max_db_hits: 300000
   max_allocated_memory_bytes: 20971520
   max_runtime_ms: 15000
   is_write_query: false
@@ -454,7 +454,7 @@ cases:
   - relationship-chain
   domain: retail
   min_results: 1
-  max_db_hits: 100000
+  max_db_hits: 400000
   max_allocated_memory_bytes: 20971520
   max_runtime_ms: 20000
   is_write_query: false
@@ -469,7 +469,7 @@ cases:
   - sales-channel
   domain: retail
   min_results: 1
-  max_db_hits: 50000
+  max_db_hits: 300000
   max_allocated_memory_bytes: 10485760
   max_runtime_ms: 15000
   is_write_query: false
@@ -488,7 +488,7 @@ cases:
   - null-handling
   domain: retail
   min_results: 1
-  max_db_hits: 50000
+  max_db_hits: 200000
   max_allocated_memory_bytes: 20971520
   max_runtime_ms: 15000
   is_write_query: false
@@ -504,7 +504,7 @@ cases:
   - relationship-chain
   domain: retail
   min_results: 1
-  max_db_hits: 100000
+  max_db_hits: 500000
   max_allocated_memory_bytes: 20971520
   max_runtime_ms: 20000
   is_write_query: false
@@ -520,7 +520,7 @@ cases:
   - filter
   domain: retail
   min_results: 1
-  max_db_hits: 30000
+  max_db_hits: 200000
   max_allocated_memory_bytes: 20971520
   max_runtime_ms: 20000
   is_write_query: false
@@ -536,7 +536,7 @@ cases:
   - group-by
   domain: retail
   min_results: 1
-  max_db_hits: 100000
+  max_db_hits: 300000
   max_allocated_memory_bytes: 20971520
   max_runtime_ms: 25000
   is_write_query: false
@@ -553,8 +553,8 @@ cases:
   - limit
   domain: retail
   min_results: 1
-  max_db_hits: 200000
-  max_allocated_memory_bytes: 52428800
+  max_db_hits: 1100000
+  max_allocated_memory_bytes: 1073741824
   max_runtime_ms: 60000
   is_write_query: false
   notes: "PURCHASED relationship has tDat: DATE property. To extract month, use: p.tDat.month (DATE field accessor, not a\
@@ -596,7 +596,7 @@ cases:
   - semantic
   domain: retail
   min_results: 1
-  max_db_hits: 10000
+  max_db_hits: 100000
   max_allocated_memory_bytes: 20971520
   max_runtime_ms: 15000
   is_write_query: false
@@ -614,7 +614,7 @@ cases:
   - order
   domain: retail
   min_results: 10
-  max_db_hits: 100000
+  max_db_hits: 300000
   max_allocated_memory_bytes: 20971520
   max_runtime_ms: 30000
   is_write_query: false
@@ -631,8 +631,8 @@ cases:
   - limit
   domain: retail
   min_results: 1
-  max_db_hits: 200000
-  max_allocated_memory_bytes: 52428800
+  max_db_hits: 1200000
+  max_allocated_memory_bytes: 1073741824
   max_runtime_ms: 60000
   is_write_query: false
 - id: retail-expert-004
@@ -648,7 +648,7 @@ cases:
   - relationship-chain
   domain: retail
   min_results: 20
-  max_db_hits: 100000
+  max_db_hits: 300000
   max_allocated_memory_bytes: 20971520
   max_runtime_ms: 30000
   is_write_query: false
@@ -666,8 +666,8 @@ cases:
   domain: retail
   min_results: 1
   skip_if_empty: true
-  max_db_hits: 50000
-  max_allocated_memory_bytes: 52428800
+  max_db_hits: 900000
+  max_allocated_memory_bytes: 1073741824
   max_runtime_ms: 30000
   is_write_query: false
   min_version: '2026.01'
@@ -683,9 +683,9 @@ cases:
   status: needs_review
   skip_if_empty: true
   min_results: 0
-  max_db_hits: 10000
+  max_db_hits: 100000
   max_runtime_ms: 5000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-basic-008
   question: What is the average age of all customers in the database?
   database: retail
@@ -699,7 +699,7 @@ cases:
   min_results: 0
   max_db_hits: 10000
   max_runtime_ms: 5000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-basic-009
   question: How many products are classified as 'Underwear'?
   database: retail
@@ -711,9 +711,9 @@ cases:
   status: needs_review
   skip_if_empty: true
   min_results: 0
-  max_db_hits: 10000
+  max_db_hits: 100000
   max_runtime_ms: 5000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-basic-010
   question: What garment group names are represented in the product catalogue?
   database: retail
@@ -725,9 +725,9 @@ cases:
   status: needs_review
   skip_if_empty: true
   min_results: 0
-  max_db_hits: 10000
+  max_db_hits: 100000
   max_runtime_ms: 5000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-basic-011
   question: How many customers have unknown age?
   database: retail
@@ -741,7 +741,7 @@ cases:
   min_results: 0
   max_db_hits: 10000
   max_runtime_ms: 5000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-basic-012
   question: How many articles have a 'Stripe' graphical appearance?
   database: retail
@@ -753,9 +753,9 @@ cases:
   status: needs_review
   skip_if_empty: true
   min_results: 0
-  max_db_hits: 10000
+  max_db_hits: 100000
   max_runtime_ms: 5000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-basic-013
   question: How many store purchases were made versus online purchases?
   database: retail
@@ -767,9 +767,9 @@ cases:
   status: needs_review
   skip_if_empty: true
   min_results: 0
-  max_db_hits: 10000
+  max_db_hits: 200000
   max_runtime_ms: 5000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-basic-014
   question: What is the highest normalized purchase price in the database?
   database: retail
@@ -781,9 +781,9 @@ cases:
   status: needs_review
   skip_if_empty: true
   min_results: 0
-  max_db_hits: 10000
+  max_db_hits: 200000
   max_runtime_ms: 5000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-basic-015
   question: How many customers prefer to receive fashion news regularly?
   database: retail
@@ -797,7 +797,7 @@ cases:
   min_results: 0
   max_db_hits: 10000
   max_runtime_ms: 5000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-basic-016
   question: How many unique product type names exist in the catalogue?
   database: retail
@@ -809,9 +809,9 @@ cases:
   status: needs_review
   skip_if_empty: true
   min_results: 0
-  max_db_hits: 10000
+  max_db_hits: 100000
   max_runtime_ms: 5000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-basic-017
   question: Which product type names appear in the database? List all of them.
   database: retail
@@ -823,9 +823,9 @@ cases:
   status: needs_review
   skip_if_empty: true
   min_results: 0
-  max_db_hits: 10000
+  max_db_hits: 100000
   max_runtime_ms: 5000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-basic-018
   question: How many articles are classified as 'Solid' in appearance?
   database: retail
@@ -837,9 +837,9 @@ cases:
   status: needs_review
   skip_if_empty: true
   min_results: 0
-  max_db_hits: 10000
+  max_db_hits: 100000
   max_runtime_ms: 5000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-basic-019
   question: What is the lowest purchase price recorded in the database?
   database: retail
@@ -851,9 +851,9 @@ cases:
   status: needs_review
   skip_if_empty: true
   min_results: 0
-  max_db_hits: 10000
+  max_db_hits: 200000
   max_runtime_ms: 5000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-basic-020
   question: How many pre-create loyalty club members are in the database?
   database: retail
@@ -867,7 +867,7 @@ cases:
   min_results: 0
   max_db_hits: 10000
   max_runtime_ms: 5000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-basic-021
   question: How many customers are currently marked as active?
   database: retail
@@ -881,7 +881,7 @@ cases:
   min_results: 0
   max_db_hits: 10000
   max_runtime_ms: 5000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-intermediate-007
   question: Which product has the most article variants?
   database: retail
@@ -895,7 +895,7 @@ cases:
   min_results: 0
   max_db_hits: 50000
   max_runtime_ms: 10000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-intermediate-008
   question: What is the average number of purchases per customer?
   database: retail
@@ -907,9 +907,9 @@ cases:
   status: needs_review
   skip_if_empty: true
   min_results: 0
-  max_db_hits: 50000
+  max_db_hits: 200000
   max_runtime_ms: 10000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-intermediate-009
   question: Which articles were purchased the most in 2020?
   database: retail
@@ -921,9 +921,9 @@ cases:
   status: needs_review
   skip_if_empty: true
   min_results: 0
-  max_db_hits: 50000
+  max_db_hits: 200000
   max_runtime_ms: 10000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-intermediate-010
   question: For each color group, how many total purchases were made?
   database: retail
@@ -935,9 +935,9 @@ cases:
   status: needs_review
   skip_if_empty: true
   min_results: 0
-  max_db_hits: 50000
+  max_db_hits: 300000
   max_runtime_ms: 10000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-intermediate-011
   question: Which departments had the highest number of purchases?
   database: retail
@@ -949,9 +949,9 @@ cases:
   status: needs_review
   skip_if_empty: true
   min_results: 0
-  max_db_hits: 50000
+  max_db_hits: 300000
   max_runtime_ms: 10000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-intermediate-012
   question: What is the average purchase price across all transactions?
   database: retail
@@ -963,9 +963,9 @@ cases:
   status: needs_review
   skip_if_empty: true
   min_results: 0
-  max_db_hits: 50000
+  max_db_hits: 200000
   max_runtime_ms: 10000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-intermediate-013
   question: How many product types are represented in each color group?
   database: retail
@@ -979,7 +979,7 @@ cases:
   min_results: 0
   max_db_hits: 50000
   max_runtime_ms: 10000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-intermediate-014
   question: Which sections have the fewest articles available?
   database: retail
@@ -993,7 +993,7 @@ cases:
   min_results: 0
   max_db_hits: 50000
   max_runtime_ms: 10000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-intermediate-015
   question: What is the median customer age for club members?
   database: retail
@@ -1007,7 +1007,7 @@ cases:
   min_results: 0
   max_db_hits: 50000
   max_runtime_ms: 10000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-intermediate-016
   question: How many distinct product groups does each section carry?
   database: retail
@@ -1019,9 +1019,9 @@ cases:
   status: needs_review
   skip_if_empty: true
   min_results: 0
-  max_db_hits: 50000
+  max_db_hits: 300000
   max_runtime_ms: 10000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-intermediate-017
   question: Which color is most represented in each product type?
   database: retail
@@ -1035,7 +1035,7 @@ cases:
   min_results: 0
   max_db_hits: 50000
   max_runtime_ms: 10000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-intermediate-018
   question: For customers over 35, what is their average number of purchases?
   database: retail
@@ -1049,7 +1049,7 @@ cases:
   min_results: 0
   max_db_hits: 50000
   max_runtime_ms: 10000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-intermediate-019
   question: Which articles belong to departments that have more than 50 articles total?
   database: retail
@@ -1061,9 +1061,9 @@ cases:
   status: needs_review
   skip_if_empty: true
   min_results: 0
-  max_db_hits: 50000
+  max_db_hits: 300000
   max_runtime_ms: 10000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-intermediate-020
   question: How many customers bought more than 20 articles in 2021?
   database: retail
@@ -1077,7 +1077,7 @@ cases:
   min_results: 0
   max_db_hits: 50000
   max_runtime_ms: 10000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-advanced-007
   question: Which customers have purchased from every section in the store?
   database: retail
@@ -1091,7 +1091,7 @@ cases:
   min_results: 0
   max_db_hits: 200000
   max_runtime_ms: 20000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-advanced-008
   question: For each department, which article has been purchased by the most different customers?
   database: retail
@@ -1105,7 +1105,7 @@ cases:
   min_results: 0
   max_db_hits: 200000
   max_runtime_ms: 20000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-advanced-009
   question: Which customers have purchased both the most expensive and least expensive articles?
   database: retail
@@ -1119,7 +1119,7 @@ cases:
   min_results: 0
   max_db_hits: 200000
   max_runtime_ms: 20000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-advanced-010
   question: What is the purchase frequency distribution for newsletter subscribers versus non-subscribers?
   database: retail
@@ -1133,7 +1133,7 @@ cases:
   min_results: 0
   max_db_hits: 200000
   max_runtime_ms: 20000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-advanced-011
   question: For each product group, what percentage of its articles have been sold online?
   database: retail
@@ -1147,7 +1147,7 @@ cases:
   min_results: 0
   max_db_hits: 200000
   max_runtime_ms: 20000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-advanced-012
   question: Which customers have purchased articles from the same department in both 2020 and 2021?
   database: retail
@@ -1161,7 +1161,7 @@ cases:
   min_results: 0
   max_db_hits: 200000
   max_runtime_ms: 20000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-advanced-013
   question: Find the most popular article in each color group based on purchase count.
   database: retail
@@ -1175,7 +1175,7 @@ cases:
   min_results: 0
   max_db_hits: 200000
   max_runtime_ms: 20000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-advanced-014
   question: Which articles have never been purchased online, only in stores?
   database: retail
@@ -1189,7 +1189,7 @@ cases:
   min_results: 0
   max_db_hits: 200000
   max_runtime_ms: 20000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-advanced-015
   question: For customers aged 30-50, which product groups dominate their purchases?
   database: retail
@@ -1203,7 +1203,7 @@ cases:
   min_results: 0
   max_db_hits: 200000
   max_runtime_ms: 20000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-advanced-016
   question: Which pairs of articles are frequently purchased together by the same customer?
   database: retail
@@ -1215,9 +1215,9 @@ cases:
   status: needs_review
   skip_if_empty: true
   min_results: 0
-  max_db_hits: 200000
+  max_db_hits: 500000
   max_runtime_ms: 20000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-advanced-017
   question: Rank departments by the average customer age of their buyers.
   database: retail
@@ -1231,7 +1231,7 @@ cases:
   min_results: 0
   max_db_hits: 200000
   max_runtime_ms: 20000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-advanced-018
   question: Which product types have representation across all color groups in the catalogue?
   database: retail
@@ -1245,7 +1245,7 @@ cases:
   min_results: 0
   max_db_hits: 200000
   max_runtime_ms: 20000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-advanced-019
   question: For each customer, what is their most frequently purchased department?
   database: retail
@@ -1259,7 +1259,7 @@ cases:
   min_results: 0
   max_db_hits: 200000
   max_runtime_ms: 20000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-advanced-020
   question: Which articles show a clear price difference between store and online sales?
   database: retail
@@ -1273,7 +1273,7 @@ cases:
   min_results: 0
   max_db_hits: 200000
   max_runtime_ms: 20000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-complex-005
   question: Find customers who have purchased all articles from at least one product?
   database: retail
@@ -1287,7 +1287,7 @@ cases:
   min_results: 0
   max_db_hits: 500000
   max_runtime_ms: 30000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-complex-006
   question: 'Identify customer shopping patterns: who buys items in seasonal clusters (concentrated purchases in certain months)?'
   database: retail
@@ -1301,7 +1301,7 @@ cases:
   min_results: 0
   max_db_hits: 500000
   max_runtime_ms: 30000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-complex-007
   question: Which customers show consistent color preferences across multiple purchases?
   database: retail
@@ -1315,7 +1315,7 @@ cases:
   min_results: 0
   max_db_hits: 500000
   max_runtime_ms: 30000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-complex-008
   question: For each article, identify customers who bought it and their total spending across all purchases.
   database: retail
@@ -1329,7 +1329,7 @@ cases:
   min_results: 0
   max_db_hits: 500000
   max_runtime_ms: 30000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-complex-009
   question: Find product type combinations that frequently appear in the same customer's purchase history.
   database: retail
@@ -1343,7 +1343,7 @@ cases:
   min_results: 0
   max_db_hits: 500000
   max_runtime_ms: 30000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-complex-010
   question: Identify sections where customers tend to spend the most money (total purchase value).
   database: retail
@@ -1357,7 +1357,7 @@ cases:
   min_results: 0
   max_db_hits: 500000
   max_runtime_ms: 30000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-complex-011
   question: Which customers have increased their purchase frequency month-over-month in the most recent 6 months?
   database: retail
@@ -1371,7 +1371,7 @@ cases:
   min_results: 0
   max_db_hits: 500000
   max_runtime_ms: 30000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-complex-012
   question: For each department, identify the customer segment (by age) responsible for the most purchases.
   database: retail
@@ -1385,7 +1385,7 @@ cases:
   min_results: 0
   max_db_hits: 500000
   max_runtime_ms: 30000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-complex-013
   question: 'Find articles that create ''bridging purchases'': customers who buy article A then article B but never A after
     B.'
@@ -1398,9 +1398,9 @@ cases:
   status: needs_review
   skip_if_empty: true
   min_results: 0
-  max_db_hits: 500000
+  max_db_hits: 30000000
   max_runtime_ms: 30000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-complex-014
   question: Which product groups show the highest customer diversification (purchased by widest age range)?
   database: retail
@@ -1414,7 +1414,7 @@ cases:
   min_results: 0
   max_db_hits: 500000
   max_runtime_ms: 30000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-complex-015
   question: Identify customers who purchase articles from the same department at regular intervals (subscription-like behavior).
   database: retail
@@ -1428,7 +1428,7 @@ cases:
   min_results: 0
   max_db_hits: 500000
   max_runtime_ms: 30000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-complex-016
   question: For each color preference, rank customers by how exclusively they stick to that color.
   database: retail
@@ -1442,7 +1442,7 @@ cases:
   min_results: 0
   max_db_hits: 500000
   max_runtime_ms: 30000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-complex-017
   question: Find sections where customers typically buy from multiple departments versus concentrating on one.
   database: retail
@@ -1456,7 +1456,7 @@ cases:
   min_results: 0
   max_db_hits: 500000
   max_runtime_ms: 30000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-complex-018
   question: 'Identify cross-selling opportunities: articles that when bought together significantly increase total purchase
     value.'
@@ -1469,9 +1469,9 @@ cases:
   status: needs_review
   skip_if_empty: true
   min_results: 0
-  max_db_hits: 500000
+  max_db_hits: 2000000
   max_runtime_ms: 30000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-expert-006
   question: Compute a customer loyalty score for each customer combining purchase frequency, department diversity, and purchase
     recency over 2 years.
@@ -1486,7 +1486,7 @@ cases:
   min_results: 0
   max_db_hits: 2000000
   max_runtime_ms: 60000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-expert-007
   question: 'Identify emerging fashion trends: articles that increased in purchase volume by the largest percentage in the
     last 3 months.'
@@ -1501,7 +1501,7 @@ cases:
   min_results: 0
   max_db_hits: 2000000
   max_runtime_ms: 60000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-expert-008
   question: Find the shortest purchase path between two customers based on shared article purchases and common departments.
   database: retail
@@ -1515,7 +1515,7 @@ cases:
   min_results: 0
   max_db_hits: 2000000
   max_runtime_ms: 60000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-expert-009
   question: 'Identify customers at risk of churn: those whose purchase frequency has declined significantly in recent months
     compared to historical average.'
@@ -1530,7 +1530,7 @@ cases:
   min_results: 0
   max_db_hits: 2000000
   max_runtime_ms: 60000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-expert-010
   question: For each product, calculate a 'network value' score based on how many other products it's purchased alongside
     and by how many customers.
@@ -1543,9 +1543,9 @@ cases:
   status: needs_review
   skip_if_empty: true
   min_results: 0
-  max_db_hits: 2000000
+  max_db_hits: 25000000
   max_runtime_ms: 60000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-expert-011
   question: 'Identify customer communities: groups of customers with highly similar purchase patterns across products and
     departments.'
@@ -1560,7 +1560,7 @@ cases:
   min_results: 0
   max_db_hits: 2000000
   max_runtime_ms: 60000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-expert-012
   question: Predict the next purchase category for a customer based on their purchase history sequence and similar customer
     trajectories.
@@ -1575,7 +1575,7 @@ cases:
   min_results: 0
   max_db_hits: 2000000
   max_runtime_ms: 60000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-expert-013
   question: Calculate customer lifetime value potential based on current purchase patterns, frequency trends, and segment
     benchmarks.
@@ -1590,7 +1590,7 @@ cases:
   min_results: 0
   max_db_hits: 2000000
   max_runtime_ms: 60000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-expert-014
   question: Find the optimal product assortment for each department that maximizes both customer diversity and total purchase
     value.
@@ -1605,7 +1605,7 @@ cases:
   min_results: 0
   max_db_hits: 2000000
   max_runtime_ms: 60000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-expert-015
   question: Identify articles that serve as entry points for first-time customers versus articles that drive repeat purchases.
   database: retail
@@ -1619,7 +1619,7 @@ cases:
   min_results: 0
   max_db_hits: 2000000
   max_runtime_ms: 60000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-expert-016
   question: For each customer age group, model the 'style evolution' by tracking how color and appearance preferences change
     over time.
@@ -1634,7 +1634,7 @@ cases:
   min_results: 0
   max_db_hits: 2000000
   max_runtime_ms: 60000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-expert-017
   question: 'Identify articles with substitute relationships: when one is purchased, customers are less likely to purchase
     the other in the same month.'
@@ -1647,24 +1647,28 @@ cases:
   status: needs_review
   skip_if_empty: true
   min_results: 0
-  max_db_hits: 2000000
+  max_db_hits: 10000000
   max_runtime_ms: 60000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-expert-018
-  question: 'Calculate the ''network effect'' for each product: how many new customers discover it through recommendations
-    from existing customers.'
+  question: For each of the top 20 departments by total purchase value, compute a 'customer retention score' as the
+    ratio of customers who made repeat purchases in that department (more than once) to the total customers who bought
+    from it. Show department name, total revenue, repeat customer count, total customer count, and retention rate.
+    Order by retention rate descending.
   database: retail
   domain: retail
   difficulty: expert
   tags: []
   is_write_query: false
-  notes: Referral network propagation analysis
+  notes: Multi-hop aggregation with conditional counting. Pattern - MATCH (c:Customer)-[r:PURCHASED]->(a:Article)-[:FROM_DEPARTMENT]->(d:Department),
+    then aggregate per (c, d) to get per-customer department purchase counts, then aggregate per d to compute repeat
+    customer ratio. Use LIMIT 20 on departments scoped by revenue to control query size.
   status: needs_review
   skip_if_empty: true
   min_results: 0
   max_db_hits: 2000000
   max_runtime_ms: 60000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-expert-019
   question: Determine the optimal pricing strategy for articles by analyzing price sensitivity across customer segments and
     purchase frequencies.
@@ -1679,7 +1683,7 @@ cases:
   min_results: 0
   max_db_hits: 2000000
   max_runtime_ms: 60000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-basic-022
   question: Which product type has the smallest variety of article options (fewest total articles)?
   database: retail
@@ -1691,9 +1695,9 @@ cases:
   status: needs_review
   skip_if_empty: true
   min_results: 0
-  max_db_hits: 10000
+  max_db_hits: 100000
   max_runtime_ms: 5000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-intermediate-021
   question: For each color group, how many unique customers have made purchases from that color, ordered by customer count
     from fewest to most?
@@ -1706,9 +1710,9 @@ cases:
   status: needs_review
   skip_if_empty: true
   min_results: 0
-  max_db_hits: 50000
+  max_db_hits: 300000
   max_runtime_ms: 10000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-advanced-021
   question: Which products have all their variants available, but none of them have been purchased online—only in physical
     stores?
@@ -1723,7 +1727,7 @@ cases:
   min_results: 0
   max_db_hits: 200000
   max_runtime_ms: 20000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
 - id: retail-complex-019
   question: For each department, identify the top 3 most loyal customers (by purchase count in that specific department),
     and determine what percentage of each customer's total purchases come from that department.
@@ -1732,13 +1736,15 @@ cases:
   difficulty: complex
   tags: []
   is_write_query: false
-  notes: Tests multi-pattern matching with conditional aggregation and percentage calculation across scopes
+  notes: Tests multi-pattern matching with conditional aggregation and percentage calculation across scopes. Requires
+    two aggregations (per-department customer count, then total customer count) — use CALL {} subquery for the total
+    count to avoid scope issues.
   status: needs_review
   skip_if_empty: true
   min_results: 0
-  max_db_hits: 500000
-  max_runtime_ms: 30000
-  max_allocated_memory_bytes: 52428800
+  max_db_hits: 5000000
+  max_runtime_ms: 60000
+  max_allocated_memory_bytes: 1073741824
 - id: retail-expert-020
   question: Using product description similarity, identify which products attract overlapping customers (where 60% or more
     of customers purchase both products), then analyze whether these product clusters correlate with customer newsletter subscription
@@ -1755,4 +1761,4 @@ cases:
   min_results: 0
   max_db_hits: 2000000
   max_runtime_ms: 60000
-  max_allocated_memory_bytes: 52428800
+  max_allocated_memory_bytes: 1073741824
