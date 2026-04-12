@@ -281,7 +281,7 @@ RETURN n.name,
 > **Capability gate** — only use `apoc.*` procedures and functions when the schema context `capabilities` list includes `"apoc"`. **Aura always has apoc-core** (bundled); local/cloud Neo4j requires the plugin to be installed. `apoc-extended` (load/export procedures) is NOT available in Aura.
 
 **When APOC is available**: Load `read/cypher25-apoc.md` for procedure signatures and examples. Key categories:
-- `apoc.map.*` — build/merge/transform maps; `apoc.coll.*` — set ops, flatten, zip, partition
+- `apoc.map.*` — build/merge/transform maps; `apoc.coll.*` — set ops, flatten, zip, partition (**prefer native `coll.sort(list)` over `apoc.coll.sort` in Cypher 25**)
 - `apoc.text.*` — fuzzy matching (`jaroWinklerDistance`), Soundex, regex groups, camelCase/snakeCase
 - `apoc.date.*` — parse/format non-ISO date strings via epoch ms; `apoc.temporal.*` — truncate/format Neo4j temporal values
 - `apoc.path.*` — configurable BFS/DFS traversal with label/rel filters (`apoc.path.expand`, `subgraphNodes`)
@@ -384,6 +384,8 @@ LIMIT 20
 | `COLLECT { (a)-[:R]->(b) }` | `COLLECT { MATCH (a)-[:R]->(b) RETURN x }` — COLLECT requires full MATCH+RETURN; bare pattern is syntax error |
 | `UNWIND range(0, min(2, size(lst)-1))` | `UNWIND range(0, CASE WHEN size(lst) < 3 THEN size(lst)-1 ELSE 2 END)` — `min()` is an **aggregation function**, not a scalar; use `CASE WHEN` for scalar minimum |
 | `rank() OVER (PARTITION BY x ORDER BY y)` | Not valid Cypher — use `WITH cat, collect({v:v, s:s}) AS ranked UNWIND range(0, size(ranked)-1) AS idx` for ranking within groups |
+| `MATCH (n:Label) RETURN count(n)` | `RETURN COUNT { MATCH (n:Label) }` — `count(variable)` triggers `NodeCountFromCountStore`; use `COUNT {}` subquery form in Cypher 25 |
+| `apoc.coll.sort(list)` | `coll.sort(list)` — native Cypher 25 built-in; no APOC dependency required |
 
 ---
 
