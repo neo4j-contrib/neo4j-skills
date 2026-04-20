@@ -41,6 +41,15 @@ Assists with upgrading Cypher queries to newer Neo4j versions.
 - Migrating databases from Neo4j 4.x or 5.x to 2025.x or 2026.x
 - Updating Cypher queries to a newer major Neo4j version
 
+### neo4j-driver-skill
+
+Modern best practices for the official Neo4j drivers (Python, JavaScript, Java, Go, .NET), centered on the `execute_query` API.
+
+**Use this skill when:**
+- Writing or reviewing code that uses an official Neo4j driver
+- Converting old session/transaction code to the `execute_query` API
+- Reaching for `record.data()` / `record.toObject()` / `AsMap()` and related result helpers
+
 ## Installation
 
 ### Using npx skills (Recommended)
@@ -70,6 +79,7 @@ git clone https://github.com/neo4j-contrib/neo4j-skills.git
 ln -s $(pwd)/neo4j-skills/neo4j-cypher-skill ~/.claude/skills/
 ln -s $(pwd)/neo4j-skills/neo4j-migration-skill ~/.claude/skills/
 ln -s $(pwd)/neo4j-skills/neo4j-cli-tools-skill ~/.claude/skills/
+ln -s $(pwd)/neo4j-skills/neo4j-driver-skill ~/.claude/skills/
 ```
 
 #### For other agents:
