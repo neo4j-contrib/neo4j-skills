@@ -20,13 +20,14 @@ Use this skill when code:
 
 1. **`execute_query` is the default.** One call, one transaction, auto-retry on transient errors. Only drop to `session.execute_read/execute_write` when you need to interleave client-side logic between queries in one transaction.
 2. **Self-managing transaction queries need `session.run` (auto-commit).** `CALL {...} IN TRANSACTIONS` and `USING PERIODIC COMMIT` manage their own transactions and fail inside a managed transaction — so neither `execute_query` nor `session.execute_read/write` work. Open a session and run them with `session.run(...)`.
-3. **Always parameterize** with `$name` placeholders. Never string-concatenate values. Parameters enable query-plan caching and prevent Cypher injection.
-4. **One driver per application**, shared across threads/requests. The driver owns a connection pool — do not create it per request. Close on shutdown (or use `with` / `try-with-resources` / `using`).
-5. **Specify routing on read-only calls** in a cluster (`routing_=RoutingControl.READ`, `routing: neo4j.routing.READ`, `.withRouting(RoutingControl.READ)`, `ExecuteQueryWithReadersRouting()`). It sends reads to follower nodes.
-6. **Bulk writes use `UNWIND $rows AS row`** with a list parameter — one round-trip for thousands of rows. Do not loop over `execute_query`.
-7. **`execute_query` is eager** — it loads all records into memory. For huge result sets, use a session with `execute_read`/`execute_write` and iterate the `Result` without materializing it.
-8. **Prefer `CREATE` over `MERGE`** when you know the data is new. `MERGE` does a match + create; `CREATE` is one step.
-9. **Dynamic labels, relationship types, and property keys** — supported natively in Cypher 25 via the `$(expr)` syntax: `MATCH (n:$($label) {$($key): $value})` or `MERGE ()-[:$($type)]->()`. On Cypher 5 a plain parameter can only be a value; for dynamic labels/keys there, validate against an allow-list and interpolate, or call `apoc.merge.node` / `apoc.create.relationship`.
+3. **Configure the database name explicitly** (`database_="neo4j"`, `{database:'neo4j'}`, `.withDatabase(...)`, `ExecuteQueryWithDatabase(...)`) unless you specifically want home-database resolution. Otherwise the driver pays an extra round-trip per query to resolve the default.
+4. **Always parameterize** with `$name` placeholders. Never string-concatenate values. Parameters enable query-plan caching and prevent Cypher injection.
+5. **One driver per application**, shared across threads/requests. The driver owns a connection pool — do not create it per request. Close on shutdown (or use `with` / `try-with-resources` / `using`).
+6. **Specify routing on read-only calls** in a cluster (`routing_=RoutingControl.READ`, `routing: neo4j.routing.READ`, `.withRouting(RoutingControl.READ)`, `ExecuteQueryWithReadersRouting()`). It sends reads to follower nodes.
+7. **Bulk writes use `UNWIND $rows AS row`** with a list parameter — one round-trip for thousands of rows. Do not loop over `execute_query`.
+8. **`execute_query` is eager** — it loads all records into memory. For huge result sets, use a session with `execute_read`/`execute_write` and iterate the `Result` without materializing it.
+9. **Prefer `CREATE` over `MERGE`** when you know the data is new. `MERGE` does a match + create; `CREATE` is one step.
+10. **Dynamic labels, relationship types, and property keys** — supported natively in Cypher 25 via the `$(expr)` syntax: `MATCH (n:$($label) {$($key): $value})` or `MERGE ()-[:$($type)]->()`. On Cypher 5 a plain parameter can only be a value; for dynamic labels/keys there, validate against an allow-list and interpolate, or call `apoc.merge.node` / `apoc.create.relationship`.
 
 ## Reading record fields
 
@@ -51,7 +52,7 @@ Load the reference file for the language in the codebase:
 1. Detect the driver language from the dependency file (`requirements.txt`, `package.json`, `pom.xml`/`build.gradle`, `go.mod`, `*.csproj`).
 2. Load the matching reference file above.
 3. When writing new code, start from the "Canonical example" in the reference — do not hand-roll sessions unless rule 1 requires it.
-4. When reviewing code, flag any of the nine core rules being broken.
+4. When reviewing code, flag any of the ten core rules being broken.
 
 ## Resources
 

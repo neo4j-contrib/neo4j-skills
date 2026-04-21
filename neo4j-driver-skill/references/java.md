@@ -11,6 +11,7 @@ import org.neo4j.driver.EagerResult;
 import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.QueryConfig;
 import org.neo4j.driver.RoutingControl;
+import org.neo4j.driver.SessionConfig;
 import java.util.Map;
 
 try (Driver driver = GraphDatabase.driver(
@@ -23,6 +24,7 @@ try (Driver driver = GraphDatabase.driver(
             "MATCH (p:Person {name: $name}) RETURN p.name AS name, p.age AS age")
         .withParameters(Map.of("name", "Alice"))
         .withConfig(QueryConfig.builder()
+            .withDatabase("neo4j")
             .withRouting(RoutingControl.READ)
             .build())
         .execute();
@@ -51,13 +53,14 @@ var rows = List.of(
 driver.executableQuery(
         "UNWIND $rows AS row MERGE (p:Person {id: row.id}) SET p += row")
     .withParameters(Map.of("rows", rows))
+    .withConfig(QueryConfig.builder().withDatabase("neo4j").build())
     .execute();
 ```
 
 ## When to drop to a session
 
 ```java
-try (var session = driver.session()) {
+try (var session = driver.session(SessionConfig.forDatabase("neo4j"))) {
     session.executeWrite(tx -> {
         var balance = tx.run(
             "MATCH (a:Account {id:$id}) RETURN a.balance AS b",

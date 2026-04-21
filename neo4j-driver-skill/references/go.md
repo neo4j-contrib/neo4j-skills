@@ -28,6 +28,7 @@ func main() {
         "MATCH (p:Person {name: $name}) RETURN p.name AS name, p.age AS age",
         map[string]any{"name": "Alice"},
         neo4j.EagerResultTransformer,
+        neo4j.ExecuteQueryWithDatabase("neo4j"),
         neo4j.ExecuteQueryWithReadersRouting(),
     )
     if err != nil { panic(err) }
@@ -55,20 +56,21 @@ rows := []map[string]any{
 neo4j.ExecuteQuery(ctx, driver,
     "UNWIND $rows AS row MERGE (p:Person {id: row.id}) SET p += row",
     map[string]any{"rows": rows},
-    neo4j.EagerResultTransformer)
+    neo4j.EagerResultTransformer,
+    neo4j.ExecuteQueryWithDatabase("neo4j"))
 ```
 
 ## Configuration options
 
+- `ExecuteQueryWithDatabase("neo4j")` — set it explicitly to avoid the home-database round-trip
 - `ExecuteQueryWithReadersRouting()` / `ExecuteQueryWithWritersRouting()`
 - `ExecuteQueryWithImpersonatedUser("alice")`
 - `ExecuteQueryWithBookmarkManager(bm)`
-- `ExecuteQueryWithDatabase("name")` — only when targeting a non-default database
 
 ## When to drop to a session
 
 ```go
-session := driver.NewSession(ctx, neo4j.SessionConfig{})
+session := driver.NewSession(ctx, neo4j.SessionConfig{DatabaseName: "neo4j"})
 defer session.Close(ctx)
 
 _, err := session.ExecuteWrite(ctx, func(tx neo4j.ManagedTransaction) (any, error) {

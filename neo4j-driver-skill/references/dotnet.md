@@ -16,7 +16,9 @@ await driver.VerifyConnectivityAsync();
 var result = await driver
     .ExecutableQuery("MATCH (p:Person {name: $name}) RETURN p.name AS name, p.age AS age")
     .WithParameters(new { name = "Alice" })
-    .WithConfig(new QueryConfig(routing: RoutingControl.Readers))
+    .WithConfig(new QueryConfig(
+        database: "neo4j",
+        routing: RoutingControl.Readers))
     .ExecuteAsync();
 
 foreach (var record in result.Result)
@@ -40,6 +42,7 @@ foreach (var record in result.Result)
 ```csharp
 var names = await driver
     .ExecutableQuery("MATCH (p:Person) RETURN p.name AS name")
+    .WithConfig(new QueryConfig(database: "neo4j"))
     .WithMap(r => r["name"].As<string>())
     .ExecuteAsync();
 // names.Result is IReadOnlyList<string>
@@ -56,13 +59,14 @@ var rows = new[] {
 await driver
     .ExecutableQuery("UNWIND $rows AS row MERGE (p:Person {id: row.id}) SET p += row")
     .WithParameters(new { rows })
+    .WithConfig(new QueryConfig(database: "neo4j"))
     .ExecuteAsync();
 ```
 
 ## When to drop to a session
 
 ```csharp
-await using var session = driver.AsyncSession();
+await using var session = driver.AsyncSession(o => o.WithDatabase("neo4j"));
 
 await session.ExecuteWriteAsync(async tx =>
 {
