@@ -4,35 +4,22 @@ A collection of [Agent Skills](https://agentskills.io/specification) designed to
 
 ## Installation
 
-### Using npx skills (Recommended)
-
 ```bash
 # Install all Neo4j skills
-npx skills add neo4j-contrib/neo4j-skills
+npx skills add https://github.com/neo4j-contrib/neo4j-skills
 
 # Or install individual skills
-npx skills add neo4j-contrib/neo4j-skills/neo4j-cypher-skill
-npx skills add neo4j-contrib/neo4j-skills/neo4j-migration-skill
-npx skills add neo4j-contrib/neo4j-skills/neo4j-cli-tools-skill
-npx skills add neo4j-contrib/neo4j-skills/neo4j-getting-started-skill
+npx skills add https://github.com/neo4j-contrib/neo4j-skills --skill neo4j-cypher-skill
+npx skills add https://github.com/neo4j-contrib/neo4j-skills --skill neo4j-migration-skill
+npx skills add https://github.com/neo4j-contrib/neo4j-skills --skill neo4j-cli-tools-skill
+npx skills add https://github.com/neo4j-contrib/neo4j-skills --skill neo4j-getting-started-skill
 ```
 
-The skills package will automatically detect your AI agent (Claude Code, Cursor, Cline, etc.) and install the skills in the appropriate location.
-
-### Manual Installation
-
-#### For Claude Code:
-```bash
-git clone https://github.com/neo4j-contrib/neo4j-skills.git
-
-ln -s $(pwd)/neo4j-skills/neo4j-cypher-skill ~/.claude/skills/
-ln -s $(pwd)/neo4j-skills/neo4j-migration-skill ~/.claude/skills/
-ln -s $(pwd)/neo4j-skills/neo4j-cli-tools-skill ~/.claude/skills/
-ln -s $(pwd)/neo4j-skills/neo4j-getting-started-skill ~/.claude/skills/
-```
-
-#### For other agents:
-Point your AI agent to this repository or add the skill directories to your agent's skills path. Most agents support the [Agent Skills specification](https://agentskills.io/specification).
+Or paste a skill link directly into your coding assistant:
+- https://github.com/neo4j-contrib/neo4j-skills/tree/main/neo4j-cypher-skill
+- https://github.com/neo4j-contrib/neo4j-skills/tree/main/neo4j-migration-skill
+- https://github.com/neo4j-contrib/neo4j-skills/tree/main/neo4j-cli-tools-skill
+- https://github.com/neo4j-contrib/neo4j-skills/tree/main/neo4j-getting-started-skill
 
 ## Available Skills
 
