@@ -16,6 +16,12 @@ Use this skill when:
 - a user asks to upgrade a Neo4j driver in languages: .NET, Go, Java, Javascript, Python
 - a user wants to upgrade Cypher queries from 4.x or 5.x syntax to 2025.x/2026.x (Cypher 25)
 
+## When NOT to use this skill
+
+- **Writing new Cypher queries** → use `neo4j-cypher-skill`
+- **Database administration or CLI tasks** (backup, restore, import, cypher-shell) → use `neo4j-cli-tools-skill`
+- **Starting a new Neo4j project from scratch** → use `neo4j-getting-started-skill`
+
 ## Instructions
 
 1. At the beginning, ALWAYS ask a user what Neo4j version is going to be used after the upgrade. Note, the Neo4j database's version is not upgraded as part of this skill, we just need that information

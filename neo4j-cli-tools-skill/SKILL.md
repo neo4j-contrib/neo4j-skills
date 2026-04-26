@@ -19,6 +19,12 @@ Use this skill when:
 - Troubleshooting Neo4j CLI tool issues
 - Migrating or backing up databases using CLI tools
 
+## When NOT to use this skill
+
+- **Writing or optimizing Cypher queries** → use `neo4j-cypher-skill`
+- **Upgrading Neo4j drivers or migrating Cypher syntax** → use `neo4j-migration-skill`
+- **Starting a new Neo4j project from scratch** → use `neo4j-getting-started-skill`
+
 ## Available CLI Tools
 
 ### 1. neo4j-admin

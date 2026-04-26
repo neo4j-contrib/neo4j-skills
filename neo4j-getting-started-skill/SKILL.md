@@ -26,6 +26,14 @@ Guide a **user or agent** from zero to a working Neo4j application by executing 
 
 ---
 
+## When NOT to use this skill
+
+- **Writing or optimizing Cypher queries on an existing project** → use `neo4j-cypher-skill`
+- **Upgrading Neo4j drivers or migrating Cypher syntax** → use `neo4j-migration-skill`
+- **CLI/admin tasks on an existing database** (backup, restore, import) → use `neo4j-cli-tools-skill`
+
+---
+
 ## Project Structure
 
 **All generated code, data, scripts, queries, and notebooks must be written to the working directory** so the user can inspect, reuse, and re-run them after the session ends. Never generate output only as text in the conversation — always write it to a file.

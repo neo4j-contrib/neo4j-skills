@@ -48,7 +48,7 @@ This is a placeholder sketch only -- not runnable Cypher. Never fill placeholder
 
 Apply these before writing any query:
 
-1. **`CYPHER 25` always** -- first token of every query; never repeat it after `UNION` or inside subqueries
+1. **`CYPHER 25` always** -- first token of every query; never repeat it after `UNION`/`UNION ALL` or inside subqueries
 2. **Schema first** -- inspect schema before writing any Cypher statement; if schema is provided in the prompt, use it directly
 3. **MERGE safety** -- for nodes `MERGE` on constrained key properties only; relationship `MERGE` only on already bound start and end nodes
 4. **Label-free `MATCH (n)` is forbidden** unless the variable is already bound OR an immediate dynamic-label predicate follows: `MATCH (n) WHERE n:$($label)` is the only valid exception
@@ -56,10 +56,9 @@ Apply these before writing any query:
 6. **`REPEATABLE ELEMENTS` / `DIFFERENT RELATIONSHIPS`** go immediately after `MATCH`, never at the end of the pattern
 7. **`SHOW` commands**: `YIELD` must come before `WHERE`; cannot be combined with `UNION`
 8. **Inline node predicates** (`(:Label WHERE prop = x)`) are only valid in a `MATCH` clause -- not in `WHERE` pattern expressions
-9. **`CYPHER 25` is a single-query prefix** -- never repeat it after `UNION ALL` or inside a subquery
-10. **`WHERE` cannot follow bare `UNWIND`** -- use `WITH x WHERE` to filter after UNWIND
-11. **Undirected relationships match both directions** -- `(a)-[:R]-(b)` finds connections in either direction and double-counts pairs; use directed `(a)-[:R]->(b)` unless direction is genuinely unknown
-12. **`DETACH DELETE` for nodes** -- plain `DELETE n` throws if the node has relationships; use `DETACH DELETE n` to remove a node and its relationships atomically
+9. **`WHERE` cannot follow bare `UNWIND`** -- use `WITH x WHERE` to filter after UNWIND
+10. **Undirected relationships match both directions** -- `(a)-[:R]-(b)` finds connections in either direction and double-counts pairs; use directed `(a)-[:R]->(b)` unless direction is genuinely unknown
+11. **`DETACH DELETE` for nodes** -- plain `DELETE n` throws if the node has relationships; use `DETACH DELETE n` to remove a node and its relationships atomically
 
 ---
 
@@ -75,6 +74,8 @@ Apply these before writing any query:
 | String literals | single-quoted | `'Alice'`; double only when string contains `'` |
 
 One clause per line; 80-char soft limit; break long `WHERE` at `AND`/`OR`; chain patterns `(a)-->(b)-->(c)` rather than repeating variables.
+
+> **Schema is the source of truth.** Label names (`:Person`), relationship types (`:KNOWS`), and property names (`name`) used throughout this skill are illustrative only. Never copy them into generated queries — always substitute the actual names from the inspected schema.
 
 ---
 
