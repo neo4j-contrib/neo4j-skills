@@ -1,17 +1,20 @@
 ---
 name: neo4j-migration-skill
-description: Use when upgrading Neo4j drivers to new major versions
+description: Use when upgrading Neo4j drivers or Cypher queries from older versions
+  (4.x, 5.x) to 2025.x/2026.x. Handles driver upgrades for .NET, Go, Java,
+  Javascript, and Python, as well as Cypher syntax migration to Cypher 25.
 allowed-tools: WebFetch
 ---
 
 # Neo4j migration skill
 
-This skill uses online guides to upgrade old Neo4j codebases. It handles all official Neo4j drivers.
+This skill uses online guides to upgrade old Neo4j codebases and Cypher queries. It handles all official Neo4j drivers and Cypher syntax migration.
 
 ## When to use
 
 Use this skill when:
 - a user asks to upgrade a Neo4j driver in languages: .NET, Go, Java, Javascript, Python
+- a user wants to upgrade Cypher queries from 4.x or 5.x syntax to 2025.x/2026.x (Cypher 25)
 
 ## Instructions
 
@@ -27,3 +30,26 @@ Use this skill when:
     - Python then include [Python migration guide](references/python-driver.md)
 
 Important: when you plan the upgrade, always include replacement of deprecated functions in the plan
+
+---
+
+## Cypher Query Migration (4.x / 5.x → Cypher 25)
+
+1. Ask the user what target Neo4j version will be used after the upgrade
+2. Scan the codebase for Cypher query strings (look in `.cypher` files, string literals in driver code, OGM/SDN `@Query` annotations, etc.)
+3. Apply these substitutions to every query found:
+
+| Old syntax | Cypher 25 replacement |
+|---|---|
+| `[:REL*1..5]` | `-[:REL]-{1,5}` |
+| `[:REL*]` | `-[:REL]-{1,}` |
+| `shortestPath((a)-[*]->(b))` | `SHORTEST 1 (a)(()-[]->()){1,}(b)` |
+| `allShortestPaths((a)-[*]->(b))` | `ALL SHORTEST (a)(()-[]->()){1,}(b)` |
+| `id(n)` | `elementId(n)` |
+| `CALL { WITH x ... }` | `CALL (x) { ... }` |
+| `-- SQL comment` | `// Cypher comment` |
+| `CALL db.index.vector.queryNodes(...)` | `SEARCH n IN (VECTOR INDEX idx FOR $emb LIMIT k) SCORE AS score` (2026.01+; keep procedure for older) |
+
+4. Prepend `CYPHER 25` to every query
+5. Fetch the migration guide for any syntax not covered above:
+   `https://neo4j.com/docs/cypher-manual/25/deprecations-additions-removals-compatibility/`

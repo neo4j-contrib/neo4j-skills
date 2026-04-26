@@ -35,11 +35,35 @@ Assists with upgrading Neo4j drivers to new major versions.
 
 ### neo4j-cypher-skill
 
-Assists with upgrading Cypher queries to newer Neo4j versions.
+Generates, optimizes, and validates Cypher 25 queries for Neo4j 2025.x and 2026.x. Covers the full language surface including reads, writes, subqueries, batch operations, vector/fulltext search, quantified path patterns, date/time, and more.
 
 **Use this skill when:**
-- Migrating databases from Neo4j 4.x or 5.x to 2025.x or 2026.x
-- Updating Cypher queries to a newer major Neo4j version
+- Writing new Cypher queries (MATCH, OPTIONAL MATCH, MERGE, CREATE, SET, DELETE, REMOVE, WITH, RETURN, UNION, CALL, UNWIND, FOREACH, LOAD CSV)
+- Optimizing slow queries or reviewing EXPLAIN/PROFILE plans
+- Using graph pattern matching, quantified path expressions (QPEs), or shortest path
+- Vector search (SEARCH clause 2026.02.1+, procedure fallback for older versions) or fulltext search
+- Working with subqueries (`EXISTS {}`, `COUNT {}`, `COLLECT {}`, `CALL (x) {}`)
+- Batch writes, LOAD CSV imports, or `CALL IN TRANSACTIONS` with error handling
+- Dynamic labels, dynamic property keys, or pattern comprehensions
+
+**Key capabilities:**
+- Schema-first protocol with property-type inspection (`nodeTypeProperties`, `relTypeProperties`)
+- Pre-flight decision protocol: drafts with explicit assumptions when schema or version is unknown
+- Parameterized output by default (production-safe)
+- Query validation via MCP tool, `cypher-shell`, or Query API v2 (`curl`)
+- 50+ common syntax traps, performance anti-patterns with severity levels, and a full failure-recovery guide
+- Version gates: safe 2025.01 baseline; 2026.x features gated and labeled
+
+**Compatibility:** Neo4j >= 2025.01 (Cypher 25 parser required)
+
+### neo4j-getting-started-skill
+
+Guides an AI agent through the full journey from zero to a running Neo4j application in 8 named stages: prerequisites → context → provision → model → load → explore → query → build. Supports both interactive (HITL) and fully autonomous operation.
+
+**Use this skill when:**
+- Starting a new Neo4j project from scratch
+- Provisioning a Neo4j Aura or Docker instance and connecting an app to it
+- Building an end-to-end graph application with data modeling, loading, and querying
 
 ## Installation
 
@@ -55,6 +79,7 @@ npx skills add neo4j-contrib/neo4j-skills
 npx skills add neo4j-contrib/neo4j-skills/neo4j-cypher-skill
 npx skills add neo4j-contrib/neo4j-skills/neo4j-migration-skill
 npx skills add neo4j-contrib/neo4j-skills/neo4j-cli-tools-skill
+npx skills add neo4j-contrib/neo4j-skills/neo4j-getting-started-skill
 ```
 
 The skills package will automatically detect your AI agent (Claude Code, Cursor, Cline, etc.) and install the skills in the appropriate location.
@@ -70,6 +95,7 @@ git clone https://github.com/neo4j-contrib/neo4j-skills.git
 ln -s $(pwd)/neo4j-skills/neo4j-cypher-skill ~/.claude/skills/
 ln -s $(pwd)/neo4j-skills/neo4j-migration-skill ~/.claude/skills/
 ln -s $(pwd)/neo4j-skills/neo4j-cli-tools-skill ~/.claude/skills/
+ln -s $(pwd)/neo4j-skills/neo4j-getting-started-skill ~/.claude/skills/
 ```
 
 #### For other agents:
