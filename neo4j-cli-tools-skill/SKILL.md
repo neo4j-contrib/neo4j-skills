@@ -87,20 +87,13 @@ Use this skill when:
 ### 4. neo4j-mcp
 **Purpose**: Model Context Protocol server for Neo4j integration with AI agents
 
-**Key Features**:
-- Enables AI agents to interact with Neo4j
-- Tools for query execution and schema inspection
-- Read-only and read-write modes
-- Multiple transport modes (stdio, http)
-- Works with all Neo4j deployment types
+For full installation and editor configuration guidance, use `neo4j-mcp-skill` — it covers all editors (Claude Code, Claude Desktop, Cursor, Windsurf, VS Code, Kiro), stdio vs HTTP transport, and troubleshooting.
 
-**Common Use Cases**:
-- Integrating Neo4j with Claude or other AI agents
-- Building AI-powered graph applications
-- Natural language to Cypher translation
-- Automated data analysis workflows
-
-**Requirements**: Neo4j instance with APOC plugin
+**Quick install:**
+```bash
+pip install neo4j-mcp-server
+neo4j-mcp --version  # verify
+```
 
 **Reference**: [neo4j-mcp-reference.md](references/neo4j-mcp-reference.md)
 
