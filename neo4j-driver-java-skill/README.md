@@ -2,7 +2,11 @@
 
 # neo4j-driver-java-skill
 
-Guides agents through connecting to Neo4j with the raw Java driver: Maven/Gradle setup, executableQuery(), session/transaction management, and error handling.
+Comprehensive guide to using the official Neo4j Java Driver (v6, current stable) — covering 
+installation (Maven/Gradle), driver lifecycle, all three transaction APIs (executableQuery,
+managed transactions via executeRead/Write, explicit transactions), async/reactive patterns,
+error handling, data type mapping, performance tuning, causal consistency/bookmarks, and
+connection configuration.
 
 **Install:**
 ```bash

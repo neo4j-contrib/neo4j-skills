@@ -2,7 +2,13 @@
 
 # neo4j-driver-dotnet-skill
 
-Guides agents through connecting to Neo4j with the .NET driver: setup, ExecutableQuery(), async patterns, session/transaction management, and dependency injection in ASP.NET Core.
+Comprehensive guide to using the official Neo4j .NET Driver (v6, current stable) — covering
+installation, IDriver lifecycle and DI registration, all three query APIs (ExecutableQuery
+fluent API, managed transactions via ExecuteReadAsync/ExecuteWriteAsync, auto-commit via
+RunAsync), IResultCursor consumption patterns (FetchAsync loop vs ToListAsync), record value
+access and null safety, WithParameters anonymous types and UNWIND batching, temporal type
+mapping, await-using vs using, EagerResult unpacking, object mapping, performance, causal
+consistency, and error handling.
 
 **Install:**
 ```bash

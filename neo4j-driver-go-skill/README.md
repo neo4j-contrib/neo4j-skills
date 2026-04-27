@@ -2,7 +2,10 @@
 
 # neo4j-driver-go-skill
 
-Guides agents through connecting to Neo4j with the Go driver: setup, ExecuteQuery(), context propagation, session/transaction management, and result serialization with AsMap().
+A Comprehensive guide to using the official Neo4j Go Driver (v6, current stable) — covering 
+installation, driver lifecycle, all three transaction APIs (ExecuteQuery, managed transactions,
+explicit transactions), error handling, data type mapping, performance tuning, causal
+consistency, and connection configuration.
 
 **Install:**
 ```bash
