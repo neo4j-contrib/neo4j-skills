@@ -1,167 +1,100 @@
-# How to Write Good Agent Skills
+# Writing Skills for this Repository
 
-A practical guide to writing high-quality `SKILL.md` files and agent instruction files (`AGENTS.md` / `CLAUDE.md`), synthesizing lessons from the Agent Skills open standard, Claude Code documentation, OpenAI Codex guides, real-world skill reviews, and experience building this repository.
-
----
-
-## Table of Contents
-
-1. [The Two Layers: Skills vs Context Files](#1-the-two-layers-skills-vs-context-files)
-2. [The SKILL.md Spec (agentskills.io)](#2-the-skillmd-spec-agentskillsio)
-3. [The Description Field — The Routing Signal](#3-the-description-field--the-routing-signal)
-4. [Body Patterns That Work](#4-body-patterns-that-work)
-5. [Anti-Patterns to Avoid](#5-anti-patterns-to-avoid)
-6. [Writing CLAUDE.md / AGENTS.md Context Files](#6-writing-claudemd--agentsmd-context-files)
-7. [Discovery and Progressive Disclosure](#7-discovery-and-progressive-disclosure)
-8. [Security, Credentials, and Write Operations](#8-security-credentials-and-write-operations)
-9. [Validation and Linting](#9-validation-and-linting)
-10. [Checklist](#10-checklist)
+When adding or editing skills in this repository, follow these rules. All skills live in `neo4j-*-skill/` directories. Run `python3 scripts/lint_skills.py` before every commit — all skills must pass.
 
 ---
 
-## 1. The Two Layers: Skills vs Context Files
+## SKILL.md Spec (agentskills.io)
 
-| Layer | File | When loaded | Purpose |
-|---|---|---|---|
-| **Context** | `CLAUDE.md` / `AGENTS.md` | Every session, always | Facts, rules, conventions that apply to all work in this project |
-| **Skill** | `SKILL.md` | On demand, when relevant | Playbooks for specific tasks — loaded only when the task matches |
-
-**Rule**: If it's a multi-step procedure, it belongs in a skill, not `CLAUDE.md`. If it's a fact the agent needs in every session (build command, test runner, naming convention), it belongs in `CLAUDE.md`.
-
-### Tooling differences
-
-| Tool | Reads | File location |
-|---|---|---|
-| Claude Code | `CLAUDE.md` | `./CLAUDE.md`, `./.claude/CLAUDE.md`, `~/.claude/CLAUDE.md` |
-| OpenAI Codex | `AGENTS.md` | `~/.codex/AGENTS.md`, repo root → subdirs (closer overrides) |
-| Both | Skills via `SKILL.md` | `.claude/skills/<name>/SKILL.md` or per the agentskills.io spec |
-
-If your repo uses `AGENTS.md` for Codex and you also use Claude Code, create a `CLAUDE.md` that imports it:
-```markdown
-@AGENTS.md
-
-## Claude Code specifics
-Use plan mode for changes under `src/billing/`.
-```
-
----
-
-## 2. The SKILL.md Spec (agentskills.io)
-
-The [Agent Skills open standard](https://agentskills.io/specification) defines the `SKILL.md` format. It is supported by Claude Code, OpenAI Codex, and other agents.
-
-### Directory structure
+Each skill is a directory with a `SKILL.md` file at the root:
 
 ```
-skill-name/
-├── SKILL.md          # Required — metadata + instructions
-├── references/       # Optional — detailed docs loaded on demand
+neo4j-my-skill/
+├── SKILL.md          # Required
+├── references/       # Optional — detailed docs, loaded on demand
 ├── scripts/          # Optional — executable code
 └── assets/           # Optional — templates, data files
 ```
 
-### Frontmatter fields
+### Frontmatter
 
 ```yaml
 ---
-name: my-skill-name           # Required. Must match parent directory name.
-description: >-               # Required. 80–1024 chars (Claude Code linter enforces 80 min).
-  What it does and when to use it. Include keywords. End with "Does NOT handle X — use Y."
+name: neo4j-my-skill          # Required. Must exactly match the parent directory name.
+description: What it does and when to use it. Include keywords and negative triggers.
+  Does NOT handle X — use neo4j-other-skill.
 compatibility: Claude Code    # Optional. Max 500 chars. Only if env requirements exist.
-license: Apache-2.0           # Optional.
-allowed-tools: Bash WebFetch  # Optional. Pre-approved tools (space-separated).
-version: 1.0.0                # Optional (Claude Code extension, not in base spec).
-status: draft                 # Optional (Claude Code extension).
+allowed-tools: Bash WebFetch  # Optional. Space-separated pre-approved tools.
+version: 1.0.0                # Optional.
 ---
 ```
 
-### Hard rules
+### Hard rules enforced by the linter (`scripts/lint_skills.py`)
 
-- `name` must exactly match the parent directory name (linters fail on mismatch)
-- `name`: lowercase letters, numbers, hyphens only; no consecutive hyphens; no leading/trailing hyphen; max 64 chars
-- `description`: 80–1024 characters; must be non-empty
-- `compatibility`: max 500 characters if provided
-- No unknown top-level frontmatter fields (linters reject them)
-- **YAML inline format only**: use `description: First line text\n  continuation lines` — never use `description: >` (block scalar). Block scalars cause the raw `>` character to be read as the description value by many parsers.
+- `name` must exactly match the parent directory name — linter hard-fails on mismatch
+- `name`: lowercase letters, numbers, and hyphens only; no consecutive hyphens; no leading/trailing hyphen; max 64 chars
+- `description`: **80–1024 characters** — linter hard-fails outside this range
+- `compatibility`: max 500 characters if present
+- No unknown top-level frontmatter fields — linter rejects them
+- **Never use `description: >` (YAML block scalar)**. Parsers read the raw `>` character as the description value → 1-char string → linter fail. Use inline continuation instead:
 
----
-
-## 3. The Description Field — The Routing Signal
-
-The `description` is the single most important field. Agents use it as their primary routing signal — they scan all available skill descriptions to decide which skill to load. Get this wrong and the skill never triggers (or triggers on the wrong tasks).
-
-### Anatomy of a good description
-
-```
-[What it does] + [When to use it — positive triggers] + [Does NOT handle X — use Y-skill instead]
-```
-
-**Example (good)**:
 ```yaml
+# WRONG — block scalar, linter fails:
+description: >
+  Comprehensive guide to...
+
+# RIGHT — inline with indented continuation:
 description: Comprehensive guide to the Neo4j Go Driver v6 — covering driver lifecycle,
   ExecuteQuery, managed and explicit transactions, error handling, and data type mapping.
-  Use when writing Go code that connects to Neo4j, setting up NewDriver() or ExecuteQuery()
-  in Go, or debugging session/transaction patterns. Also triggers on neo4j-go-driver,
-  SessionConfig, ManagedTransaction, or any Neo4j Bolt connection work in Go.
-  Does NOT handle Cypher query authoring — use neo4j-cypher-skill.
-  Does NOT cover driver migration — use neo4j-migration-skill.
+  Use when writing Go code that connects to Neo4j. Does NOT handle Cypher — use neo4j-cypher-skill.
 ```
 
-**Example (poor)**:
-```yaml
-description: Helps with the Neo4j Go driver.
-```
+---
 
-### Positive triggers
+## The Description Field — The Routing Signal
 
-Pack the description with:
-- The canonical product name and version: `Neo4j Go Driver v6`, `graphdatascience v1.21`
-- Common entry-point symbols: `NewDriver`, `ExecuteQuery`, `GraphDataScience`, `gds.pageRank`
+The `description` is how the agent decides which skill to load. Get it wrong and the skill never triggers, or triggers on the wrong task.
+
+**Anatomy**: `[what it does] + [positive triggers] + [Does NOT handle X — use Y-skill]`
+
+### Positive triggers — pack these in
+
+- Canonical product name and version: `Neo4j Go Driver v6`, `graphdatascience v1.21`
+- Common entry-point symbols: `NewDriver`, `ExecuteQuery`, `GdsSessions`, `gds.pageRank`
 - Natural-language task phrases: `"Use when writing Go code that connects to Neo4j"`
-- Synonyms users might write: both `GDS` and `Graph Data Science`
+- Synonyms: both `GDS` and `Graph Data Science`; both `AGA` and `Aura Graph Analytics`
 
-### Negative triggers — the gold standard
+### Negative triggers — always name the sibling skill
 
-Always include explicit exclusions. Name the sibling skill, not just the category:
-
-```
+```yaml
 Does NOT handle Cypher query authoring — use neo4j-cypher-skill.
 Does NOT cover Aura Graph Analytics serverless sessions — use neo4j-aura-graph-analytics-skill.
 ```
 
-Never write a bare "Don't" without naming where to go instead. A bundle with 15+ skills especially needs tight routing; the agent must know which skill handles each boundary case without ambiguity.
-
-The MongoDB `mongodb-natural-language-querying` pattern is the gold standard:
+Never a bare "Don't" without naming where to go instead. With 20+ skills in this repo, tight routing is critical. The MongoDB `mongodb-natural-language-querying` pattern is the gold standard:
 > "Does NOT handle Atlas Search ($search operator) — use search-and-ai for those. Does NOT analyze or optimize queries — use mongodb-query-optimizer for that."
-
-### When NOT to Use sections
-
-Repeat the negative triggers in the skill body too, in a `## When NOT to Use` section near the top. The description routing and the body guidance reinforce each other:
-
-```markdown
-## When NOT to Use
-
-- **Writing or optimizing Cypher queries** → use `neo4j-cypher-skill`
-- **GDS plugin on Aura Pro or self-managed Neo4j** → use `neo4j-gds-skill`
-- **Snowflake Graph Analytics** → use `neo4j-snowflake-graph-analytics-skill`
-```
 
 ---
 
-## 4. Body Patterns That Work
+## Skill Body Structure
 
-Evidence-backed patterns (source: Augment Code research + this repo's experience):
+### Open with When to Use / When NOT to Use
 
-### Pattern 1: When to Use / When NOT to Use (at the top)
+Always the first two sections. Short-circuits the agent before it reads the whole skill body:
 
-Always open the skill body with both sections. This short-circuits the agent from reading the whole skill before deciding it's the wrong one. Keep it to 4–6 bullets each.
+```markdown
+## When to Use
+- Running GDS algorithms on Aura BC or VDC
+- Processing graph data from Pandas DataFrames or Spark
 
-### Pattern 2: Procedural numbered workflows (+25% correctness, +20% completeness)
+## When NOT to Use
+- **Aura Pro with GDS plugin** → use `neo4j-gds-skill`
+- **Writing Cypher queries** → use `neo4j-cypher-skill`
+```
 
-For operational skills (deploy, import, provision, connect), use strict numbered steps. Each step should have:
-- A clear action
-- A code block
-- A branch condition: "if X → continue; if Y → stop and report"
+### Procedural numbered steps for operational skills
+
+For connect, provision, import, and deploy skills — strict numbered steps, each with a code block and a branch condition. Agents cannot skip or reorder numbered steps:
 
 ```markdown
 ## Step 1 — Verify GDS is available
@@ -170,40 +103,36 @@ For operational skills (deploy, import, provision, connect), use strict numbered
 RETURN gds.version() AS gds_version
 ```
 
-If this fails with `Unknown function 'gds.version'`, GDS is not installed. Stop and inform the user.
+If this fails with `Unknown function 'gds.version'`, GDS is not installed. **Stop and inform the user.**
 
 ## Step 2 — Estimate memory before projecting
-...
 ```
 
-This makes skills deterministic — the agent cannot skip or reorder steps.
+Evidence: numbered workflows reduced missing wiring from 40% to 10%, +25% correctness, +20% completeness (Augment Code).
 
-### Pattern 3: Decision tables (+25% best-practice adherence)
+### Decision tables when multiple approaches exist
 
-When multiple valid approaches exist, force the choice upfront with a decision table rather than describing all approaches in prose:
+Force the choice upfront — don't describe all approaches in prose and let the agent guess:
 
 ```markdown
-| Question | Approach |
+| Deployment | Use |
 |---|---|
-| Aura Pro or self-managed Neo4j? | Use GDS plugin (`neo4j-gds-skill`) |
-| Aura Business Critical or VDC? | Use Aura Graph Analytics (this skill) |
-| Non-Neo4j data source (Pandas, Spark)? | Use standalone AGA session |
-| Need real-time graph traversal from app code? | Use the Neo4j driver + Cypher |
+| Aura Pro | `neo4j-gds-skill` (embedded plugin) |
+| Aura Business Critical / VDC | `neo4j-aura-graph-analytics-skill` (serverless) |
+| Self-managed with GDS | `neo4j-gds-skill` |
 ```
 
-Also useful as a routing tree at the top of skills that cover multiple sub-cases.
+Evidence: decision tables produce 25% higher best-practice adherence (Augment Code).
 
-### Pattern 4: Real code examples from production (+20% code reuse)
+### Real code examples — idiomatic, not toy
 
-Include 3–10 line snippets that represent the idiomatic pattern — not toy examples. Agents copy patterns they see. If you show `gds.run_cypher()` in the right context once, the agent will use it correctly everywhere.
+Agents copy patterns they see. Show the full production-idiomatic usage, not stripped-down snippets:
 
-Bad (toy):
 ```python
+# Toy (bad):
 gds.pageRank.stream(G)
-```
 
-Good (production-idiomatic):
-```python
+# Idiomatic (good):
 gds = sessions.get_or_create(
     session_name="prod-analysis",
     memory=memory,
@@ -213,19 +142,29 @@ gds = sessions.get_or_create(
 gds.verify_connectivity()
 ```
 
-### Pattern 5: Pair every "Don't" with a "Do"
+Evidence: production code examples improve code reuse by 20% (Augment Code).
 
-Never list prohibitions without solutions. `Documentation with 15+ sequential warnings without solutions caused over-exploration and incomplete work` (Augment Code research):
+### Pair every prohibition with a solution
 
 ```
-❌  Don't instantiate HTTP clients directly.
-✅  Don't instantiate HTTP clients directly — use the shared apiClient from lib/http 
-    (includes retry middleware and auth headers).
+❌  Don't create a new driver per request.
+✅  Don't create a new driver per request — create one Driver at startup and share it across goroutines.
 ```
 
-### Pattern 6: Structured output templates
+15+ sequential warnings without paired solutions cause agents to over-explore and take 2× longer (Augment Code).
 
-For review or analysis skills, prescribe the exact markdown the agent must produce. This prevents freeform responses that don't match the expected format:
+### Inter-skill delegation
+
+Name sibling skill delegation explicitly in the body, not just the description:
+
+```markdown
+If `gds.version()` fails, GDS is not available on this deployment.
+For Aura BC/VDC, delegate to `neo4j-aura-graph-analytics-skill` instead.
+```
+
+### Structured output templates for review skills
+
+For skills that produce analysis or recommendations, prescribe exact output format:
 
 ```markdown
 ## Output format
@@ -234,272 +173,126 @@ For review or analysis skills, prescribe the exact markdown the agent must produ
 - [item]
 
 ### Issues Found
-#### [Issue Title] — Severity: HIGH / MEDIUM / LOW
+#### [Title] — Severity: HIGH / MEDIUM / LOW
 - **Current**: what the code does
-- **Problem**: why it's wrong
-- **Fix**: specific recommendation with code snippet
+- **Problem**: why it's wrong  
+- **Fix**: specific change with code snippet
 ```
 
-### Pattern 7: Inter-skill delegation
+### Provenance labels for advice skills
 
-When a task requires a prerequisite from a sibling skill, name the delegation explicitly:
+Label recommendations to distinguish documented fact from field heuristic:
 
-```markdown
-If the GDS plugin is not available (gds.version() fails), stop. 
-For Aura BC/VDC deployments, delegate to `neo4j-aura-graph-analytics-skill`.
-```
-
-DuckDB skills show the gold standard:
-> "If not found, delegate to `/duckdb-skills:install-duckdb` and then continue."
-
-### Pattern 8: Provenance labels for derived advice
-
-When giving recommendations that are opinion or field experience rather than documented fact, label them:
-
-- `[official]` — directly from docs
+- `[official]` — stated directly in Neo4j docs
 - `[derived]` — follows from documented behavior
-- `[field]` — community heuristic (add a disclaimer)
+- `[field]` — community heuristic; add a disclaimer
 
-This is especially important for algorithm selection advice (GDS, query optimization) where many recommendations are experience-based.
+Use especially in GDS algorithm selection and modeling advice.
 
-### Pattern 9: Token-cost awareness
-
-For skills that execute queries or return large results via MCP, add explicit guards:
+### Token-cost guards for MCP/query skills
 
 ```markdown
-Before running any traversal query:
-1. Run `EXPLAIN` or a `COUNT(*)` first
-2. Warn if no `LIMIT` on a pattern that could match millions of nodes
+Before running any traversal query via MCP:
+1. Run `EXPLAIN` or `COUNT(*)` first
+2. Warn if no `LIMIT` on patterns that could match millions of nodes
 3. Default to `LIMIT 25` on exploratory queries
-4. Warn before returning result sets that would consume >1K tokens
 ```
 
-### Pattern 10: Checklist at the end
+### Close with a checklist
 
-Close operational skills with a checklist. Agents use checklists to self-verify before reporting completion:
+Agents use checklists to self-verify before reporting done:
 
 ```markdown
 ## Checklist
-- [ ] GDS version confirmed (`gds.version()` returns a result)
-- [ ] Memory estimated before projecting large graphs
+- [ ] `gds.version()` confirmed
+- [ ] Memory estimated before large projections
 - [ ] Named graph dropped after use (`G.drop()`)
-- [ ] `randomSeed` set for reproducible embeddings
-- [ ] Results written back before session deletion (AGA)
+- [ ] Results written back before session deletion
 ```
 
 ---
 
-## 5. Anti-Patterns to Avoid
+## Progressive Disclosure
 
-### Overexploration trap
+The agentskills.io spec and Claude Code both load skills in three stages:
 
-**Excessive architecture overviews**: Detailed "why" explanations (event bus topology, decision rationale, historical context) push agents into reading dozens of documentation files unnecessarily. Focus on "what" and "how". Keep "why" in commit messages and PR descriptions.
-
-**Too many warnings without solutions**: 30–50 "don't" rules cause agents to verify solutions against every warning, loading irrelevant context and taking 2x longer. Cap prohibition lists; pair every one with a concrete alternative.
-
-### Premature patterns
-
-Don't document patterns that don't exist yet in your codebase. If you write a WebSocket pattern alongside a REST+polling implementation, the agent may follow the documented pattern and generate inconsistent code.
-
-### Context sprawl
-
-A focused `AGENTS.md` sitting atop 500K characters of surrounding documentation won't help — the agent reads all of it. Fix the documentation environment by consolidating and removing orphan docs.
-
-### YAML block scalars in frontmatter
-
-Never use `description: >` (block scalar form). Most SKILL.md parsers read the `>` character itself as the description value, producing a 1-character description that fails validation. Use inline format:
-
-```yaml
-# Wrong:
-description: >
-  This skill handles...
-
-# Right:
-description: This skill handles complex cases including foo,
-  bar, and baz. Use when the user asks about X or Y.
-```
-
-### Orphan documentation
-
-From Augment Code research on discovery rates:
-- `AGENTS.md` at root: **100%** discovery — the only reliable location
-- Files directly referenced from it: **90%+**
-- `README.md` in working directory: **80%+**  
-- Nested READMEs in subdirectories: **40%**
-- Orphan `_docs/` files: **<10%**
-
-Everything important must live in `AGENTS.md` / `CLAUDE.md` or be directly referenced from it.
-
-### Splitting without referencing
-
-If you split content into separate files, reference them explicitly from `SKILL.md`. An unreferenced `references/REFERENCE.md` will be discovered much less reliably than a referenced one.
-
----
-
-## 6. Writing CLAUDE.md / AGENTS.md Context Files
-
-Context files (not skills) are loaded on every session. They should be short, specific, and factual.
-
-### What belongs here
-
-- Build and test commands: `npm test`, `python3 scripts/lint_skills.py`
-- Naming conventions: skill directories must match `name` frontmatter
-- Architectural decisions agents would otherwise get wrong
-- "Always do X" rules that apply to every task in this repo
-- Pointers to relevant sibling skills (max 10–15 references per file)
-
-### What does NOT belong here
-
-- Multi-step procedures → move to a skill
-- Content only relevant to one subdirectory → use path-scoped rules (`.claude/rules/`)
-- Information derivable from reading the code → skip it
-- Historical context or rationale → belongs in commit messages
-
-### Size and structure
-
-**Target under 200 lines** for the main file. Longer files consume more context and reduce adherence. Use markdown headers and bullets. Claude reads structure the same way humans do.
-
-Specificity wins:
-```
-✅  "Run `python3 scripts/lint_skills.py` before committing new skills"
-❌  "Always lint skills before committing"
-```
-
-### Scoping for large projects
-
-Use path-scoped rules for instructions that only apply to certain files:
-
-```markdown
----
-paths:
-  - "neo4j-*-skill/SKILL.md"
----
-# Skill authoring rules
-- description must be 80–1024 chars
-- name must match parent directory
-```
-
-### OpenAI Codex file precedence
-
-Codex builds an instruction chain from multiple files:
-1. `~/.codex/AGENTS.override.md` — global override
-2. `~/.codex/AGENTS.md` — global baseline
-3. Repo root `AGENTS.md` → walking toward current directory (closer = higher priority)
-4. Files concatenate; combined size must stay under 32 KiB (configurable via `project_doc_max_bytes`)
-
-Use `AGENTS.override.md` for temporary changes without modifying the base file.
-
-### Verify which files are loading
-
-Claude Code: run `/memory` to see all CLAUDE.md and rules files active in the current session.
-
-Codex: run `codex --ask-for-approval never "Summarize current instructions."` to verify the instruction chain.
-
----
-
-## 7. Discovery and Progressive Disclosure
-
-The agentskills.io spec and Claude Code both implement progressive disclosure:
-
-| Stage | Loaded | Size target |
+| Stage | Content | Size target |
 |---|---|---|
-| Skill listing | `name` + `description` (~100 tokens per skill) | 80–1024 chars |
-| Skill activation | Full `SKILL.md` body | <500 lines / <5000 tokens |
-| Deep reference | `references/*.md`, `scripts/` (on demand) | Any size |
+| Skill listing | `name` + `description` only (~100 tokens) | 80–1024 chars |
+| Skill activation | Full `SKILL.md` body | **< 500 lines** |
+| On demand | `references/`, `scripts/`, `assets/` | Any size |
 
-**Design for this**: Keep `SKILL.md` under 500 lines. Move algorithm tables, full API references, and large code examples to `references/REFERENCE.md`. Reference them explicitly so the agent knows to fetch them:
+Keep `SKILL.md` under 500 lines. Move large algorithm tables, full API references, and parameter lists to `references/REFERENCE.md` — but always link them explicitly:
 
 ```markdown
 For the complete algorithm parameter reference, see [references/algorithms.md](references/algorithms.md).
 ```
 
-Claude Code-specific: the `description` + `when_to_use` text is capped at 1,536 characters in the skill listing. Front-load the key use case — the first sentence of `description` is the most important.
-
-For skills with many siblings, descriptions are shortened to fit the context budget (1% of context window, minimum 8,000 chars total). Trim descriptions if the budget causes clipping.
+An unreferenced file in `references/` has <10% discovery rate. A referenced one has 90%+.
 
 ---
 
-## 8. Security, Credentials, and Write Operations
+## Security and Write Operations
 
-### Credential handling
-
-- Write credentials to `.env`, never to shell profiles
-- Verify `.env` is in `.gitignore` before continuing in any skill that handles credentials
-- Use `AuraAPICredentials.from_env()` / `DbmsConnectionInfo.from_env()` patterns — never hardcode
+- Write credentials to `.env`; verify `.env` is in `.gitignore` before proceeding
+- Use `from_env()` patterns — never hardcode credentials
 - Never print credential values in conversation output
-
-### Write operation gates
-
-Any skill that executes writes via MCP tools (`write-cypher`, `git push`, etc.) should:
-
-1. Show the query or command and estimated affected rows/files before executing
-2. Require explicit user confirmation for destructive operations (`DELETE`, `DETACH DELETE`, force-push)
-3. Never auto-run `CALL IN TRANSACTIONS` or batch writes without approval
-
-Use `disable-model-invocation: true` on deploy, commit, and write-back skills to prevent the agent from triggering them without explicit user intent.
+- Any skill that writes via MCP must show the query + estimated impact and require explicit user confirmation before executing `DELETE`, `DETACH DELETE`, `CALL IN TRANSACTIONS`, or bulk writes
+- Use `disable-model-invocation: true` for write/deploy skills to prevent auto-triggering
 
 ---
 
-## 9. Validation and Linting
+## Anti-Patterns
 
-### agentskills.io validator
+**Excessive architecture overviews** — detailed "why" explanations push agents into reading irrelevant docs. Focus on "what" and "how"; keep "why" in commit messages.
 
-```bash
-skills-ref validate ./my-skill
-```
+**YAML block scalar `description: >`** — always inline. This burns the most time in review because linters report it as a 1-char description (hard fail) or silent wrong routing.
 
-### Claude Code skills lint script (this repo)
+**Bare prohibitions without solutions** — every "Don't" needs a "Do with pointer".
+
+**Toy code examples** — agents replicate what they see. Show idiomatic, real patterns.
+
+**Orphan reference files** — always link from `SKILL.md`. Discovery rates: root `AGENTS.md` 100%, directly referenced files 90%+, unreferenced nested files <10%.
+
+**Premature patterns** — don't document approaches that don't exist in the codebase yet. The agent will use them on the existing code.
+
+---
+
+## Linter Reference
 
 ```bash
 python3 scripts/lint_skills.py
 ```
 
-Checks: `name` matches directory, `description` is 80–1024 chars, no unknown frontmatter fields.
+The linter uses `git ls-files` to find tracked `SKILL.md` files and checks:
 
-All 21 skills in this repo must pass before committing.
+| Rule | Detail |
+|---|---|
+| `name` matches directory | Hard fail — most common mistake |
+| `description` length | Hard fail if < 80 or > 1024 chars |
+| `description` not block scalar | Detected via `>` prefix in parsed value |
+| No unknown frontmatter fields | `status`, `version` are allowed extensions; anything else fails |
+| `compatibility` length | Hard fail if > 500 chars |
 
-### Manual checks before committing a new skill
-
-- `name` exactly matches parent directory
-- `description` is inline (not block scalar `>`)
-- `description` includes both positive triggers AND negative triggers with named sibling skills
-- `## When to Use` and `## When NOT to Use` sections present in body
-- No step in procedural workflows can be skipped (each step has a "continue/stop" branch)
-- Code examples are production-idiomatic, not toy snippets
-- Write operations require explicit user confirmation
-- `SKILL.md` is under 500 lines (move overflow to `references/`)
+Stage new skills with `git add` before running — the linter only sees tracked files.
 
 ---
 
-## 10. Checklist
+## New Skill Checklist
 
-For each new skill:
-
-- [ ] **Directory name** matches `name` frontmatter exactly
-- [ ] **Description** 80–1024 chars, inline YAML, no block scalar
-- [ ] **Description** has positive triggers (product name, symbols, task phrases)
-- [ ] **Description** ends with `Does NOT handle X — use Y-skill`
-- [ ] **When to Use / When NOT to Use** in skill body, near the top
-- [ ] **Decision table or routing tree** if skill covers multiple sub-cases
-- [ ] **Numbered procedural steps** with branch conditions for operational skills
-- [ ] **Real code examples** — idiomatic, not toy; from actual API/SDK docs
-- [ ] **Every prohibition paired with an alternative**
-- [ ] **Checklist at the end** for self-verification
-- [ ] **Write operations gated** behind explicit confirmation
-- [ ] **Credentials** handled via env vars; `.env` in `.gitignore`
-- [ ] **Sibling skill delegation** explicit when prerequisites come from another skill
-- [ ] **Large reference material** moved to `references/` and linked from `SKILL.md`
-- [ ] **Linter passes**: `python3 scripts/lint_skills.py`
-
----
-
-## Sources
-
-- [Agent Skills open standard](https://agentskills.io/specification)
-- [Augment Code: How to write good AGENTS.md files](https://www.augmentcode.com/blog/how-to-write-good-agents-dot-md-files)
-- [Claude Code: Memory (CLAUDE.md guide)](https://code.claude.com/docs/en/memory)
-- [Claude Code: Skills documentation](https://code.claude.com/docs/en/skills)
-- [OpenAI Codex: AGENTS.md guide](https://developers.openai.com/codex/guides/agents-md)
-- [OpenAI Codex: Skills](https://developers.openai.com/codex/skills)
-- [VoltAgent/awesome-agent-skills](https://github.com/VoltAgent/awesome-agent-skills) — real-world skill reviews (Neon, ClickHouse, DuckDB, MongoDB)
-- [skills-learnings.md](skills-learnings.md) — lessons from reviewing the above
+- [ ] Directory name matches `name` frontmatter exactly
+- [ ] Description 80–1024 chars, inline YAML, no `>`
+- [ ] Description has positive triggers (product name, symbols, task phrases)
+- [ ] Description ends with `Does NOT handle X — use Y-skill`
+- [ ] `## When to Use` and `## When NOT to Use` near top of body
+- [ ] Decision table if skill covers multiple sub-cases or deployments
+- [ ] Numbered steps with branch conditions for operational workflows
+- [ ] Production-idiomatic code examples (not toy snippets)
+- [ ] Every prohibition paired with a concrete alternative
+- [ ] Inter-skill delegation explicit in body when prerequisites are elsewhere
+- [ ] Checklist at end of skill body
+- [ ] Write operations gated behind explicit confirmation
+- [ ] Credentials via env vars; `.env` in `.gitignore`
+- [ ] `SKILL.md` under 500 lines; overflow in `references/` with explicit links
+- [ ] `git add <skill-dir>` then `python3 scripts/lint_skills.py` — all pass
+- [ ] `README.md` in skill directory covers what skill does, availability, install command
