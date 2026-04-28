@@ -249,11 +249,19 @@ For skills that produce analysis or recommendations, prescribe exact output form
 - [item]
 
 ### Issues Found
-#### [Title] — Severity: HIGH / MEDIUM / LOW
+#### [Title] — Severity: ERROR / WARNING / INFO
 - **Current**: what the code does
 - **Problem**: why it's wrong  
 - **Fix**: specific change with code snippet
 ````
+
+Use consistent severity semantics across all analysis/review skills:
+
+| Severity | Meaning | Agent action |
+|---|---|---|
+| `ERROR` | Blocking — must be fixed before proceeding | Stop and report; do not continue |
+| `WARNING` | Review recommended — may need attention | Report; ask user before proceeding |
+| `INFO` | Informational — no action required | Surface in output; continue |
 
 ### Provenance labels for advice skills
 
@@ -298,6 +306,18 @@ Run `npm test`. If tests fail:
 3. Report the exact failing test and error message to the user
 ```
 
+### Async operations — poll explicitly, don't assume completion
+
+For operations that are asynchronous (index builds, schema migrations, Aura instance provisioning, GDS algorithm runs on large graphs), tell the agent to poll for completion rather than moving on:
+
+```markdown
+Run the migration. It returns immediately with an operation ID.
+Call `SHOW INDEXES YIELD name, state WHERE state <> 'ONLINE'` every 5 seconds
+until the result is empty. Do NOT query the index until it reports ONLINE.
+```
+
+Async operations that silently "succeed" but are still running are a common source of hard-to-debug failures. Make the wait explicit.
+
 ### Close with a checklist
 
 Agents use checklists to self-verify before reporting done:
@@ -337,6 +357,7 @@ An unreferenced file in `references/` has <10% discovery rate. A referenced one 
 - Write credentials to `.env`; verify `.env` is in `.gitignore` before proceeding
 - Use `from_env()` patterns — never hardcode credentials
 - Never print credential values in conversation output
+- **Do not prompt the user to set env vars** unless skill execution actually fails due to a missing variable — skills that use `from_env()` or load `.env` automatically do not need the user to set anything in advance
 - Any skill that writes via MCP must show the query + estimated impact and require explicit user confirmation before executing `DELETE`, `DETACH DELETE`, `CALL IN TRANSACTIONS`, or bulk writes
 - Use `disable-model-invocation: true` for write/deploy skills to prevent auto-triggering
 
