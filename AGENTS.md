@@ -82,7 +82,7 @@ Never a bare "Don't" without naming where to go instead. With 20+ skills in this
 
 Always the first two sections. Short-circuits the agent before it reads the whole skill body:
 
-```markdown
+````markdown
 ## When to Use
 - Running GDS algorithms on Aura BC or VDC
 - Processing graph data from Pandas DataFrames or Spark
@@ -90,13 +90,13 @@ Always the first two sections. Short-circuits the agent before it reads the whol
 ## When NOT to Use
 - **Aura Pro with GDS plugin** → use `neo4j-gds-skill`
 - **Writing Cypher queries** → use `neo4j-cypher-skill`
-```
+````
 
 ### Procedural numbered steps for operational skills
 
 For connect, provision, import, and deploy skills — strict numbered steps, each with a code block and a branch condition. Agents cannot skip or reorder numbered steps:
 
-```markdown
+````markdown
 ## Step 1 — Verify GDS is available
 
 ```cypher
@@ -106,7 +106,7 @@ RETURN gds.version() AS gds_version
 If this fails with `Unknown function 'gds.version'`, GDS is not installed. **Stop and inform the user.**
 
 ## Step 2 — Estimate memory before projecting
-```
+````
 
 Evidence: numbered workflows reduced missing wiring from 40% to 10%, +25% correctness, +20% completeness (Augment Code).
 
@@ -114,13 +114,13 @@ Evidence: numbered workflows reduced missing wiring from 40% to 10%, +25% correc
 
 Force the choice upfront — don't describe all approaches in prose and let the agent guess:
 
-```markdown
+````markdown
 | Deployment | Use |
 |---|---|
 | Aura Pro | `neo4j-gds-skill` (embedded plugin) |
 | Aura Business Critical / VDC | `neo4j-aura-graph-analytics-skill` (serverless) |
 | Self-managed with GDS | `neo4j-gds-skill` |
-```
+````
 
 Evidence: decision tables produce 25% higher best-practice adherence (Augment Code).
 
@@ -157,16 +157,16 @@ Evidence: production code examples improve code reuse by 20% (Augment Code).
 
 Name sibling skill delegation explicitly in the body, not just the description:
 
-```markdown
+````markdown
 If `gds.version()` fails, GDS is not available on this deployment.
 For Aura BC/VDC, delegate to `neo4j-aura-graph-analytics-skill` instead.
-```
+````
 
 ### Structured output templates for review skills
 
 For skills that produce analysis or recommendations, prescribe exact output format:
 
-```markdown
+````markdown
 ## Output format
 
 ### Compliant
@@ -177,7 +177,7 @@ For skills that produce analysis or recommendations, prescribe exact output form
 - **Current**: what the code does
 - **Problem**: why it's wrong  
 - **Fix**: specific change with code snippet
-```
+````
 
 ### Provenance labels for advice skills
 
@@ -191,24 +191,24 @@ Use especially in GDS algorithm selection and modeling advice.
 
 ### Token-cost guards for MCP/query skills
 
-```markdown
+````markdown
 Before running any traversal query via MCP:
 1. Run `EXPLAIN` or `COUNT(*)` first
 2. Warn if no `LIMIT` on patterns that could match millions of nodes
 3. Default to `LIMIT 25` on exploratory queries
-```
+````
 
 ### Close with a checklist
 
 Agents use checklists to self-verify before reporting done:
 
-```markdown
+````markdown
 ## Checklist
 - [ ] `gds.version()` confirmed
 - [ ] Memory estimated before large projections
 - [ ] Named graph dropped after use (`G.drop()`)
 - [ ] Results written back before session deletion
-```
+````
 
 ---
 
@@ -224,9 +224,9 @@ The agentskills.io spec and Claude Code both load skills in three stages:
 
 Keep `SKILL.md` under 500 lines. Move large algorithm tables, full API references, and parameter lists to `references/REFERENCE.md` — but always link them explicitly:
 
-```markdown
+````markdown
 For the complete algorithm parameter reference, see [references/algorithms.md](references/algorithms.md).
-```
+````
 
 An unreferenced file in `references/` has <10% discovery rate. A referenced one has 90%+.
 
