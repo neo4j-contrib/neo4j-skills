@@ -2,7 +2,12 @@
 
 # neo4j-driver-javascript-skill
 
-Guides agents through connecting to Neo4j with the JavaScript/TypeScript driver: setup, executeQuery(), session/transaction management, and the 64-bit integer footgun.
+Comprehensive guide to using the official Neo4j JavaScript/TypeScript Driver (v6) — covering
+installation, driver lifecycle, all three query APIs (executeQuery, managed transactions via
+executeRead/Write, auto-commit via session.run), Integer handling and JSON serialization,
+temporal and graph types, result consumption, async/Promise error handling and session closure,
+UNWIND batching, performance, causal consistency, TypeScript usage, and browser/WebSocket
+support.
 
 **Install:**
 ```bash

@@ -2,7 +2,12 @@
 
 # neo4j-driver-python-skill
 
-Guides agents through connecting to Neo4j with the Python driver: setup, execute_query(), async patterns, session/transaction management, and result serialization.
+Comprehensive guide to using the official Neo4j Python Driver (v6, current stable) — covering
+installation, driver lifecycle, all three query APIs (execute_query, managed transactions via
+execute_read/write, implicit transactions via session.run), async patterns with AsyncGraphDatabase,
+result handling and consumption, data type mapping (including temporal and graph types), UNWIND
+batching, null safety, performance tuning, causal consistency/bookmarks, and connection
+configuration.
 
 **Install:**
 ```bash
