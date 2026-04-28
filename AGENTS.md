@@ -1,6 +1,21 @@
 # Writing Skills for this Repository
 
+A `SKILL.md` is not a prompt, not documentation, and not a policy file. It is a **portable, on-demand operational playbook** for an autonomous coding agent — a runbook with judgment, a checklist with decision logic, a guardrail against improvisational mistakes.
+
 When adding or editing skills in this repository, follow these rules. All skills live in `neo4j-*-skill/` directories. Run `python3 scripts/lint_skills.py` before every commit — all skills must pass.
+
+## Six Design Principles
+
+Every skill must satisfy all six:
+
+| Principle | Test |
+|---|---|
+| **Triggerable** | Does the description clearly state when to activate? |
+| **Procedural** | Do the instructions define a deterministic workflow? |
+| **Scoped** | Does the skill do exactly one coherent thing? |
+| **Composable** | Does it work alongside sibling skills without conflict or overlap? |
+| **Verifiable** | Are outputs and success criteria explicit? |
+| **Context-efficient** | Is metadata concise? Does detail load only when needed? |
 
 ---
 
@@ -78,6 +93,17 @@ Never a bare "Don't" without naming where to go instead. With 20+ skills in this
 
 ## Skill Body Structure
 
+### Write imperatively, not explanatorily
+
+Instructions must be commands, not explanations. Agents execute procedures; they do not reliably interpret prose intent.
+
+```
+❌  You may want to consider writing tests first.
+✅  Write a failing test. Confirm the failure is for the intended reason.
+```
+
+Every instruction should be answerable with "done" or "not done" — not "I think so."
+
 ### Open with When to Use / When NOT to Use
 
 Always the first two sections. Short-circuits the agent before it reads the whole skill body:
@@ -91,6 +117,41 @@ Always the first two sections. Short-circuits the agent before it reads the whol
 - **Aura Pro with GDS plugin** → use `neo4j-gds-skill`
 - **Writing Cypher queries** → use `neo4j-cypher-skill`
 ````
+
+### Define entry criteria
+
+State explicitly when the skill should begin executing, not just when it's relevant. Prevents the agent from starting work before prerequisites are met:
+
+```markdown
+## Entry criteria
+- A feature request or bug report is present in the conversation
+- The file(s) to be modified have been identified
+- Existing tests (if any) are confirmed passing before changes begin
+```
+
+### Specify artifacts explicitly
+
+Tell the agent exactly what to produce. Without this, the agent improvises output format — sometimes useful, often not:
+
+```markdown
+## Outputs
+- Modified `SKILL.md` with inline description (no block scalar)
+- Updated `README.md` for the skill directory
+- Lint output confirming all checks pass
+```
+
+### Handle uncertainty explicitly
+
+Distinct from failure recovery (command failed) — this is what to do when required information is *missing before starting*:
+
+```markdown
+If required context is missing before starting (e.g., no target file identified, 
+connection credentials not provided):
+1. State exactly what is missing
+2. Explain why it is needed
+3. Ask for the minimum input required to proceed
+Do NOT guess. Do NOT proceed with assumptions that could cause destructive changes.
+```
 
 ### Narrow Bridge vs Open Field
 
@@ -294,6 +355,10 @@ An unreferenced file in `references/` has <10% discovery rate. A referenced one 
 **Orphan reference files** — always link from `SKILL.md`. Discovery rates: root `AGENTS.md` 100%, directly referenced files 90%+, unreferenced nested files <10%.
 
 **Premature patterns** — don't document approaches that don't exist in the codebase yet. The agent will use them on the existing code.
+
+**No exit criteria** — without an explicit verification checklist or done condition, agents tend to "wander": continuing to refine, second-guess, or add unrequested work. Always define when the skill is finished.
+
+**Overlapping skills** — if two skills cover the same trigger, the agent picks unpredictably. Every skill must be composable: it should be possible to have all skills active simultaneously without them conflicting. Resolve overlaps with explicit negative triggers naming the boundary.
 
 ---
 
