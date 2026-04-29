@@ -6,7 +6,7 @@ description: Serverless GDS sessions on Neo4j Aura — covers GdsSessions, AuraA
   result retrieval, and session lifecycle. Use when running graph algorithms on Aura
   Business Critical or VDC, processing graph data from Pandas/Spark, or using the
   graphdatascience Python client in AGA (serverless) mode. Covers all three data source
-  modes: AuraDB-connected, self-managed Neo4j, and standalone from DataFrames.
+  three source modes (AuraDB-connected, self-managed Neo4j, standalone from DataFrames).
   Does NOT cover the embedded GDS plugin on Aura Pro or self-managed Neo4j — use neo4j-gds-skill.
   Does NOT handle Cypher authoring — use neo4j-cypher-skill.
   Does NOT cover Snowflake Graph Analytics — use neo4j-snowflake-graph-analytics-skill.
