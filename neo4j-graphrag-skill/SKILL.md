@@ -1,14 +1,13 @@
 ---
 name: neo4j-graphrag-skill
-description: Build GraphRAG retrieval pipelines and knowledge graphs on Neo4j using the
-  neo4j-graphrag Python package (formerly neo4j-genai). Covers retriever selection
-  (VectorRetriever, HybridRetriever, VectorCypherRetriever, HybridCypherRetriever,
-  Text2CypherRetriever), retrieval_query Cypher fragments, query_params, pipeline
-  wiring (GraphRAG + LLM), SimpleKGPipeline for doc-to-graph extraction, embedder
-  setup, index creation, and LangChain/LlamaIndex integration. Does NOT handle plain
-  vector search without graph traversal — use neo4j-vector-search-skill. Does NOT
-  handle GDS analytics — use neo4j-gds-skill. Does NOT handle agent memory — use
-  neo4j-agent-memory-skill. Does NOT handle Cypher authoring — use neo4j-cypher-skill.
+description: Build GraphRAG retrieval pipelines on Neo4j using the neo4j-graphrag Python
+  package (formerly neo4j-genai). Covers retriever selection (VectorRetriever,
+  HybridRetriever, VectorCypherRetriever, HybridCypherRetriever, Text2CypherRetriever),
+  retrieval_query Cypher fragments, query_params, pipeline wiring (GraphRAG + LLM),
+  embedder setup, index creation, and LangChain/LlamaIndex integration. Does NOT handle
+  KG construction from documents — use neo4j-document-import-skill. Does NOT handle
+  plain vector search — use neo4j-vector-index-skill. Does NOT handle GDS analytics —
+  use neo4j-gds-skill. Does NOT handle agent memory — use neo4j-agent-memory-skill.
 version: 1.0.0
 status: active
 allowed-tools: Bash WebFetch
@@ -22,17 +21,16 @@ allowed-tools: Bash WebFetch
 - Choosing between VectorRetriever, HybridRetriever, VectorCypherRetriever, HybridCypherRetriever
 - Writing `retrieval_query` Cypher fragments that traverse the graph after vector lookup
 - Wiring retriever + LLM into a `GraphRAG` pipeline
-- Constructing a knowledge graph from documents with `SimpleKGPipeline`
 - Debugging low retrieval quality (when to use graph traversal vs plain vector)
 - Integrating Neo4j with LangChain (`langchain-neo4j`), LlamaIndex, or Haystack
 
 ## When NOT to Use
 
-- **Plain vector/semantic search without graph traversal** → `neo4j-vector-search-skill`
+- **KG construction from documents** → `neo4j-document-import-skill`
+- **Plain vector/semantic search without graph traversal** → `neo4j-vector-index-skill`
 - **GDS algorithms (PageRank, Louvain, node embeddings)** → `neo4j-gds-skill`
 - **Agent long-term memory** → `neo4j-agent-memory-skill`
 - **Writing raw Cypher queries** → `neo4j-cypher-skill`
-- **Document chunking / loading only** → `neo4j-document-import-skill`
 
 ---
 
@@ -234,51 +232,7 @@ If `neo4j_schema=None`: retriever fetches schema automatically. For large schema
 
 ---
 
-## Step 9 — SimpleKGPipeline (Document → Knowledge Graph)
-
-```python
-from neo4j_graphrag.experimental.pipeline.kg_builder import SimpleKGPipeline
-import asyncio
-
-pipeline = SimpleKGPipeline(
-    llm=OpenAILLM(model_name="gpt-4o"),
-    driver=driver,
-    embedder=embedder,
-    # Schema: list of entity types and relation types to extract
-    entities=["Person", "Organization", "Location"],
-    relations=["WORKS_AT", "LOCATED_IN", "KNOWS"],
-    # Optional: detailed schema with descriptions and properties
-    # schema={"node_types": [...], "relationship_types": [...], "patterns": [...]},
-    on_error="IGNORE",               # "RAISE" or "IGNORE"
-    perform_entity_resolution=True,  # merge similar entities (default True)
-    from_file=False,                 # True = pass file_path; False = pass text=
-)
-
-# Run from text:
-asyncio.run(pipeline.run_async(text=document_text))
-
-# Run from file:
-asyncio.run(pipeline.run_async(file_path="path/to/doc.pdf"))
-
-# Attach metadata to Document node:
-asyncio.run(pipeline.run_async(
-    text=document_text,
-    document_metadata={"source": "annual_report_2024", "author": "CFO"},
-))
-```
-
-Structured output (OpenAI/VertexAI only — improves reliability):
-
-```python
-pipeline = SimpleKGPipeline(
-    llm=OpenAILLM(model_name="gpt-4o", model_params={"use_structured_output": True}),
-    ...
-)
-```
-
----
-
-## Step 10 — Custom Prompt Template
+## Step 9 — Custom Prompt Template
 
 ```python
 from neo4j_graphrag.generation.prompts import RagTemplate
@@ -350,7 +304,7 @@ from neo4j_graphrag.llm import (
     CohereLLM,
     OllamaLLM,
 )
-# Any LangChain chat model also accepted by GraphRAG/SimpleKGPipeline
+# Any LangChain chat model also accepted by GraphRAG
 ```
 
 ---
@@ -379,7 +333,6 @@ response = rag.search(
 - 0 results from retrieval: run `retriever.search()` directly (skip LLM); check `top_k`, index name, embedding dims
 - LLM hallucinating: reduce `top_k`, improve `retrieval_query` to return more specific context
 - Slow queries: add `LIMIT` inside `retrieval_query` on expensive expansions; use `filters` to pre-reduce candidates
-- KG builder produces empty graph: set `on_error="RAISE"`, check LLM extraction output, verify entity/relation names match schema
 - Embedding dimension mismatch: `SHOW INDEXES YIELD name, options` — check `vector.dimensions`
 
 ---
@@ -387,86 +340,8 @@ response = rag.search(
 ## References
 
 - [references/retrievers.md](references/retrievers.md) — full retriever API, all constructor params, result_formatter, ToolsRetriever, external DB retrievers
-- [references/kg-builder.md](references/kg-builder.md) — SimpleKGPipeline advanced config, chunking options, schema modes, entity resolution
 - [GraphRAG Python Docs](https://neo4j.com/docs/neo4j-graphrag-python/current/)
 - [neo4j-graphrag GitHub](https://github.com/neo4j/neo4j-graphrag-python)
-- [GraphAcademy: Constructing Knowledge Graphs](https://graphacademy.neo4j.com/courses/genai-graphrag-python/)
-
----
-
-## Step 11 — KG Pipeline Customization
-
-### Chunking (FixedSizeSplitter)
-
-```python
-from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter import FixedSizeSplitter
-
-splitter = FixedSizeSplitter(chunk_size=500, chunk_overlap=100)
-pipeline = SimpleKGPipeline(..., text_splitter=splitter)
-```
-
-| Goal | chunk_size | chunk_overlap |
-|---|---|---|
-| Semantic search quality | 500–1000 chars | 100–200 |
-| Dense entity extraction | 200–500 chars | 50–100 |
-| Max LLM context (fewer chunks) | 1500–2000 chars | 200–400 |
-
-LangChain adapter: `from neo4j_graphrag.experimental.components.text_splitters.langchain import LangChainTextSplitterAdapter`
-
-### LexicalGraphConfig (rename Document/Chunk node labels)
-
-```python
-from neo4j_graphrag.experimental.components.kg_writer import LexicalGraphConfig
-
-config = LexicalGraphConfig(
-    document_node_label="Lesson",
-    chunk_node_label="Section",
-    chunk_to_document_relationship_type="PART_OF",
-)
-pipeline = SimpleKGPipeline(..., lexical_graph_config=config)
-```
-
-### Entity Resolution (post-processing)
-
-Default: merge entities with identical label+name. Post-processing resolvers available:
-
-```python
-from neo4j_graphrag.experimental.components.resolver import (
-    SpacySemanticMatchResolver,   # spaCy similarity; pip install neo4j-graphrag[spacy]
-    FuzzyMatchResolver,           # rapidfuzz; pip install neo4j-graphrag[fuzzy]
-)
-resolver = FuzzyMatchResolver(driver=driver, neo4j_database="neo4j")
-asyncio.run(resolver.run())  # run after pipeline ingestion
-```
-
-### Custom PDF / Data Loader
-
-```python
-from neo4j_graphrag.experimental.components.pdf_loader import PdfLoader
-
-class CustomPDFLoader(PdfLoader):
-    async def run(self, filepath):           # override to pre-process text
-        doc = await super().run(filepath)
-        doc.text = re.sub(r"^:.*$", "", doc.text, flags=re.MULTILINE)
-        return doc
-
-pipeline = SimpleKGPipeline(..., pdf_loader=CustomPDFLoader())
-```
-
-### KG Builder Prompt Customization
-
-```python
-from neo4j_graphrag.experimental.pipeline.kg_builder import SimpleKGPipeline
-from neo4j_graphrag.experimental.components.entity_relation_extractor import OnError
-
-domain_instructions = "Extract ONLY technology companies and their products."
-pipeline = SimpleKGPipeline(
-    ...,
-    prompt_template=domain_instructions + "\n\n{default_prompt}",
-)
-```
-
-Full reference: [references/knowledge-graph-construction.md](references/knowledge-graph-construction.md)
 
 ---
 
@@ -480,8 +355,4 @@ Full reference: [references/knowledge-graph-construction.md](references/knowledg
 - [ ] `node` and `score` NOT re-declared in `retrieval_query` — auto-injected
 - [ ] `query_params` passed via `retriever_config` or direct `retriever.search()` arg
 - [ ] `retriever_config={"top_k": N}` set on `rag.search()` (default 5)
-- [ ] `SimpleKGPipeline.run_async()` called with `asyncio.run()`
-- [ ] `on_error="RAISE"` used during development; switch to `"IGNORE"` in production
-- [ ] `chunk_size` tuned for use case (500–1000 chars for semantic search)
-- [ ] Post-processing resolvers run after ingestion if `perform_entity_resolution=False`
 - [ ] Credentials in env vars; never hardcoded

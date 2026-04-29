@@ -326,30 +326,25 @@ DROP INDEX chunk_embedding IF EXISTS;
 
 ---
 
-## In-Cypher Embedding Generation — genai.vector.encode()
+## In-Cypher Embedding Generation — ai.text.embed() [2025.12]
 
-Generate embeddings at query time without external Python code:
+Generate embeddings at query time without external Python code. Use `ai.text.embed()` — the current API since [2025.12]:
 
 ```cypher
-// Syntax
-genai.vector.encode(resource :: STRING, provider :: STRING, configuration :: MAP) :: LIST<FLOAT>
+// Syntax (requires CYPHER 25)
+CYPHER 25
+// ai.text.embed(resource :: STRING, provider :: STRING, configuration :: MAP) :: VECTOR
 ```
 
-**Supported providers:**
+Provider strings are lowercase (`'openai'`, `'vertexai'`, `'bedrock-titan'`, `'azure-openai'`). Full provider config → `neo4j-genai-plugin-skill`.
 
-| Provider string | Required config keys | Notes |
-|---|---|---|
-| `'OpenAI'` | `token` (API key), optional `model` | Default model: `text-embedding-ada-002` |
-| `'VertexAI'` | `token`, `projectId`, `location` | Google Vertex AI |
-| `'Bedrock'` | `accessKeyId`, `secretAccessKey`, `region` | AWS Bedrock |
-| `'Azure'` | `token`, `resource`, `deployment` | Azure OpenAI |
-
-Full query pattern — encode at query time, search immediately:
+Full query pattern — embed at query time, search immediately:
 ```cypher
-WITH genai.vector.encode(
+CYPHER 25
+WITH ai.text.embed(
     "What are good open source projects",
-    "OpenAI",
-    { token: $openaiKey }) AS userEmbedding
+    "openai",
+    { token: $openaiKey, model: 'text-embedding-3-small' }) AS userEmbedding
 CALL db.index.vector.queryNodes('chunk_embedding', 6, userEmbedding)
 YIELD node AS c, score
 RETURN c.text, score
@@ -358,7 +353,8 @@ ORDER BY score DESC
 
 With SEARCH clause (2026.01+):
 ```cypher
-WITH genai.vector.encode("my query", "OpenAI", { token: $openaiKey }) AS userEmbedding
+CYPHER 25
+WITH ai.text.embed("my query", "openai", { token: $openaiKey, model: 'text-embedding-3-small' }) AS userEmbedding
 MATCH (c:Chunk)
   SEARCH c IN (VECTOR INDEX chunk_embedding FOR userEmbedding LIMIT 6) SCORE AS score
 RETURN c.text, score
@@ -369,6 +365,13 @@ ORDER BY score DESC
 ✅ Use `$openaiKey` parameter; inject via driver params dict.
 
 **Rule**: Use same model at ingest time and query time — embeddings from different models are not comparable.
+
+**Deprecated** (still works but do not use in new code):
+- `genai.vector.encode()` [deprecated] → use `ai.text.embed()` [2025.12]
+- `genai.vector.encodeBatch()` [deprecated] → use `CALL ai.text.embedBatch()` [2025.12]
+- `genai.vector.listEncodingProviders()` [deprecated] → use `CALL ai.text.embed.providers()` [2025.12]
+
+For full `ai.text.*` reference (completion, structured output, chat, tokenization) → `neo4j-genai-plugin-skill`.
 
 ---
 
@@ -480,7 +483,7 @@ If both return `null` → embeddings not set. If cosine returns `1.0` → identi
 | Index not ONLINE at ingest time | Inserting nodes before index exists is valid — index auto-populates. But querying during `POPULATING` returns partial results | Always poll `state = 'ONLINE'` before first query |
 | Wrong dimensions — silent failure | Stored vector dim ≠ `vector.dimensions` → `IllegalArgumentException` at query time, not at ingest time | Assert `len(emb) == expected_dim` before every `SET c.embedding` |
 | Different models at ingest vs query | No error; cosine scores ~0.3–0.5 for clearly similar text | Use same model string/version for both; store model name as node metadata |
-| Missing model at query | `genai.vector.encode` returns `null` silently if provider config wrong | Test encode call standalone; check `RETURN genai.vector.encode(...)` before embedding into pipeline |
+| Missing model at query | `ai.text.embed` returns `null` silently if provider config wrong | Test encode call standalone; check `CYPHER 25 RETURN ai.text.embed(...)` before embedding into pipeline |
 | Large single-transaction ingest | One transaction for 10k nodes → OOM or timeout | Use `UNWIND $rows ... CALL IN TRANSACTIONS OF 500 ROWS` or Python batch loop |
 | Chunk overlap not set | Adjacent chunks with no overlap → context at boundaries lost → poor recall for cross-paragraph queries | Set `chunk_overlap` ≥ 10% of `chunk_size` |
 
@@ -491,5 +494,5 @@ Load on demand:
 - [Vector index docs](https://neo4j.com/docs/cypher-manual/25/indexes/semantic-indexes/vector-indexes/)
 - [SEARCH clause docs](https://neo4j.com/docs/cypher-manual/25/clauses/search/)
 - [Vector functions docs](https://neo4j.com/docs/cypher-manual/25/functions/vector/)
-- [genai.vector.encode() docs](https://neo4j.com/docs/cypher-manual/current/genai-integrations/)
+- [ai.text.embed() / GenAI plugin docs](https://neo4j.com/docs/genai/plugin/current/) [2025.12] — replaces deprecated `genai.vector.encode()`
 - [db.create.setNodeVectorProperty docs](https://neo4j.com/docs/operations-manual/current/reference/procedures/)
