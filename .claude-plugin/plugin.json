@@ -1,0 +1,39 @@
+{
+  "name": "neo4j-skills",
+  "version": "1.0.0",
+  "description": "Agent skills for Neo4j — Cypher queries, graph modeling, drivers, imports, GraphRAG, GDS, vector indexes, Aura provisioning, and more.",
+  "author": {
+    "name": "Neo4j",
+    "email": "devrel@neo4j.com"
+  },
+  "homepage": "https://neo4j.com",
+  "license": "Apache-2.0",
+  "repository": "https://github.com/neo4j-contrib/neo4j-skills",
+  "skills": "./",
+  "userConfig": {
+    "neo4j_uri": {
+      "title": "Neo4j URI",
+      "description": "Bolt URI for the Neo4j instance (e.g. neo4j+s://xxxx.databases.neo4j.io)",
+      "type": "string",
+      "sensitive": false
+    },
+    "neo4j_username": {
+      "title": "Username",
+      "description": "Neo4j database username (default: neo4j)",
+      "type": "string",
+      "sensitive": false
+    },
+    "neo4j_password": {
+      "title": "Password",
+      "description": "Neo4j database password",
+      "type": "string",
+      "sensitive": true
+    },
+    "neo4j_database": {
+      "title": "Database",
+      "description": "(Optional) Target database name (default: neo4j)",
+      "type": "string",
+      "sensitive": false
+    }
+  }
+}

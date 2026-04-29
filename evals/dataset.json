@@ -1,0 +1,83 @@
+{
+  "scenarios": [
+    {
+      "id": "cypher-basic-match",
+      "starting_prompt": "Find all Person nodes in my Neo4j database and return their names.",
+      "conversation_plan": "Ask the agent to write a Cypher query to find Person nodes. Validate it uses CYPHER 25 prefix, parameters, and LIMIT.",
+      "expected_skills": ["neo4j-cypher-skill"],
+      "expected_patterns": ["CYPHER 25", "MATCH", "LIMIT"],
+      "kind": "skill-routing"
+    },
+    {
+      "id": "cypher-schema-first",
+      "starting_prompt": "I want to query my graph but I don't know the schema. Help me explore it.",
+      "conversation_plan": "Agent should trigger schema inspection before writing any query. Validate it runs db.schema.visualization() or SHOW INDEXES.",
+      "expected_skills": ["neo4j-cypher-skill"],
+      "expected_patterns": ["db.schema.visualization", "SHOW INDEXES"],
+      "kind": "skill-routing"
+    },
+    {
+      "id": "model-relational-migration",
+      "starting_prompt": "I have a SQL schema with Users, Orders, and Products tables. How should I model this as a graph?",
+      "conversation_plan": "Agent should apply graph modeling patterns: Users and Products as nodes, Orders as either intermediate node or relationship. Should recommend constraints.",
+      "expected_skills": ["neo4j-modeling-skill"],
+      "kind": "skill-routing"
+    },
+    {
+      "id": "vector-index-create",
+      "starting_prompt": "I want to add semantic search to my Neo4j database using OpenAI embeddings.",
+      "conversation_plan": "Agent should guide through creating a vector index with correct dimensions for the embedding model and show the SEARCH query pattern.",
+      "expected_skills": ["neo4j-vector-index-skill"],
+      "expected_patterns": ["CREATE VECTOR INDEX", "vector.dimensions"],
+      "kind": "skill-routing"
+    },
+    {
+      "id": "graphrag-pipeline",
+      "starting_prompt": "Build a GraphRAG pipeline that answers questions about my Neo4j knowledge graph.",
+      "conversation_plan": "Agent should use VectorCypherRetriever or HybridCypherRetriever, show retrieval_query with node and score variables, wire up a GraphRAG pipeline.",
+      "expected_skills": ["neo4j-graphrag-skill"],
+      "expected_patterns": ["VectorCypherRetriever", "retrieval_query", "GraphRAG"],
+      "kind": "skill-routing"
+    },
+    {
+      "id": "import-csv",
+      "starting_prompt": "Load 100k rows from a CSV file into my Neo4j database as Person nodes.",
+      "conversation_plan": "Agent should use LOAD CSV + CALL IN TRANSACTIONS, set batch size, handle type coercion and null values.",
+      "expected_skills": ["neo4j-import-skill"],
+      "expected_patterns": ["LOAD CSV", "CALL IN TRANSACTIONS", "MERGE"],
+      "kind": "skill-routing"
+    },
+    {
+      "id": "python-driver-query",
+      "starting_prompt": "Write Python code to connect to Neo4j and find all movies released after 2020.",
+      "conversation_plan": "Agent should use neo4j package (not neo4j-driver), execute_query pattern, proper result handling.",
+      "expected_skills": ["neo4j-driver-python-skill"],
+      "expected_patterns": ["from neo4j import", "execute_query", "CYPHER 25"],
+      "kind": "skill-routing"
+    },
+    {
+      "id": "aura-provision",
+      "starting_prompt": "Create a new Neo4j Aura Professional instance in us-east-1.",
+      "conversation_plan": "Agent should use aura-provisioning-skill, show async polling pattern, warn about credentials being downloadable only once.",
+      "expected_skills": ["neo4j-aura-provisioning-skill"],
+      "expected_patterns": ["aura-cli", "status", "credentials"],
+      "kind": "skill-routing"
+    },
+    {
+      "id": "gds-pagerank",
+      "starting_prompt": "Run PageRank on my social graph to find the most influential users.",
+      "conversation_plan": "Agent should project the graph first, estimate memory, then run PageRank in stream mode. Should use neo4j-gds-skill not aura-graph-analytics-skill (no Aura context).",
+      "expected_skills": ["neo4j-gds-skill"],
+      "expected_patterns": ["gds.graph.project", "gds.pageRank", "estimate"],
+      "kind": "skill-routing"
+    },
+    {
+      "id": "migration-cypher-upgrade",
+      "starting_prompt": "I have old Cypher queries using shortestPath() and id(n). Upgrade them to Cypher 25.",
+      "conversation_plan": "Agent should apply migration substitutions: shortestPath → SHORTEST 1 QPE, id(n) → elementId(n), prepend CYPHER 25.",
+      "expected_skills": ["neo4j-migration-skill"],
+      "expected_patterns": ["SHORTEST 1", "elementId", "CYPHER 25"],
+      "kind": "skill-routing"
+    }
+  ]
+}

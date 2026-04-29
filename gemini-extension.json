@@ -1,0 +1,28 @@
+{
+  "name": "neo4j-skills",
+  "version": "1.0.0",
+  "description": "Agent skills for Neo4j graph database — Cypher queries, graph modeling, drivers, imports, GraphRAG, GDS, vector indexes, and Aura provisioning.",
+  "contextFileName": "NEO4J.md",
+  "settings": [
+    {
+      "name": "Neo4j URI",
+      "description": "Bolt URI for the Neo4j instance (e.g. neo4j+s://xxxx.databases.neo4j.io)",
+      "envVar": "NEO4J_URI"
+    },
+    {
+      "name": "Username",
+      "description": "Neo4j database username (default: neo4j)",
+      "envVar": "NEO4J_USERNAME"
+    },
+    {
+      "name": "Password",
+      "description": "Neo4j database password",
+      "envVar": "NEO4J_PASSWORD"
+    },
+    {
+      "name": "Database",
+      "description": "(Optional) Target database name (default: neo4j)",
+      "envVar": "NEO4J_DATABASE"
+    }
+  ]
+}

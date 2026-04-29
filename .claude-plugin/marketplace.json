@@ -1,0 +1,16 @@
+{
+  "name": "neo4j-skills-marketplace",
+  "owner": {
+    "name": "Neo4j",
+    "email": "devrel@neo4j.com"
+  },
+  "metadata": {
+    "description": "Agent skills for Neo4j graph database — write Cypher queries, design graph models, use drivers, run imports, build GraphRAG pipelines, run GDS algorithms, and manage Aura instances."
+  },
+  "plugins": [
+    {
+      "name": "neo4j-skills",
+      "source": "./"
+    }
+  ]
+}
