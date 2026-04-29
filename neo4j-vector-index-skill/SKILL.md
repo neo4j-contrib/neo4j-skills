@@ -2,7 +2,7 @@
 name: neo4j-vector-index-skill
 description: Create and manage Neo4j vector indexes, run vector similarity search (ANN/kNN),
   store embeddings on nodes or relationships, use SEARCH clause (Neo4j 2026.01+) or
-  db.index.vector.queryNodes() procedure (2025.x fallback), configure HNSW and quantization
+  db.index.vector.queryNodes() procedure (pre-2026.01 fallback), configure HNSW and quantization
   options, pick similarity function and embedding provider dimensions, and batch-update
   embeddings. Use when tasks involve CREATE VECTOR INDEX, vector.dimensions, cosine/euclidean
   search, embedding ingestion pipelines, or semantic nearest-neighbor lookup in Neo4j.
@@ -10,7 +10,8 @@ description: Create and manage Neo4j vector indexes, run vector similarity searc
   Does NOT handle fulltext/keyword indexes (FULLTEXT INDEX, db.index.fulltext) — use neo4j-cypher-skill.
   Does NOT handle GDS graph embeddings (FastRP, Node2Vec) — use neo4j-gds-skill.
 version: 1.0.0
-compatibility: Neo4j >= 2025.01; SEARCH clause requires 2026.01+
+compatibility: Neo4j >= 5.13 for GA vector indexes; prefer latest Neo4j/Cypher 25;
+  SEARCH clause requires 2026.01+
 allowed-tools: Bash WebFetch
 ---
 
@@ -19,21 +20,22 @@ allowed-tools: Bash WebFetch
 - Running vector similarity / nearest-neighbor search
 - Storing embeddings on graph nodes during ingestion
 - Choosing similarity function, dimensions, HNSW params, or quantization
-- Using `SEARCH` clause (2026.01+) or `db.index.vector.queryNodes()` (2025.x)
+- Using `SEARCH` clause (2026.01+) or `db.index.vector.queryNodes()` for older deployments
 - Batch-updating embeddings after model change
 - Combining vector results with immediate graph neighborhood (full retrieval_query pipelines → `neo4j-graphrag-skill`)
 
 ## When NOT to Use
 - **GraphRAG pipelines** (VectorCypherRetriever, HybridCypherRetriever, retrieval_query) → `neo4j-graphrag-skill`
-- **Fulltext / keyword search** (FULLTEXT INDEX, `db.index.fulltext.queryNodes`) → `neo4j-cypher-skill`
+- **Non-vector search and index admin** (`FULLTEXT INDEX`, `db.index.fulltext.*`, range/text/lookup indexes) → `neo4j-cypher-skill`
 - **GDS graph embeddings** (FastRP, Node2Vec, GraphSAGE) → `neo4j-gds-skill`
-- **Index admin** (list all indexes, drop range/text/lookup indexes) → `neo4j-cypher-skill`
+- **Embedding provider configuration, auth, and full `ai.text.*` reference** → `neo4j-genai-plugin-skill`
+- **Production memory sizing** (heap, page cache, OS filesystem cache for vector indexes) → Operations Manual: Vector index memory configuration
 
 ---
 
-## Pre-flight — Determine Version
+## Pre-flight — Determine Version and Store Format
 
-Drives syntax choice:
+Use the latest Neo4j version and Cypher 25 for new work. If supporting older deployments, version drives syntax choice:
 ```cypher
 CALL dbms.components() YIELD versions RETURN versions[0] AS neo4j_version
 ```
@@ -41,7 +43,14 @@ CALL dbms.components() YIELD versions RETURN versions[0] AS neo4j_version
 | Version | Use |
 |---|---|
 | `2026.01` or higher | `SEARCH` clause (in-index filtering, preferred) |
-| `2025.x` | `db.index.vector.queryNodes()` procedure |
+| Earlier versions with vector index support | `db.index.vector.queryNodes()` procedure fallback |
+
+For native `VECTOR` property storage, use Aura or self-managed Enterprise Edition with `block` store format. Check self-managed databases:
+```cypher
+SHOW DATABASES YIELD name, store
+RETURN name, store
+```
+Use `VECTOR` only when `store` contains `block`; use `LIST<FLOAT>` on Community Edition or `aligned` stores.
 
 ---
 
@@ -71,11 +80,12 @@ FOR ()-[r:HAS_CHUNK]-() ON (r.embedding)
 OPTIONS { indexConfig: { `vector.dimensions`: 768, `vector.similarity_function`: 'cosine' } }
 ```
 
-Multi-label index (2026.01+ only, vector-3.0 provider):
+Index with properties for filtered vector search (2026.01+ only):
 ```cypher
 CYPHER 25
-CREATE VECTOR INDEX multi_chunk IF NOT EXISTS
-FOR (n:Chunk|Document) ON n.embedding
+CREATE VECTOR INDEX chunk_embedding_filtered IF NOT EXISTS
+FOR (c:Chunk) ON c.embedding
+WITH [c.source, c.lang]
 OPTIONS { indexConfig: { `vector.dimensions`: 1536, `vector.similarity_function`: 'cosine' } }
 ```
 
@@ -83,7 +93,7 @@ OPTIONS { indexConfig: { `vector.dimensions`: 1536, `vector.similarity_function`
 
 | Parameter | Type | Default | Notes |
 |---|---|---|---|
-| `vector.dimensions` | INTEGER 1–4096 | none | Required; must match embedding model exactly |
+| `vector.dimensions` | INTEGER 1–4096 | none | Optional but recommended; when set, must match embedding model exactly |
 | `vector.similarity_function` | STRING | `'cosine'` | `'cosine'` or `'euclidean'` |
 | `vector.quantization.enabled` | BOOLEAN | `true` | Reduces storage; slight accuracy tradeoff; needs vector-2.0+ (5.18+) |
 | `vector.hnsw.m` | INTEGER 1–512 | `16` | HNSW graph connections; higher = better recall, more memory |
@@ -120,9 +130,9 @@ done
 
 ---
 
-## Step 3 — Ingest Embeddings
+## Step 3 — Generate and Store Embeddings
 
-Batch UNWIND pattern (use for > 100 nodes — never one-node-per-transaction):
+Assumes source/chunk nodes already exist. Batch UNWIND pattern (use for > 100 nodes — never one-node-per-transaction):
 ```python
 from neo4j import GraphDatabase
 
@@ -144,13 +154,13 @@ def store_embeddings(records: list[dict], batch_size: int = 500):
             for r, emb in zip(records, embeddings)]
     for i in range(0, len(rows), batch_size):
         driver.execute_query(
-            "UNWIND $rows AS row MATCH (c:Chunk {id: row.id}) SET c.embedding = row.embedding",
+            "UNWIND $rows AS row MATCH (c:Chunk {id: row.id}) CALL db.create.setNodeVectorProperty(c, 'embedding', row.embedding)",
             rows=rows[i:i+batch_size]
         )
 ```
 
-❌ Never create index after embeddings are already stored — always create index first.
-✅ Create index → poll ONLINE → ingest embeddings.
+Creating the index before storing embeddings avoids a later population step, but creating it after embeddings are stored is valid.
+Always poll until the index is `ONLINE` before querying.
 
 ---
 
@@ -170,12 +180,12 @@ RETURN c.text, score
 ORDER BY score DESC
 ```
 
-With in-index filter (AND only — no OR/NOT):
+With in-index filter (requires filtered properties in the index `WITH` list):
 ```cypher
 CYPHER 25
 MATCH (c:Chunk)
   SEARCH c IN (
-    VECTOR INDEX chunk_embedding
+    VECTOR INDEX chunk_embedding_filtered
     FOR $queryEmbedding
     WHERE c.source = $source AND c.lang = 'en'
     LIMIT 10
@@ -184,10 +194,8 @@ RETURN c.text, c.source, score
 ORDER BY score DESC
 ```
 
-### Procedure fallback (2025.x)
-
+### Procedure fallback (pre-2026.01; deprecated in 2026.04+)
 ```cypher
-CYPHER 25
 CALL db.index.vector.queryNodes('chunk_embedding', 10, $queryEmbedding)
 YIELD node AS c, score
 WHERE c.source = $source
@@ -197,14 +205,14 @@ ORDER BY score DESC
 
 Relationship index procedure:
 ```cypher
-CYPHER 25
 CALL db.index.vector.queryRelationships('rel_embedding', 5, $queryEmbedding)
 YIELD relationship AS r, score
 RETURN r.text, score
 ```
 
 **SEARCH clause hard limits:**
-- `WHERE` inside SEARCH: AND predicates only; no OR, NOT, list ops, string ops, VECTOR/LIST/POINT types
+- `WHERE` inside `SEARCH` accepts property predicates on the `SEARCH` binding variable, joined with `AND`; filtered properties must be in the index `WITH` list.
+- Unsupported: `OR`, `<>`, list operators, string operators, type predicates, `POINT`/`VECTOR`/`LIST` expressions, and comparisons to another property of the binding variable. `NOT` is only allowed for boolean properties.
 - Index name cannot be a parameter (`$indexName` not allowed — use literal string)
 - Binding variable must come from the enclosing MATCH pattern
 - Query vector cannot reference the binding variable
@@ -254,25 +262,17 @@ For full retrieval_query pipelines, HybridCypherRetriever, or `neo4j-graphrag` l
 Ad-hoc similarity (not for kNN search — use index for that):
 ```cypher
 MATCH (a:Chunk {id: $id1}), (b:Chunk {id: $id2})
-RETURN vector.similarity.cosine(a.embedding, b.embedding) AS sim
-// vector.similarity.euclidean(a, b) — same signature, 0–1 range
-
-// vector_distance (2025.10+) — metrics: EUCLIDEAN, EUCLIDEAN_SQUARED, MANHATTAN, COSINE, DOT, HAMMING
-// Returns distance (lower = more similar, inverse of similarity)
-RETURN vector_distance(a.embedding, b.embedding, 'COSINE') AS dist
-
-// vector_dimension_count (2025.10+)
-RETURN vector_dimension_count(n.embedding) AS dims
-
-// vector_norm (2025.20+) — metrics: EUCLIDEAN, MANHATTAN
-RETURN vector_norm(n.embedding, 'EUCLIDEAN') AS norm
+RETURN vector.similarity.cosine(a.embedding, b.embedding) AS cosine_sim,
+       vector.similarity.euclidean(a.embedding, b.embedding) AS euclidean_sim
 ```
+
+For `VECTOR`-only functions such as `vector_distance()`, `vector_dimension_count()`, and `vector_norm()`, load the vector functions docs.
 
 Convert LIST to typed VECTOR:
 ```cypher
 // vector(value, dimension, coordinateType)
 // coordinateType: FLOAT64, FLOAT32, INTEGER8/16/32/64
-WITH vector([1.0, 2.0, 3.0], 3, 'FLOAT32') AS v
+WITH vector([1.0, 2.0, 3.0], 3, FLOAT32) AS v
 RETURN vector_dimension_count(v)
 ```
 
@@ -281,19 +281,19 @@ RETURN vector_dimension_count(v)
 ## Index Management
 
 ```cypher
--- Show all vector indexes with config
+// Show all vector indexes with config
 SHOW VECTOR INDEXES YIELD name, state, populationPercent,
   labelsOrTypes, properties, indexConfig
 RETURN name, state, populationPercent, labelsOrTypes, properties, indexConfig;
 
--- Drop (node data unchanged — only index structure removed)
+// Drop (node data unchanged — only index structure removed)
 DROP INDEX chunk_embedding IF EXISTS;
 
--- No ALTER VECTOR INDEX — to change dimensions or similarity function:
--- 1. DROP INDEX old_index IF EXISTS
--- 2. CREATE VECTOR INDEX new_index ... with new OPTIONS
--- 3. Re-generate all embeddings with new model
--- 4. Poll until ONLINE
+// No ALTER VECTOR INDEX — to change index schema or options:
+// 1. DROP INDEX old_index IF EXISTS
+// 2. CREATE VECTOR INDEX new_index ... with new schema/OPTIONS
+// 3. Poll until ONLINE
+// Re-generate embeddings only if the embedding model or stored vectors change
 ```
 
 ---
@@ -302,33 +302,32 @@ DROP INDEX chunk_embedding IF EXISTS;
 
 | Error | Cause | Fix |
 |---|---|---|
-| `IllegalArgumentException: Index dimension mismatch` | Stored embedding dim ≠ `vector.dimensions` | Fix embed generation; drop + recreate index with correct dim |
+| `IllegalArgumentException: Index dimension mismatch` | Query or stored embedding dim does not match configured `vector.dimensions` | Fix embed generation; drop + recreate index with correct dim |
 | Search returns incomplete results | Index still `POPULATING` | Poll until `state = 'ONLINE'` |
-| `Unknown procedure db.index.vector.queryNodes` | Neo4j < 5.11 | No vector index support below 5.11; upgrade |
-| `SEARCH clause not available` | Neo4j < 2026.01 | Use `queryNodes()` procedure |
-| `OR/NOT not allowed in SEARCH WHERE` | SEARCH in-index filter restriction | Move complex predicates to outer WHERE after SEARCH |
+| `Unknown procedure db.index.vector.queryNodes` | Neo4j version lacks vector index procedure | Use Neo4j 5.13+ for GA vector indexes; upgrade |
+| `SEARCH clause not available` | Neo4j < 2026.01 | Use `queryNodes()` procedure, or upgrade for `SEARCH` |
+| `OR/NOT not allowed in SEARCH WHERE` | SEARCH in-index filter restriction | Move unsupported predicates to outer WHERE after SEARCH |
 | Zero results from correct query | Wrong similarity function or all-zeros embedding | Verify with `vector.similarity.cosine()`; check embed call succeeded |
-| Score always 1.0 | All-zeros or identical vectors | Embedding generation failed; add dimension assertion before ingest |
+| Score always 1.0 | Identical or duplicated vectors | Check embedding generation; add dimension assertion before ingest |
 | `vector.quantization.enabled` option rejected | provider vector-1.0 (Neo4j < 5.18) | Omit quantization option or upgrade to 5.18+ |
 
 ---
 
 ## Checklist
-- [ ] `vector.dimensions` matches embedding model output exactly
-- [ ] Vector index created before ingesting embeddings
+- [ ] Configured `vector.dimensions`, if set, matches embedding model output exactly
+- [ ] Vector index exists and is `ONLINE` before querying
 - [ ] Similarity function chosen explicitly (`cosine` for normalized, `euclidean` for distance-based)
-- [ ] Index polled to `state = 'ONLINE'` before first query
 - [ ] Dimension validated on every embedding before ingest
-- [ ] `SEARCH` clause only on Neo4j >= 2026.01; procedure fallback on 2025.x
-- [ ] SEARCH `WHERE` uses AND-only predicates with scalar types
+- [ ] `SEARCH` clause only on Neo4j >= 2026.01; procedure fallback only for older deployments
+- [ ] SEARCH `WHERE` uses AND-only predicates on supported properties included with index `WITH`
 - [ ] Batch UNWIND pattern used for > 100 nodes
-- [ ] If model changes: drop index → recreate with new dimensions → re-generate all embeddings
+- [ ] If the embedding model/output dimension changes: re-generate embeddings and recreate the index
 
 ---
 
-## In-Cypher Embedding Generation — ai.text.embed() [2025.12]
+## In-Cypher Embedding Generation — ai.text.embed() [2025.11]
 
-Generate embeddings at query time without external Python code. Use `ai.text.embed()` — the current API since [2025.12]:
+Generate embeddings at query time without external Python code. Use `ai.text.embed()` — the current API since [2025.11]:
 
 ```cypher
 // Syntax (requires CYPHER 25)
@@ -336,9 +335,19 @@ CYPHER 25
 // ai.text.embed(resource :: STRING, provider :: STRING, configuration :: MAP) :: VECTOR
 ```
 
-Provider strings are lowercase (`'openai'`, `'vertexai'`, `'bedrock-titan'`, `'azure-openai'`). Full provider config → `neo4j-genai-plugin-skill`.
+Use lowercase provider strings (`'openai'`, `'vertexai'`, `'bedrock-titan'`, `'azure-openai'`) for consistency; identifiers are case-insensitive. Full provider config → `neo4j-genai-plugin-skill`.
 
-Full query pattern — embed at query time, search immediately:
+SEARCH pattern (2026.01+) — embed at query time, search immediately:
+```cypher
+CYPHER 25
+WITH ai.text.embed("my query", "openai", { token: $openaiKey, model: 'text-embedding-3-small' }) AS userEmbedding
+MATCH (c:Chunk)
+  SEARCH c IN (VECTOR INDEX chunk_embedding FOR userEmbedding LIMIT 6) SCORE AS score
+RETURN c.text, score
+ORDER BY score DESC
+```
+
+Procedure fallback pattern:
 ```cypher
 CYPHER 25
 WITH ai.text.embed(
@@ -351,25 +360,15 @@ RETURN c.text, score
 ORDER BY score DESC
 ```
 
-With SEARCH clause (2026.01+):
-```cypher
-CYPHER 25
-WITH ai.text.embed("my query", "openai", { token: $openaiKey, model: 'text-embedding-3-small' }) AS userEmbedding
-MATCH (c:Chunk)
-  SEARCH c IN (VECTOR INDEX chunk_embedding FOR userEmbedding LIMIT 6) SCORE AS score
-RETURN c.text, score
-ORDER BY score DESC
-```
-
 ❌ Never pass API key as literal string in production — use `$param` or `apoc.static.get()`.
 ✅ Use `$openaiKey` parameter; inject via driver params dict.
 
 **Rule**: Use same model at ingest time and query time — embeddings from different models are not comparable.
 
 **Deprecated** (still works but do not use in new code):
-- `genai.vector.encode()` [deprecated] → use `ai.text.embed()` [2025.12]
-- `genai.vector.encodeBatch()` [deprecated] → use `CALL ai.text.embedBatch()` [2025.12]
-- `genai.vector.listEncodingProviders()` [deprecated] → use `CALL ai.text.embed.providers()` [2025.12]
+- `genai.vector.encode()` [deprecated] → use `ai.text.embed()` [2025.11]
+- `genai.vector.encodeBatch()` [deprecated] → use `CALL ai.text.embedBatch()` [2025.11]
+- `genai.vector.listEncodingProviders()` [deprecated] → use `CALL ai.text.embed.providers()` [2025.11]
 
 For full `ai.text.*` reference (completion, structured output, chat, tokenization) → `neo4j-genai-plugin-skill`.
 
@@ -472,7 +471,7 @@ WITH collect(c) AS nodes
 RETURN vector.similarity.cosine(nodes[0].embedding, nodes[1].embedding) AS cosine_check,
        vector.similarity.euclidean(nodes[0].embedding, nodes[1].embedding) AS euclidean_check
 ```
-If both return `null` → embeddings not set. If cosine returns `1.0` → identical vectors (embed call failed).
+If both return `null` → embeddings not set. If cosine returns `1.0` for unrelated chunks → check for duplicated or failed embedding generation.
 
 ---
 
@@ -480,10 +479,10 @@ If both return `null` → embeddings not set. If cosine returns `1.0` → identi
 
 | Gotcha | Detail | Fix |
 |---|---|---|
-| Index not ONLINE at ingest time | Inserting nodes before index exists is valid — index auto-populates. But querying during `POPULATING` returns partial results | Always poll `state = 'ONLINE'` before first query |
-| Wrong dimensions — silent failure | Stored vector dim ≠ `vector.dimensions` → `IllegalArgumentException` at query time, not at ingest time | Assert `len(emb) == expected_dim` before every `SET c.embedding` |
+| Querying before the index is ONLINE | Inserting nodes before index exists is valid — index auto-populates. But querying during `POPULATING` returns partial results | Always poll `state = 'ONLINE'` before first query |
+| Wrong dimensions — query-time failure | Stored vector dim ≠ `vector.dimensions` → `IllegalArgumentException` at query time, not at ingest time | Assert `len(emb) == expected_dim` before storing embeddings |
 | Different models at ingest vs query | No error; cosine scores ~0.3–0.5 for clearly similar text | Use same model string/version for both; store model name as node metadata |
-| Missing model at query | `ai.text.embed` returns `null` silently if provider config wrong | Test encode call standalone; check `CYPHER 25 RETURN ai.text.embed(...)` before embedding into pipeline |
+| Missing model or provider config | `ai.text.embed()` fails before returning a usable embedding | Test the embed call standalone; check `CYPHER 25 RETURN ai.text.embed(...)` before embedding into a pipeline |
 | Large single-transaction ingest | One transaction for 10k nodes → OOM or timeout | Use `UNWIND $rows ... CALL IN TRANSACTIONS OF 500 ROWS` or Python batch loop |
 | Chunk overlap not set | Adjacent chunks with no overlap → context at boundaries lost → poor recall for cross-paragraph queries | Set `chunk_overlap` ≥ 10% of `chunk_size` |
 
@@ -494,5 +493,5 @@ Load on demand:
 - [Vector index docs](https://neo4j.com/docs/cypher-manual/25/indexes/semantic-indexes/vector-indexes/)
 - [SEARCH clause docs](https://neo4j.com/docs/cypher-manual/25/clauses/search/)
 - [Vector functions docs](https://neo4j.com/docs/cypher-manual/25/functions/vector/)
-- [ai.text.embed() / GenAI plugin docs](https://neo4j.com/docs/genai/plugin/current/) [2025.12] — replaces deprecated `genai.vector.encode()`
+- [ai.text.embed() / GenAI plugin docs](https://neo4j.com/docs/genai/plugin/current/) [2025.11] — replaces deprecated `genai.vector.encode()`
 - [db.create.setNodeVectorProperty docs](https://neo4j.com/docs/operations-manual/current/reference/procedures/)
