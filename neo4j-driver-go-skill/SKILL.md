@@ -39,6 +39,26 @@ Import: `github.com/neo4j/neo4j-go-driver/v6/neo4j`
 
 ---
 
+## Environment Variables
+
+```go
+import "os"
+
+uri      := getEnv("NEO4J_URI",      "neo4j://localhost:7687")
+user     := getEnv("NEO4J_USERNAME", "neo4j")
+password := getEnv("NEO4J_PASSWORD", "")
+database := getEnv("NEO4J_DATABASE", "neo4j")
+
+func getEnv(key, fallback string) string {
+    if v := os.Getenv(key); v != "" { return v }
+    return fallback
+}
+```
+
+Use [godotenv](https://github.com/joho/godotenv) to load `.env` in dev: `godotenv.Load()`. `.env` in `.gitignore`.
+
+---
+
 ## Driver Lifecycle
 
 One `Driver` per application. Goroutine-safe, connection-pooled, expensive to create.
@@ -279,6 +299,68 @@ neo4j.ExecuteQuery(ctx, driver,
 )
 ```
 
+### Generic Helpers (v6+)
+
+Prefer type-safe helpers over manual assertions:
+
+```go
+// GetRecordValue[T] — extract + cast in one call
+name, isNil, err := neo4j.GetRecordValue[string](record, "name")
+// isNil=true when OPTIONAL MATCH returned null; err != nil when key absent or wrong type
+
+// CollectTWithContext — map all records to a slice
+people, err := neo4j.CollectTWithContext(ctx, result, func(record *neo4j.Record) (Person, error) {
+    name, _, err := neo4j.GetRecordValue[string](record, "name")
+    age, _, _   := neo4j.GetRecordValue[int64](record, "age")
+    return Person{Name: name, Age: int(age)}, err
+})
+
+// SingleTWithContext — expect exactly one record (error if 0 or 2+)
+person, err := neo4j.SingleTWithContext(ctx, result, func(record *neo4j.Record) (Person, error) {
+    name, _, _ := neo4j.GetRecordValue[string](record, "name")
+    return Person{Name: name}, nil
+})
+
+// GetProperty — typed property from Node or Relationship
+node, _, _ := neo4j.GetRecordValue[neo4j.Node](record, "p")
+nameVal, err := neo4j.GetProperty[string](node, "name")
+```
+
+### Spatial Types
+
+```go
+// 2D Cartesian (SRID 7203), 3D Cartesian (SRID 9157)
+pt2d := neo4j.Point2D{X: 1.23, Y: 4.56, SpatialRefId: 7203}
+pt3d := neo4j.Point3D{X: 1.23, Y: 4.56, Z: 7.89, SpatialRefId: 9157}
+
+// 2D WGS-84 (SRID 4326), 3D WGS-84 (SRID 4979)
+london := neo4j.Point2D{X: -0.118092, Y: 51.509865, SpatialRefId: 4326}
+shard  := neo4j.Point3D{X: -0.0865, Y: 51.5045, Z: 310, SpatialRefId: 4979}
+
+// Pass as parameter
+result, err := neo4j.ExecuteQuery(ctx, driver,
+    "CREATE (p:Place {location: $loc})",
+    map[string]any{"loc": london},
+    neo4j.EagerResultTransformer,
+    neo4j.ExecuteQueryWithDatabase("neo4j"),
+)
+
+// Read from result — assert to Point2D or Point3D
+raw, _ := record.Get("location")
+if p2d, ok := raw.(neo4j.Point2D); ok {
+    fmt.Printf("lon=%f lat=%f srid=%d\n", p2d.X, p2d.Y, p2d.SpatialRefId)
+}
+
+// Distance (same SRID only)
+result, _ = neo4j.ExecuteQuery(ctx, driver,
+    "RETURN point.distance($p1, $p2) AS distance",
+    map[string]any{"p1": pt2d, "p2": neo4j.Point2D{X: 10, Y: 10, SpatialRefId: 7203}},
+    neo4j.EagerResultTransformer, neo4j.ExecuteQueryWithDatabase("neo4j"),
+)
+dist, _ := result.Records[0].Get("distance")
+fmt.Println(dist.(float64))
+```
+
 ### Always Specify Database
 
 ```go
@@ -312,6 +394,7 @@ Cross-session (parallel workers): combine bookmarks explicitly — see [referenc
 
 ## References
 
+Load on demand:
 Load on demand:
 - [references/advanced-config.md](references/advanced-config.md) — connection pool tuning, custom address resolver, notification config, Bolt logging, auth options, URI scheme table
 - [references/repository-pattern.md](references/repository-pattern.md) — repository wrapper pattern, cross-session causal consistency with bookmarks

@@ -68,6 +68,47 @@ JSON.stringify({ created: dt.toString() })
 
 ---
 
+## Spatial Types
+
+`neo4j.types.Point` — represents both Cartesian and WGS-84 points.
+
+```javascript
+// Read point from query result
+const pt = record.get('location')    // neo4j.types.Point
+pt.srid                              // 4326 (WGS-84 2D), 4979 (WGS-84 3D), 7203 (Cartesian 2D), 9157 (Cartesian 3D)
+pt.x                                 // longitude (WGS-84) or x (Cartesian)
+pt.y                                 // latitude (WGS-84) or y (Cartesian)
+pt.z                                 // height/z — undefined for 2D points
+
+// Create and pass as parameter
+import { types } from 'neo4j-driver'
+const londonWgs84  = new types.Point(4326, -0.118092, 51.509865)          // 2D WGS-84
+const shardWgs84   = new types.Point(4979, -0.086500, 51.504501, 310)     // 3D WGS-84
+const cartesian2d  = new types.Point(7203, 1.23, 4.56)                    // 2D Cartesian
+const cartesian3d  = new types.Point(9157, 1.23, 4.56, 7.89)             // 3D Cartesian
+
+await driver.executeQuery(
+  'CREATE (p:Place {location: $loc})',
+  { loc: londonWgs84 },
+  { database: 'neo4j' }
+)
+
+// Distance — same SRID only (different SRIDs return null)
+const { records } = await driver.executeQuery(
+  'RETURN point.distance($p1, $p2) AS distance',
+  { p1: new types.Point(7203, 1, 1), p2: new types.Point(7203, 10, 10) },
+  { database: 'neo4j' }
+)
+const distance = records[0].get('distance')   // number (float)
+
+// isPoint() guard — needed in toNative() helper
+neo4j.isPoint(pt)   // true
+```
+
+SRID table: `4326` = WGS-84 2D, `4979` = WGS-84 3D, `7203` = Cartesian 2D, `9157` = Cartesian 3D.
+
+---
+
 ## `toNative()` Conversion Helper
 
 For REST APIs that serialize all driver types to plain JS. Call on `.properties` or pass the full Node/Relationship with the explicit handler shown.

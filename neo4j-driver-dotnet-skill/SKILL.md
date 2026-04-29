@@ -73,6 +73,34 @@ Auth options: `AuthTokens.Basic(u, p)` / `AuthTokens.Bearer(token)` / `AuthToken
 
 ---
 
+## Environment Variables
+
+Load connection config from environment / `appsettings.json` — never hardcode credentials.
+
+```json
+// appsettings.json
+{
+  "Neo4j": {
+    "Uri": "neo4j+s://xxx.databases.neo4j.io",
+    "User": "neo4j",
+    "Password": "secret",
+    "Database": "neo4j"
+  }
+}
+```
+
+```csharp
+// Access via IConfiguration (injected in Program.cs)
+var uri      = builder.Configuration["Neo4j:Uri"];
+var user     = builder.Configuration["Neo4j:User"];
+var password = builder.Configuration["Neo4j:Password"];
+var database = builder.Configuration["Neo4j:Database"] ?? "neo4j";
+```
+
+Override with environment variables (standard .NET behavior): `Neo4j__Uri=neo4j+s://...` (double underscore = colon separator). Never commit `appsettings.json` with real credentials — use `appsettings.Development.json` (gitignored) or env vars in CI/production.
+
+---
+
 ## DI Registration (ASP.NET Core)
 
 Register `IDriver` as **singleton** — never Scoped or Transient. Never register `IAsyncSession` in DI.
@@ -427,7 +455,7 @@ If `CommitAsync()` throws a network error, commit may or may not have succeeded 
 
 Load on demand:
 - [references/transactions.md](references/transactions.md) — explicit transactions, `BeginTransactionAsync`, rollback, commit uncertainty, `TransactionConfig` (timeout, metadata), causal consistency and bookmarks
-- [references/performance.md](references/performance.md) — connection pool tuning, `WithFetchSize`, session config options, `CancellationToken` patterns, large result streaming
+- [references/performance.md](references/performance.md) — spatial types (Point/WGS-84/Cartesian), connection pool tuning, `WithFetchSize`, session config options, `CancellationToken` patterns, large result streaming
 - [references/object-mapping.md](references/object-mapping.md) — `AsObject<T>`, blueprint mapping, lambda mapping, `AsObjectsAsync<T>`, repository pattern example
 
 ---

@@ -139,6 +139,24 @@ interface ReviewedProps @relationshipProperties {
 
 Direction rule: `OUT` = arrow leaves this node. `IN` = arrow enters this node. Both sides of a relationship must declare opposite directions.
 
+### Querying Relationship Properties — Connection API
+
+For each relationship with `properties:`, a `{field}Connection` field is auto-generated. Access rel properties via `actorsConnection.edges.properties`, not via `actors`:
+
+```graphql
+query {
+  movies(where: { title: { eq: "The Matrix" } }) {
+    title
+    actorsConnection {
+      edges {
+        properties { role }   # maps to @relationshipProperties interface
+        node { name }
+      }
+    }
+  }
+}
+```
+
 ### @cypher — Custom Resolver
 
 ```graphql
@@ -174,6 +192,23 @@ type Query {
 ```
 
 `this` refers to the current node in field-level @cypher. Parameters are passed as `$paramName`.
+
+### @cypher — Field Arguments and extend type
+
+```graphql
+# extend type adds computed fields without modifying the base type definition
+extend type Movie @node {
+  avgRating: Float
+    @cypher(statement: "MATCH (this)<-[r:RATED]-(:User) RETURN avg(r.rating) AS result", columnName: "result")
+
+  # Field arguments passed as Cypher params; always provide default to avoid null
+  recommended(limit: Int = 3): [Movie!]!
+    @cypher(
+      statement: "MATCH (this)<-[:RATED]-(u:User)-[:RATED]->(rec:Movie) WITH rec, COUNT(u) AS score ORDER BY score DESC RETURN rec LIMIT $limit"
+      columnName: "rec"
+    )
+}
+```
 
 ### @id and @timestamp
 
@@ -393,22 +428,15 @@ subscription {
 ## Schema Control Directives
 
 ```graphql
-# Disable mutations for a type
-type ReadOnlyData @node @mutation(operations: []) {
-  value: String!
-}
+type ReadOnlyData @node @mutation(operations: []) { value: String! }  # disable mutations
 
-# Disable sort/filter on expensive fields
 type HeavyDoc @node {
   id: ID! @id
-  content: String! @filterable(byValue: false) @sortable(enabled: false)
+  content: String! @filterable(byValue: false) @sortable(enabled: false)  # perf guard
   title: String!
 }
 
-# Custom pluralization (auto-plural can be wrong for irregular nouns)
-type Series @node @plural(value: "seriesList") {
-  title: String!
-}
+type Series @node @plural(value: "seriesList") { title: String! }  # irregular plural fix
 ```
 
 ---

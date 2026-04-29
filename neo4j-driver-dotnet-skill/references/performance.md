@@ -1,3 +1,39 @@
+# Performance, Type Extras — Neo4j .NET Driver
+
+## Spatial Types
+
+```csharp
+using Neo4j.Driver;
+
+// Create points — new Point(srid, x, y) / new Point(srid, x, y, z)
+var cartesian2d = new Point(7203, 1.23, 4.56);            // Cartesian 2D (SRID 7203)
+var cartesian3d = new Point(9157, 1.23, 4.56, 7.89);      // Cartesian 3D (SRID 9157)
+var london      = new Point(4326, -0.118092, 51.509865);   // WGS-84 2D (lon, lat) (SRID 4326)
+var shard       = new Point(4979, -0.0865, 51.5045, 310);  // WGS-84 3D (SRID 4979)
+
+// Pass as parameter — driver serializes automatically
+await driver.ExecutableQuery("CREATE (p:Place {location: $loc})")
+    .WithParameters(new { loc = london })
+    .WithConfig(new QueryConfig(database: "neo4j"))
+    .ExecuteAsync();
+
+// Read from result
+var pt = record.Get<Point>("location");
+Console.WriteLine($"X={pt.X} Y={pt.Y} Z={pt.Z} SRID={pt.SrId}");
+// For WGS-84: X=longitude, Y=latitude, Z=height (NaN for 2D)
+
+// Distance (same SRID only — different SRIDs return null)
+var dist = (await driver
+    .ExecutableQuery("RETURN point.distance($p1, $p2) AS distance")
+    .WithParameters(new { p1 = new Point(7203, 1, 1), p2 = new Point(7203, 10, 10) })
+    .WithConfig(new QueryConfig(database: "neo4j"))
+    .ExecuteAsync()).Result[0].Get<double>("distance");
+```
+
+SRID: `4326` = WGS-84 2D, `4979` = WGS-84 3D, `7203` = Cartesian 2D, `9157` = Cartesian 3D.
+
+---
+
 # Performance — Connection Pool, Streaming, CancellationToken
 
 ## Always Specify the Database

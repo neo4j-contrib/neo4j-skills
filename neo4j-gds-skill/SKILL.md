@@ -101,6 +101,41 @@ G, result = gds.graph.cypher.project(
 
 Native projection over Cypher projection whenever possible — 5–10× faster on large graphs.
 
+### Weighted Projection (Cypher projection syntax)
+
+```cypher
+MATCH (source:User)-[r:RATED]->(target:Movie)
+WITH gds.graph.project(
+  'user-movie-weighted',
+  source, target,
+  { relationshipProperties: r { .rating } },
+  { undirectedRelationshipTypes: ['*'] }
+) AS g
+RETURN g.graphName, g.nodeCount, g.relationshipCount
+```
+
+### Relationship Aggregation (collapse parallel relationships into a weighted edge)
+
+```cypher
+MATCH (source:Actor)-[r:ACTED_IN]->(:Movie)<-[:ACTED_IN]-(target:Actor)
+WITH source, target, count(r) AS collabCount
+WITH gds.graph.project(
+  'actor-network',
+  source, target,
+  { relationshipProperties: { collabCount: collabCount } },
+  { undirectedRelationshipTypes: ['*'] }
+) AS g
+RETURN g.graphName, g.nodeCount, g.relationshipCount
+```
+
+Use `count(r)` to aggregate multiple parallel relationships into a single weighted edge. Reduces graph size; enables weight-based algorithms.
+
+### Undirected Projection (native syntax)
+
+Pass `orientation: 'UNDIRECTED'` per relationship type — or use `undirectedRelationshipTypes: ['*']` in Cypher projection (second config map).
+
+Leiden **requires** undirected relationships. Community detection and similarity algorithms generally work better on undirected graphs.
+
 ### Inspect and Drop
 
 ```python
@@ -152,6 +187,29 @@ After `write`, re-project to use written properties in subsequent GDS calls (in-
 
 ---
 
+## gds.util.asNode() — Enrich Stream Results
+
+`stream` mode yields `nodeId` (internal GDS integer). `gds.util.asNode(nodeId)` translates it back to the DB node so you can access properties.
+
+```cypher
+-- Single property
+CALL gds.pageRank.stream('myGraph', {})
+YIELD nodeId, score
+RETURN gds.util.asNode(nodeId).name AS name, score
+ORDER BY score DESC LIMIT 10
+
+-- Multiple properties — convert once with WITH
+CALL gds.pageRank.stream('myGraph', {})
+YIELD nodeId, score
+WITH gds.util.asNode(nodeId) AS node, score
+RETURN node.name AS name, node.born AS born, score
+ORDER BY score DESC LIMIT 10
+```
+
+Not needed for `write`, `mutate`, or `stats` modes — those don't return per-node data.
+
+---
+
 ## Core Algorithms
 
 ### PageRank (centrality)
@@ -160,6 +218,8 @@ After `write`, re-project to use written properties in subsequent GDS calls (in-
 CALL gds.pageRank.stream('myGraph', { dampingFactor: 0.85, maxIterations: 20 })
 YIELD nodeId, score
 RETURN gds.util.asNode(nodeId).name AS name, score ORDER BY score DESC LIMIT 10
+-- score: relative influence — not absolute. Compare within same run only.
+-- didConverge: true means score stabilized; if false, increase maxIterations.
 
 CALL gds.pageRank.write('myGraph', { writeProperty: 'pagerank', dampingFactor: 0.85 })
 YIELD nodePropertiesWritten, ranIterations, didConverge
@@ -187,6 +247,8 @@ gds.louvain.write(G, writeProperty="community")
 ```
 
 Leiden is a refinement of Louvain avoiding poorly connected communities — use when community quality > raw speed.
+`modularity` in stats result: range -0.5 to 1.0; values > 0.3 indicate meaningful community structure; > 0.7 = strong.
+Leiden **requires** undirected relationships in the projection.
 
 ### WCC — Weakly Connected Components
 

@@ -34,6 +34,32 @@ npm install neo4j-driver   # or: yarn add neo4j-driver
 
 ---
 
+## Environment Variables
+
+Load connection config from environment — never hardcode credentials.
+
+```bash
+# .env file (add to .gitignore)
+NEO4J_URI=neo4j+s://xxx.databases.neo4j.io
+NEO4J_USERNAME=neo4j
+NEO4J_PASSWORD=secret
+NEO4J_DATABASE=neo4j
+```
+
+```javascript
+// npm install dotenv (for Node.js < 20 or when .env auto-load is off)
+import 'dotenv/config'   // or: require('dotenv').config()
+
+const URI      = process.env.NEO4J_URI
+const USER     = process.env.NEO4J_USERNAME
+const PASSWORD = process.env.NEO4J_PASSWORD
+const DATABASE = process.env.NEO4J_DATABASE ?? 'neo4j'
+```
+
+Node 20+ natively loads `.env` with `--env-file .env`. Next.js / Vite auto-load `.env` — no dotenv import needed.
+
+---
+
 ## Driver Lifecycle
 
 Create **one driver instance** at startup. Share everywhere. Never create per-request.
@@ -373,7 +399,7 @@ await driver.executeQuery(
 ## References
 
 Load on demand:
-- [references/data-types.md](references/data-types.md) — full type mapping table, temporal types, graph types (Node/Relationship/Path), `toNative()` conversion helper
+- [references/data-types.md](references/data-types.md) — full type mapping table, temporal types, graph types (Node/Relationship/Path), spatial types (Point/WGS-84/Cartesian), `toNative()` conversion helper
 - [references/advanced-patterns.md](references/advanced-patterns.md) — explicit transactions, causal consistency/bookmarks, connection pool tuning, result transformers, lazy streaming, repository pattern
 - [references/browser-usage.md](references/browser-usage.md) — WebSocket URIs, CORS, bundler config, security guidance
 - [references/rxjs-session.md](references/rxjs-session.md) — RxJS session API (`rxSession.run()`, observable patterns)

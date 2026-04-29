@@ -37,6 +37,34 @@ pip install neo4j-rust-ext         # optional: 3–10× faster serialization, sa
 
 ---
 
+## Environment Variables
+
+Load connection config from environment — never hardcode credentials.
+
+```python
+import os
+from dotenv import load_dotenv   # pip install python-dotenv
+
+load_dotenv(".env")   # reads NEO4J_URI / NEO4J_USERNAME / NEO4J_PASSWORD / NEO4J_DATABASE
+
+URI      = os.getenv("NEO4J_URI",      "neo4j://localhost:7687")
+USER     = os.getenv("NEO4J_USERNAME", "neo4j")
+PASSWORD = os.getenv("NEO4J_PASSWORD", "")
+DATABASE = os.getenv("NEO4J_DATABASE", "neo4j")
+```
+
+`.env` file format:
+```
+NEO4J_URI=neo4j+s://xxx.databases.neo4j.io
+NEO4J_USERNAME=neo4j
+NEO4J_PASSWORD=secret
+NEO4J_DATABASE=neo4j
+```
+
+Add `.env` to `.gitignore`. Without `python-dotenv`, use `export` in shell or `os.getenv` directly.
+
+---
+
 ## Driver Lifecycle
 
 Create **one Driver per application**. Thread-safe, expensive to create. Never create per-request.
@@ -369,7 +397,7 @@ Full performance patterns → [references/performance.md](references/performance
 
 Load on demand:
 - [references/async.md](references/async.md) — full async patterns: managed transactions, result methods, concurrency
-- [references/data-types.md](references/data-types.md) — complete Python↔Cypher type mapping, temporal conversion, graph object API
+- [references/data-types.md](references/data-types.md) — complete Python↔Cypher type mapping, temporal conversion, graph object API, spatial types (CartesianPoint/WGS84Point)
 - [references/performance.md](references/performance.md) — connection pool, lazy streaming, threading vs asyncio, bookmarks/causal consistency
 - [references/transactions.md](references/transactions.md) — explicit transactions, rollback, commit uncertainty, `unit_of_work` details
 

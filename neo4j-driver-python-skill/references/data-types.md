@@ -94,6 +94,38 @@ node = records[0]["p"]
 props = dict(node)              # plain dict — json-safe if all property types are primitives
 ```
 
+## Spatial Types
+
+```python
+from neo4j.spatial import CartesianPoint, WGS84Point
+
+# 2D Cartesian (SRID 7203)
+pt2d = CartesianPoint((1.23, 4.56))
+print(pt2d.x, pt2d.y, pt2d.srid)   # 1.23, 4.56, 7203
+
+# 3D Cartesian (SRID 9157)
+pt3d = CartesianPoint((1.23, 4.56, 7.89))
+x, y, z = pt3d   # destructuring
+
+# 2D WGS-84 (SRID 4326)
+ldn = WGS84Point((-0.118092, 51.509865))
+print(ldn.longitude, ldn.latitude, ldn.srid)   # -0.118092, 51.509865, 4326
+
+# 3D WGS-84 (SRID 4979)
+shard = WGS84Point((-0.086500, 51.504501, 310))
+longitude, latitude, height = shard
+
+# Distance (same SRID only — returns None if SRIDs differ)
+records, _, _ = driver.execute_query(
+    "RETURN point.distance($p1, $p2) AS distance",
+    p1=CartesianPoint((1, 1)), p2=CartesianPoint((10, 10)),
+    database_="neo4j",
+)
+distance = records[0]["distance"]   # float64
+```
+
+Pass points as parameters — driver serializes automatically. Destructure or use `.x`/`.y`/`.z` to read back.
+
 ## Null Safety
 
 | Situation | `record["key"]` | `record.get("key")` |

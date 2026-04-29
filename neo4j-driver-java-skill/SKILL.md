@@ -45,6 +45,26 @@ Check latest: https://central.sonatype.com/artifact/org.neo4j.driver/neo4j-java-
 
 ---
 
+## Environment Variables
+
+Standard pattern for connection config — never hardcode credentials:
+
+```java
+String uri      = System.getenv().getOrDefault("NEO4J_URI",      "neo4j://localhost:7687");
+String user     = System.getenv().getOrDefault("NEO4J_USERNAME",  "neo4j");
+String password = System.getenv().getOrDefault("NEO4J_PASSWORD",  "");
+String database = System.getenv().getOrDefault("NEO4J_DATABASE",  "neo4j");
+```
+
+Spring Boot: inject via `@Value("${spring.neo4j.uri}")` or `application.properties`:
+```properties
+spring.neo4j.uri=neo4j+s://xxx.databases.neo4j.io
+spring.neo4j.authentication.username=neo4j
+spring.neo4j.authentication.password=secret
+```
+
+---
+
 ## Driver Lifecycle
 
 One `Driver` per application — thread-safe, expensive to create. Implement `AutoCloseable` or use try-with-resources.
@@ -272,6 +292,71 @@ if (record.containsKey("city") && !record.get("city").isNull()) {
 
 ---
 
+## Object Mapping
+
+Map query results to Java records/classes directly — eliminates manual accessor calls.
+
+```java
+// Domain record — field names match RETURN aliases (case-sensitive)
+public record Person(String name, long age) {}
+
+// Map single record
+var person = driver.executableQuery("MATCH (p:Person {name: $name}) RETURN p.name AS name, p.age AS age")
+    .withParameters(Map.of("name", "Alice"))
+    .withConfig(QueryConfig.builder().withDatabase("neo4j").build())
+    .execute()
+    .records()
+    .stream()
+    .map(r -> r.get("name").asString())   // or: r.as(Person.class) — see note
+    .findFirst()
+    .orElseThrow();
+
+// Using .as(Person.class) — maps RETURN keys to record fields by name
+var person2 = driver.executableQuery("""
+        MATCH (p:Person {name: $name})
+        RETURN p.name AS name, p.age AS age
+        """)
+    .withParameters(Map.of("name", "Tom Hanks"))
+    .withConfig(QueryConfig.builder().withDatabase("neo4j").build())
+    .execute()
+    .records()
+    .stream()
+    .map(record -> record.get("p").as(Person.class))
+    .findFirst()
+    .orElseThrow(() -> new RuntimeException("Person not found"));
+```
+
+Nested mapping — return a map projection and include `COLLECT {}` for lists:
+
+```java
+public record Movie(String title, List<Person> actors) {}
+
+var movieCypher = """
+    MATCH (movie:Movie)
+    LIMIT 1
+    RETURN movie {
+        .title,
+        actors: COLLECT {
+            MATCH (actor:Person)-[:ACTED_IN]->(movie)
+            RETURN actor
+        }
+    }
+    """;
+
+var movie = driver.executableQuery(movieCypher)
+    .withConfig(QueryConfig.builder().withDatabase("neo4j").build())
+    .execute()
+    .records()
+    .stream()
+    .map(r -> r.get("movie").as(Movie.class))
+    .findFirst()
+    .orElseThrow();
+```
+
+Only mapped properties defined in the record are populated — extra properties returned by Cypher are ignored.
+
+---
+
 ## Performance Patterns
 
 **Always specify database** — omitting triggers home-db round-trip on every call.
@@ -332,7 +417,7 @@ Config.builder()
 
 Load on demand:
 - [references/async-reactive.md](references/async-reactive.md) — full async `CompletableFuture` patterns, reactive `RxSession` with `Flux.usingWhen`, deadlock avoidance
-- [references/advanced-config.md](references/advanced-config.md) — full `Config.builder()` options, TLS, notification filtering, session-level auth, user impersonation, cross-session bookmarks
+- [references/advanced-config.md](references/advanced-config.md) — full `Config.builder()` options, TLS, notification filtering, session-level auth, user impersonation, cross-session bookmarks, spatial types (Values.point/WGS-84/Cartesian)
 
 Docs:
 - Java Driver manual: https://neo4j.com/docs/java-manual/current/

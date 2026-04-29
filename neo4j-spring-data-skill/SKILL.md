@@ -478,6 +478,7 @@ Optional<MovieEntity> findByTitleWithCast(String title);
 - [Neo4j Getting Started — SDN](https://neo4j.com/docs/getting-started/languages-guides/java/spring-data-neo4j/)
 - [SDN Advanced projections](https://docs.spring.io/spring-data/neo4j/reference/repositories/projections.html)
 - [SDN Auditing](https://docs.spring.io/spring-data/neo4j/reference/object-mapping/auditing.html)
+- [Modeling pitfalls, projection guide, type mapping](references/modeling-pitfalls.md)
 
 ---
 
