@@ -333,6 +333,7 @@ Load on demand:
 - [references/syntax-traps.md](references/syntax-traps.md) — 40+ syntax trap table
 - [references/performance.md](references/performance.md) — anti-patterns, text vs fulltext indexes, Eager (3 fix strategies), label inference, batching best practices, parallel runtime
 - [references/advanced-patterns.md](references/advanced-patterns.md) — REPEATABLE ELEMENTS patterns, allReduce stateful traversal, multi-stop QPE, route planning simulation, DAG critical path, temporal fraud detection component graph, cycle detection, OPTIONAL CALL
+- [references/apoc.md](references/apoc.md) — APOC Core: refactoring, virtual graph, merge helpers, path expanders, triggers, collections, conditional execution
 
 ## WebFetch
 

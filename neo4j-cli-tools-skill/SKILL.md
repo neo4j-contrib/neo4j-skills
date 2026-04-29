@@ -129,6 +129,105 @@ When a user asks about Neo4j CLI tools:
    - neo4j-mcp: Download binary from official repository
    - Include installation verification steps
 
+## Backup and Recovery
+
+### Edition gate
+
+Online backup requires **Enterprise Edition**. Community Edition users must use dump/load only (database must be offline).
+
+### Backup (Enterprise — database stays online)
+
+```bash
+# Full online backup — database stays online during backup
+neo4j-admin database backup \
+  --to-path=/backups/ \
+  --database=neo4j \
+  --compress
+
+# Differential backup — only changes since last full backup (faster)
+neo4j-admin database backup \
+  --to-path=/backups/ \
+  --database=neo4j \
+  --type=DIFF \
+  --compress
+
+# Backup to cloud storage (S3, GCS, or HTTPS)
+neo4j-admin database backup \
+  --to-path=s3://my-bucket/neo4j-backups/ \
+  --database=neo4j
+```
+
+### Restore (Enterprise)
+
+**AGENT GATE — destructive operation**: Before running restore, show the user the exact command and target database name, and wait for explicit confirmation. A restore overwrites the existing database.
+
+```bash
+# Restore from a full or differential backup
+# Requires DB to be stopped, or use --force-offline for a running instance
+neo4j-admin database restore \
+  --from-path=/backups/neo4j-2026-01-15T10-00-00/ \
+  --database=neo4j \
+  --overwrite-destination=true
+
+# Restore to a new database name (non-destructive path)
+neo4j-admin database restore \
+  --from-path=/backups/neo4j-2026-01-15T10-00-00/ \
+  --database=neo4j-restored
+```
+
+### Dump / Load (all editions — database must be offline)
+
+Use for migrations, dev/test data transfers, and Community Edition backups.
+
+```bash
+# Dump — stop the database first, or pass --force-offline
+neo4j-admin database dump --to-path=/exports/ neo4j
+
+# Load — overwrites if target DB exists
+neo4j-admin database load \
+  --from-path=/exports/neo4j.dump \
+  --database=neo4j \
+  --overwrite-destination=true
+```
+
+**AGENT GATE — destructive operation**: Before running load with `--overwrite-destination=true`, confirm target database name and path with the user.
+
+### Key flags
+
+| Flag | Notes |
+|---|---|
+| `--compress` | Zstd compression on backup archives |
+| `--type=DIFF` | Differential: only changes since last full backup |
+| `--to-path` | Local path or `s3://`, `gs://`, `https://` |
+| `--overwrite-destination=true` | Required if target database already exists |
+| `--force-offline` | Allow backup/restore of a running database in some scenarios |
+
+### Point-in-time restore strategy
+
+- **Full backup**: weekly (e.g. every Sunday)
+- **Differential backup**: daily (captures only changes since last full)
+- **Naming convention**: include timestamp in path — e.g. `/backups/neo4j-2026-01-19T02-00-00/`
+- **Restore sequence**: apply full backup first, then each differential in chronological order
+
+```bash
+# Example: restore Sunday full + Monday + Tuesday differentials
+neo4j-admin database restore \
+  --from-path=/backups/neo4j-2026-01-19T02-00-00/ \
+  --database=neo4j --overwrite-destination=true
+
+neo4j-admin database restore \
+  --from-path=/backups/neo4j-2026-01-20T02-00-00/ \
+  --database=neo4j --overwrite-destination=true
+
+neo4j-admin database restore \
+  --from-path=/backups/neo4j-2026-01-21T02-00-00/ \
+  --database=neo4j --overwrite-destination=true
+```
+
+**Reference**: [neo4j-admin-reference.md](references/neo4j-admin-reference.md)
+
+---
+
 ## Important Notes
 
 - All commands support `--help` for detailed usage information
