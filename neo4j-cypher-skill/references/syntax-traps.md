@@ -14,9 +14,9 @@ Load this when debugging a syntax error or validating a query before returning i
 | `FOREACH ... RETURN` | Use `UNWIND` when you need RETURN |
 | `least(a,b)` / `greatest(a,b)` | `CASE WHEN a < b THEN a ELSE b END` |
 | `-- SQL comment` | `// Cypher comment` |
-| `FILTER x IN list WHERE ...` | `[x IN list WHERE ...]` — FILTER is GQL, illegal in Cypher |
-| `LET x = expr` | `WITH expr AS x` — LET is GQL, illegal |
-| `INSERT (p:Person {name:'A'})` | `CREATE (p:Person {name: 'A'})` — INSERT is GQL, illegal |
+| `FILTER x IN list WHERE ...` | `[x IN list WHERE ...]` — `FILTER` clause exists (Cypher 25 / 2025.06) but is not a list-comprehension form |
+| `LET x = expr` | `LET` clause valid in Cypher 25 (Neo4j 2025.06+); on older versions use `WITH expr AS x` |
+| `INSERT (p:Person {name:'A'})` | `INSERT` is a Cypher 25 synonym for `CREATE` (Neo4j 2025.06+) but multi-labels must use `&` not `:` and dynamic labels/types are not supported; on older versions use `CREATE (p:Person {name: 'A'})` |
 | `shortestPath((a)-[*]->(b))` | `SHORTEST 1 (a)(()-[]->()){1,}(b)` |
 | `allShortestPaths((a)-[*]->(b))` | `ALL SHORTEST (a)(()-[]->()){1,}(b)` |
 | `id(n)` | `elementId(n)` |

@@ -185,10 +185,10 @@ Triggers fire Cypher on write events. Require `apoc.trigger.enabled=true` in `ap
 // Install — run from system database
 USE system
 CALL apoc.trigger.install(
-  'neo4j',                                      -- target database
-  'stamp-created',                              -- trigger name
+  'neo4j',                                      // target database
+  'stamp-created',                              // trigger name
   'UNWIND $createdNodes AS n SET n.createdAt = datetime()',
-  {phase: 'before'}                             -- before | after | rollback | afterAsync
+  {phase: 'before'}                             // before | after | rollback | afterAsync
 ) YIELD name, installed RETURN name, installed
 
 // List triggers for current database
@@ -235,13 +235,13 @@ Both deprecated in Cypher 25 — prefer native `CASE` + conditional `CALL { ... 
 
 ```cypher
 // Flatten nested list
-RETURN apoc.coll.flatten([[1,2],[3,[4,5]]], true)  -- [1,2,3,4,5]
+RETURN apoc.coll.flatten([[1,2],[3,[4,5]]], true)  // [1,2,3,4,5]
 
 // Distinct union of two lists
-RETURN apoc.coll.union([1,2,3], [2,3,4])           -- [1,2,3,4]
+RETURN apoc.coll.union([1,2,3], [2,3,4])           // [1,2,3,4]
 
 // Deduplicate list
-RETURN apoc.coll.toSet([1,2,2,3])                  -- [1,2,3]
+RETURN apoc.coll.toSet([1,2,2,3])                  // [1,2,3]
 ```
 
 `flatten` and `toSet` deprecated in Cypher 25 — use `apoc.coll.flatten` only for deeply nested lists where the native `[x IN list | ...]` flattening is insufficient.
@@ -252,13 +252,13 @@ RETURN apoc.coll.toSet([1,2,2,3])                  -- [1,2,3]
 
 ```cypher
 // Merge two maps (right overwrites left on key collision)
-RETURN apoc.map.merge({a:1, b:2}, {b:3, c:4})      -- {a:1, b:3, c:4}
+RETURN apoc.map.merge({a:1, b:2}, {b:3, c:4})      // {a:1, b:3, c:4}
 
 // Build map from list of [key, value] pairs
-RETURN apoc.map.fromPairs([['k1',1],['k2',2]])      -- {k1:1, k2:2}
+RETURN apoc.map.fromPairs([['k1',1],['k2',2]])      // {k1:1, k2:2}
 
 // Extract sub-map by keys
-RETURN apoc.map.submap({a:1,b:2,c:3}, ['a','c'])    -- {a:1, c:3}
+RETURN apoc.map.submap({a:1,b:2,c:3}, ['a','c'])    // {a:1, c:3}
 ```
 
 ---
@@ -272,7 +272,7 @@ RETURN apoc.convert.toJson(n{.*})
 
 // Parse JSON string → Cypher list
 WITH '[{"name":"Alice"},{"name":"Bob"}]' AS raw
-RETURN apoc.convert.fromJsonList(raw, '$[*].name', [])  -- ['Alice','Bob']
+RETURN apoc.convert.fromJsonList(raw, '$[*].name', [])  // ['Alice','Bob']
 
 // Parse JSON string → Cypher map
 WITH '{"score":0.9,"tier":"A"}' AS raw
@@ -302,17 +302,17 @@ RETURN apoc.date.convert(1710489600000, 'ms', 's')
 
 ```cypher
 // Split by regex
-RETURN apoc.text.split('a,b,,c', ',', 0)           -- ['a','b','','c']
+RETURN apoc.text.split('a,b,,c', ',', 0)           // ['a','b','','c']
 
 // Join list of strings
-RETURN apoc.text.join(['foo','bar','baz'], '-')     -- 'foo-bar-baz'
+RETURN apoc.text.join(['foo','bar','baz'], '-')     // 'foo-bar-baz'
 
 // URL-safe slug
-RETURN apoc.text.slug('Hello World! 2025', '-')    -- 'hello-world-2025'
+RETURN apoc.text.slug('Hello World! 2025', '-')    // 'hello-world-2025'
 
 // Regex capture groups
 RETURN apoc.text.regexGroups('2025-04-01', '(\\d{4})-(\\d{2})-(\\d{2})')
--- [['2025-04-01','2025','04','01']]
+// [['2025-04-01','2025','04','01']]
 ```
 
 ---

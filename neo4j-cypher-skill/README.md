@@ -43,7 +43,7 @@ Loaded on demand — not bundled into the main skill context:
 
 - Driver migration or version upgrade → `neo4j-migration-skill`
 - Database administration (users, config, backups) → `neo4j-cli-tools-skill`
-- GQL clauses: `LET`, `FINISH`, `FILTER`, `INSERT` are parse errors in Cypher 25
+- GQL clauses: `LET`, `FINISH`, `FILTER`, and `INSERT` are valid in Cypher 25 (introduced via GQL conformance, mostly in Neo4j 2025.06); not available on older versions
 
 ## Related skills
 

@@ -7,15 +7,15 @@ Every `MATCH`, `MERGE`, or `WHERE` predicate on a node/relationship property req
 **Index requires a label.** Index lookup only happens when the node has a label in the pattern. Without a label, Neo4j cannot identify which index to use and falls back to a full scan even if an index exists.
 
 ```cypher
--- IGNORED: no label → no index used, full scan
+// IGNORED: no label → no index used, full scan
 MATCH (n {email: $email}) RETURN n.name, n.email
 
--- USED: label present → RANGE/UNIQUE index on Person.email
+// USED: label present → RANGE/UNIQUE index on Person.email
 MATCH (n:Person {email: $email}) RETURN n.name, n.email
 
--- IGNORED in MERGE too: label required
-MERGE (n {email: $email})          -- full scan, no lock
-MERGE (n:Person {email: $email})   -- index lookup + constraint lock
+// IGNORED in MERGE too: label required
+MERGE (n {email: $email})          // full scan, no lock
+MERGE (n:Person {email: $email})   // index lookup + constraint lock
 ```
 
 MERGE compounds this: `MERGE (n:Person {email: $email})` = `MATCH` + `CREATE IF NOT EXISTS`. The MATCH phase scans without an index. With a constraint, the MERGE also acquires a lock on the constraint entry, preventing concurrent duplicate creation (atomicity guarantee).
@@ -70,28 +70,28 @@ Consequences:
 ## Create syntax
 
 ```cypher
--- RANGE (numbers, dates, booleans, strings: =, >, <, STARTS WITH, IS NOT NULL)
+// RANGE (numbers, dates, booleans, strings: =, >, <, STARTS WITH, IS NOT NULL)
 CREATE RANGE INDEX person_email IF NOT EXISTS FOR (n:Person) ON (n.email)
 
--- RANGE on relationship
+// RANGE on relationship
 CREATE RANGE INDEX event_date IF NOT EXISTS FOR ()-[r:OCCURRED_ON]-() ON (r.date)
 
--- RANGE composite (all listed props must appear in WHERE for planner to use it)
+// RANGE composite (all listed props must appear in WHERE for planner to use it)
 CREATE INDEX person_name_age IF NOT EXISTS FOR (n:Person) ON (n.name, n.age)
 
--- RANGE composite on relationship
+// RANGE composite on relationship
 CREATE INDEX purchased_date_amount IF NOT EXISTS FOR ()-[r:PURCHASED]-() ON (r.date, r.amount)
 
--- TEXT (string CONTAINS, ENDS WITH, IN list — trigram internally)
+// TEXT (string CONTAINS, ENDS WITH, IN list — trigram internally)
 CREATE TEXT INDEX person_name_text IF NOT EXISTS FOR (n:Person) ON (n.name)
 
--- TEXT on relationship
+// TEXT on relationship
 CREATE TEXT INDEX rates_interest IF NOT EXISTS FOR ()-[r:KNOWS]-() ON (r.interest)
 
--- POINT (spatial)
+// POINT (spatial)
 CREATE POINT INDEX place_location IF NOT EXISTS FOR (n:Place) ON (n.location)
 
--- POINT with spatial bounding box config (WGS-84 geographic CRS)
+// POINT with spatial bounding box config (WGS-84 geographic CRS)
 CREATE POINT INDEX place_wgs IF NOT EXISTS FOR (n:Place) ON (n.location)
 OPTIONS {
   indexConfig: {
@@ -99,13 +99,13 @@ OPTIONS {
     `spatial.wgs-84.max`: [180.0, 90.0]
   }
 }
--- Other spatial CRS config keys: spatial.cartesian.min/max, spatial.cartesian-3d.min/max, spatial.wgs-84-3d.min/max
+// Other spatial CRS config keys: spatial.cartesian.min/max, spatial.cartesian-3d.min/max, spatial.wgs-84-3d.min/max
 
--- FULLTEXT (Lucene; multi-label, multi-prop, scored)
+// FULLTEXT (Lucene; multi-label, multi-prop, scored)
 CREATE FULLTEXT INDEX search_articles IF NOT EXISTS
   FOR (n:Article|BlogPost) ON EACH [n.title, n.body]
 
--- FULLTEXT with analyzer + eventually-consistent background updates
+// FULLTEXT with analyzer + eventually-consistent background updates
 CREATE FULLTEXT INDEX search_articles IF NOT EXISTS
   FOR (n:Article|BlogPost) ON EACH [n.title, n.body]
 OPTIONS {
@@ -115,7 +115,7 @@ OPTIONS {
   }
 }
 
--- LOOKUP (auto-created per database — shown for reference only; do NOT drop or recreate)
+// LOOKUP (auto-created per database — shown for reference only; do NOT drop or recreate)
 CREATE LOOKUP INDEX node_label_lookup FOR (n) ON EACH labels(n)
 CREATE LOOKUP INDEX rel_type_lookup  FOR ()-[r]-() ON EACH type(r)
 ```
@@ -140,39 +140,39 @@ Constraints enforce data integrity AND create an implicit **RANGE index** (UNIQU
 **Edition notes**: UNIQUE and NOT NULL (existence) available in all editions. NODE KEY, RELATIONSHIP KEY, RELATIONSHIP UNIQUE, property type (`IS ::`) require **Enterprise Edition**.
 
 ```cypher
--- UNIQUE node — creates implicit RANGE index; MERGE acquires lock
+// UNIQUE node — creates implicit RANGE index; MERGE acquires lock
 CREATE CONSTRAINT person_email_unique IF NOT EXISTS
   FOR (n:Person) REQUIRE n.email IS UNIQUE
 
--- UNIQUE composite node
+// UNIQUE composite node
 CREATE CONSTRAINT book_title_year IF NOT EXISTS
   FOR (n:Book) REQUIRE (n.title, n.publicationYear) IS UNIQUE
 
--- UNIQUE relationship (Enterprise)
+// UNIQUE relationship (Enterprise)
 CREATE CONSTRAINT sequel_order IF NOT EXISTS
   FOR ()-[r:SEQUEL_OF]-() REQUIRE r.order IS UNIQUE
 
--- NODE KEY — composite uniqueness + existence; creates composite RANGE index (Enterprise)
+// NODE KEY — composite uniqueness + existence; creates composite RANGE index (Enterprise)
 CREATE CONSTRAINT person_key IF NOT EXISTS
   FOR (n:Person) REQUIRE (n.firstName, n.lastName) IS NODE KEY
 
--- RELATIONSHIP KEY (Enterprise)
+// RELATIONSHIP KEY (Enterprise)
 CREATE CONSTRAINT owns_key IF NOT EXISTS
   FOR ()-[r:OWNS]-() REQUIRE r.ownershipId IS RELATIONSHIP KEY
 
--- NOT NULL node (existence only — no index created)
+// NOT NULL node (existence only — no index created)
 CREATE CONSTRAINT person_name_exists IF NOT EXISTS
   FOR (n:Person) REQUIRE n.name IS NOT NULL
 
--- NOT NULL relationship
+// NOT NULL relationship
 CREATE CONSTRAINT wrote_year_exists IF NOT EXISTS
   FOR ()-[r:WROTE]-() REQUIRE r.year IS NOT NULL
 
--- PROPERTY TYPE node (Enterprise) — IS ::, IS TYPED, and :: are synonyms; IS :: is preferred
+// PROPERTY TYPE node (Enterprise) — IS ::, IS TYPED, and :: are synonyms; IS :: is preferred
 CREATE CONSTRAINT movie_title_type IF NOT EXISTS
   FOR (n:Movie) REQUIRE n.title IS :: STRING
 
--- PROPERTY TYPE relationship (Enterprise)
+// PROPERTY TYPE relationship (Enterprise)
 CREATE CONSTRAINT rating_type IF NOT EXISTS
   FOR ()-[r:RATED]-() REQUIRE r.rating IS :: INTEGER
 ```
@@ -186,13 +186,13 @@ Supported types for `IS ::`: `BOOLEAN`, `STRING`, `INTEGER`, `FLOAT`, `DATE`, `L
 `MERGE` = `MATCH` + conditional `CREATE`. Without an index/constraint on the merge property, the MATCH phase scans all nodes of that label.
 
 ```cypher
--- Without constraint: full scan + no atomicity guarantee
+// Without constraint: full scan + no atomicity guarantee
 MERGE (p:Person {email: $email})
 
--- With UNIQUE constraint:
---   1. O(log n) lookup via implicit RANGE index
---   2. Lock on constraint entry → prevents concurrent duplicate creation
---   3. Atomic: two concurrent MERGEs cannot both create the same node
+// With UNIQUE constraint:
+//   1. O(log n) lookup via implicit RANGE index
+//   2. Lock on constraint entry → prevents concurrent duplicate creation
+//   3. Atomic: two concurrent MERGEs cannot both create the same node
 CREATE CONSTRAINT person_email_unique IF NOT EXISTS
   FOR (n:Person) REQUIRE n.email IS UNIQUE
 
@@ -211,31 +211,31 @@ Use `MERGE (n:Label {keyProp: $val}) SET n.otherProp = $other` — merge only on
 Fulltext indexes use Lucene — tokenized, scored, not a filter index. Result nodes must be joined back to the graph. Supports `LIST<STRING>` properties — each element analyzed independently.
 
 ```cypher
--- Create (multi-label, multi-prop)
+// Create (multi-label, multi-prop)
 CREATE FULLTEXT INDEX article_search IF NOT EXISTS
   FOR (n:Article|BlogPost) ON EACH [n.title, n.body]
 
--- Query nodes — returns node + score (descending)
+// Query nodes — returns node + score (descending)
 CALL db.index.fulltext.queryNodes('article_search', 'graph database')
 YIELD node, score
 WHERE score > 0.5
 RETURN node.title, score
 ORDER BY score DESC LIMIT 10
 
--- Query relationships
+// Query relationships
 CALL db.index.fulltext.queryRelationships('rel_search', 'query string')
 YIELD relationship, score
 RETURN relationship, score
 
--- Lucene query syntax:
---   'graph database'         token AND (default)
---   '"graph database"'       exact phrase
---   'graph OR database'      OR
---   'graph -relational'      NOT
---   'graph~'                 fuzzy
---   'graph*'                 wildcard prefix
---   'title:graph'            field-scoped search
---   'team:"Operations"'      field + exact phrase
+// Lucene query syntax:
+//   'graph database'         token AND (default)
+//   '"graph database"'       exact phrase
+//   'graph OR database'      OR
+//   'graph -relational'      NOT
+//   'graph~'                 fuzzy
+//   'graph*'                 wildcard prefix
+//   'title:graph'            field-scoped search
+//   'team:"Operations"'      field + exact phrase
 ```
 
 Fulltext index does NOT participate in normal WHERE predicate planning. Use `CALL db.index.fulltext.queryNodes` / `queryRelationships` explicitly.
@@ -247,37 +247,37 @@ Fulltext index does NOT participate in normal WHERE predicate planning. Use `CAL
 Force the planner to use a specific index (or specific type) when it chooses a suboptimal plan. Use `EXPLAIN` first to confirm the issue.
 
 ```cypher
--- Generic hint — planner uses any available index on the property
+// Generic hint — planner uses any available index on the property
 MATCH (p:Person)
 USING INDEX p:Person(email)
 WHERE p.email = $email
 RETURN p.name, p.email
 
--- Force RANGE index specifically
+// Force RANGE index specifically
 MATCH (s:Scientist {born: 1850})
 USING RANGE INDEX s:Scientist(born)
 RETURN s.name, s.born
 
--- Force TEXT index specifically
+// Force TEXT index specifically
 MATCH (c:Country)
 USING TEXT INDEX c:Country(name)
 WHERE c.name = 'Country7'
 RETURN c.name, c.population
 
--- Two hints in one query — forces both path ends to use their index (enables index join)
+// Two hints in one query — forces both path ends to use their index (enables index join)
 MATCH (p:Person)-[:ACTED_IN]->(m:Movie)<-[:DIRECTED]-(p2:Person)
 USING INDEX p:Person(name)
 USING INDEX p2:Person(name)
 WHERE p.name CONTAINS 'John' AND p2.name CONTAINS 'George'
 RETURN p.name, p2.name, m.title
 
--- Relationship index hint
+// Relationship index hint
 MATCH (u:User)-[r:RATED]->(m:Movie)
 USING INDEX r:RATED(rating)
 WHERE r.rating = 5
 RETURN u.name, r.rating, m.title
 
--- Relationship TEXT index hint
+// Relationship TEXT index hint
 MATCH (n:Inventor)-[i:INVENTED_BY]->(inv:Invention)
 USING TEXT INDEX i:INVENTED_BY(location)
 WHERE i.location = 'Location7'
@@ -296,36 +296,36 @@ Rules:
 ## Inspect indexes and constraints
 
 ```cypher
--- All indexes — core fields
+// All indexes — core fields
 SHOW INDEXES YIELD name, type, state, labelsOrTypes, properties, populationPercent
-  WHERE state <> 'ONLINE' OR populationPercent < 100   -- building or not ready
+  WHERE state <> 'ONLINE' OR populationPercent < 100   // building or not ready
 
--- Full details (includes: indexSize, lastRead, readCount, lastWrite, writeCount, indexConfig)
+// Full details (includes: indexSize, lastRead, readCount, lastWrite, writeCount, indexConfig)
 SHOW INDEXES YIELD *
 
--- Filter by type
+// Filter by type
 SHOW RANGE INDEXES    YIELD name, state, labelsOrTypes, properties
 SHOW TEXT INDEXES     YIELD name, state, labelsOrTypes, properties
 SHOW FULLTEXT INDEXES YIELD name, state, indexConfig
 SHOW VECTOR INDEXES   YIELD name, state, populationPercent, indexConfig
 SHOW LOOKUP INDEXES   YIELD name, state
 
--- Unused index candidates (never read — review for removal)
+// Unused index candidates (never read — review for removal)
 SHOW INDEXES YIELD name, type, readCount, lastRead
   WHERE readCount = 0 AND type <> 'LOOKUP'
   RETURN name, type, lastRead
   ORDER BY lastRead
 
--- Constraints
+// Constraints
 SHOW CONSTRAINTS YIELD name, type, labelsOrTypes, properties
 
--- Check index used in query plan
+// Check index used in query plan
 EXPLAIN MATCH (p:Person {email: $email}) RETURN p
--- 'NodeIndexSeek' or 'NodeUniqueIndexSeek' — index used ✓
--- 'NodeIndexContainsScan' — TEXT index via CONTAINS ✓
--- 'NodeByLabelScan' or 'AllNodesScan' — no index, add one
+// 'NodeIndexSeek' or 'NodeUniqueIndexSeek' — index used ✓
+// 'NodeIndexContainsScan' — TEXT index via CONTAINS ✓
+// 'NodeByLabelScan' or 'AllNodesScan' — no index, add one
 
--- PROFILE for timing (run twice; second run = true cost)
+// PROFILE for timing (run twice; second run = true cost)
 PROFILE MATCH (p:Person) WHERE p.name CONTAINS 'Robert' RETURN p.name
 ```
 
@@ -336,15 +336,15 @@ PROFILE MATCH (p:Person) WHERE p.name CONTAINS 'Robert' RETURN p.name
 Create constraints and indexes **before** bulk import. MERGE during load uses the index for every row.
 
 ```cypher
--- 1. Uniqueness constraints first (implicit RANGE index)
+// 1. Uniqueness constraints first (implicit RANGE index)
 CREATE CONSTRAINT person_id    IF NOT EXISTS FOR (n:Person)  REQUIRE n.id    IS UNIQUE;
 CREATE CONSTRAINT movie_id     IF NOT EXISTS FOR (n:Movie)   REQUIRE n.id    IS UNIQUE;
 CREATE CONSTRAINT org_name     IF NOT EXISTS FOR (n:Org)     REQUIRE n.name  IS UNIQUE;
 
--- 2. Additional lookup indexes (non-unique properties used in MATCH/WHERE)
+// 2. Additional lookup indexes (non-unique properties used in MATCH/WHERE)
 CREATE RANGE INDEX person_email IF NOT EXISTS FOR (n:Person) ON (n.email);
 CREATE TEXT  INDEX movie_title  IF NOT EXISTS FOR (n:Movie)  ON (n.title);
 
--- 3. Wait for all to be ONLINE before loading
+// 3. Wait for all to be ONLINE before loading
 SHOW INDEXES YIELD name, state WHERE state <> 'ONLINE' RETURN name, state;
 ```

@@ -17,7 +17,8 @@ compatibility: Neo4j >= 2025.01 (safe baseline); Cypher 25
 ## When NOT to Use
 - **Driver migration/API changes** → `neo4j-migration-skill`
 - **DB admin** (users, config, backups) → `neo4j-cli-tools-skill`
-- **GQL clauses** (`LET`, `FINISH`, `FILTER`, `INSERT`) — illegal in Cypher; use `WITH`/`RETURN`/`WHERE`/`CREATE`
+
+GQL conformance note: `LET`, `FINISH`, `FILTER`, and `INSERT` are valid Cypher 25 clauses (introduced via GQL conformance, mostly in Neo4j 2025.06). On older versions, fall back to `WITH` / (omit RETURN) / `WHERE` / `CREATE`. `INSERT` requires `&`-separated multi-labels and does not support dynamic labels/types.
 
 ---
 
@@ -243,10 +244,10 @@ Full trap table → [references/syntax-traps.md](references/syntax-traps.md)
 
 Default: parameterized queries. **Return named properties, not full nodes or `RETURN *`.**
 ```cypher
--- RIGHT: agent gets named fields it can reason over
+// RIGHT: agent gets named fields it can reason over
 CYPHER 25 MATCH (n:Organization {name: $name}) RETURN n.name, n.founded, n.industry LIMIT 10
 
--- WRONG: full node object wastes tokens, leaks all properties, agent can't extract fields cleanly
+// WRONG: full node object wastes tokens, leaks all properties, agent can't extract fields cleanly
 CYPHER 25 MATCH (n:Organization {name: $name}) RETURN n LIMIT 10
 ```
 Exception: schema/diagnostic queries (`CALL db.schema.visualization()`, `SHOW INDEXES YIELD *`, `EXPLAIN`) where the object is the point.
