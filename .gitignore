@@ -138,6 +138,7 @@ celerybeat.pid
 # Environments
 .env
 .envrc
+.config/skill-evals.env
 .venv
 env/
 venv/

@@ -125,6 +125,23 @@ Agent Skills are a standardized format for domain-specific AI agent knowledge. E
 
 Pull requests welcome — new skills or improvements to existing ones.
 
+### Testing
+
+Run the fast repo-wide skill linter before submitting changes:
+
+```bash
+python3 scripts/lint_skills.py
+```
+
+Run the Python test suite for lint, executable Cypher examples, and optional vector-skill golden eval validation:
+
+```bash
+python3 -m pip install -r requirements-dev.txt
+python3 -m pytest tests -v
+```
+
+Vector-skill Cypher tests use Docker when `NEO4J_TEST_URI` is unset, including a Neo4j 5.26 Community run that verifies the aligned store format path. Configured `NEO4J_TEST_URI` runs are destructive and require `NEO4J_TEST_ALLOW_DESTRUCTIVE=1`. Live golden evals are skipped unless `.config/skill-evals.env` or environment variables provide `OPENAI_API_KEY` and `SKILL_EVAL_MODEL`. See [tests/README.md](tests/README.md) for test layers, configuration, and how to add new test cases.
+
 ## License
 
 MIT — see the [LICENSE](LICENSE) file for details.

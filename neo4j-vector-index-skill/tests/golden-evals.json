@@ -1,0 +1,70 @@
+{
+  "skill": "neo4j-vector-index-skill/SKILL.md",
+  "evals": [
+    {
+      "id": "create-vector-index-with-dimensions",
+      "prompt": "I am using Neo4j 2026.01 and OpenAI text-embedding-3-small embeddings on :Chunk(embedding). Show me the recommended vector index creation statement, the SHOW VECTOR INDEXES query to confirm the index is ONLINE, and the first SEARCH query pattern to run after the index is ready. Make every fenced Cypher example copy-paste safe by starting it with the CYPHER 25 pragma.",
+      "checks": [
+        {"type": "literal", "scope": "code", "value": "CYPHER 25"},
+        {"type": "literal", "scope": "code", "value": "CREATE VECTOR INDEX"},
+        {"type": "literal", "scope": "code", "value": "vector.dimensions"},
+        {"type": "literal", "scope": "any", "value": "1536"},
+        {"type": "literal", "scope": "code", "value": "vector.similarity_function"},
+        {"type": "literal", "scope": "any", "value": "cosine"},
+        {"type": "literal", "scope": "code", "value": "SHOW VECTOR INDEXES"},
+        {"type": "literal", "scope": "any", "value": "ONLINE"},
+        {"type": "literal", "scope": "code", "value": "SEARCH c IN"},
+        {"type": "regex", "scope": "prose", "expect": "absent", "pattern": "vector\\.dimensions\\s+(?:is|are)\\s+optional"}
+      ]
+    },
+    {
+      "id": "procedure-fallback-for-2025",
+      "prompt": "I am on Neo4j 2025.x. I already have a vector index called chunk_embedding and a $queryEmbedding parameter. Show me the query pattern for the top 10 chunks.",
+      "checks": [
+        {"type": "literal", "scope": "code", "value": "db.index.vector.queryNodes"},
+        {"type": "literal", "scope": "any", "value": "chunk_embedding"},
+        {"type": "regex", "scope": "code", "pattern": "YIELD\\s+node\\s+AS\\s+c\\s*,\\s*score"},
+        {"type": "regex", "scope": "code", "pattern": "RETURN\\s+c\\.text\\s*,\\s*score"},
+        {"type": "literal", "scope": "code", "value": "ORDER BY score DESC"},
+        {"type": "literal", "scope": "code", "expect": "absent", "value": "SEARCH c IN"}
+      ]
+    },
+    {
+      "id": "search-with-in-index-filter-limits",
+      "prompt": "I am on Neo4j 2026.01. Write a vector search over :Chunk that filters to source = $source and lang = 'en'. Also mention both key limitations of filters inside SEARCH: filtered properties must be declared in the vector index WITH list, and predicates are AND-only with no OR. Make the fenced Cypher example copy-paste safe by starting it with the CYPHER 25 pragma.",
+      "checks": [
+        {"type": "literal", "scope": "code", "value": "SEARCH c IN"},
+        {"type": "literal", "scope": "code", "value": "WHERE"},
+        {"type": "regex", "scope": "code", "pattern": "c\\.source\\s*=\\s*\\$source"},
+        {"type": "regex", "scope": "code", "pattern": "c\\.lang\\s*=\\s*'en'"},
+        {"type": "literal", "scope": "code", "value": "AND"},
+        {
+          "type": "llm_judge",
+          "blocking": false,
+          "criteria": [
+            {
+              "id": "mentions_with_list_requirement",
+              "description": "The answer says that properties filtered inside SEARCH must be declared in the vector index WITH list. Equivalent wording is acceptable."
+            },
+            {
+              "id": "mentions_and_only_filtering",
+              "description": "The answer says that in-index SEARCH filters support AND-only predicates and do not support OR. Equivalent wording is acceptable."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "current-cypher-embedding-function",
+      "prompt": "For Cypher 25, should I use genai.vector.encode() for query embeddings? Show the current approach for embedding a query and searching chunk_embedding. Make the fenced Cypher example copy-paste safe by starting it with the CYPHER 25 pragma.",
+      "checks": [
+        {"type": "literal", "scope": "any", "value": "ai.text.embed"},
+        {"type": "literal", "scope": "any", "value": "genai.vector.encode"},
+        {"type": "literal", "scope": "prose", "value": "deprecated"},
+        {"type": "literal", "scope": "code", "value": "CYPHER 25"},
+        {"type": "literal", "scope": "any", "value": "$openaiKey"},
+        {"type": "literal", "scope": "any", "value": "chunk_embedding"}
+      ]
+    }
+  ]
+}
