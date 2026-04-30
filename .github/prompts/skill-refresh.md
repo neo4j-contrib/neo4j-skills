@@ -61,7 +61,15 @@ Doc roots:
 
 ## Step 4 — Edit skills and references
 
-Read `AGENTS.md` before editing anything. It contains the authoritative rules for skill structure, terse language, decision tables, and quality gates.
+**Before writing a single edit**: run `cat AGENTS.md` and read it in full. Every edit you make must satisfy the rules there. This is not optional — AGENTS.md is the contract.
+
+Key rules from AGENTS.md that are most commonly violated — check each sentence you write against these:
+
+- **Caveman compression**: strip articles, conjunctions, politeness, and any sentence that doesn't add information an agent couldn't derive from a code block or heading alone. `❌ "You should always make sure to check the schema first."` → `✅ "Check schema before writing any query."`
+- **No section intros**: never open a section with a sentence that restates the heading. `❌ "This section covers PROPERTY_EXISTS, which tests whether a property exists."` — the heading already says that.
+- **No "when to use" prose for individual features**: decision tables replace prose motivation. `❌ "Use ACYCLIC for loop-free routing, DAG traversal, or any graph where re-visiting a node is invalid."` → put it in a table row.
+- **No redundant notices**: if the table already says `deprecated 2026.04`, do not also add a blockquote or paragraph saying the same thing.
+- **Every prohibition paired with a solution**: `❌ "Don't use this."` → `✅ "Use X instead."`
 
 Apply changes. Read each file fully before editing.
 
@@ -76,12 +84,25 @@ Apply changes. Read each file fully before editing.
 - Content you are not confident is outdated — leave it and note it in the summary
 - Architectural patterns that are still valid
 - Code examples that are still correct
+- **GQL syntactic synonyms** (`FOR`, `FILTER`, `LET`, `PROPERTY_EXISTS`, `IS [NOT] LABELED`, etc.) — document only as a compact alias table with a "GQL compliance only — use Cypher equivalents" note. Do not add per-alias examples, separate sections, or version-gate rows for each. One table row in the references file is sufficient.
 
 **Quality rules (all must pass before you finish):**
 
 1. **Line budget**: `SKILL.md` ≤ 500 lines. If a SKILL.md would exceed 500 lines after additions, move new content to a `references/` file and add a link.
 
-2. **Terse language**: Follow caveman compression — no section intros restating headings, no hedging, no passive-voice padding. See AGENTS.md for the full rule with examples and decision tables.
+2. **Terse language**: Follow caveman compression — applies equally to `SKILL.md` and every `references/` file you touch. Before finishing, re-read every sentence you wrote and delete it if it matches any of these patterns:
+
+   | Delete if it... | Example to cut |
+   |---|---|
+   | Restates the section heading as a sentence | `— tests property exists and is not NULL:` after `PROPERTY_EXISTS` heading |
+   | Explains *when to use* a feature in prose | `Use for loop-free routing, DAG traversal, or any graph where re-visiting a node is invalid.` |
+   | Repeats a fact already in a table row or code comment | Blockquote deprecation notice when the table already has `deprecated 2026.04` |
+   | Hedges or qualifies (`you may want to`, `it is generally recommended`) | any |
+   | Numbers a step whose command is self-documenting | `# 2. Create instance` before `aura-cli instance create` |
+
+   Never delete: option/flag lists, error trigger strings, error fix steps, example output, code blocks, table rows, `key: value` pairs.
+
+   Test: *would a developer need to look this up?* If yes, keep it. If it's padding around something they'd look up, cut the padding.
 
 3. **Cypher comments**: Use `//` only. `--` is a SQL comment and a Cypher parse error. Check every Cypher block you write or edit.
 

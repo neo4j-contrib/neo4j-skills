@@ -13,7 +13,7 @@ jobs:
   refresh:
     name: Refresh skills against Neo4j release notes
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
 
     steps:
       - uses: actions/checkout@v4
@@ -57,7 +57,7 @@ jobs:
             --no-session-persistence \
             --allowedTools "Bash,WebFetch,Read,Edit,Write" \
             --max-turns 200 \
-            --max-budget-usd 5.00 \
+            --max-budget-usd 10.00 \
             | stdbuf -oL tee /tmp/refresh-raw.jsonl \
             | jq -r --unbuffered '
                 if .type == "assistant" then
@@ -101,7 +101,7 @@ jobs:
         run: |
           git fetch origin main
           git rebase origin/main
-          git push --force-with-lease origin "${{ steps.branch.outputs.name }}"
+          git push --force origin "${{ steps.branch.outputs.name }}"
 
       - name: Extract summary for PR body
         if: steps.changes.outputs.changed == 'true'
@@ -123,12 +123,20 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh pr create \
-            --title "skill-refresh: Neo4j release notes scan $(date +%Y-%m-%d)" \
-            --body-file /tmp/pr-body.txt \
-            --base main \
-            --head "${{ steps.branch.outputs.name }}" \
-            --label "skill-refresh,automated"
+          BRANCH="${{ steps.branch.outputs.name }}"
+          if gh pr view "$BRANCH" --repo "$GITHUB_REPOSITORY" &>/dev/null; then
+            gh pr edit "$BRANCH" \
+              --title "skill-refresh: Neo4j release notes scan $(date +%Y-%m-%d)" \
+              --body-file /tmp/pr-body.txt
+            echo "Updated existing PR for $BRANCH"
+          else
+            gh pr create \
+              --title "skill-refresh: Neo4j release notes scan $(date +%Y-%m-%d)" \
+              --body-file /tmp/pr-body.txt \
+              --base main \
+              --head "$BRANCH" \
+              --label "skill-refresh,automated"
+          fi
 
       - name: No changes
         if: steps.changes.outputs.changed == 'false'
