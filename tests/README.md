@@ -97,6 +97,14 @@ Guidelines:
 
 Golden evals live in `neo4j-vector-index-skill/tests/golden-evals.json`. Each eval sends the skill and task prompt to the configured model, then evaluates the response with typed checks.
 
+Prompt design:
+
+- Describe the user's scenario, version, environment, and task.
+- Do not include the implementation strategy unless the user would naturally provide it.
+- Do not solve the problem in the prompt. Put required behavior in checks instead.
+- Prefer prompts that force the skill to choose between branches, for example Neo4j 5.26 CE versus Neo4j 2026.01.
+- A new eval may fail against the current `SKILL.md` if the failure identifies missing or weak skill guidance. Do not relax the eval only to make the current skill pass.
+
 Use deterministic checks for objective requirements:
 
 ```json

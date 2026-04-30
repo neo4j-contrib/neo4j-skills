@@ -30,6 +30,37 @@
       ]
     },
     {
+      "id": "neo4j-526-ce-list-float-workflow",
+      "prompt": "I am using Neo4j 5.26 Community Edition. My application already generates embeddings. Show a copy-paste-safe workflow to create a vector index on :Chunk(embedding), insert or update chunks with list embeddings using a $rows parameter, wait for the index to be ONLINE, and query the top 10 chunks using a $queryEmbedding parameter. Do not use placeholder ellipses. The query example must yield node AS c, score and order by score DESC.",
+      "checks": [
+        {"type": "literal", "scope": "prose", "value": "Neo4j 5.26"},
+        {"type": "regex", "scope": "prose", "pattern": "\\b(?:CE|Community Edition)\\b"},
+        {"type": "literal", "scope": "any", "value": "LIST<FLOAT>"},
+        {"type": "literal", "scope": "code", "value": "CREATE VECTOR INDEX"},
+        {"type": "literal", "scope": "code", "value": "vector.dimensions"},
+        {"type": "literal", "scope": "code", "value": "vector.similarity_function"},
+        {"type": "literal", "scope": "code", "value": "SHOW VECTOR INDEXES"},
+        {"type": "literal", "scope": "any", "value": "ONLINE"},
+        {"type": "literal", "scope": "code", "value": "SET c.embedding"},
+        {"type": "literal", "scope": "code", "value": "$rows"},
+        {"type": "literal", "scope": "code", "value": "$queryEmbedding"},
+        {"type": "literal", "scope": "code", "value": "db.index.vector.queryNodes"},
+        {"type": "regex", "scope": "code", "pattern": "YIELD\\s+node\\s+AS\\s+c\\s*,\\s*score"},
+        {"type": "literal", "scope": "code", "value": "ORDER BY score DESC"},
+        {"type": "literal", "scope": "code", "expect": "absent", "value": "CYPHER 25"},
+        {"type": "literal", "scope": "code", "expect": "absent", "value": "SEARCH c IN"},
+        {"type": "literal", "scope": "code", "expect": "absent", "value": "ai.text.embed"},
+        {"type": "literal", "scope": "code", "expect": "absent", "value": "genai.vector.encode"},
+        {"type": "literal", "scope": "code", "expect": "absent", "value": "db.index.vector.create"},
+        {"type": "literal", "scope": "code", "expect": "absent", "value": "apoc.periodic.iterate"},
+        {"type": "regex", "scope": "code", "expect": "absent", "pattern": "\\.\\.\\."},
+        {"type": "regex", "scope": "code", "expect": "absent", "pattern": "\\bVECTOR\\s*<"},
+        {"type": "regex", "scope": "code", "expect": "absent", "pattern": "\\bvector\\s*\\("},
+        {"type": "regex", "scope": "code", "expect": "absent", "pattern": "CREATE\\s+CONSTRAINT[\\s\\S]*VECTOR"},
+        {"type": "regex", "scope": "code", "expect": "absent", "pattern": "FOR\\s*\\([^)]*\\)\\s+ON\\s*\\([^)]*\\)\\s+WITH\\s*\\["}
+      ]
+    },
+    {
       "id": "search-with-in-index-filter-limits",
       "prompt": "I am on Neo4j 2026.01. Write a vector search over :Chunk that filters to source = $source and lang = 'en'. Also mention both key limitations of filters inside SEARCH: filtered properties must be declared in the vector index WITH list, and predicates are AND-only with no OR. Make the fenced Cypher example copy-paste safe by starting it with the CYPHER 25 pragma.",
       "checks": [
