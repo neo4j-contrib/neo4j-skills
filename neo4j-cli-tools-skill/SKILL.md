@@ -16,14 +16,10 @@ This skill provides comprehensive guidance on Neo4j command-line tools for datab
 
 ## When to Use
 
-Use this skill when:
-- Setting up or configuring Neo4j databases via command line
-- Running administrative tasks with neo4j-admin
-- Executing Cypher queries from the command line
-- Managing Neo4j Aura cloud instances
-- Setting up the Neo4j MCP server for AI agents
-- Troubleshooting Neo4j CLI tool issues
-- Migrating or backing up databases using CLI tools
+- Admin tasks: backup, restore, import, memory sizing → `neo4j-admin`
+- Ad-hoc queries, scripting, CI/CD → `cypher-shell`
+- Aura cloud provisioning → `aura-cli`
+- MCP server install → `neo4j-mcp`
 
 ## When NOT to Use
 
@@ -264,8 +260,8 @@ Common environment variables across tools:
 
 ## Checklist
 
-- [ ] Correct tool selected for task (neo4j-admin / cypher-shell / aura-cli / neo4j-mcp)
-- [ ] Credentials set via env vars (`NEO4J_USERNAME`, `NEO4J_PASSWORD`); not hardcoded
-- [ ] Destructive operations (restore, load-overwrite, bulk delete) confirmed by user before execution
-- [ ] Post-operation verification run (connectivity test / `SHOW INDEXES` / count check)
-- [ ] Backup completed before any restore or schema change
+- [ ] Correct tool selected: neo4j-admin / cypher-shell / aura-cli / neo4j-mcp
+- [ ] Credentials via env (`NEO4J_USERNAME`, `NEO4J_PASSWORD`); not hardcoded
+- [ ] Destructive ops confirmed before execution
+- [ ] Post-op verify: connect + `SHOW INDEXES` + count
+- [ ] Backup taken before restore or schema change

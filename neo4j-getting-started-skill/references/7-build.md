@@ -4,9 +4,8 @@
 
 ## Virtual environment (required — always use .venv)
 
-Modern Python (3.12+) forbids global `pip install`. All installs and runs must go through the `.venv` created in stage 0.
+Modern Python (3.12+) forbids global `pip install` — always use `.venv` from stage 0.
 
-**Before installing requirements**, ensure dependencies are in the venv:
 ```bash
 .venv/bin/pip install -r requirements.txt
 ```
@@ -38,8 +37,7 @@ APP_TYPE=mcp           → Path E: neo4j-mcp configuration
 
 ## Path A — Jupyter Notebook
 
-**Two-step approach: test Python snippets first, then compose into notebook.**
-This avoids writing a large notebook only to discover connection or query errors.
+**Two-step: test Python snippets first, then compose into notebook.** Avoids writing a large notebook only to discover connection or query errors.
 
 ### Step A0 — Smoke-test key snippets in isolation
 
@@ -74,11 +72,11 @@ print(f"✓ Use-case query works: {len(df)} recommendations")
 driver.close()
 ```
 
-Run: write to a temp file and run it: `.venv/bin/python3 /tmp/smoke_test.py`. **Only proceed to notebook composition once this passes.**
+Run: `.venv/bin/python3 /tmp/smoke_test.py`. **Only proceed to notebook composition once this passes.**
 
 ### Step A1 — Compose `notebook.ipynb`
 
-Required cells (keep each cell focused — no multi-page cells):
+Required cells (one focus per cell):
 
 1. **Setup** — imports + `.env` loading via `python-dotenv`
 2. **Connection** — create driver, verify connectivity
@@ -160,12 +158,9 @@ neo4j-viz>=1.0.0
 
 ## Path B — Streamlit Dashboard
 
-**If DATA_SOURCE=documents**: use the GraphRAG chatbot template from
-`${CLAUDE_SKILL_DIR}/references/capabilities/kg-from-documents.md` Step K7 instead of
-the generic dashboard below. The chatbot template uses `VectorCypherRetriever` to ground
-answers in the ingested document chunks.
+**If DATA_SOURCE=documents**: use the GraphRAG chatbot template from `${CLAUDE_SKILL_DIR}/references/capabilities/kg-from-documents.md` Step K7 — it uses `VectorCypherRetriever` to ground answers in ingested document chunks.
 
-Generate `app.py` (generic dashboard — for non-documents data sources):
+Generate `app.py` (generic dashboard for non-documents data sources):
 
 ```python
 import streamlit as st
@@ -356,9 +351,7 @@ Assert `total_nodes > 0` in the response.
 
 ## Path D — GraphRAG Pipeline
 
-**If DATA_SOURCE=documents**: the full pipeline is already defined in
-`${CLAUDE_SKILL_DIR}/references/capabilities/kg-from-documents.md` (Steps K7/K8).
-Use the Streamlit chatbot template (Step K7) or ToolsRetriever (Step K8) from there.
+**If DATA_SOURCE=documents**: full pipeline in `${CLAUDE_SKILL_DIR}/references/capabilities/kg-from-documents.md` (Steps K7/K8). Use the Streamlit chatbot template (Step K7) or ToolsRetriever (Step K8).
 
 For a standalone smoke-test script `graphrag_app.py`:
 
@@ -410,7 +403,7 @@ neo4j-graphrag[openai]>=1.13.0
 
 ## Path E — MCP Integration
 
-Install `neo4j-mcp` binary (done in `prerequisites`). Write config files:
+Install `neo4j-mcp` binary (done in prerequisites). Write config files:
 
 **For Claude Desktop** (`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS,
 `%APPDATA%\Claude\claude_desktop_config.json` on Windows):
@@ -449,7 +442,7 @@ Install `neo4j-mcp` binary (done in `prerequisites`). Write config files:
 
 Available MCP tools after restart: `read-cypher`, `write-cypher`, `get-schema`, `list-gds-procedures`.
 
-Tell user: "Restart Claude Desktop or Claude Code. The `neo4j` server will appear as available tools."
+Tell user: "Restart Claude Desktop or Claude Code — the `neo4j` server will appear as available tools."
 
 For read-only mode (recommended for production/shared DBs), add:
 ```json

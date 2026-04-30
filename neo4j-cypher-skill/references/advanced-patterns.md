@@ -8,9 +8,9 @@ Version markers: `[Neo4j 5]` = Neo4j 5.x, `[2025.x]` = Neo4j 2025.x / Cypher 25,
 
 ## REPEATABLE ELEMENTS — When to Use [2025.x]
 
-Default match mode is `DIFFERENT RELATIONSHIPS` — each relationship traversed at most once per path.
+Default: `DIFFERENT RELATIONSHIPS` — each relationship traversed at most once per path.
 Use `REPEATABLE ELEMENTS` when:
-- Graph has nodes with limited connectivity (single in/out relationship) and you need weight-optimized paths
+- Nodes have limited connectivity (single in/out relationship) and weight-optimized paths are needed
 - Problem requires backtracking through already-visited nodes (circular routes, constrained path search)
 - Path must revisit waypoints (multi-stop routes, recurring visits)
 
@@ -31,7 +31,7 @@ RETURN p, distance
 
 ## Multi-Stop Shortest Path [2025.x]
 
-Visit multiple waypoints in one query using chained QPE groups:
+Multiple waypoints in one query via chained QPE groups:
 
 ```cypher
 CYPHER 25
@@ -48,7 +48,7 @@ RETURN p, distance
 
 ## Stateful Route Planning with allReduce [2025.x]
 
-Use `allReduce` for simulation-style traversal where path validity depends on accumulated state (energy, time, cost):
+`allReduce` for simulation-style traversal where path validity depends on accumulated state (energy, time, cost):
 
 ```cypher
 CYPHER 25 runtime=parallel
@@ -76,7 +76,7 @@ ORDER BY total_mins ASC LIMIT 1
 
 ## DAG Traversal and Critical Path [Neo4j 5]
 
-Model tasks as ActivityStart/ActivityEnd nodes connected by weighted `:ACTIVITY` edges; zero-weight `:DEPENDS_ON` edges for sequencing.
+Model: ActivityStart/ActivityEnd nodes connected by weighted `:ACTIVITY` edges; zero-weight `:DEPENDS_ON` edges for sequencing.
 
 ```cypher
 // Longest path (critical path) — small graphs only
@@ -101,8 +101,8 @@ Limitation: Cypher QPE for longest path fails on large graphs; use `gds.dag.long
 
 Pattern: User-Event-Thing model where fraud rings = connected components sharing resources (IPs, devices, emails).
 
-**Problem**: Standard WCC includes future events — causes "future leakage" in ML features.
-**Solution**: Build chronological `:SAME_CC_AS` forest — each event links only to components existing at its timestamp.
+**Problem**: Standard WCC includes future events → "future leakage" in ML features.
+**Solution**: Chronological `:SAME_CC_AS` forest — each event links only to components existing at its timestamp.
 
 ```cypher
 // Step 1: Build temporal connected components (process events in timestamp order)
@@ -217,7 +217,7 @@ RETURN totalCost, [n IN nodes(*) | n.name] AS route
 
 ## Type Predicate for Schema Discovery [Neo4j 5]
 
-Identify properties by runtime type — useful in GraphRAG pipelines to auto-detect text fields:
+Identifies properties by runtime type — useful in GraphRAG pipelines to auto-detect text fields:
 
 ```cypher
 // Find all STRING properties on nodes in a label
@@ -233,7 +233,7 @@ RETURN p AS textProperty
 
 ## OPTIONAL CALL [Neo4j 5]
 
-Left-outer join semantics for procedures — row is kept even if procedure returns no results:
+Left-outer join for procedures — row kept even if procedure returns no results:
 
 ```cypher
 CYPHER 25

@@ -2,7 +2,7 @@
 
 ## SHOW QUERIES
 
-Lists currently running queries across all databases (admin only for other users' queries).
+Lists currently running queries across all databases (admin required for other users' queries).
 
 ```cypher
 SHOW QUERIES
@@ -67,7 +67,7 @@ YIELD transactionId, message
 ## Database Statistics
 
 ### Graph Counts
-Returns node/relationship counts by label and type — the data the planner uses for cardinality estimation.
+Node/relationship counts by label and type — the data the planner uses for cardinality estimation.
 
 ```cypher
 CALL db.stats.retrieve('GRAPH COUNTS')
@@ -106,7 +106,7 @@ Anonymized version for sharing without exposing property names.
 ### Config
 `dbms.cypher.statistics_divergence_threshold` (default: `0.75`)
 
-Formula: `abs(a - b) / max(a, b)`. At 0.75, a plan is invalidated when statistics change by 75% (roughly 4× growth/shrink). Lower this value to replan more aggressively on growing databases.
+Formula: `abs(a - b) / max(a, b)`. At 0.75, plan invalidated when statistics change by 75% (~4× growth/shrink). Lower to replan more aggressively on growing databases.
 
 ### Force Replanning
 ```cypher
@@ -162,7 +162,7 @@ Index types and supported predicates:
 
 ## Query Log (server-side)
 
-On self-managed Neo4j, slow queries are logged to `neo4j.log` and `query.log`:
+On self-managed Neo4j, slow queries log to `neo4j.log` and `query.log`:
 
 Config options (`neo4j.conf`):
 ```
@@ -179,7 +179,7 @@ Each log entry includes: `{elapsedMs} ms: {query}` with optional params, allocat
 
 ## Page Cache Sizing
 
-Page cache too small → high `pageFaults` → disk I/O → slow queries.
+Small page cache → high `pageFaults` → disk I/O → slow queries.
 
 ```cypher
 // Current page cache stats:
@@ -192,4 +192,4 @@ Or from SHOW TRANSACTIONS/QUERIES:
 - `pageHits` high, `pageFaults` low → cache is sufficient
 - `pageFaults` > 1% of pageHits → increase `server.memory.pagecache.size` in `neo4j.conf`
 
-Rule of thumb: set page cache to hold entire graph store (`graph.db/` directory size).
+Set page cache to hold the entire graph store (`graph.db/` directory size).

@@ -38,9 +38,7 @@ func (r *PersonRepo) FindByName(ctx context.Context, name string) ([]Person, err
 
 ## Causal Consistency — Cross-Session Bookmarks
 
-Within a single session, queries are automatically causally chained — no action required.
-
-Across concurrent sessions, share bookmarks explicitly:
+Within a single session, queries are automatically causally chained. Across concurrent sessions, share bookmarks explicitly:
 
 ```go
 // sessionA and sessionB run concurrently; sessionC waits for both

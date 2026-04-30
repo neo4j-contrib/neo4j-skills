@@ -29,8 +29,7 @@ If `tx.commit()` rejects with a network error, the commit may or may not have su
 
 ## Causal Consistency and Bookmarks
 
-Within a single session, queries are causally chained automatically.
-Across sessions, pass bookmarks explicitly:
+Within a single session, queries are causally chained automatically. Across sessions, pass bookmarks explicitly:
 
 ```javascript
 const sessionA = driver.session({ database: 'neo4j' })

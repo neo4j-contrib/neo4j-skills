@@ -17,7 +17,7 @@
 | `datetime.timedelta` | Duration |
 | `neo4j.time.*` types | Corresponding Cypher temporal |
 
-Custom classes, dataclasses, Pydantic models, and enums are **not** auto-serialized. Convert to `dict` or primitive values first.
+Custom classes, dataclasses, Pydantic models, and enums are **not** auto-serialized — convert to `dict` or primitives first.
 
 ```python
 from dataclasses import dataclass, asdict
@@ -76,7 +76,7 @@ dur.months
 
 ## JSON Serialization
 
-`record.data()` returns a `dict` but values for `Node`, `Relationship`, `Path`, and `neo4j.time.*` are still driver objects — not JSON-safe.
+`record.data()` returns a `dict` but `Node`, `Relationship`, `Path`, and `neo4j.time.*` values are still driver objects — not JSON-safe.
 
 ```python
 # ❌ Raises TypeError if result contains node/rel/temporal
@@ -124,7 +124,7 @@ records, _, _ = driver.execute_query(
 distance = records[0]["distance"]   # float64
 ```
 
-Pass points as parameters — driver serializes automatically. Destructure or use `.x`/`.y`/`.z` to read back.
+Pass points as parameters — serialized automatically. Read back via destructuring or `.x`/`.y`/`.z`.
 
 ## Null Safety
 
@@ -134,7 +134,7 @@ Pass points as parameters — driver serializes automatically. Destructure or us
 | Key present, value is graph null | `None` | `None` |
 | Key absent (typo / not in RETURN) | `KeyError` | `None` |
 
-`.get()` cannot distinguish absent key from graph null. Use `"key" in record.keys()` when the distinction matters.
+`.get()` cannot distinguish absent key from graph null — use `"key" in record.keys()` when the distinction matters.
 
 ```python
 # Optional column from OPTIONAL MATCH

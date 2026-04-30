@@ -13,7 +13,7 @@ NEO4J_MCP_BIN=$(which neo4j-mcp 2>/dev/null \
 echo "neo4j-mcp: $NEO4J_MCP_BIN"
 ```
 
-Use the absolute path found above in all config files below.
+Use that absolute path in all config files below.
 
 ## Claude Desktop
 
@@ -92,4 +92,4 @@ This disables the `write-cypher` tool entirely.
 
 ## Verify config is working
 
-After restart, ask the agent: "What node labels are in my Neo4j database?" — it should use `get-schema` automatically.
+After restart, ask: "What node labels are in my Neo4j database?" — should use `get-schema` automatically.

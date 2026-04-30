@@ -323,6 +323,28 @@ For the complete algorithm parameter reference, see [references/algorithms.md](r
 
 An unreferenced file in `references/` has <10% discovery rate. A referenced one has 90%+.
 
+### Language style applies to `references/` too
+
+The same caveman compression rule from the Language Style section applies to every file in `references/`. References are loaded at execution time and read in full — verbosity wastes tokens just as much as in `SKILL.md`.
+
+Apply the same standard when writing or reviewing reference files:
+
+```
+❌ The following section provides a comprehensive overview of all the available
+   algorithm categories and when you might want to use each one in your workflow.
+✅ Algorithm categories:
+
+❌ Make sure that you always remember to drop the projected graph after the
+   algorithms have completed running to free up memory in the GDS session.
+✅ Drop projected graph after algorithms complete — frees session memory.
+```
+
+When reviewing any skill (new or updated), check `references/` for:
+- Explanatory paragraphs that describe what something is instead of what to do
+- Hedging language ("you may want to", "it is generally recommended that")
+- Redundant context already present in `SKILL.md`
+- Section intros that just restate the heading
+
 ---
 
 ## Security and Write Operations

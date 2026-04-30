@@ -2,7 +2,7 @@
 
 ## Table Classification — What Becomes What
 
-Before writing any Cypher, classify every source table:
+Classify every source table before writing any Cypher:
 
 | Table type | Graph target | Example |
 |---|---|---|
@@ -12,7 +12,7 @@ Before writing any Cypher, classify every source table:
 | Self-referencing hierarchy | Same-label relationship | `employees.reports_to` → `[:REPORTS_TO]` |
 | Audit/log table | Omit or keep in RDBMS | `audit_log` → leave in relational storage |
 
-Rule: Design for query patterns, not schema replication. A good graph often looks different from the source schema.
+Design for query patterns, not schema replication. A good graph often looks different from the source schema.
 
 ## FK → Relationship Mapping
 
@@ -72,7 +72,7 @@ MATCH (o:Order    {orderID:    toInteger(row.order_id)})
 MERGE (c)-[:PLACED]->(o)
 ```
 
-Use `CREATE` only for initial bulk load with guaranteed-clean data; use `MERGE` for any incremental sync or re-runnable script.
+`CREATE` only for initial bulk load with guaranteed-clean data. `MERGE` for incremental sync or re-runnable scripts.
 
 ## NULL Handling
 
@@ -85,7 +85,7 @@ SET c.region = CASE WHEN row.region IS NOT NULL AND row.region <> ''
 SET c.region = COALESCE(NULLIF(row.region, ''), 'Unknown')
 ```
 
-Neo4j does not store null properties, so Option A means the property simply won't exist on nodes where source is NULL.
+Neo4j does not store null properties — Option A means the property won't exist on nodes where source is NULL.
 
 ## Large Dataset Batching
 
@@ -152,7 +152,7 @@ After creating indexes, poll until all ONLINE:
 ```cypher
 SHOW INDEXES YIELD name, state WHERE state <> 'ONLINE'
 ```
-Do not use indexes until all report `ONLINE`.
+Do not query until all report `ONLINE`.
 
 ## Common Misconceptions
 

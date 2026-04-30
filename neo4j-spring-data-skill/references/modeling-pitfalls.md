@@ -2,28 +2,28 @@
 
 ## findAll() — Greedy Graph Traversal
 
-`findAll()` fetches the entire reachable graph from the entity root. For datasets > ~100 nodes this causes timeouts or OOM. Use a custom `@Query` with `LIMIT`:
+`findAll()` fetches the entire reachable graph. For datasets > ~100 nodes this causes timeouts or OOM. Use a custom `@Query` with `LIMIT`:
 
 ```java
 @Query("MATCH (m:Movie)<-[r:ACTED_IN]-(p:Person) RETURN m, collect(r), collect(p) LIMIT 20")
 List<MovieEntity> findMoviesSubset();
 ```
 
-Never use `findAll()` in production without a `LIMIT`.
+Never call `findAll()` in production without a `LIMIT`.
 
 ## Bidirectional Relationships — Avoid Unless Needed
 
-Defining `Movie → actors` AND `Person → movies` in the same entity graph causes chain-loading: fetching a movie loads actors, which loads their other movies, which loads those casts, etc. This can fetch the entire graph.
+Defining `Movie → actors` AND `Person → movies` causes chain-loading: fetching a movie loads actors, which loads their other movies, which loads those casts, etc. — can fetch the entire graph.
 
-- Define only the direction needed for your use case.
-- If both directions are genuinely needed, use `@Query` with explicit depth control.
-- Avoid `@Relationship` on both ends of the same relationship type unless the domain truly requires it.
+- Define only the direction needed for the use case.
+- If both directions are required, use `@Query` with explicit depth control.
+- Avoid `@Relationship` on both ends of the same type unless the domain requires it.
 
 ## Interface vs DTO Projection — When to Use Each
 
 ### Interface projection (closed)
 
-Use when you need a subset of existing entity properties for display or serialization. SDN can optimize the Cypher query to only fetch those fields.
+Use for a subset of existing entity properties. SDN can optimize the Cypher query to fetch only those fields.
 
 ```java
 public interface MovieSummary {
@@ -37,7 +37,7 @@ List<MovieSummary> findByYearGreaterThan(int year);
 
 ### DTO projection (record/class)
 
-Use when you need **computed or aggregated fields** not present on the entity. The `@Query` computes extra columns that map to DTO fields.
+Use for **computed or aggregated fields** not on the entity. The `@Query` computes extra columns mapped to DTO fields.
 
 ```java
 public record MovieWithCastSize(String title, String poster, Long castSize) {}
@@ -46,7 +46,7 @@ public record MovieWithCastSize(String title, String poster, Long castSize) {}
 List<MovieWithCastSize> findMoviesWithCastSize();
 ```
 
-**Caution**: DTO projection does NOT reduce database load. SDN fetches the full entity in case SpEL or other features access unlisted fields. Use interface projections when reducing payload size matters; use DTO projections for computed columns.
+**Caution**: DTO projection does NOT reduce database load — SDN fetches the full entity in case SpEL or other features access unlisted fields. Use interface projections to reduce payload; use DTO projections for computed columns.
 
 ### Multi-level (nested) projection
 
@@ -83,8 +83,8 @@ Integer values outside `Long` range are returned as `String`.
 
 ## Not Building the Entire Graph Into the Application
 
-Resist mapping every label, relationship, and property. Build entities for the specific use case. Mapping `Actor`, `Director`, `User`, `Genre` as separate entities alongside `Movie` creates sprawl and often loads unwanted data.
+Map only what the use case needs. Mapping every label (`Actor`, `Director`, `User`, `Genre`) alongside `Movie` creates sprawl and loads unwanted data.
 
-- Start with the minimum model for your primary use case.
+- Start with the minimum model.
 - Add entities incrementally as use cases require.
-- Use `@Query` projections to cross type boundaries without introducing new entity classes.
+- Use `@Query` projections to cross type boundaries without new entity classes.

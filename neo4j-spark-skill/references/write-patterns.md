@@ -118,7 +118,7 @@ relDF.coalesce(1)
 ## Pre-Write Checklist
 
 - [ ] Uniqueness constraint on all `node.keys` / `*.node.keys` properties
-- [ ] `coalesce(1)` before any relationship write
-- [ ] `node.properties` reduces payload to only needed columns
-- [ ] `batch.size` validated against Neo4j heap settings
-- [ ] For `Overwrite` on nodes: constraint prevents duplicates under concurrency
+- [ ] `coalesce(1)` before relationship write
+- [ ] `node.properties` limits payload to needed columns
+- [ ] `batch.size` validated against Neo4j heap
+- [ ] `Overwrite` on nodes: constraint prevents duplicates under concurrency

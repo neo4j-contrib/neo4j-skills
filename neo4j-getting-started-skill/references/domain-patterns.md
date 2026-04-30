@@ -1,6 +1,6 @@
 # Domain Patterns Reference
 
-Pre-built graph model templates for common domains. Use as starting point, adapt to user's specific use-case.
+Pre-built graph model templates for common domains. Adapt to the user's use-case.
 
 ---
 
@@ -121,10 +121,7 @@ Extended model (add as needed):
 (Transaction)-[:VIA]->(Device {deviceId, ip})
 ```
 
-**Why PERFORMS/BENEFITS_TO (not FROM/TO on Transaction):** The ring detection pattern
-`(a)-[:PERFORMS]->()-[:BENEFITS_TO]->(b)` creates a direct Account→Account traversal path
-that can be chained as variable-length paths for cycle detection. Transaction-centric
-models `(tx)-[:FROM]->(a)` require more complex patterns and are harder to chain.
+**Why PERFORMS/BENEFITS_TO (not FROM/TO on Transaction):** `(a)-[:PERFORMS]->()-[:BENEFITS_TO]->(b)` creates a direct Account→Account traversal path chainable as variable-length paths for cycle detection. Transaction-centric models `(tx)-[:FROM]->(a)` require more complex patterns and are harder to chain.
 
 ### DDL
 ```cypher
@@ -167,8 +164,7 @@ ORDER BY txCount DESC LIMIT 20;
 
 ### Synthetic data guidance (generate.py)
 
-**Always plant explicit ring patterns** — random transactions will almost never form cycles.
-Generate rings deliberately:
+**Always plant explicit ring patterns** — random transactions almost never form cycles:
 
 ```python
 # Plant ring patterns: A→B→C→A with ≤20% amount decay per hop (realistic fee/skimming)

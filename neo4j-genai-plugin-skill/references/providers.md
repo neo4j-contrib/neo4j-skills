@@ -127,8 +127,6 @@ RETURN ai.text.embed('Hello', 'bedrock-titan', {
 ---
 
 ## Provider Discovery — Runtime Check
-
-List all providers configured and available:
 ```cypher
 // Embedding providers
 CYPHER 25

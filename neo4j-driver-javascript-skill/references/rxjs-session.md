@@ -1,6 +1,6 @@
 # RxJS Session API — Neo4j JavaScript Driver
 
-The driver exposes an RxJS-based session via `driver.rxSession()`. Requires RxJS v7+.
+RxJS-based session via `driver.rxSession()`. Requires RxJS v7+.
 
 ```javascript
 import { map, toArray } from 'rxjs/operators'
@@ -35,7 +35,7 @@ rxSession.executeRead(txFn =>
 ).pipe(toArray()).subscribe({ ... })
 ```
 
-Always close the RxJS session after use:
+Always close after use:
 
 ```javascript
 rxSession.close().subscribe()
@@ -43,4 +43,4 @@ rxSession.close().subscribe()
 
 ## When to Use
 
-RxJS session is suited to reactive/streaming pipelines where the rest of the app is already RxJS-based. For most Node.js apps, the `async/await` API in the main SKILL.md is simpler and preferred.
+Use when the rest of the app is already RxJS-based. For most Node.js apps, `async/await` (see SKILL.md) is simpler.

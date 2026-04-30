@@ -53,10 +53,10 @@ Full option reference for `.read.format("org.neo4j.spark.DataSource")`.
 
 ## Schema Inference Notes
 
-- Without APOC: connector samples `schema.flatten.limit` rows to infer types
-- With APOC installed: uses `apoc.meta.nodeTypeProperties` — more accurate
+- Without APOC: samples `schema.flatten.limit` rows to infer types
+- With APOC: uses `apoc.meta.nodeTypeProperties` — more accurate
 - Map/list properties: flattened into dot-notation columns (e.g. `address.city`)
-- Use `query` mode with explicit RETURN types when schema inference is unreliable
+- Use `query` mode with explicit RETURN types when inference is unreliable
 
 ## Examples
 

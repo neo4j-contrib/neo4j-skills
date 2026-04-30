@@ -2,7 +2,7 @@
 
 ## Movie Graph Demo Dataset (Standard Quick-Start)
 
-Fastest path to a populated graph — load via `:play movies` in Neo4j Browser or the Aura Query tool.
+Fastest path to a populated graph. Load via `:play movies` in Neo4j Browser or the Aura Query tool.
 
 ```cypher
 // Load the movie graph (Neo4j Browser only — :play command)

@@ -26,7 +26,7 @@ CALL apoc.meta.relTypeProperties()
 YIELD relType, propertyName, propertyTypes, mandatory RETURN *
 ```
 
-`apoc.meta.schema()` walks a sample of the graph; `apoc.meta.stats()` is near-instant from counters.
+`apoc.meta.schema()` samples the graph; `apoc.meta.stats()` is near-instant from counters.
 
 ---
 
@@ -75,7 +75,7 @@ CALL apoc.refactor.cloneNodes([n], true, ['internalId']) YIELD input, output, er
 
 ### Extract node from relationship
 
-Splits a relationship into node-rel-node triple:
+Splits a relationship into a node-rel-node triple:
 
 ```cypher
 // apoc.refactor.extractNode(rels, [labels], outRelType, inRelType)
@@ -89,7 +89,7 @@ YIELD input, output RETURN output
 
 ## Merge Helpers (dynamic MERGE)
 
-Use when label or rel-type is a parameter — Cypher `MERGE` requires literal labels.
+Use when label or rel-type is a parameter — Cypher `MERGE` requires literal labels at compile time.
 
 ```cypher
 // apoc.merge.node(labels, identProps [, onCreateProps, onMatchProps])
@@ -108,7 +108,7 @@ YIELD rel RETURN rel
 
 ## Virtual Graph (in-memory, no write)
 
-Virtual nodes and relationships exist only in the query result. Used for projecting computed subgraphs to visualization tools or passing to other APOC procedures.
+Virtual nodes/relationships exist only in query result — for projecting computed subgraphs to visualization tools or passing to other APOC procedures.
 
 ```cypher
 // Virtual node — does NOT persist to DB
@@ -131,7 +131,7 @@ CALL apoc.graph.fromCypher(
 
 ## Path Expanders
 
-Variable-depth traversal with label/rel-type filters. Useful when depth is not known at write time or needs runtime configuration.
+Variable-depth traversal with label/rel-type filters. Use when depth is unknown at write time or needs runtime configuration.
 
 ### expandConfig — flexible traversal
 
@@ -176,7 +176,7 @@ CALL apoc.path.spanningTree(root, {
 
 ## Triggers
 
-Triggers fire Cypher on write events. Require `apoc.trigger.enabled=true` in `apoc.conf`.
+Fire Cypher on write events. Require `apoc.trigger.enabled=true` in `apoc.conf`.
 
 **For Neo4j 2025.x / Cypher 25:** use `apoc.trigger.install` (system db) + `apoc.trigger.list`.
 `apoc.trigger.add` / `apoc.trigger.remove` / `apoc.trigger.pause` were removed in Cypher 25.
@@ -208,7 +208,7 @@ Available bindings in trigger statement: `$createdNodes`, `$deletedNodes`, `$ass
 ## Conditional Execution
 
 ```cypher
-// apoc.do.when — read/write branch
+// apoc.do.when — read/write branching
 CALL apoc.do.when(
   size($ids) > 0,
   'MATCH (n:Person) WHERE n.id IN $ids SET n.active = true RETURN count(n)',
@@ -225,9 +225,9 @@ CALL apoc.do.case(
 ) YIELD value RETURN value.tier
 ```
 
-`apoc.do.when` / `apoc.do.case` execute write Cypher. `apoc.when` / `apoc.case` are read-only variants.
+`apoc.do.when` / `apoc.do.case` execute write Cypher; `apoc.when` / `apoc.case` are read-only variants.
 
-Both deprecated in Cypher 25 — prefer native `CASE` + conditional `CALL { ... }` or `OPTIONAL CALL`.
+Both deprecated in Cypher 25 — use native `CASE` + conditional `CALL { ... }` or `OPTIONAL CALL`.
 
 ---
 
@@ -283,7 +283,7 @@ RETURN apoc.convert.fromJsonMap(raw, null, [])
 
 ## Date / Time Utilities
 
-`apoc.date.*` functions deprecated in Cypher 25 — prefer native `datetime()`, `date()`, `duration`. Use APOC date functions only when parsing non-ISO legacy format strings or converting epoch integers.
+`apoc.date.*` deprecated in Cypher 25 — use native `datetime()`, `date()`, `duration`. Use APOC date only when parsing non-ISO legacy format strings or converting epoch integers.
 
 ```cypher
 // Parse legacy date string → epoch ms
@@ -324,13 +324,13 @@ RETURN apoc.text.regexGroups('2025-04-01', '(\\d{4})-(\\d{2})-(\\d{2})')
 CALL apoc.nodes.get([123, 456, 789]) YIELD node RETURN node
 ```
 
-Prefer element IDs (`elementId(n)`) over integer IDs for stable references across restores.
+Prefer `elementId(n)` over integer IDs — stable across restores.
 
 ---
 
 ## Export
 
-Requires `apoc.export.file.enabled=true` in `apoc.conf`. Pass `{stream:true}` to return data inline instead of writing a file.
+Requires `apoc.export.file.enabled=true` in `apoc.conf`. Pass `{stream:true}` to return data inline instead of file output.
 
 ```cypher
 // Export query results to CSV (inline)

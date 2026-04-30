@@ -106,15 +106,14 @@ NEO4J_DATABASE=neo4j
 
 ## Aura REST API
 
-Use these three endpoints directly — no extra tooling needed. For all other operations
-(list, delete, pause, resume, update), fetch the live OpenAPI spec at runtime:
+Use these three endpoints directly — no extra tooling needed. For other operations (list, delete, pause, resume, update), fetch the live OpenAPI spec at runtime:
 `GET https://api.neo4j.io/openapi.json` or browse `https://neo4j.com/docs/aura/platform/api/specification/`
 
 ### Step P-1 — Collect Aura API credentials
 
-`aura.env` holds account-level API credentials (reusable across instances).
-`.env` holds per-instance DB connection details (written later in P3).
-They must be kept separate so writing `.env` never overwrites the API key.
+`aura.env` — account-level API credentials (reusable across instances).
+`.env` — per-instance DB connection details (written later in P3).
+Keep separate so writing `.env` never overwrites the API key.
 
 Check in order:
 1. `aura.env` exists → load it with Python (see Step P0) → proceed
@@ -143,8 +142,7 @@ The console generates keys named `CLIENT_ID` / `CLIENT_SECRET`. Both that form a
 
 ### Steps P0–P3 — Provision via Python script
 
-**Run the entire provision flow as a single Python script.** Environment variables set in
-one Bash tool call are lost in the next call, so do not split this across multiple commands.
+**Run the entire provision flow as a single Python script.** Env vars set in one Bash tool call are lost in the next — never split across multiple commands.
 
 ```python
 #!/usr/bin/env python3
@@ -416,7 +414,7 @@ print(f"✓ .env written  URI={CONNECTION}")
 print(f"✓ DONE — instance {INSTANCE_ID} is running")
 ```
 
-Write this to `scripts/provision_aura.py`. Do **not** run it directly here — use the recommended flow below with background launch + log file.
+Write to `scripts/provision_aura.py`. Do **not** run directly — use the recommended flow below with background launch + log file.
 
 ---
 
@@ -613,8 +611,7 @@ curl -s -X POST "http://localhost:7474/db/neo4j/query/v2" \
 
 ## Parallelise with offline work (saves 2–3 min)
 
-Aura provisioning typically takes 2–4 minutes. Everything that doesn't touch the
-database can be done during that wait. Only execution needs the DB to be ready.
+Aura provisioning takes 2–4 minutes. Everything that doesn't touch the database can run during that wait.
 
 **What can be done before the DB is running (no connection needed):**
 - Stage 3: design the model, write `schema/schema.json` + `schema/schema.cypher`
@@ -652,8 +649,7 @@ echo "✓ DB ready" && tail -5 scripts/provision.log
 - **Never `kill` a running provision process** — this releases the lock and allows a duplicate to start
 - If `.env` already exists with a valid URI, skip provision entirely — the DB is already running
 
-If any offline-written files need fixing after DB validation, the fix loop is short
-because the structure is already correct — only execution errors need addressing.
+If offline-written files need fixing after DB validation, only execution errors need addressing — structure is already correct.
 
 ## On Completion — write to progress.md
 

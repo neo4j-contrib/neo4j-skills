@@ -12,7 +12,7 @@ driver = GraphDatabase.driver(URI, auth=AUTH,
 )
 ```
 
-Each open session holds a connection. If sessions leak (not closed), the pool exhausts and new sessions block until `connection_acquisition_timeout` then raise `ClientError`. Always use `with driver.session(...) as session`.
+Each open session holds a connection. Leaked sessions exhaust the pool — new sessions block until `connection_acquisition_timeout` then raise `ClientError`. Always use `with driver.session(...) as session`.
 
 ## Batch Writes — Three Patterns
 
@@ -69,7 +69,7 @@ with driver.session(database="neo4j") as session:
 
 ## Threading vs asyncio
 
-The Python GIL limits true CPU parallelism for threads; both threads and asyncio overlap on I/O (network waits).
+The Python GIL limits CPU parallelism for threads; both threads and asyncio overlap on I/O.
 
 ```python
 # Sync threading — OK for moderate I/O concurrency
@@ -96,9 +96,7 @@ async def run_all(names):
 
 ## Causal Consistency & Bookmarks
 
-Within a single session, queries are automatically causally chained.
-
-Across sessions — use `execute_query` (shares `BookmarkManager` automatically), or pass bookmarks explicitly:
+Within a single session, queries are automatically causally chained. Across sessions — use `execute_query` (shares `BookmarkManager` automatically), or pass bookmarks explicitly:
 
 ```python
 from neo4j import Bookmarks
@@ -122,4 +120,4 @@ with driver.session(database="neo4j", bookmarks=combined) as session_c:
     )
 ```
 
-`execute_query` shares a `BookmarkManager` automatically — usually all you need for causal consistency.
+`execute_query` shares a `BookmarkManager` automatically — usually sufficient.

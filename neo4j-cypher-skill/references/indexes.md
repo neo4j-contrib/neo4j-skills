@@ -2,9 +2,9 @@
 
 ## Why indexes are critical
 
-Every `MATCH`, `MERGE`, or `WHERE` predicate on a node/relationship property requires an index on the **initial lookup property** (the RHS anchor that starts the traversal). Without one, Neo4j does a full AllNodesScan or AllRelationshipsScan.
+Every `MATCH`, `MERGE`, or `WHERE` predicate on a node/relationship property requires an index on the **initial lookup property** (the anchor that starts traversal). Without one, Neo4j does a full AllNodesScan or AllRelationshipsScan.
 
-**Index requires a label.** Index lookup only happens when the node has a label in the pattern. Without a label, Neo4j cannot identify which index to use and falls back to a full scan even if an index exists.
+**Index requires a label.** Without a label, Neo4j cannot identify which index to use and falls back to full scan even if an index exists.
 
 ```cypher
 // IGNORED: no label → no index used, full scan
@@ -18,9 +18,9 @@ MERGE (n {email: $email})          // full scan, no lock
 MERGE (n:Person {email: $email})   // index lookup + constraint lock
 ```
 
-MERGE compounds this: `MERGE (n:Person {email: $email})` = `MATCH` + `CREATE IF NOT EXISTS`. The MATCH phase scans without an index. With a constraint, the MERGE also acquires a lock on the constraint entry, preventing concurrent duplicate creation (atomicity guarantee).
+MERGE compounds this: `MERGE (n:Person {email: $email})` = `MATCH` + `CREATE IF NOT EXISTS`. MATCH phase scans without an index. With a constraint, MERGE also acquires a lock on the constraint entry, preventing concurrent duplicate creation.
 
-**Single index per MATCH clause by default.** For multi-predicate queries, planner picks one anchor index. Use `USING INDEX` hints to force index usage on multiple variables in the same MATCH.
+**Single index per MATCH clause by default.** Planner picks one anchor index for multi-predicate queries. Use `USING INDEX` hints to force multiple indexes in the same MATCH.
 
 ---
 
@@ -55,15 +55,14 @@ LOOKUP indexes (auto-created, two per database) have no user-configurable provid
 
 ## TEXT index — trigram internals
 
-Default `text-2.0` provider indexes STRING values as overlapping **trigrams** (3-Unicode-codepoint windows). Example: `"developer"` → `["dev","eve","vel","elo","lop","ope","per"]`.
+Default `text-2.0` indexes STRING values as overlapping **trigrams** (3-Unicode-codepoint windows). Example: `"developer"` → `["dev","eve","vel","elo","lop","ope","per"]`.
 
-Consequences:
-- `CONTAINS "vel"` / `ENDS WITH "per"` resolve to direct trigram lookups — O(1) index probe, not a scan.
-- `STARTS WITH` works via trigram but RANGE index is generally faster for prefix-only searches.
-- When both RANGE and TEXT index exist on the same STRING property, planner **auto-selects TEXT** for `CONTAINS` / `ENDS WITH`, RANGE for `STARTS WITH` / `=` / range predicates.
-- TEXT indexes take **less storage** than RANGE for high-cardinality string data.
-- TEXT indexes may show **higher db-hits but lower elapsed time** vs RANGE for substring queries — measure elapsed ms, not db-hits.
-- `text-1.0` (older provider, pre-5.1) does NOT use trigrams — deprecated.
+- `CONTAINS "vel"` / `ENDS WITH "per"` → direct trigram lookup, O(1) index probe.
+- `STARTS WITH` works via trigram but RANGE is faster for prefix-only.
+- When both RANGE and TEXT exist on the same STRING property, planner **auto-selects TEXT** for `CONTAINS`/`ENDS WITH`, RANGE for `STARTS WITH`/`=`/range predicates.
+- TEXT takes **less storage** than RANGE for high-cardinality string data.
+- TEXT may show **higher db-hits but lower elapsed time** vs RANGE for substring queries — measure elapsed ms, not db-hits.
+- `text-1.0` (pre-5.1) does NOT use trigrams — deprecated.
 
 ---
 
@@ -135,9 +134,9 @@ CREATE LOOKUP INDEX rel_type_lookup  FOR ()-[r]-() ON EACH type(r)
 
 ## Constraints
 
-Constraints enforce data integrity AND create an implicit **RANGE index** (UNIQUE, NODE KEY) used for lookups. Always prefer a constraint over a bare index when uniqueness is required.
+Enforce data integrity AND create an implicit **RANGE index** (UNIQUE, NODE KEY). Prefer constraint over bare index when uniqueness is required.
 
-**Edition notes**: UNIQUE and NOT NULL (existence) available in all editions. NODE KEY, RELATIONSHIP KEY, RELATIONSHIP UNIQUE, property type (`IS ::`) require **Enterprise Edition**.
+**Edition notes**: UNIQUE and NOT NULL available in all editions. NODE KEY, RELATIONSHIP KEY, RELATIONSHIP UNIQUE, property type (`IS ::`) require **Enterprise Edition**.
 
 ```cypher
 // UNIQUE node — creates implicit RANGE index; MERGE acquires lock
@@ -183,7 +182,7 @@ Supported types for `IS ::`: `BOOLEAN`, `STRING`, `INTEGER`, `FLOAT`, `DATE`, `L
 
 ## MERGE and constraints
 
-`MERGE` = `MATCH` + conditional `CREATE`. Without an index/constraint on the merge property, the MATCH phase scans all nodes of that label.
+`MERGE` = `MATCH` + conditional `CREATE`. Without an index/constraint on the merge property, MATCH scans all nodes of that label.
 
 ```cypher
 // Without constraint: full scan + no atomicity guarantee
@@ -202,13 +201,13 @@ MERGE (p:Person {email: $email})
 ```
 
 Merge on multiple properties without NODE KEY: planner may not use index.
-Use `MERGE (n:Label {keyProp: $val}) SET n.otherProp = $other` — merge only on the indexed property, set others after.
+Merge only on the indexed property, set others after: `MERGE (n:Label {keyProp: $val}) SET n.otherProp = $other`
 
 ---
 
 ## Fulltext search
 
-Fulltext indexes use Lucene — tokenized, scored, not a filter index. Result nodes must be joined back to the graph. Supports `LIST<STRING>` properties — each element analyzed independently.
+Lucene — tokenized, scored, not a filter index. Result nodes must be joined back to the graph. Supports `LIST<STRING>` properties — each element analyzed independently.
 
 ```cypher
 // Create (multi-label, multi-prop)
@@ -238,13 +237,13 @@ RETURN relationship, score
 //   'team:"Operations"'      field + exact phrase
 ```
 
-Fulltext index does NOT participate in normal WHERE predicate planning. Use `CALL db.index.fulltext.queryNodes` / `queryRelationships` explicitly.
+Fulltext index does NOT participate in WHERE predicate planning. Use `CALL db.index.fulltext.queryNodes` / `queryRelationships` explicitly.
 
 ---
 
 ## Index hints (USING INDEX)
 
-Force the planner to use a specific index (or specific type) when it chooses a suboptimal plan. Use `EXPLAIN` first to confirm the issue.
+Force a specific index when the planner chooses a suboptimal plan. Use `EXPLAIN` first to confirm the issue.
 
 ```cypher
 // Generic hint — planner uses any available index on the property
@@ -285,11 +284,11 @@ RETURN n.name, inv.name, i.location
 ```
 
 Rules:
-- Typed hints (`USING RANGE INDEX`, `USING TEXT INDEX`) only valid when the planner can guarantee the specified type doesn't change results.
-- Hints do NOT guarantee improvement — always PROFILE before/after and measure elapsed ms (not db-hits for TEXT).
-- Index **not used** when predicate compares two node properties (e.g., `WHERE p.name = p2.name`) — no anchor available.
+- Typed hints (`USING RANGE INDEX`, `USING TEXT INDEX`) only valid when the planner can guarantee the type doesn't change results.
+- Hints do NOT guarantee improvement — PROFILE before/after; measure elapsed ms (not db-hits for TEXT).
+- Index **not used** when predicate compares two node properties (`WHERE p.name = p2.name`) — no anchor.
 - FULLTEXT has no `USING INDEX` hint — call `db.index.fulltext.queryNodes` explicitly.
-- Never use hints as first resort — check query stats first (`CALL db.stats.retrieve('GRAPH COUNTS')`).
+- Check query stats first (`CALL db.stats.retrieve('GRAPH COUNTS')`) before adding hints.
 
 ---
 
@@ -333,7 +332,7 @@ PROFILE MATCH (p:Person) WHERE p.name CONTAINS 'Robert' RETURN p.name
 
 ## Import pre-flight — create before loading
 
-Create constraints and indexes **before** bulk import. MERGE during load uses the index for every row.
+Create constraints and indexes **before** bulk import — MERGE during load uses the index for every row.
 
 ```cypher
 // 1. Uniqueness constraints first (implicit RANGE index)

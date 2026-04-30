@@ -238,7 +238,7 @@ gds.pageRank.stream(G,
 )
 ```
 
-Most algorithms accept `nodeLabels` and `relationshipTypes` parameters to scope execution within a heterogeneous projection.
+Most algorithms accept `nodeLabels` and `relationshipTypes` to scope execution within a heterogeneous projection.
 
 ---
 
@@ -254,4 +254,4 @@ sub_G, result = gds.graph.filter(
 )
 ```
 
-Useful for iterative exploration — project once, filter many times without re-reading the database.
+Project once, filter many times without re-reading the database.

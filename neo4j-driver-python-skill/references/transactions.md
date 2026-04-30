@@ -2,7 +2,7 @@
 
 ## Explicit Transactions
 
-Use when a transaction must span multiple functions or coordinate with external state.
+Use when a transaction spans multiple functions or coordinates with external state.
 
 ```python
 with driver.session(database="neo4j") as session:
@@ -21,7 +21,7 @@ def do_part_a(tx):
 
 ### Rollback Can Raise
 
-`tx.rollback()` is a network call. If the connection is broken, it raises. Don't let it swallow the original exception:
+`tx.rollback()` is a network call — if the connection is broken, it raises. Don't let it swallow the original exception:
 
 ```python
 try:
@@ -37,11 +37,11 @@ except Exception as original:
 
 ### Commit Uncertainty
 
-If `tx.commit()` raises a network-level exception, the commit may or may not have succeeded on the server. Design writes to be idempotent with `MERGE` and unique constraints so retrying is always safe.
+If `tx.commit()` raises a network-level exception, the commit may or may not have succeeded. Design writes as idempotent with `MERGE` and unique constraints so retrying is safe.
 
 ## `@unit_of_work` — Timeout & Metadata
 
-Attaches a timeout and server metadata to a managed transaction callback.
+Attaches timeout and server metadata to a managed transaction callback.
 
 ```python
 from neo4j import unit_of_work
@@ -83,11 +83,11 @@ create_person = unit_of_work(timeout=5.0)(lambda tx: tx.run(
 session.execute_write(create_person)
 ```
 
-Use named functions when timeout or metadata is required; lambdas are fine for fire-and-forget callbacks.
+Use named functions when timeout or metadata is needed; lambdas are fine for fire-and-forget callbacks.
 
 ## Multiple `tx.run()` Calls
 
-Calling `tx.run()` a second time before the first `Result` is consumed causes the driver to **buffer the first result in memory** automatically. Safe, but can pull large results into RAM unexpectedly.
+Calling `tx.run()` again before the first `Result` is consumed causes the driver to **buffer the first result in memory**. Safe, but can pull large results into RAM unexpectedly.
 
 ```python
 def multi_query_tx(tx):
@@ -100,7 +100,7 @@ def multi_query_tx(tx):
 
 ## Retry Safety
 
-`execute_read` / `execute_write` callbacks **may execute more than once** on transient failures.
+`execute_read` / `execute_write` callbacks **may execute more than once** on transient failures — keep them side-effect-free.
 
 ```python
 # ❌ Side effect fires on every retry

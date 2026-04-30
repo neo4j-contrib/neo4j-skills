@@ -47,11 +47,11 @@ MATCH (n:Article)
 RETURN count(n), avg(n.sentiment)
 ```
 
-Confirm with EXPLAIN — header must show `Runtime PARALLEL`. Only useful for large analytical scans; adds overhead for OLTP short-hop lookups.
+Confirm with EXPLAIN — header must show `Runtime PARALLEL`. Only for large analytical scans; adds overhead for OLTP short-hop lookups.
 
 ## Eager Operator
 
-`Eager` materializes the entire intermediate result in memory. Blocks streaming; causes heap pressure at scale.
+`Eager` materializes entire intermediate result in memory. Blocks streaming; causes heap pressure at scale.
 
 **Common triggers:**
 
@@ -111,7 +111,7 @@ CALL (pair) {
 
 ## Label Inference [Neo4j 5 / 2025.x]
 
-When the planner underestimates selectivity on multi-label queries, enable label inference:
+When the planner underestimates selectivity on multi-label queries:
 
 ```cypher
 // Per-query hint
@@ -131,7 +131,7 @@ Impact: uses existing statistics + advanced deduction; can improve OLTP plans fr
 
 ## Batching Best Practices [Neo4j 5 / 2025.x]
 
-Prefer native `CALL IN TRANSACTIONS` over `apoc.periodic.iterate` (APOC Core is maintenance-mode):
+Prefer native `CALL IN TRANSACTIONS` over `apoc.periodic.iterate` (APOC Core is maintenance-mode).
 
 ```cypher
 // Modern pattern — full planner visibility, accurate stats, memory tracking

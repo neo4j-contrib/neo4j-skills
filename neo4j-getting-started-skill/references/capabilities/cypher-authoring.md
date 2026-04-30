@@ -4,9 +4,7 @@
 
 ## When to use neo4j-cypher-authoring-skill
 
-If `neo4j-cypher-authoring-skill` is available in the agent's skill set, defer all Cypher
-generation to it — it has comprehensive Cypher 25 rules, QPE handling, and a schema-first
-protocol that produces higher-quality queries.
+If `neo4j-cypher-authoring-skill` is available, defer all Cypher generation to it — it has comprehensive Cypher 25 rules, QPE handling, and a schema-first protocol that produces higher-quality queries.
 
 To check:
 ```bash
@@ -137,8 +135,7 @@ ORDER BY mutualFriends DESC LIMIT 10
 RETURN fof.name AS recommendation, fof.bio AS bio, mutualFriends
 ```
 
-This pattern applies whenever you ORDER BY or LIMIT before accessing properties:
-always use `WITH node, aggregation ORDER BY ... LIMIT` then `RETURN node.prop`.
+Apply whenever ORDER BY or LIMIT precedes property access: use `WITH node, aggregation ORDER BY ... LIMIT` then `RETURN node.prop`.
 
 ## Common pitfalls (validated against Neo4j 2026.x / CYPHER 25)
 

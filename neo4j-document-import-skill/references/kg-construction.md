@@ -14,7 +14,7 @@ Overflow from `SKILL.md` — load when detailed chunking strategy or entity reso
 | N-gram | Overlapping windows of n words | Short snippets, keyword-dense text | Custom — not built into neo4j-graphrag |
 | Structural | By section/heading/method (doc-specific) | API docs, legal contracts, structured PDFs | Custom — parse structure then chunk |
 
-**Rule**: Start with `FixedSizeSplitter(chunk_size=512, chunk_overlap=50)`. Switch to paragraph-based when sentences must not break (courses, articles). Switch to semantic chunking only when topic coherence within chunks is critical and you have budget for embedder calls during ingestion.
+**Rule**: Start with `FixedSizeSplitter(chunk_size=512, chunk_overlap=50)`. Switch to paragraph-based when sentences must not break (courses, articles). Switch to semantic chunking only when topic coherence within chunks is critical and embedder calls during ingestion are affordable.
 
 **Combination pattern** (course content model from GraphAcademy course):
 ```
@@ -95,7 +95,7 @@ resolver = SpaCySemanticMatchResolver(
 asyncio.run(resolver.run())
 ```
 
-**When to use which resolver:**
+**Resolver selection:**
 | Scenario | Resolver | threshold |
 |---|---|---|
 | Exact duplicates (OCR, same source) | `SinglePropertyExactMatchResolver` | — |
@@ -109,7 +109,7 @@ Run resolvers after all ingest batches complete — running inline per-batch is 
 
 ## LexicalGraphConfig — All Fields
 
-Full field reference (all have defaults — only override as needed):
+All fields have defaults — only override as needed:
 
 | Field | Default | Controls |
 |---|---|---|
@@ -127,7 +127,7 @@ Full field reference (all have defaults — only override as needed):
 
 ## GraphSchema — Rich NodeType / RelationshipType
 
-Full schema with descriptions and typed properties (improves LLM extraction quality):
+Descriptions and typed properties improve LLM extraction quality:
 
 ```python
 from neo4j_graphrag.experimental.components.schema import (
@@ -165,10 +165,9 @@ schema = GraphSchema(
 )
 ```
 
-`additional_node_types=True` allows LLM to invent new node types beyond the defined list.
-Use `False` for production (precision), `True` for exploration (recall).
+`additional_node_types=True`: LLM may invent new node types. `False` = production (precision); `True` = exploration (recall).
 
-Labels starting or ending with `__` are reserved for internal neo4j-graphrag use — never define them in schema.
+Labels starting or ending with `__` are reserved for internal neo4j-graphrag use.
 
 ---
 
@@ -221,9 +220,9 @@ Pass custom loader: `SimpleKGPipeline(..., file_loader=WebPageLoader(), from_fil
 ## LLM Graph Builder — Chunking Strategy Options
 
 Via Graph Enhancement UI → Entity Extraction Settings:
-- **Token-based chunking**: fixed size (default)
-- **Page-based chunking**: one chunk per PDF page
-- **Semantic chunking**: embedding similarity boundaries
-- **Paragraph chunking**: `\n\n` boundaries
+- **Token-based**: fixed size (default)
+- **Page-based**: one chunk per PDF page
+- **Semantic**: embedding similarity boundaries
+- **Paragraph**: `\n\n` boundaries
 
-Also configurable via the Graph Builder API for programmatic ingestion.
+Also configurable via the Graph Builder API.

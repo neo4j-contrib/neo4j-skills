@@ -2,7 +2,7 @@
 
 ## URI Scheme
 
-Browser environments use **WebSockets**, not TCP. Use `neo4j+s://` (WSS) or `neo4j://` (WS).
+Browser uses **WebSockets**, not TCP. Use `neo4j+s://` (WSS) or `neo4j://` (WS).
 
 ```javascript
 // ❌ bolt:// uses TCP — not supported in browsers
@@ -17,12 +17,12 @@ neo4j.driver('neo4j://localhost:7687', auth)
 
 ## Bundling
 
-`neo4j-driver` works in the browser when bundled with webpack, Vite, or Rollup. No separate browser package needed.
+`neo4j-driver` works in browsers bundled with webpack, Vite, or Rollup. No separate browser package needed.
 
 ## CORS
 
-Bolt/WebSocket connections bypass CORS — they are not HTTP. Browser connects directly to Neo4j's Bolt port (default 7687). Ensure Neo4j server allows WebSocket connections from your origin.
+Bolt/WebSocket connections bypass CORS — not HTTP. Browser connects directly to Neo4j's Bolt port (default 7687). Ensure Neo4j allows WebSocket connections from your origin.
 
 ## Security
 
-**Never embed production credentials in client-side JavaScript.** Use a backend API as proxy to the database.
+**Never embed production credentials in client-side JavaScript.** Proxy through a backend API.

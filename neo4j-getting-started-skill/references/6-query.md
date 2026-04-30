@@ -27,7 +27,7 @@ cypher-shell -a "$NEO4J_URI" -u "$NEO4J_USERNAME" -p "$NEO4J_PASSWORD" \
   "CYPHER 25 SHOW VECTOR INDEXES YIELD name RETURN name"
 ```
 
-Only generate GDS or vector queries if the plugin/index is confirmed present.
+Only generate GDS or vector queries if plugin/index confirmed present.
 
 ## Step Q3 — Required query set
 
@@ -124,8 +124,7 @@ ORDER BY score DESC LIMIT 20;
 
 ## Step Q4 — Validate all queries in one batch call
 
-**Do not run cypher-shell once per query** — each remote call adds latency.
-Instead, run all queries in a single Python script using the Query API helper:
+**Do not run cypher-shell once per query** — batch into a single Python script using the Query API helper:
 
 ```python
 # Run from the work directory:
@@ -140,9 +139,8 @@ Run it after drafting `queries/queries.cypher`:
 python3 "${CLAUDE_SKILL_DIR}/scripts/validate_queries.py"
 ```
 
-It reads `queries/queries.cypher`, substitutes `$param` placeholders with safe defaults,
-runs all queries in a single driver session, and prints a pass/fail table.
-Only queries marked ✓ need to be in the final file; remove or fix any marked ✗.
+Reads `queries/queries.cypher`, substitutes `$param` placeholders with safe defaults, runs all queries in a single driver session, prints a pass/fail table.
+Keep queries marked ✓; remove or fix ✗.
 
 A query returning 0 rows is acceptable if the schema confirms the pattern exists.
 

@@ -31,7 +31,7 @@ static async Task DoPartA(IAsyncTransaction tx)
 
 `RollbackAsync()` is a network call — it can throw. Isolate it with its own `try/catch` to avoid hiding the original exception.
 
-If `CommitAsync()` throws a network-level exception, the commit may or may not have succeeded. Design writes idempotent using `MERGE` + unique constraints.
+If `CommitAsync()` throws a network-level exception, the commit may or may not have succeeded — design writes as idempotent using `MERGE` + unique constraints.
 
 ---
 
@@ -50,7 +50,7 @@ await session.ExecuteReadAsync(
 );
 ```
 
-Metadata appears in `SHOW TRANSACTIONS` on the server — useful for tracing slow queries.
+Metadata appears in `SHOW TRANSACTIONS` — useful for tracing slow queries.
 
 ---
 
@@ -69,9 +69,7 @@ await using var session = driver.AsyncSession(conf => conf
 
 ## Causal Consistency — Cross-Session Bookmarks
 
-Within a single session, transactions are automatically causally chained.
-
-Across sessions, use `ExecutableQuery` (auto-managed) or pass bookmarks explicitly:
+Within a single session, transactions are automatically causally chained. Across sessions, use `ExecutableQuery` (auto-managed bookmarks) or pass bookmarks explicitly:
 
 ```csharp
 Bookmarks bookmarksA, bookmarksB;

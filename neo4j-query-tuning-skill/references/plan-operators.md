@@ -136,7 +136,7 @@ ProduceResults         ← root; read last
       NodeIndexSeek    ← leaf; read first; index used ✓
 ```
 
-Interpretation: index seek is efficient, expand is normal, filter is applied after expand (not index-backed — if filter is selective, consider adding a composite index or moving the WHERE earlier).
+Index seek is efficient, expand is normal, filter applied after expand (not index-backed). If filter is selective, add a composite index or move the WHERE earlier.
 
 ---
 

@@ -416,11 +416,11 @@ Before publishing any content about this project, verify:
 
 ## Checklist
 
-- [ ] Version number verified against PyPI before citing (`https://pypi.org/project/neo4j-agent-memory/`)
-- [ ] Consumption model identified: self-hosted library or hosted NAMS service
-- [ ] Correct extras installed for framework integration (`pip install neo4j-agent-memory[<extra>]`)
-- [ ] `MemoryClient` used as async context manager (`async with MemoryClient(settings) as memory:`)
-- [ ] Three memory types referenced correctly: short-term, long-term, reasoning
-- [ ] POLE+O model named consistently (not POLEO or POLE-O)
-- [ ] NAMS content flagged as early-access; no SLA or pricing claims
-- [ ] Credentials not hardcoded; Neo4j password via `--password` flag or env; NAMS key via bearer header
+- [ ] Version: check PyPI before citing
+- [ ] Consumption model: self-hosted vs NAMS
+- [ ] Correct extras installed (`neo4j-agent-memory[<extra>]`)
+- [ ] `MemoryClient` as async context manager
+- [ ] Three types named: short-term / long-term / reasoning
+- [ ] POLE+O consistent (not POLEO or POLE-O)
+- [ ] NAMS: early-access framing; no SLAs/pricing
+- [ ] Credentials not hardcoded; NAMS bearer token separate from Neo4j `--password`

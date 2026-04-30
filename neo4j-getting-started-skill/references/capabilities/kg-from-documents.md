@@ -2,13 +2,7 @@
 # Build a knowledge graph from unstructured documents using neo4j-graphrag SimpleKGPipeline.
 # Used in the `load` stage when DATA_SOURCE=documents.
 
-## Overview
-
-The `neo4j-graphrag` library's `SimpleKGPipeline` handles the full ETL from raw text to a
-graph of entities and relationships, with embeddings for vector search. It requires:
-- An LLM for entity/relation extraction
-- An embedder for chunk embeddings
-- A running Neo4j database with vector + fulltext indexes
+`neo4j-graphrag` `SimpleKGPipeline` — full ETL from raw text to entity/relationship graph with embeddings. Requires LLM for extraction, embedder for chunk embeddings, Neo4j with vector + fulltext indexes.
 
 ## Installation
 
@@ -23,7 +17,7 @@ graph of entities and relationships, with embeddings for vector search. It requi
 
 ## Step K1 — Schema (model stage output)
 
-The `model` stage should have produced `schema.cypher`. For KG/documents, it typically includes:
+The `model` stage produces `schema.cypher`. For KG/documents it typically includes:
 
 ```cypher
 CYPHER 25
@@ -42,9 +36,7 @@ Apply this before running the pipeline (`load` step L0).
 
 ## Step K1b — Optional: extract schema from a sample document first
 
-If you're unsure what entity/relationship types to use, let the LLM infer them from a
-sample document by passing `schema=None` (the default). Run on **one file only**, inspect
-the result, refine if needed, then commit to a `schema={}` dict for the full run.
+To discover entity/relationship types, pass `schema=None` (default) — LLM infers from text. Run on **one file only**, inspect, refine, then commit to a `schema={}` dict for the full run.
 
 ```python
 import asyncio, os
@@ -76,14 +68,11 @@ CYPHER 25
 CALL db.schema.visualization()
 ```
 
-Review the extracted labels and relationship types. If they look right, use them as
-`NODE_TYPES` / `RELATIONSHIP_TYPES` / `PATTERNS` in Step K2. If they're too noisy or
-too generic, adjust and re-run on the sample before processing all documents.
+If extracted labels and relationship types look right, use them as `NODE_TYPES` / `RELATIONSHIP_TYPES` / `PATTERNS` in Step K2. If too noisy or generic, adjust and re-run on the sample before processing all documents.
 
 ## Step K2 — Configure the pipeline
 
-Generate `import/ingest_docs.py`. Adapt entity types, relationship types, and patterns to
-the domain — the schema below is illustrative; replace with domain-appropriate types:
+Generate `import/ingest_docs.py`. Adapt entity types, relationship types, and patterns to the domain — schema below is illustrative:
 
 ```python
 """
@@ -288,7 +277,7 @@ OPENAI_API_KEY=sk-...              # required for openai provider
 
 **Run ingestion synchronously — never in background.** Wait for "✓ Ingestion complete" before proceeding.
 
-Check what was actually created (entity labels may differ from the schema you specified):
+Check what was actually created (entity labels may differ from specified schema):
 
 ```cypher
 CYPHER 25
@@ -310,7 +299,7 @@ MATCH ()-[r]->() RETURN type(r) AS rel, count(r) AS cnt ORDER BY cnt DESC
 | `[:NEXT_CHUNK]` | Sequential chunk chain |
 | Custom rels | `IMPOSES`, `PARTY_TO`, `GOVERNS` etc. as specified in PATTERNS |
 
-The vector index is on `:Chunk` nodes. The `retrieval_query` for `VectorCypherRetriever` must traverse from `node` (a `Chunk`) to `__KGBuilder__` entities via `FROM_CHUNK`:
+Vector index is on `:Chunk` nodes. The `retrieval_query` for `VectorCypherRetriever` must traverse from `node` (a `Chunk`) to `__KGBuilder__` entities via `FROM_CHUNK`:
 
 ```cypher
 CYPHER 25
@@ -319,6 +308,7 @@ RETURN name, state, populationPercent
 ```
 
 Wait for `state=ONLINE` and `populationPercent=100` before running vector queries.
+
 
 ## Step K6 — Test retrieval
 
@@ -342,9 +332,7 @@ for item in results.items:
 
 ## Step K7 — Streamlit GraphRAG chatbot (APP_TYPE=streamlit)
 
-When the user wants a Streamlit Q&A chatbot over their documents, generate `app.py`.
-This template works for any domain — adapt the title, placeholder text, and
-`retrieval_query` to the domain schema produced by stage 3.
+Generate `app.py` for a Streamlit Q&A chatbot over documents. Works for any domain — adapt the title, placeholder text, and `retrieval_query` to the domain schema from stage 3.
 
 ```python
 """
@@ -442,10 +430,7 @@ python-dotenv>=1.0.0
 
 ## Step K8 — ToolsRetriever: multi-tool agent (optional upgrade)
 
-`ToolsRetriever` wraps multiple retrievers as LLM tools. The LLM inspects the query,
-picks the best tool(s), runs them, and combines results — a built-in mini agent loop.
-Good for domains where some questions need semantic search and others need precise
-entity/relationship lookups:
+`ToolsRetriever` wraps multiple retrievers as LLM tools — LLM picks the best tool(s), runs them, combines results. Use for domains where some questions need semantic search and others need precise entity/relationship lookups:
 
 ```python
 from neo4j_graphrag.retrievers import ToolsRetriever, VectorCypherRetriever, Text2CypherRetriever
@@ -486,8 +471,7 @@ rag = GraphRAG(llm=llm, retriever=tools_retriever)
 result = rag.search(query_text=query, return_context=True)
 ```
 
-Swap `tools_retriever` for the single `retriever` in the `@st.cache_resource` function
-above — the Streamlit app code is otherwise identical.
+Swap `tools_retriever` for the single `retriever` in the `@st.cache_resource` function — Streamlit app code is otherwise identical.
 
 ## Completion condition
 

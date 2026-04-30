@@ -49,9 +49,7 @@ Prometheus config:
 
 Access: project Settings → Metrics Integration.
 
-Benefits over console: custom alerting, long-term retention, unified infrastructure dashboards, team collaboration.
-
-Keep Client Secret secure — it provides access for the entire organization.
+Keep Client Secret secure — grants access to the entire organization.
 
 ## Backup and Restore
 

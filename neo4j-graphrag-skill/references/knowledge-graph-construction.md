@@ -1,6 +1,6 @@
 # Knowledge Graph Construction — Advanced Reference
 
-Supplements [SKILL.md Step 11](../SKILL.md#step-11--kg-pipeline-customization).
+Supplements [SKILL.md Step 11](../SKILL.md#step-11--kg-pipeline-customization). Advanced reference — use when SimpleKGPipeline defaults are insufficient.
 
 ---
 
@@ -14,7 +14,7 @@ from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter i
 splitter = FixedSizeSplitter(chunk_size=500, chunk_overlap=100)
 ```
 
-`chunk_size` = max characters per chunk. `chunk_overlap` = chars shared between consecutive chunks — preserves context across boundaries.
+`chunk_size` = max chars per chunk. `chunk_overlap` = chars shared between consecutive chunks — preserves context across boundaries.
 
 ### Custom TextSplitter (section-aware)
 
@@ -79,7 +79,7 @@ ORDER BY d.path, c.index
 
 ### Default (inline, identical name merge)
 
-`perform_entity_resolution=True` (default): merges nodes sharing same label + identical `name` property during ingestion. Fast, exact-match only.
+`perform_entity_resolution=True` (default): merges nodes sharing same label + identical `name` during ingestion. Fast, exact-match only.
 
 ### Disable (keep all duplicates)
 
@@ -87,7 +87,7 @@ ORDER BY d.path, c.index
 pipeline = SimpleKGPipeline(..., perform_entity_resolution=False)
 ```
 
-Use during development for speed. Risk: duplicate entity nodes for same real-world entity.
+Use during development for speed. Risk: duplicate entity nodes.
 
 ### Post-Processing Resolvers (run after ingestion)
 
@@ -121,7 +121,7 @@ asyncio.run(resolver.run())
 
 Install: `pip install neo4j-graphrag[spacy]` + `python -m spacy download en_core_web_lg`
 
-Risk of over-merging: "Apple" (company) and "Apple" (fruit) may merge. Apply domain `filter_query` to restrict by label.
+Risk of over-merging ("Apple" company vs "Apple" fruit). Apply domain `filter_query` to restrict by label.
 
 ---
 
@@ -213,7 +213,7 @@ llm = OpenAILLM(
 )
 ```
 
-Custom provider: inherit from `neo4j_graphrag.llm.base.LLMInterface`, implement `invoke()` and `ainvoke()`.
+Custom provider: inherit `neo4j_graphrag.llm.base.LLMInterface`, implement `invoke()` and `ainvoke()`.
 
 ---
 

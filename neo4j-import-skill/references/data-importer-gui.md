@@ -67,21 +67,12 @@ De-normalized CSV (one row = person + movie + role) requires multiple passes:
 
 ## Common Mistakes
 
-**No unique ID set**
-Consequence: duplicate nodes on re-import; relationship creation fails.
-Fix: always set key icon on ID column before running.
+**No unique ID set**: duplicate nodes on re-import; relationship creation fails. Set key icon on ID column before running.
 
-**Foreign key kept as property**
-Example: keeping `order_id` as property on Customer node instead of creating relationship.
-Fix: foreign keys → relationships, not properties.
+**Foreign key kept as property**: e.g. `order_id` as property instead of relationship. Foreign keys → relationships.
 
-**Type mismatch (silent failure)**
-If Data Importer cannot convert a source value to the specified type (e.g., text in Integer column), import succeeds but that property is silently omitted on affected nodes.
-Fix: verify node counts + spot-check properties after import; use string import + Cypher coercion if needed.
+**Type mismatch (silent failure)**: if Data Importer can't convert a value to the specified type, import succeeds but property is silently omitted. Verify node counts + spot-check properties; use string import + Cypher coercion if needed.
 
-**All data imports as strings**
-Fix: set correct type per column in mapping panel; or post-process with `toInteger()`, `date()`, `split()`.
+**All data imports as strings**: set correct type per column in mapping panel, or post-process with `toInteger()`, `date()`, `split()`.
 
-**Importing before constraint creation**
-Data Importer creates constraints automatically — this is fine for the GUI path.
-For Cypher path: create constraints manually BEFORE import.
+**Importing before constraint creation**: Data Importer creates constraints automatically (GUI path only). For Cypher path: create constraints manually BEFORE import.

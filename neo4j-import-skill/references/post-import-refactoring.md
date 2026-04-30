@@ -1,6 +1,6 @@
 # Post-Import Refactoring Patterns
 
-Use after Data Importer or basic LOAD CSV when imported data needs reshaping.
+Use after Data Importer or basic LOAD CSV to reshape imported data.
 
 ## 1. Verify Property Types First
 
@@ -19,7 +19,7 @@ RETURN relType, propertyName, propertyTypes;
 
 Without APOC: extract a sample and inspect values manually.
 
-Neo4j Browser displays dates as strings — use `n.born.year` to confirm a property is actually a date (not a string).
+Neo4j Browser displays dates as strings — use `n.born.year` to confirm a property is a date, not a string.
 
 ## 2. String → List (split delimited field)
 
@@ -40,11 +40,11 @@ CALL (m) {
 SET m.countries = [x IN split(coalesce(m.countries, ''), '|') WHERE x <> '']
 ```
 
-Separator varies — check source data: `|`, `,`, `;` are common. Never assume `,` (conflicts with CSV delimiter).
+Check source data for separator (`|`, `,`, `;` are common). Never assume `,` — conflicts with CSV delimiter.
 
 ## 3. Add Labels Based on Relationships
 
-Performance best practice: add specific labels for targeted lookups.
+Add specific labels for targeted lookups.
 
 ```cypher
 // Add Actor label to Person nodes with ACTED_IN relationship
@@ -125,11 +125,11 @@ RETURN DISTINCT custId AS missingCustomer
 LIMIT 25;
 ```
 
-If any results → import missing nodes first, then create relationships.
+Any results → import missing nodes first, then create relationships.
 
 ## 7. Self-Referencing Relationship (two-pass)
 
-Node must exist before relationship can reference it — even when both ends are the same label.
+Node must exist before relationship can reference it — even when both ends share a label.
 
 ```cypher
 // Pass 1: Import Employee nodes (already done)

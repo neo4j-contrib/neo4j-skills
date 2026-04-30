@@ -5,7 +5,7 @@
 
 Before asking anything, attempt to extract all 6 context variables from the initial prompt. Look for: domain, use-case, experience level, database target, data source, and app type — either as explicit key=value pairs or inferred from natural language.
 
-**The autonomous/HITL decision is based solely on whether all 6 variables are present — never on phrasing like "guide me", "help me", or "walk me through".** Those phrases describe the user's intent, not their preference for interactive vs automated execution.
+**The autonomous/HITL decision is based solely on whether all 6 variables are present — never on phrasing like "guide me", "help me", or "walk me through".** Those phrases describe intent, not preference for interactive vs automated execution.
 
 **If all 6 variables can be extracted → AUTONOMOUS MODE.**
 - Extract and record them immediately (no questions needed)
@@ -94,7 +94,7 @@ REGION_HINT     = <geographic hint inferred from user context — see below>
 `CLOUD_PROVIDER` comes from **user preference** (asked for Aura Pro only).
 `REGION_HINT` is **inferred** from geographic signals (never asked).
 
-The provision stage combines both: use the user's preferred provider, then pick the closest available region within that provider using the geographic hint.
+The provision stage combines both: user's preferred provider, closest available region within that provider using the geographic hint.
 
 ### REGION_HINT — infer, don't ask
 
@@ -104,7 +104,7 @@ Infer from any available signal — do not ask:
 - Timezone in system prompt or `date` output (e.g. `CET` → western Europe, `BRT` → Brazil)
 - Initial prompt already contains a region → use it directly
 
-Store only the **geographic area**, not a cloud-specific region — the provision stage maps it to the user's chosen provider:
+Store the **geographic area** only — the provision stage maps it to the user's chosen provider:
 
 | Signal | REGION_HINT |
 |--------|------------|
@@ -140,8 +140,8 @@ Write to `.env` immediately, skip `provision` stage.
 
 ## Detect execution method
 
-After collecting user context, detect `EXEC_METHOD` for all subsequent Cypher execution.
-See `${CLAUDE_SKILL_DIR}/references/capabilities/execute-cypher.md` for full details on each option.
+Detect `EXEC_METHOD` for all subsequent Cypher execution.
+See `${CLAUDE_SKILL_DIR}/references/capabilities/execute-cypher.md` for details on each option.
 
 ```bash
 # Priority order:
@@ -153,8 +153,7 @@ which cypher-shell 2>/dev/null && EXEC_METHOD=cypher-shell || EXEC_METHOD=query-
 echo "EXEC_METHOD=$EXEC_METHOD"
 ```
 
-Store `EXEC_METHOD` alongside the other variables. Reference only the relevant section
-of `${CLAUDE_SKILL_DIR}/references/capabilities/execute-cypher.md` in subsequent stages.
+Store `EXEC_METHOD` alongside the other variables. Reference only the relevant section of `${CLAUDE_SKILL_DIR}/references/capabilities/execute-cypher.md` in subsequent stages.
 
 ## On Completion — write to progress.md
 

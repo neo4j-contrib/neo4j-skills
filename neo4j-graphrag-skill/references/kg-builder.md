@@ -112,7 +112,7 @@ async def ingest_all(docs):
 asyncio.run(ingest_all(documents))
 ```
 
-Sequential by default. For parallel: use `asyncio.gather()` but monitor Neo4j connection pool.
+Sequential by default. For parallel: use `asyncio.gather()` — monitor Neo4j connection pool.
 
 ## Debug: Inspect LLM Extraction
 

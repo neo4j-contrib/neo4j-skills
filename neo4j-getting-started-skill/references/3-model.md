@@ -3,7 +3,7 @@
 
 ## Autonomous mode check — do this FIRST
 
-Before anything else, check `progress.md` for `MODE=autonomous`.
+Check `progress.md` for `MODE=autonomous` first.
 
 **If `MODE=autonomous`**: design the model without any review pause. Do not show a "does this look right?" message. Do not wait for confirmation at any point. Auto-approve your design and proceed immediately through all steps M4→M5→completion.
 
@@ -45,7 +45,7 @@ Derive model from structure:
 
 ## Path C — Greenfield modeling
 
-Use `${CLAUDE_SKILL_DIR}/references/domain-patterns.md` as starting templates. Adapt for the user's specific use-case.
+Use `${CLAUDE_SKILL_DIR}/references/domain-patterns.md` as starting templates. Adapt to the user's use-case.
 
 Principles:
 - 3–6 node labels (more for advanced users)

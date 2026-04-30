@@ -41,7 +41,7 @@ var driver = GraphDatabase.driver(uri, auth,
 
 ## Session-level auth (multi-tenant)
 
-Cheaper than creating a new `Driver` per tenant — reuses the connection pool:
+Cheaper than a new `Driver` per tenant — reuses the connection pool:
 
 ```java
 var session = driver.session(SessionConfig.builder()
@@ -52,7 +52,7 @@ var session = driver.session(SessionConfig.builder()
 
 ## User impersonation
 
-Executing user must have the `IMPERSONATE` privilege:
+Requires `IMPERSONATE` privilege on the executing user:
 
 ```java
 var session = driver.session(SessionConfig.builder()
@@ -106,8 +106,7 @@ SRID table: `4326` = WGS-84 2D, `4979` = WGS-84 3D, `7203` = Cartesian 2D, `9157
 
 ## Causal consistency — cross-session bookmarks
 
-Within a single session: automatic, nothing to do.
-Across parallel sessions, pass bookmarks explicitly:
+Within a single session: automatic. Across parallel sessions, pass bookmarks explicitly:
 
 ```java
 import org.neo4j.driver.Bookmark;
@@ -132,4 +131,4 @@ try (var sessionC = driver.session(SessionConfig.builder()
 }
 ```
 
-`executableQuery` shares a `BookmarkManager` automatically — prefer it; only drop to explicit bookmarks for complex cross-session coordination.
+`executableQuery` shares a `BookmarkManager` automatically — prefer it over explicit bookmarks except for complex cross-session coordination.

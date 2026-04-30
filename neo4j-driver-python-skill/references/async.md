@@ -9,7 +9,7 @@ import asyncio
 URI  = "neo4j+s://xxx.databases.neo4j.io"
 AUTH = ("neo4j", "password")
 
-# Singleton — same cost as sync driver; never create per-request
+# Singleton — never create per-request
 driver = AsyncGraphDatabase.driver(URI, auth=AUTH)
 await driver.verify_connectivity()
 # on shutdown:

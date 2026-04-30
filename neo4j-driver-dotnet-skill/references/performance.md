@@ -90,7 +90,7 @@ Default pool size: 100. Reduce if running many app instances to avoid overwhelmi
 
 ## CancellationToken — Propagate End-to-End
 
-In web apps, always propagate the request cancellation token. Without it, abandoned requests keep running on the server, exhausting the connection pool under load.
+Always propagate the request cancellation token in web apps. Without it, abandoned requests keep running on the server, exhausting the connection pool under load.
 
 ```csharp
 // ASP.NET Core controller

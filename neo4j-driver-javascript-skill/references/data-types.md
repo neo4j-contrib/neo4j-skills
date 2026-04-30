@@ -47,7 +47,7 @@ rel.endNodeElementId
 
 ## Temporal Types
 
-Neo4j temporals are **not** JS `Date`. Nanosecond precision; timezone ID support.
+Neo4j temporals are **not** JS `Date` — nanosecond precision, timezone ID support.
 
 ```javascript
 const dt = record.get('created_at')  // neo4j.types.DateTime
@@ -70,7 +70,7 @@ JSON.stringify({ created: dt.toString() })
 
 ## Spatial Types
 
-`neo4j.types.Point` — represents both Cartesian and WGS-84 points.
+`neo4j.types.Point` — Cartesian and WGS-84 points.
 
 ```javascript
 // Read point from query result
@@ -111,7 +111,7 @@ SRID table: `4326` = WGS-84 2D, `4979` = WGS-84 3D, `7203` = Cartesian 2D, `9157
 
 ## `toNative()` Conversion Helper
 
-For REST APIs that serialize all driver types to plain JS. Call on `.properties` or pass the full Node/Relationship with the explicit handler shown.
+Converts all driver types to plain JS for REST APIs. Call on `.properties` or pass the full Node/Relationship with the explicit handler shown.
 
 ```javascript
 import { isInt, isDate, isDateTime, isTime, isLocalDateTime,

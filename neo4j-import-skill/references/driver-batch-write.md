@@ -1,6 +1,6 @@
 # Driver Batch Write Pattern (Python)
 
-Use when source is not a file — API responses, database migrations, programmatic generation.
+Use when source is not a file: API responses, database migrations, programmatic generation.
 
 ```python
 from neo4j import GraphDatabase
@@ -32,7 +32,7 @@ with driver.session(database="neo4j") as session:
 driver.close()
 ```
 
-UNWIND-based batching: ~10x faster than one-at-a-time because network round-trips are the bottleneck.
+UNWIND-based batching: ~10x faster than one-at-a-time — network round-trips are the bottleneck.
 
 ## JavaScript / Node.js
 

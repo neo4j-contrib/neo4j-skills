@@ -13,7 +13,7 @@ Free auto-pauses after 72h inactivity. Professional/BC/VDC include 7-day free tr
 
 ## Connection String Format
 
-All tiers use the same URI pattern:
+URI pattern (all tiers):
 ```
 NEO4J_URI=neo4j+s://<instance-id>.databases.neo4j.io
 NEO4J_USERNAME=neo4j

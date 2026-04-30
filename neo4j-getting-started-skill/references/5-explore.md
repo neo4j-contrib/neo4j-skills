@@ -1,10 +1,5 @@
 # Stage 5 — explore
-# Give the user a visual view of their graph — the "it clicks" moment.
-# This is a hard success gate. Do not skip.
-
-## Why this matters
-
-For first-time Neo4j users, seeing nodes and edges rendered is often the defining moment when graph databases make sense. Always deliver a visual entry point after import.
+# Deliver a visual view of the graph — the "it clicks" moment. Hard success gate. Do not skip.
 
 ## Option A — Neo4j Browser standalone (always available, zero install)
 
@@ -34,7 +29,7 @@ print(f"\n   Run this query after connecting:")
 print(f"   MATCH (n)-[r]->(m) RETURN n,r,m LIMIT 50")
 ```
 
-Tell the user: "Open the URL above, connect with your password from `.env`, then run the query to see your data as a graph."
+Tell the user: "Open the URL above, connect with the password from `.env`, then run the query to see your data as a graph."
 
 ## Option B — Notebook visualization (for APP_TYPE=notebook)
 
@@ -63,11 +58,11 @@ vg.render()
 
 ## Option C — VS Code Neo4j extension
 
-Tell the user: "If you're in VS Code, install the **Neo4j extension** — it connects to your DB and renders Cypher query results as an interactive graph directly in the editor."
+Tell the user: "In VS Code, install the **Neo4j extension** — connects to your DB and renders Cypher results as an interactive graph directly in the editor."
 
 ## Sample visualization queries by domain
 
-Include one of these in the browser suggestion, adapted to the user's schema:
+Include one adapted to the user's schema:
 
 ```cypher
 // Social: show follow network

@@ -174,4 +174,4 @@ CALL gds.list() YIELD name, description
 RETURN name ORDER BY name
 ```
 
-Use to verify which algorithms are available on the current GDS installation and license tier.
+Verify which algorithms are available on the current GDS installation and license tier.

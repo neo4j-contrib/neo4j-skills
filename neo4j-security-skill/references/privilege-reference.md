@@ -1,7 +1,6 @@
 # Neo4j Privilege Reference
 
-Full GRANT / DENY / REVOKE syntax for all privilege types.
-All commands execute against the **system** database.
+Full GRANT / DENY / REVOKE syntax for all privilege types. All commands execute against the **system** database.
 
 ---
 
@@ -184,8 +183,8 @@ WHERE action = 'read';
 
 ## Access Decision Rules
 
-1. `DENY` always overrides `GRANT` — a user with both gets the DENY.
-2. Roles are additive — user inherits union of all assigned role privileges, minus any DENY.
+1. `DENY` overrides `GRANT` — user with both gets the DENY.
+2. Roles are additive — union of all assigned privileges, minus any DENY.
 3. Missing `ACCESS ON DATABASE` = connection refused regardless of graph privileges.
 4. Read restriction makes data **invisible** (not an error); write restriction returns an error.
 5. `FOR` pattern restrictions apply at query time — every node match is filtered against the condition.

@@ -1,15 +1,12 @@
 # Aura Agent (No-Code AI Agent)
 
-Aura Agent is a no/low-code platform in the Aura Console for building AI agents that query AuraDB with natural language — no application code required.
+No/low-code platform in the Aura Console for building AI agents that query AuraDB with natural language.
 
 ## When to Use
 
-Use Aura Agent when:
-- Building a retrieval assistant grounded in graph data without writing app code
-- Enabling natural language queries over a knowledge graph from the console
-- Prototyping agent behavior before embedding in an application
+Use Aura Agent for: retrieval assistants over graph data without app code, natural language queries from the console, prototyping agent behavior.
 
-Use application-level agent frameworks (LangChain, LangGraph, etc.) instead when: custom orchestration, multi-agent coordination, or production deployment outside Aura console is needed.
+Use LangChain/LangGraph/etc. for: custom orchestration, multi-agent coordination, production deployment outside Aura console.
 
 ## Prerequisites
 

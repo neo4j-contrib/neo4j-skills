@@ -29,16 +29,15 @@ Guide a **user or agent** from zero to a working Neo4j application by executing 
 
 ## When to Use
 
-- Starting a new Neo4j project from scratch (local, Docker, or Aura)
-- Provisioning an Aura instance and getting a first app running
-- Running the full onboarding pipeline (zero → DB → model → load → app)
-- Generating synthetic data for demos or development
+- New Neo4j project from scratch (local/Docker/Aura)
+- Full onboarding: zero → DB → model → load → app
+- Generating synthetic data for demos or dev
 
 ## When NOT to Use
 
-- **Writing or optimizing Cypher queries on an existing project** → use `neo4j-cypher-skill`
-- **Upgrading Neo4j drivers or migrating Cypher syntax** → use `neo4j-migration-skill`
-- **CLI/admin tasks on an existing database** (backup, restore, import) → use `neo4j-cli-tools-skill`
+- **Cypher authoring on existing project** → `neo4j-cypher-skill`
+- **Driver upgrades / Cypher migration** → `neo4j-migration-skill`
+- **Admin on existing DB** (backup, restore, import) → `neo4j-cli-tools-skill`
 
 ---
 
@@ -424,10 +423,10 @@ omit `data/generate.py` when `DATA_SOURCE=csv`).
 
 ## Checklist
 
-- [ ] Prerequisites confirmed (Docker/Python/Java, API key if Aura)
-- [ ] Neo4j instance running and reachable (`RETURN 1` passes in cypher-shell)
-- [ ] Schema constraints and indexes ONLINE before data load
-- [ ] Data loaded and verified (`MATCH (n) RETURN count(n) > 0`)
-- [ ] All queries in queries.cypher return expected results
-- [ ] App/notebook runs end-to-end without errors
-- [ ] Credentials in `.env`; `.env` in `.gitignore`
+- [ ] Prerequisites met (Docker/Python/Java; Aura API key if cloud)
+- [ ] DB reachable — `RETURN 1` in cypher-shell
+- [ ] Constraints + indexes ONLINE before data load
+- [ ] Data loaded — `MATCH (n) RETURN count(n)` > 0
+- [ ] queries.cypher: all queries return expected results
+- [ ] App/notebook runs end-to-end
+- [ ] `.env` gitignored; credentials not hardcoded

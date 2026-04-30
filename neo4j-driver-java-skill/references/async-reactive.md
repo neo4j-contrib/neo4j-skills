@@ -2,7 +2,7 @@
 
 ## Async API (`driver.asyncSession()`)
 
-Non-blocking execution via `CompletableFuture` / `CompletionStage`. Mirrors sync API — every method returns `CompletionStage` instead of blocking.
+Non-blocking via `CompletableFuture` / `CompletionStage`. Every method returns `CompletionStage` instead of blocking.
 
 ### Session lifecycle — close in both paths
 
@@ -84,7 +84,7 @@ session.executeReadAsync(tx ->
 
 ## Reactive API (`driver.rxSession()`)
 
-For Project Reactor / RxJava backpressure-aware streaming. Use only when downstream consumer is itself reactive.
+Project Reactor / RxJava backpressure-aware streaming. Use only when downstream consumer is itself reactive.
 
 ```java
 import org.neo4j.driver.reactive.RxSession;
@@ -112,6 +112,6 @@ Flux<String> getNames(Driver driver) {
 ```
 
 Key rules:
-- Use `Flux.usingWhen` to ensure session closes in all paths (success / error / cancel).
+- `Flux.usingWhen` ensures session closes in all paths (success / error / cancel).
 - Never subscribe inside a reactive chain — let the framework subscribe.
-- Reactive is only worth the complexity when the consumer is reactive (e.g. Spring WebFlux). For standard Spring MVC or synchronous code, use the sync or async API.
+- Reactive is only worth the complexity when the consumer is reactive (e.g. Spring WebFlux). For Spring MVC or synchronous code, use the sync or async API.

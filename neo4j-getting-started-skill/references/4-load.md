@@ -32,10 +32,7 @@ print("Schema applied")
 
 ## Preferred pattern — Python batch loading via DataFrame
 
-Load data into a pandas DataFrame first, then push rows to Neo4j in batches using
-`driver.execute_query(..., rows=batch)`. This works with **any data source and any
-database target** — local files, HTTPS, S3/GCS, Parquet, relational DBs, MongoDB, etc.
-No Neo4j import directory access required (works on Aura out of the box).
+Load into pandas DataFrame, push to Neo4j in batches via `driver.execute_query(..., rows=batch)`. Works with any source (local files, HTTPS, S3/GCS, Parquet, relational DBs, MongoDB) — no Neo4j import directory access required (works on Aura).
 
 ```python
 import os
@@ -253,8 +250,7 @@ Always follow **Phase 1 (all nodes) → Phase 2 (all relationships)** regardless
 ## Path D — Document / GraphRAG pipeline (DATA_SOURCE=documents)
 
 **STOP — do NOT generate synthetic data for this path.**
-The user has real documents. Ingest what is already in `data/`.
-Only fall back to synthetic data if the user explicitly says they have no files.
+Ingest what is already in `data/`. Fall back to synthetic only if the user explicitly confirms they have no files.
 
 ### Step D0 — Inventory data/
 
@@ -288,8 +284,7 @@ If `OPENAI_API_KEY` is missing: check `aura.env` and append to `.env`.
 
 ### Step D3 — Write and run import/ingest_docs.py
 
-Read and follow `${CLAUDE_SKILL_DIR}/references/capabilities/kg-from-documents.md` for the
-full pipeline template. Key points:
+Follow `${CLAUDE_SKILL_DIR}/references/capabilities/kg-from-documents.md` for the full pipeline template. Key points:
 
 ```python
 from neo4j_graphrag.experimental.pipeline.kg_builder import SimpleKGPipeline
@@ -346,11 +341,11 @@ print("  ✓ Vector index 'chunk_embeddings' ready")
 | Files with boilerplate headers | Low-value entity extraction | Strip headers before passing `text=` |
 | No useful structure | LLM extracts nothing | Try `schema=None` — lets LLM infer types freely |
 
-**IMPORTANT: run ingestion synchronously — do NOT use `&` or background execution.**
-The script must complete and print "✓ Ingestion complete" before the next stage begins.
-LLM-based extraction is slow (minutes for large corpora) — this is expected, just wait.
+**Run ingestion synchronously — do NOT use `&` or background execution.**
+Script must complete and print "✓ Ingestion complete" before the next stage begins.
+LLM-based extraction is slow (minutes for large corpora) — expected, just wait.
 
-After ingestion, **always inspect the actual graph schema** before writing queries:
+**Always inspect the actual graph schema after ingestion before writing queries:**
 ```cypher
 CYPHER 25
 CALL db.schema.visualization()
@@ -419,8 +414,7 @@ In autonomous mode: log counts and continue.
 
 ## On Completion — write to progress.md
 
-Record node counts per label and total relationships. For `sample_id`, read the
-first two rows (header + data) of the primary node CSV to get a real loaded value:
+Record node counts per label and total relationships. For `sample_id`, read the first two rows of the primary node CSV:
 
 ```python
 import csv

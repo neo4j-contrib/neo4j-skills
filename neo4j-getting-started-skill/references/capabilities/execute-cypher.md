@@ -1,8 +1,7 @@
 # Capability — execute-cypher
 # Three options for running Cypher statements against Neo4j.
-# The `context` stage determines which option to use; reference only that section here.
 
-During the `context` stage, detect and record `EXEC_METHOD` from this priority order:
+Detect and record `EXEC_METHOD` in the `context` stage — priority order:
 1. `mcp` — if neo4j-mcp is running as an MCP server in this session
 2. `cypher-shell` — if `cypher-shell` is on PATH
 3. `query-api` — HTTP fallback, always available when DB is reachable
@@ -60,7 +59,7 @@ cypher-shell -a "$NEO4J_URI" -u "$NEO4J_USERNAME" -p "$NEO4J_PASSWORD" \
 
 ## Option 3 — Neo4j Query API (HTTP)
 
-Use when: neither MCP nor cypher-shell is available. Works with `curl` only — no Neo4j client needed.
+Use when neither MCP nor cypher-shell is available. Works with `curl` only — no Neo4j client needed.
 
 ```bash
 source .env
@@ -89,8 +88,6 @@ Note: for local Docker, use `http://localhost:7474` instead of `https://${HOST}`
 ---
 
 ## Python driver (always available when neo4j package installed)
-
-Use in generated application code regardless of `EXEC_METHOD`:
 
 ```python
 from neo4j import GraphDatabase

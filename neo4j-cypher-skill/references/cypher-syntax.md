@@ -51,7 +51,7 @@ CREATE CONSTRAINT name IF NOT EXISTS FOR ()-[r:TYPE]-() REQUIRE r.prop IS RELATI
 ```
 
 Rules:
-- Always add uniqueness constraint on MERGE key before loading data
+- Add uniqueness constraint on MERGE key before loading data
 - `IF NOT EXISTS` prevents error on re-run
 - `SHOW CONSTRAINTS YIELD name, type` to inspect
 
@@ -133,7 +133,7 @@ SET n = {}
 
 ## WITH Scope and Aggregation
 
-`WITH` defines a new scope. **Every variable not listed is dropped.** Use `WITH *` to carry all variables forward.
+`WITH` defines a new scope — every variable not listed is dropped. Use `WITH *` to carry all forward.
 
 ```cypher
 // Variable 'b' dropped after WITH
@@ -145,7 +145,7 @@ RETURN a.name, friends
 ORDER BY friends DESC
 ```
 
-`WITH` resets aggregation scope — use it to filter on aggregates before further traversal:
+`WITH` resets aggregation scope — filter on aggregates before further traversal:
 
 ```cypher
 CYPHER 25
@@ -228,7 +228,7 @@ RETURN coalesce(n.nickname, n.name) AS displayName
 
 ## Type Coercion
 
-Prefer **OrNull variants** — return `null` on unconvertible input instead of throwing: [2025.01 — pre-2025 models use base forms that throw]
+Prefer **OrNull variants** — return `null` on unconvertible input instead of throwing [2025.01; pre-2025 base forms throw]:
 
 ```cypher
 toIntegerOrNull(n.score)
@@ -276,7 +276,7 @@ RETURN [(n)-[:KNOWS]->(f:Person) | f.name] AS friends,
        [(n)-[:ACTED_IN]->(m:Movie) WHERE m.year > 2020 | m.title] AS recentFilms
 ```
 
-Use pattern comprehensions for simple one-hop inline collections. For multi-step traversals use `COLLECT { MATCH ... RETURN ... }`.
+Use pattern comprehensions for simple one-hop inline collections; for multi-step traversals use `COLLECT { MATCH ... RETURN ... }`.
 
 ---
 
@@ -338,7 +338,7 @@ RETURN count(n) AS created
 
 ## OPTIONAL MATCH
 
-Returns `null` columns for the optional pattern rather than eliminating the row.
+Returns `null` for the optional pattern rather than eliminating the row.
 
 ```cypher
 CYPHER 25
@@ -350,13 +350,13 @@ RETURN p.name, d.name AS department    // d.name is null when no match
 RETURN p.name, EXISTS { (p)-[:MANAGES]->() } AS isManager
 ```
 
-Do NOT chain multiple `OPTIONAL MATCH` for nested optional data — each fan-out multiplies row count. Use `COLLECT {}` subqueries instead.
+Do NOT chain multiple `OPTIONAL MATCH` for nested optional data — each fan-out multiplies row count. Use `COLLECT {}` instead.
 
 ---
 
 ## UNION and UNION ALL
 
-`UNION` deduplicates (slow). `UNION ALL` keeps all rows (fast). Both branches must return **identical column names and count**.
+`UNION` deduplicates (slow). `UNION ALL` keeps all rows (fast). Both branches must return identical column names and count.
 
 ```cypher
 CYPHER 25                              // prefix only on first branch
@@ -452,13 +452,13 @@ CALL (row) {
 } IN TRANSACTIONS OF 1000 ROWS ON ERROR CONTINUE
 ```
 
-All CSV fields are `STRING` — coerce explicitly. `PERIODIC COMMIT` is deprecated; use `CALL IN TRANSACTIONS`.
+All CSV fields are `STRING` — coerce explicitly. `PERIODIC COMMIT` deprecated; use `CALL IN TRANSACTIONS`.
 
 ---
 
 ## Subqueries [2025.01]
 
-**Expression subqueries** (auto-import outer variables):
+**Expression subqueries** (auto-import outer variables — no `WITH` needed):
 
 ```cypher
 EXISTS { (a)-[:R]->(b) }
@@ -471,7 +471,7 @@ COLLECT { MATCH (a)-[:R]->(b) RETURN b.name }   // COLLECT: full MATCH+RETURN re
 
 `COLLECT {}` returns exactly one column.
 
-**`CALL` subqueries** — outer variables NOT auto-imported; declare explicitly:
+**`CALL` subqueries** — outer variables NOT auto-imported; declare explicitly in `CALL (x) { ... }`:
 
 ```cypher
 CYPHER 25
@@ -514,18 +514,18 @@ RETURN [x IN n | x.name] AS via, dst.name AS reached
 ```
 
 Syntax rules:
-- Prefer `{1,}` over `+` and `{0,}` over `*`
+- Prefer `{1,}` over `+`, `{0,}` over `*`
 - Quantifier goes **outside** the group: `(pattern){N,M}`
 - Groups must start AND end with a node
 
-Match modes [2025.01] (go immediately after `MATCH`):
+Match modes [2025.01] (immediately after `MATCH`):
 
 | Mode | Semantics |
 |---|---|
 | `DIFFERENT RELATIONSHIPS` | Default — each relationship traversed at most once per path |
 | `REPEATABLE ELEMENTS` | Nodes AND relationships may be revisited; requires bounded `{m,n}` |
 
-Path selectors (go immediately after `MATCH`, before the pattern):
+Path selectors (immediately after `MATCH`, before the pattern):
 
 | Selector | Semantics |
 |---|---|
@@ -590,13 +590,13 @@ CYPHER 25 CALL db.index.vector.queryNodes('news', 10, $embedding) YIELD node AS 
 CYPHER 25 CALL db.index.fulltext.queryNodes('entity', $query) YIELD node, score RETURN node.name, score LIMIT 20
 ```
 
-SEARCH syntax: binding variable only (not `(c)`), `LIMIT` inside parens, `SCORE AS` after closing paren.
+SEARCH syntax: binding variable only (not `(c)`); `LIMIT` inside parens; `SCORE AS` after closing paren.
 
 ---
 
 ## CALL IN TRANSACTIONS (write batching only) [2025.01: CONCURRENT, REPORT STATUS added; PERIODIC COMMIT removed]
 
-The input stream must be **outside** the subquery — filtering inside collapses everything into one transaction.
+Input stream must be **outside** the subquery — filtering inside collapses everything into one transaction.
 
 ```cypher
 // Basic batch update
@@ -628,7 +628,7 @@ CALL (row) {
   ON ERROR CONTINUE
 ```
 
-`IN TRANSACTIONS` comes **after** the `{ }` block. Never use for reads. Requires auto-commit — do not wrap in `beginTransaction()`.
+`IN TRANSACTIONS` comes **after** the `{ }` block. Read-only use prohibited. Requires auto-commit — do not wrap in `beginTransaction()`.
 
 **ON ERROR options**: `FAIL` (default) | `CONTINUE` (skip failed batch) | `BREAK` (stop after first error) | `RETRY FOR N SECS` [2025.03+]
 
@@ -636,7 +636,7 @@ CALL (row) {
 
 ## Conditional CALL Subqueries (WHEN…THEN…ELSE) [2025.06 / Neo4j 2025.06+]
 
-Provides if-else-if semantics within a single subquery block. Replaces multiple independent `CALL` blocks or complex `CASE` expressions with side effects.
+If-else-if semantics in a single subquery block. Replaces multiple independent `CALL` blocks or complex `CASE` with side effects.
 
 ```cypher
 // Move a linked-list item: insert before/after depending on context
@@ -660,8 +660,8 @@ CALL (move, insertBefore, insertAfter) {
 ```
 
 Rules:
-- `WHEN` branches receive only params declared in `CALL(params)`
-- Mutually exclusive — first matching WHEN wins (not all-of-the-above)
+- Branches receive only params declared in `CALL(params)`
+- Mutually exclusive — first matching WHEN wins
 - Each branch can contain full write clauses; `ELSE` is optional
 - Cannot mix `WHEN...THEN` and regular subquery body in same `CALL`
 
@@ -698,7 +698,7 @@ MATCH (n:$any($labelList)) RETURN n
 
 ## Compact CASE WHEN [Neo4j 5+]
 
-Multiple values and comparison operators in a single WHEN branch:
+Multiple values and comparison operators in a single WHEN branch.
 
 ```cypher
 // Multiple values in WHEN (simple CASE)
@@ -722,7 +722,7 @@ END AS ageGroup
 
 ## String Normalization [Neo4j 5+]
 
-`normalize(s)` converts string to NFC Unicode normal form — solves accented character comparison issues where identical glyphs have different code points:
+`normalize(s)` converts to NFC Unicode — solves accented character comparison where identical glyphs have different code points:
 
 ```cypher
 // Match regardless of Unicode encoding differences (e.g., 'ö' as U+00F6 vs o + combining diacritic)
@@ -739,7 +739,7 @@ MATCH (c:City) SET c.normalizedName = normalize(c.name)
 
 ## allReduce Function (Traversal State) [CYPHER 25]
 
-Accumulates state during QPE traversal; enables mid-traversal filtering and stateful path constraints. Prevents visiting invalid paths instead of post-filtering.
+Accumulates state during QPE traversal — mid-traversal filtering and stateful path constraints. Prunes invalid paths inline instead of post-filtering.
 
 ```cypher
 // Syntax: allReduce(accumulator = initial, var IN list | updateExpr, predicate)
@@ -777,7 +777,7 @@ ORDER BY total_mins LIMIT 1
 
 ## NEXT Clause [CYPHER 25]
 
-Chains query blocks without re-traversal; each block can add computed columns:
+Chains query blocks without re-traversal; each block adds computed columns:
 
 ```cypher
 CYPHER 25
