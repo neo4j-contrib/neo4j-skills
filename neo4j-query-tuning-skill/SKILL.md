@@ -240,7 +240,7 @@ RETURN n.currency, count(*), sum(n.amount)
 SHOW QUERIES YIELD query, queryId, elapsedTimeMillis, allocatedBytes, status, username
 
 // Running transactions:
-SHOW TRANSACTIONS YIELD transactionId, currentQuery, elapsedTime, status, username, cpuTime, activeLockCount
+SHOW TRANSACTIONS YIELD transactionId, currentQuery, currentQueryProgress, elapsedTime, status, username, cpuTime, activeLockCount  // currentQueryProgress added [2026.03]
 
 // Kill a specific transaction:
 TERMINATE TRANSACTION $transactionId

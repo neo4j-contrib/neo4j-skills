@@ -144,8 +144,14 @@ Input stream must be outside subquery. Auto-commit only — never wrap in `begin
 CYPHER 25
 MATCH SHORTEST 1 (a:Person {name:'Alice'})(()-[:KNOWS]->()){1,}(b:Person {name:'Bob'})
 RETURN b.name
+
+// ACYCLIC [2026.03] — no repeated nodes within a path (prevents cycles)
+CYPHER 25
+MATCH p = ACYCLIC (start:Router {name: $from})-[:LINK]-+(end:Router {name: $to})
+RETURN [n IN nodes(p) | n.name] AS route
+ORDER BY length(p) LIMIT 5
 ```
-Quantifier outside group: `(pattern){N,M}`. Groups start+end with node. `REPEATABLE ELEMENTS` needs bounded `{m,n}`.
+Quantifier outside group: `(pattern){N,M}`. Groups start+end with node. `REPEATABLE ELEMENTS` needs bounded `{m,n}`. `ACYCLIC` implies nodes cannot repeat within a path (stronger than default `DIFFERENT RELATIONSHIPS`).
 
 Match mode — add after `MATCH`:
 - `DIFFERENT RELATIONSHIPS` (default) — each rel traversed once per path
@@ -283,7 +289,11 @@ Default to 2025.01-safe features when version unknown.
 | Match modes (`DIFFERENT RELATIONSHIPS`, `REPEATABLE ELEMENTS`) | 2025.01 | require 2025+ |
 | Dynamic labels `$($expr)`, `coll.sort()` | 2025.01 | APOC or app-side |
 | `CONCURRENT TRANSACTIONS`, `REPORT STATUS` | 2025.01 | drop / omit |
-| `SEARCH` clause (vector/fulltext) | 2026.01 | `CALL db.index.vector.queryNodes(...)` |
+| `SEARCH` clause (vector/fulltext) | 2026.01 | `CALL db.index.vector.queryNodes(...)` (deprecated 2026.04) |
+| `ACYCLIC` path mode (no repeated nodes in path) | 2026.03 | post-filter with `size(nodes(p)) = size(apoc.coll.toSet(nodes(p)))` |
+| `PROPERTY_EXISTS(n, 'prop')` predicate | 2026.03 | `n.prop IS NOT NULL` |
+| `FOR x IN list` (GQL synonym for `UNWIND list AS x`) | 2026.04 | `UNWIND list AS x` |
+| `n IS [NOT] LABELED :LabelExpr` predicate | 2026.04 | `n:Label` or `NOT n:Label` inline check |
 
 ---
 
