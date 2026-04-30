@@ -325,32 +325,36 @@ An unreferenced file in `references/` has <10% discovery rate. A referenced one 
 
 ### Language style applies to `references/` too
 
-The same caveman compression rule from the Language Style section applies to every file in `references/`. References are loaded at execution time and read in full — verbosity wastes tokens just as much as in `SKILL.md`.
+Same caveman compression rule applies to every file in `references/`. References are loaded at execution time and read in full — verbosity costs tokens just as much as in `SKILL.md`.
 
-Apply the same standard when writing or reviewing reference files:
+#### Remove — pure prose padding
 
-```
-❌ The following section provides a comprehensive overview of all the available
-   algorithm categories and when you might want to use each one in your workflow.
-✅ Algorithm categories:
+| Pattern | Example | Action |
+|---|---|---|
+| Section intro restating the heading | "This section describes the available options for configuring…" | Delete entirely |
+| Numbered step comment before self-describing command | `# 2. Create instance` before `aura-cli instance create \` | Delete |
+| Hedging | "you may want to", "it is generally recommended that" | Delete or restate as imperative |
+| Redundant label before single code block | `**Example**:` when there is exactly one example | Delete |
+| "What is X?" overview when X is already named in the section heading | "The Model Context Protocol (MCP) is a standardized way for AI agents to…" | Delete |
+| Passive voice explaining what a command does | "This command adds the credential and sets it as the default." | Delete (the command is self-documenting) |
 
-❌ Make sure that you always remember to drop the projected graph after the
-   algorithms have completed running to free up memory in the GDS session.
-✅ Drop projected graph after algorithms complete — frees session memory.
-```
+#### Never remove — technical content
 
-**Never strip technical content in the name of terseness.** The terse rule targets prose padding only. These must never be removed:
-- Option/flag lists (`--name`, `--type`, `--region` …)
-- Example command output (JSON, table, plain text)
-- Code blocks of any kind
-- Table data rows
-- Sub-command descriptions that serve as navigation anchors
+The test: *would a developer need to look this up?* If yes, it stays.
 
-When reviewing any skill (new or updated), check `references/` for:
-- Explanatory paragraphs that describe what something is instead of what to do
-- Hedging language ("you may want to", "it is generally recommended that")
-- Redundant context already present in `SKILL.md`
-- Section intros that just restate the heading
+| Type | Examples |
+|---|---|
+| Flag / option lists | `--name`, `--type <enterprise-db\|professional-db>`, with their descriptions |
+| Error trigger strings | `Error: authentication failed`, `Error: rate limit exceeded` |
+| Error fix steps | The bullet list or sentence explaining how to resolve each error |
+| Example output | JSON responses, table output, plain-text results from commands |
+| Code blocks | Any fenced block |
+| Table data rows | Any row in a markdown table |
+| `key: value` reference pairs | `NEO4J_DATABASE` - target database (default: neo4j) |
+| Sub-command descriptions | One-line summaries under `#### create`, `#### list` etc. when they add meaning beyond the name |
+| Best Practices / Checklist items | Concrete numbered or bulleted guidance with actionable content |
+
+**The terse rule compresses sentences. It never removes facts.**
 
 ---
 
