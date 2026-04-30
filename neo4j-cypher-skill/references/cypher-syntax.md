@@ -246,35 +246,14 @@ RETURN n.name, n.value
 
 **DateTime vs date() mismatch**: `datetime_prop >= date('2025-01-01')` returns 0 rows — use `.year` accessor or `datetime()` literals for `ZONED DATETIME` properties.
 
-`PROPERTY_EXISTS` predicate [2026.03] — tests property exists and is not NULL:
-```cypher
-// Equivalent to: n.name IS NOT NULL
-MATCH (n:Person)
-WHERE PROPERTY_EXISTS(n, 'name')
-RETURN n.name, n.email
-
-// Works on relationships too
-MATCH ()-[r:KNOWS]->()
-WHERE PROPERTY_EXISTS(r, 'since')
-RETURN r.since
-```
-
-`IS [NOT] LABELED` predicate [2026.04] — tests label expression, equivalent to `:Label` colon form:
-```cypher
-// Equivalent to: n:Manager
-MATCH (n:Person)
-RETURN n.name, n IS LABELED Manager AS isManager
-
-// With label expression
-MATCH (n)
-WHERE n IS LABELED (Manager|Director)
-RETURN n.name, labels(n) AS nodeLabels
-
-// NOT form
-MATCH (n:Person)
-WHERE n IS NOT LABELED Manager
-RETURN n.name
-```
+**GQL compliance aliases [2026.03–04]** — valid syntax, but use the Cypher form in new code:
+| GQL alias | Cypher equivalent |
+|---|---|
+| `FOR x IN list` | `UNWIND list AS x` |
+| `PROPERTY_EXISTS(n, 'prop')` | `n.prop IS NOT NULL` |
+| `n IS [NOT] LABELED Label` | `n:Label` / `NOT n:Label` |
+| `FILTER` | `WHERE` |
+| `LET x = expr` | `WITH expr AS x` |
 
 ---
 
@@ -340,15 +319,14 @@ elementId(n)         // STRING internal ID [replaces deprecated id(n) — pre-20
 
 ---
 
-## FOREACH vs UNWIND vs FOR
+## FOREACH vs UNWIND
 
 | Use | When |
 |---|---|
 | `FOREACH (x IN list \| write-clause)` | Side-effect writes only — no RETURN needed |
 | `UNWIND list AS x` | Need to read, filter, or return list items |
-| `FOR x IN list` [2026.04] | GQL synonym for `UNWIND list AS x` — identical semantics, different syntax |
 
-`FOREACH` cannot be followed by `RETURN` or `WITH`. `FOR` and `UNWIND` are interchangeable — prefer `UNWIND` for compatibility with pre-2026.04 deployments.
+`FOREACH` cannot be followed by `RETURN` or `WITH`. When in doubt, use `UNWIND`.
 
 ```cypher
 // FOREACH -- side-effect only
@@ -558,8 +536,7 @@ Match modes [2025.01] (immediately after `MATCH`):
 | `ACYCLIC` [2026.03] | No repeated nodes within a path; GQL path mode — prevents cycles |
 
 `ACYCLIC` is placed before the path pattern: `MATCH p = ACYCLIC (a)-[:R]-+(b)`.  
-Use for loop-free routing, DAG traversal, or any graph where re-visiting a node is invalid.  
-Nodes can still repeat *across* paths (equijoins still work).
+Nodes cannot repeat within a path; may still repeat across paths (equijoins work).
 
 Path selectors (immediately after `MATCH`, before the pattern):
 

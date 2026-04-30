@@ -212,8 +212,6 @@ ORDER BY score DESC
 
 ### Post-filter pattern (2025.x or arbitrary predicates)
 
-> **Deprecated [2026.04]**: `db.index.vector.queryNodes()` and `db.index.vector.queryRelationships()` are deprecated in favor of the `SEARCH` clause. Use the procedure only on 2025.x or when predicates cannot be expressed as `SEARCH WHERE` (OR/NOT/non-scalar types).
-
 ```cypher
 CYPHER 25
 CALL db.index.vector.queryNodes('chunk_embedding', 50, $queryEmbedding)

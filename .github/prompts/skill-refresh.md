@@ -76,6 +76,7 @@ Apply changes. Read each file fully before editing.
 - Content you are not confident is outdated — leave it and note it in the summary
 - Architectural patterns that are still valid
 - Code examples that are still correct
+- **GQL syntactic synonyms** (`FOR`, `FILTER`, `LET`, `PROPERTY_EXISTS`, `IS [NOT] LABELED`, etc.) — document only as a compact alias table with a "GQL compliance only — use Cypher equivalents" note. Do not add per-alias examples, separate sections, or version-gate rows for each. One table row in the references file is sufficient.
 
 **Quality rules (all must pass before you finish):**
 

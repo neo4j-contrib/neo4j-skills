@@ -291,9 +291,7 @@ Default to 2025.01-safe features when version unknown.
 | `CONCURRENT TRANSACTIONS`, `REPORT STATUS` | 2025.01 | drop / omit |
 | `SEARCH` clause (vector/fulltext) | 2026.01 | `CALL db.index.vector.queryNodes(...)` (deprecated 2026.04) |
 | `ACYCLIC` path mode (no repeated nodes in path) | 2026.03 | post-filter with `size(nodes(p)) = size(apoc.coll.toSet(nodes(p)))` |
-| `PROPERTY_EXISTS(n, 'prop')` predicate | 2026.03 | `n.prop IS NOT NULL` |
-| `FOR x IN list` (GQL synonym for `UNWIND list AS x`) | 2026.04 | `UNWIND list AS x` |
-| `n IS [NOT] LABELED :LabelExpr` predicate | 2026.04 | `n:Label` or `NOT n:Label` inline check |
+| GQL aliases: `FOR`=`UNWIND`, `PROPERTY_EXISTS`=`IS NOT NULL`, `IS [NOT] LABELED`=`n:Label` | 2026.03–04 | GQL compliance only — use Cypher equivalents |
 
 ---
 
