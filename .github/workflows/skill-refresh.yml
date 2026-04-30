@@ -34,15 +34,39 @@ jobs:
           git checkout -b "$BRANCH"
           echo "name=$BRANCH" >> "$GITHUB_OUTPUT"
 
+      - name: Install jq
+        run: sudo apt-get install -y jq
+
       - name: Run skill refresh
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
-          claude \
+          claude --bare \
             --print \
+            --output-format stream-json \
+            --verbose \
+            --include-partial-messages \
+            --no-session-persistence \
             --allowedTools "Bash,WebFetch,Read,Edit,Write" \
             --max-turns 200 \
+            --max-budget-usd 5.00 \
             "$(cat .github/prompts/skill-refresh.md)" \
+            | tee /tmp/refresh-raw.jsonl \
+            | jq -r '
+                if .type == "assistant" then
+                  (.message.content[]? |
+                    if .type == "text" then .text
+                    elif .type == "tool_use" then
+                      "[tool] \(.name) \((.input.command // .input.url // .input.file_path // "") | .[0:120])"
+                    else empty end)
+                elif .type == "stream_event" then
+                  if .event.type == "content_block_start"
+                     and .event.content_block.type == "tool_use" then
+                    "[tool] \(.event.content_block.name)"
+                  else empty end
+                else empty
+                end
+              ' \
             | tee /tmp/refresh-summary.txt
 
       - name: Lint skills
