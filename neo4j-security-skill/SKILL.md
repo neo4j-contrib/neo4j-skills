@@ -68,10 +68,10 @@ CREATE USER $username SET PASSWORD $password CHANGE NOT REQUIRED;
 ### Alter user
 ```cypher
 ALTER USER alice SET PASSWORD $newPw CHANGE NOT REQUIRED;
-ALTER USER alice SET STATUS SUSPENDED;          -- lock account
-ALTER USER alice SET STATUS ACTIVE;             -- unlock
-ALTER USER alice SET HOME DATABASE mydb;        -- default db on connect
-ALTER USER alice IF EXISTS SET PASSWORD $pw;    -- safe if missing
+ALTER USER alice SET STATUS SUSPENDED;          // lock account
+ALTER USER alice SET STATUS ACTIVE;             // unlock
+ALTER USER alice SET HOME DATABASE mydb;        // default db on connect
+ALTER USER alice IF EXISTS SET PASSWORD $pw;    // safe if missing
 ```
 
 ### Show users
@@ -100,15 +100,15 @@ DROP ROLE analyst IF EXISTS;
 ### Assign / remove roles
 ```cypher
 GRANT ROLE analyst TO alice;
-GRANT ROLE analyst, writer TO alice, bob;   -- bulk
+GRANT ROLE analyst, writer TO alice, bob;   // bulk
 REVOKE ROLE analyst FROM alice;
 ```
 
 ### Inspect roles
 ```cypher
 SHOW ROLES YIELD role, member ORDER BY role;
-SHOW ROLE analyst PRIVILEGES AS COMMANDS;   -- returns runnable GRANT commands
-SHOW POPULATED ROLES YIELD role;            -- only roles with members
+SHOW ROLE analyst PRIVILEGES AS COMMANDS;   // returns runnable GRANT commands
+SHOW POPULATED ROLES YIELD role;            // only roles with members
 ```
 
 ---
@@ -145,7 +145,7 @@ DENY  READ {ssn} ON GRAPH mydb NODES Person TO analyst;
 ```cypher
 REVOKE GRANT READ {email} ON GRAPH mydb NODES Person FROM analyst;
 REVOKE DENY  READ {ssn}   ON GRAPH mydb NODES Person FROM analyst;
-REVOKE MATCH {*} ON GRAPH mydb NODES Person FROM analyst;  -- removes both grant+deny
+REVOKE MATCH {*} ON GRAPH mydb NODES Person FROM analyst;  // removes both grant+deny
 ```
 
 ---
@@ -172,9 +172,9 @@ GRANT WRITE   ON GRAPH mydb TO writer;
 ```cypher
 CREATE ROLE limited_reader IF NOT EXISTS;
 GRANT ACCESS    ON DATABASE mydb TO limited_reader;
-GRANT TRAVERSE  ON GRAPH mydb ELEMENTS * TO limited_reader;      -- can traverse
-GRANT MATCH {*} ON GRAPH mydb NODES Person TO limited_reader;    -- Person props visible
-GRANT MATCH {*} ON GRAPH mydb NODES Company TO limited_reader;   -- Company props visible
+GRANT TRAVERSE  ON GRAPH mydb ELEMENTS * TO limited_reader;      // can traverse
+GRANT MATCH {*} ON GRAPH mydb NODES Person TO limited_reader;    // Person props visible
+GRANT MATCH {*} ON GRAPH mydb NODES Company TO limited_reader;   // Company props visible
 // Other labels: traversable but properties invisible
 ```
 
@@ -247,7 +247,7 @@ GRANT ROLE senior_engineer TO AUTH RULE seniorRule;
 ### Manage auth rules
 ```cypher
 SHOW AUTH RULES YIELD ruleName, condition, roles;
-ALTER AUTH RULE salesRule SET ENABLED false;     -- disable without dropping
+ALTER AUTH RULE salesRule SET ENABLED false;     // disable without dropping
 RENAME AUTH RULE salesRule TO salesDeptRule;
 DROP AUTH RULE salesDeptRule;
 REVOKE ROLE analyst FROM AUTH RULE salesRule;

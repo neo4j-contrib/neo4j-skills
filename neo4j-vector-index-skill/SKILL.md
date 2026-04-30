@@ -68,7 +68,7 @@ Node index **with filterable properties** [2026.01+] — `WITH` declares which p
 CYPHER 25
 CREATE VECTOR INDEX chunk_embedding IF NOT EXISTS
 FOR (c:Chunk) ON (c.embedding)
-WITH [c.source, c.lang, c.published_year]  -- stored as metadata; filterable in SEARCH WHERE
+WITH [c.source, c.lang, c.published_year]  // stored as metadata; filterable in SEARCH WHERE
 OPTIONS { indexConfig: { `vector.dimensions`: 1536, `vector.similarity_function`: 'cosine' } }
 ```
 
@@ -216,7 +216,7 @@ ORDER BY score DESC
 CYPHER 25
 CALL db.index.vector.queryNodes('chunk_embedding', 50, $queryEmbedding)
 YIELD node AS c, score
-WHERE c.source = $source    -- post-filter: fetch more, then filter
+WHERE c.source = $source    // post-filter: fetch more, then filter
 RETURN c.text, score
 ORDER BY score DESC LIMIT 10
 ```
