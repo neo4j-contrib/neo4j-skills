@@ -1,6 +1,12 @@
 ---
 name: neo4j-cli-tools-skill
-description: Use when working with Neo4j command-line tools including neo4j-admin, cypher-shell, aura-cli, and neo4j-mcp
+description: Use when working with Neo4j command-line tools — neo4j-admin (backup, restore,
+  import, memory sizing), cypher-shell (ad-hoc queries, scripting, CI/CD), aura-cli (cloud
+  provisioning), or neo4j-mcp (quick MCP server install). Covers CLI flags, environment
+  variables, and operational runbooks for each tool.
+  Does NOT cover Cypher query authoring — use neo4j-cypher-skill.
+  Does NOT cover driver upgrades — use neo4j-migration-skill.
+  Does NOT cover full MCP editor configuration — use neo4j-mcp-skill.
 allowed-tools: WebFetch, Bash
 ---
 
@@ -8,7 +14,7 @@ allowed-tools: WebFetch, Bash
 
 This skill provides comprehensive guidance on Neo4j command-line tools for database administration, query execution, cloud management, and AI agent integration.
 
-## When to use
+## When to Use
 
 Use this skill when:
 - Setting up or configuring Neo4j databases via command line
@@ -19,7 +25,7 @@ Use this skill when:
 - Troubleshooting Neo4j CLI tool issues
 - Migrating or backing up databases using CLI tools
 
-## When NOT to use this skill
+## When NOT to Use
 
 - **Writing or optimizing Cypher queries** → use `neo4j-cypher-skill`
 - **Upgrading Neo4j drivers or migrating Cypher syntax** → use `neo4j-migration-skill`
@@ -253,3 +259,13 @@ Common environment variables across tools:
 - [Aura CLI GitHub](https://github.com/neo4j/aura-cli)
 - [Neo4j MCP Documentation](https://neo4j.com/docs/mcp/current/)
 - [Neo4j Developer Portal](https://neo4j.com/developer/)
+
+---
+
+## Checklist
+
+- [ ] Correct tool selected for task (neo4j-admin / cypher-shell / aura-cli / neo4j-mcp)
+- [ ] Credentials set via env vars (`NEO4J_USERNAME`, `NEO4J_PASSWORD`); not hardcoded
+- [ ] Destructive operations (restore, load-overwrite, bulk delete) confirmed by user before execution
+- [ ] Post-operation verification run (connectivity test / `SHOW INDEXES` / count check)
+- [ ] Backup completed before any restore or schema change

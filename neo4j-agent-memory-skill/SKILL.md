@@ -411,3 +411,16 @@ Before publishing any content about this project, verify:
 - **create-context-graph (scaffolder):** https://create-context-graph.dev
 - **Community Forum:** https://community.neo4j.com
 - **Microsoft Learn integration page:** https://learn.microsoft.com/en-us/agent-framework/integrations/neo4j-memory
+
+---
+
+## Checklist
+
+- [ ] Version number verified against PyPI before citing (`https://pypi.org/project/neo4j-agent-memory/`)
+- [ ] Consumption model identified: self-hosted library or hosted NAMS service
+- [ ] Correct extras installed for framework integration (`pip install neo4j-agent-memory[<extra>]`)
+- [ ] `MemoryClient` used as async context manager (`async with MemoryClient(settings) as memory:`)
+- [ ] Three memory types referenced correctly: short-term, long-term, reasoning
+- [ ] POLE+O model named consistently (not POLEO or POLE-O)
+- [ ] NAMS content flagged as early-access; no SLA or pricing claims
+- [ ] Credentials not hardcoded; Neo4j password via `--password` flag or env; NAMS key via bearer header

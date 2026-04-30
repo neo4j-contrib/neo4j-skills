@@ -1,12 +1,13 @@
 ---
 name: neo4j-getting-started-skill
-description: >
-  Orchestrates the full journey from zero to a running Neo4j application.
-  Executes 8 named stages in order: prerequisites → context → provision →
-  model → load → explore → query → build. Each stage has its own reference
-  file in references/ that the agent reads and follows when entering that stage.
-  Supports both HITL and fully autonomous operation.
-  Time budget: ≤15 min after DB is running (autonomous), ≤90 min total (HITL).
+description: Orchestrates zero-to-running-app in 8 stages — prerequisites → context →
+  provision → model → load → explore → query → build. Each stage reads its own reference
+  file. Supports HITL and fully autonomous operation. Use when starting a new Neo4j project
+  from scratch, provisioning Aura, generating synthetic data, building a notebook or app,
+  or running the full onboarding pipeline. Time budget ≤15 min autonomous, ≤90 min HITL.
+  Does NOT cover Cypher query authoring — use neo4j-cypher-skill.
+  Does NOT cover driver upgrades or Cypher migration — use neo4j-migration-skill.
+  Does NOT cover CLI/admin tasks on an existing DB — use neo4j-cli-tools-skill.
 version: 0.3.0
 allowed-tools: Bash, WebFetch, Read, Write, Edit,
   mcp__neo4j__read-cypher, mcp__neo4j__write-cypher, mcp__neo4j__get-schema,
@@ -26,7 +27,14 @@ Guide a **user or agent** from zero to a working Neo4j application by executing 
 
 ---
 
-## When NOT to use this skill
+## When to Use
+
+- Starting a new Neo4j project from scratch (local, Docker, or Aura)
+- Provisioning an Aura instance and getting a first app running
+- Running the full onboarding pipeline (zero → DB → model → load → app)
+- Generating synthetic data for demos or development
+
+## When NOT to Use
 
 - **Writing or optimizing Cypher queries on an existing project** → use `neo4j-cypher-skill`
 - **Upgrading Neo4j drivers or migrating Cypher syntax** → use `neo4j-migration-skill`
@@ -411,3 +419,15 @@ graph_visible ✓  app_generated ✓  integration_ready ✓/–
 
 Omit lines that don't apply (e.g. omit `data/import.py` when `DATA_SOURCE=synthetic`,
 omit `data/generate.py` when `DATA_SOURCE=csv`).
+
+---
+
+## Checklist
+
+- [ ] Prerequisites confirmed (Docker/Python/Java, API key if Aura)
+- [ ] Neo4j instance running and reachable (`RETURN 1` passes in cypher-shell)
+- [ ] Schema constraints and indexes ONLINE before data load
+- [ ] Data loaded and verified (`MATCH (n) RETURN count(n) > 0`)
+- [ ] All queries in queries.cypher return expected results
+- [ ] App/notebook runs end-to-end without errors
+- [ ] Credentials in `.env`; `.env` in `.gitignore`
