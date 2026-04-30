@@ -339,6 +339,13 @@ Apply the same standard when writing or reviewing reference files:
 ✅ Drop projected graph after algorithms complete — frees session memory.
 ```
 
+**Never strip technical content in the name of terseness.** The terse rule targets prose padding only. These must never be removed:
+- Option/flag lists (`--name`, `--type`, `--region` …)
+- Example command output (JSON, table, plain text)
+- Code blocks of any kind
+- Table data rows
+- Sub-command descriptions that serve as navigation anchors
+
 When reviewing any skill (new or updated), check `references/` for:
 - Explanatory paragraphs that describe what something is instead of what to do
 - Hedging language ("you may want to", "it is generally recommended that")
