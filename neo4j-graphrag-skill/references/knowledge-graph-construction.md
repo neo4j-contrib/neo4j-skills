@@ -220,15 +220,15 @@ Custom provider: inherit from `neo4j_graphrag.llm.base.LLMInterface`, implement 
 ## Explore Extracted Graph (Cypher)
 
 ```cypher
--- View entities per chunk
+// View entities per chunk
 MATCH p = (c:Chunk)<-[:FROM_CHUNK]-(e1:__Entity__)-[*1..2]->(e2:__Entity__)
 RETURN p
 
--- Count entity types
+// Count entity types
 MATCH (e:__Entity__)
 RETURN labels(e) AS types, count(*) AS n ORDER BY n DESC
 
--- Find duplicate entities (pre-resolution check)
+// Find duplicate entities (pre-resolution check)
 MATCH (e:__Entity__)
 WITH e.name AS name, labels(e) AS lbl, count(*) AS cnt
 WHERE cnt > 1

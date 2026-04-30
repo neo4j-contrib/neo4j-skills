@@ -43,9 +43,9 @@ Never auto-execute privilege changes. Show exact Cypher, annotate impact, get "y
 
 All security Cypher runs against the **system** database:
 ```cypher
--- Neo4j auto-routes CREATE/ALTER/SHOW USER|ROLE|PRIVILEGE to system
--- If using cypher-shell: cypher-shell -d system
--- If using driver: use database="system"
+// Neo4j auto-routes CREATE/ALTER/SHOW USER|ROLE|PRIVILEGE to system
+// If using cypher-shell: cypher-shell -d system
+// If using driver: use database="system"
 ```
 
 ---
@@ -55,9 +55,9 @@ All security Cypher runs against the **system** database:
 ### Create user
 ```cypher
 CREATE USER alice SET PASSWORD 'secret' CHANGE NOT REQUIRED;
--- CHANGE REQUIRED (default): forces password change on first login
--- CHANGE NOT REQUIRED: password valid immediately
--- SET STATUS ACTIVE (default) | SUSPENDED
+// CHANGE REQUIRED (default): forces password change on first login
+// CHANGE NOT REQUIRED: password valid immediately
+// SET STATUS ACTIVE (default) | SUSPENDED
 ```
 
 ### Parameterised password (preferred in scripts)
@@ -136,7 +136,7 @@ SHOW POPULATED ROLES YIELD role;            -- only roles with members
 
 ### DENY overrides GRANT
 ```cypher
--- Analyst can read Person but NOT the ssn property
+// Analyst can read Person but NOT the ssn property
 GRANT MATCH {*} ON GRAPH mydb NODES Person TO analyst;
 DENY  READ {ssn} ON GRAPH mydb NODES Person TO analyst;
 ```
@@ -175,7 +175,7 @@ GRANT ACCESS    ON DATABASE mydb TO limited_reader;
 GRANT TRAVERSE  ON GRAPH mydb ELEMENTS * TO limited_reader;      -- can traverse
 GRANT MATCH {*} ON GRAPH mydb NODES Person TO limited_reader;    -- Person props visible
 GRANT MATCH {*} ON GRAPH mydb NODES Company TO limited_reader;   -- Company props visible
--- Other labels: traversable but properties invisible
+// Other labels: traversable but properties invisible
 ```
 
 ### DBA role (full admin)
@@ -191,19 +191,19 @@ GRANT ALL ON DATABASE * TO dba;
 
 Restrict read access to individual properties:
 ```cypher
--- Grant read on all Person props, then deny sensitive ones
+// Grant read on all Person props, then deny sensitive ones
 GRANT MATCH {*}   ON GRAPH mydb NODES Person TO analyst;
 DENY  READ {ssn, dateOfBirth} ON GRAPH mydb NODES Person TO analyst;
 ```
 
 Property-based pattern matching (sub-graph access):
 ```cypher
--- Only see Person nodes where classification = 'public'
+// Only see Person nodes where classification = 'public'
 GRANT MATCH {*} ON GRAPH mydb
   FOR (n:Person) WHERE n.classification = 'public'
   TO analyst;
 
--- Block access to classified nodes
+// Block access to classified nodes
 DENY MATCH {*} ON GRAPH mydb
   FOR (n) WHERE n.classification <> 'UNCLASSIFIED'
   TO regularUsers;
@@ -263,21 +263,21 @@ REVOKE ROLE analyst FROM AUTH RULE salesRule;
 ## 7. SHOW PRIVILEGES Patterns
 
 ```cypher
--- All privileges in the system
+// All privileges in the system
 SHOW PRIVILEGES YIELD *;
 
--- Privileges for a specific user (as runnable commands)
+// Privileges for a specific user (as runnable commands)
 SHOW USER alice PRIVILEGES AS COMMANDS;
 
--- Privileges for a specific role
+// Privileges for a specific role
 SHOW ROLE analyst PRIVILEGES YIELD privilege, action, resource, graph, segment;
 
--- Find who has access to a database
+// Find who has access to a database
 SHOW PRIVILEGES YIELD *
 WHERE graph = 'mydb'
 RETURN role, action, resource, segment ORDER BY role;
 
--- Find all DENY rules
+// Find all DENY rules
 SHOW PRIVILEGES YIELD *
 WHERE access = 'DENIED'
 RETURN role, action, resource, segment;

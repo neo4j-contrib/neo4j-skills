@@ -143,22 +143,22 @@ Interpretation: index seek is efficient, expand is normal, filter is applied aft
 ## Operator Hints
 
 ```cypher
--- Force index:
+// Force index:
 MATCH (p:Person {email: $email})
 USING INDEX p:Person(email)
 RETURN p
 
--- Force label scan (ignore index):
+// Force label scan (ignore index):
 MATCH (p:Person {active: true})
 USING SCAN p:Person
 RETURN p
 
--- Force hash join at specific node:
+// Force hash join at specific node:
 MATCH (a:Author)-[:WROTE]->(b:Book)<-[:REVIEWED]-(r:Reviewer)
 USING JOIN ON b
 RETURN a.name, r.name
 
--- Force index for relationship property:
+// Force index for relationship property:
 MATCH ()-[t:TRANSFER {txId: $id}]->()
 USING INDEX t:TRANSFER(txId)
 RETURN t

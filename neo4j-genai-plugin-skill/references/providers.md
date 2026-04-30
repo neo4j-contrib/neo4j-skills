@@ -130,25 +130,25 @@ RETURN ai.text.embed('Hello', 'bedrock-titan', {
 
 List all providers configured and available:
 ```cypher
--- Embedding providers
+// Embedding providers
 CYPHER 25
 CALL ai.text.embed.providers()
 YIELD name, requiredConfigType, optionalConfigType, defaultConfig
 RETURN name, requiredConfigType;
 
--- Completion providers
+// Completion providers
 CYPHER 25
 CALL ai.text.completion.providers()
 YIELD name, requiredConfigType, optionalConfigType
 RETURN name;
 
--- Chat providers
+// Chat providers
 CYPHER 25
 CALL ai.text.chat.providers()
 YIELD name
 RETURN name;
 
--- Token count providers
+// Token count providers
 CYPHER 25
 CALL ai.text.tokenCount.providers()
 YIELD name

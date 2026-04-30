@@ -184,7 +184,7 @@ ORDER BY score DESC
 
 With in-index filter [2026.01+] — properties must be declared in `WITH` at index creation:
 ```cypher
--- Index must have been created with: WITH [c.source, c.lang, c.published_year]
+// Index must have been created with: WITH [c.source, c.lang, c.published_year]
 CYPHER 25
 MATCH (c:Chunk)
   SEARCH c IN (
@@ -306,19 +306,19 @@ RETURN vector_dimension_count(v)
 ## Index Management
 
 ```cypher
--- Show all vector indexes with config
+// Show all vector indexes with config
 SHOW VECTOR INDEXES YIELD name, state, populationPercent,
   labelsOrTypes, properties, indexConfig
 RETURN name, state, populationPercent, labelsOrTypes, properties, indexConfig;
 
--- Drop (node data unchanged — only index structure removed)
+// Drop (node data unchanged — only index structure removed)
 DROP INDEX chunk_embedding IF EXISTS;
 
--- No ALTER VECTOR INDEX — to change dimensions or similarity function:
--- 1. DROP INDEX old_index IF EXISTS
--- 2. CREATE VECTOR INDEX new_index ... with new OPTIONS
--- 3. Re-generate all embeddings with new model
--- 4. Poll until ONLINE
+// No ALTER VECTOR INDEX — to change dimensions or similarity function:
+// 1. DROP INDEX old_index IF EXISTS
+// 2. CREATE VECTOR INDEX new_index ... with new OPTIONS
+// 3. Re-generate all embeddings with new model
+// 4. Poll until ONLINE
 ```
 
 ---

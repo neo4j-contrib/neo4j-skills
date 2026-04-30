@@ -319,7 +319,7 @@ neo4j-admin database import full \
 ```
 
 ```cypher
--- schema.cypher
+// schema.cypher
 CREATE CONSTRAINT person_id IF NOT EXISTS FOR (n:Person) REQUIRE n.id IS UNIQUE;
 CREATE CONSTRAINT movie_id  IF NOT EXISTS FOR (n:Movie)  REQUIRE n.id IS UNIQUE;
 CREATE RANGE INDEX person_email IF NOT EXISTS FOR (n:Person) ON (n.email);

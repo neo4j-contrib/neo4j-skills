@@ -25,16 +25,16 @@ YIELD graphName, nodeCount, relationshipCount, projectMillis
 ### Node projection variants
 
 ```cypher
--- All nodes
+// All nodes
 '*'
 
--- Single label
+// Single label
 'Person'
 
--- Multiple labels (no properties)
+// Multiple labels (no properties)
 ['Person', 'City']
 
--- With properties per label
+// With properties per label
 {
   Person: { properties: ['age', 'score'] },
   City:   { properties: { population: { defaultValue: 0 } } }
@@ -44,16 +44,16 @@ YIELD graphName, nodeCount, relationshipCount, projectMillis
 ### Relationship projection variants
 
 ```cypher
--- All relationships
+// All relationships
 '*'
 
--- Single type
+// Single type
 'KNOWS'
 
--- Multiple types
+// Multiple types
 ['KNOWS', 'LIVES_IN']
 
--- With orientation and properties
+// With orientation and properties
 {
   KNOWS: {
     orientation: 'UNDIRECTED',    -- NATURAL (default), UNDIRECTED, REVERSE
@@ -80,7 +80,7 @@ Use `UNDIRECTED` for undirected algorithms (community detection, most similarity
 ### Default values
 
 ```cypher
--- Nodes with missing property get defaultValue 0.0 instead of null
+// Nodes with missing property get defaultValue 0.0 instead of null
 {
   Person: {
     properties: {
@@ -199,13 +199,13 @@ Rule: if `requiredMemory` > 80% of available JVM heap (`dbms.memory.heap.max_siz
 ## Catalog Management
 
 ```cypher
--- List all projected graphs
+// List all projected graphs
 CALL gds.graph.list() YIELD graphName, nodeCount, relationshipCount, memoryUsage
 
--- Drop by name
+// Drop by name
 CALL gds.graph.drop('myGraph') YIELD graphName
 
--- Drop if exists (no error if missing)
+// Drop if exists (no error if missing)
 CALL gds.graph.drop('myGraph', false) YIELD graphName
 ```
 

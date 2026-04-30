@@ -110,13 +110,13 @@ Formula: `abs(a - b) / max(a, b)`. At 0.75, a plan is invalidated when statistic
 
 ### Force Replanning
 ```cypher
--- Recalculate all statistics immediately (blocks until complete):
+// Recalculate all statistics immediately (blocks until complete):
 CALL db.prepareForReplanning()
 
--- Resample a specific index asynchronously:
+// Resample a specific index asynchronously:
 CALL db.resampleIndex("index-name")
 
--- Resample all outdated indexes asynchronously:
+// Resample all outdated indexes asynchronously:
 CALL db.resampleOutdatedIndexes()
 ```
 
@@ -137,12 +137,12 @@ MATCH (p:Person {email: $email}) RETURN p.name
 ## Index Health Check
 
 ```cypher
--- Indexes not yet ONLINE (still populating or failed):
+// Indexes not yet ONLINE (still populating or failed):
 SHOW INDEXES YIELD name, type, labelsOrTypes, properties, state
 WHERE state <> 'ONLINE'
 RETURN name, type, labelsOrTypes, properties, state
 
--- All online indexes:
+// All online indexes:
 SHOW INDEXES YIELD name, type, labelsOrTypes, properties, state, populationPercent
 WHERE state = 'ONLINE'
 RETURN name, type, labelsOrTypes, properties
@@ -182,7 +182,7 @@ Each log entry includes: `{elapsedMs} ms: {query}` with optional params, allocat
 Page cache too small → high `pageFaults` → disk I/O → slow queries.
 
 ```cypher
--- Current page cache stats:
+// Current page cache stats:
 CALL dbms.queryJmx("org.neo4j:instance=kernel#0,name=Page cache")
 YIELD attributes
 RETURN attributes

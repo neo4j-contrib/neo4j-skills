@@ -84,7 +84,7 @@ Using external vector DB?       → WeaviateNeo4jRetriever / PineconeNeo4jRetrie
 ## Step 3 — Create Indexes (run once)
 
 ```cypher
--- Vector index (all retrievers need this)
+// Vector index (all retrievers need this)
 CREATE VECTOR INDEX chunk_embedding IF NOT EXISTS
 FOR (c:Chunk) ON (c.embedding)
 OPTIONS { indexConfig: {
@@ -92,15 +92,15 @@ OPTIONS { indexConfig: {
   `vector.similarity_function`: 'cosine'
 } };
 
--- Fulltext index (Hybrid retrievers only)
+// Fulltext index (Hybrid retrievers only)
 CREATE FULLTEXT INDEX chunk_fulltext IF NOT EXISTS
 FOR (c:Chunk) ON EACH [c.text];
 
--- Confirm ONLINE before ingesting:
+// Confirm ONLINE before ingesting:
 SHOW INDEXES YIELD name, state
 WHERE name IN ['chunk_embedding', 'chunk_fulltext']
 RETURN name, state;
--- Both must show state = 'ONLINE'
+// Both must show state = 'ONLINE'
 ```
 
 If index not ONLINE: wait, poll every 5s. Do NOT start ingestion until ONLINE.

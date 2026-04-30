@@ -192,13 +192,13 @@ After `write`, re-project to use written properties in subsequent GDS calls (in-
 `stream` mode yields `nodeId` (internal GDS integer). `gds.util.asNode(nodeId)` translates it back to the DB node so you can access properties.
 
 ```cypher
--- Single property
+// Single property
 CALL gds.pageRank.stream('myGraph', {})
 YIELD nodeId, score
 RETURN gds.util.asNode(nodeId).name AS name, score
 ORDER BY score DESC LIMIT 10
 
--- Multiple properties — convert once with WITH
+// Multiple properties — convert once with WITH
 CALL gds.pageRank.stream('myGraph', {})
 YIELD nodeId, score
 WITH gds.util.asNode(nodeId) AS node, score
@@ -218,8 +218,8 @@ Not needed for `write`, `mutate`, or `stats` modes — those don't return per-no
 CALL gds.pageRank.stream('myGraph', { dampingFactor: 0.85, maxIterations: 20 })
 YIELD nodeId, score
 RETURN gds.util.asNode(nodeId).name AS name, score ORDER BY score DESC LIMIT 10
--- score: relative influence — not absolute. Compare within same run only.
--- didConverge: true means score stabilized; if false, increase maxIterations.
+// score: relative influence — not absolute. Compare within same run only.
+// didConverge: true means score stabilized; if false, increase maxIterations.
 
 CALL gds.pageRank.write('myGraph', { writeProperty: 'pagerank', dampingFactor: 0.85 })
 YIELD nodePropertiesWritten, ranIterations, didConverge

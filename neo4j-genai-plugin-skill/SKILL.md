@@ -38,10 +38,10 @@ allowed-tools: Bash WebFetch
 **CYPHER 25 required** for all `ai.*` functions. Two ways to enable:
 
 ```cypher
--- Per-query prefix (self-managed, no admin rights needed):
+// Per-query prefix (self-managed, no admin rights needed):
 CYPHER 25 MATCH (n:Chunk) ...
 
--- Per-database default (admin; applies to all sessions):
+// Per-database default (admin; applies to all sessions):
 ALTER DATABASE neo4j SET DEFAULT LANGUAGE CYPHER 25
 ```
 
@@ -232,7 +232,7 @@ RETURN ai.text.aggregateStructuredCompletion(
 Supported providers: **openai** and **azure-openai** only.
 
 ```cypher
--- Start new conversation (chatId = null → new session)
+// Start new conversation (chatId = null → new session)
 CYPHER 25
 WITH ai.text.chat(
   'Hello, who are you?',
@@ -242,7 +242,7 @@ WITH ai.text.chat(
 ) AS result
 RETURN result.message AS reply, result.chatId AS sessionId
 
--- Continue conversation (pass returned chatId)
+// Continue conversation (pass returned chatId)
 CYPHER 25
 WITH ai.text.chat(
   'What did I just ask you?',
@@ -260,11 +260,11 @@ Returns `MAP { message: STRING, chatId: STRING }`. Store `chatId` to continue se
 ## Tokenization & Chunking [2025.12]
 
 ```cypher
--- Count tokens before sending to LLM
+// Count tokens before sending to LLM
 CYPHER 25
 RETURN ai.text.tokenCount($text, 'openai', { token: $openaiKey, model: 'gpt-4o-mini' }) AS tokenCount
 
--- Chunk text by token limit (no external dependencies)
+// Chunk text by token limit (no external dependencies)
 CYPHER 25
 UNWIND ai.text.chunkByTokenLimit($longText, 512, 'gpt-4', 50) AS chunk
 MERGE (c:Chunk { text: chunk })

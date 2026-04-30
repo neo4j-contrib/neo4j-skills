@@ -118,11 +118,11 @@ Find whether the label/property from the bad operator has an index.
 
 ### Step 3 — Create Missing Index
 ```cypher
--- RANGE index for equality/range predicates:
+// RANGE index for equality/range predicates:
 CREATE INDEX person_email IF NOT EXISTS FOR (n:Person) ON (n.email)
--- TEXT index for CONTAINS/ENDS WITH:
+// TEXT index for CONTAINS/ENDS WITH:
 CREATE TEXT INDEX person_bio IF NOT EXISTS FOR (n:Person) ON (n.bio)
--- Composite for multi-property lookup:
+// Composite for multi-property lookup:
 CREATE INDEX order_status_date IF NOT EXISTS FOR (n:Order) ON (n.status, n.createdAt)
 ```
 Wait for `state = 'ONLINE'` before measuring.
@@ -136,9 +136,9 @@ Compare `dbHits` and elapsed ms before/after. Target: `NodeIndexSeek` replaces s
 ### Step 5 — Stale Statistics (if estimatedRows wildly off)
 ```cypher
 CALL db.prepareForReplanning()
--- or resample a specific index:
+// or resample a specific index:
 CALL db.resampleIndex("person_email")
--- or resample all outdated:
+// or resample all outdated:
 CALL db.resampleOutdatedIndexes()
 ```
 Config: `dbms.cypher.statistics_divergence_threshold` (default `0.75` — plan expires when stat changes >75%).
@@ -149,11 +149,11 @@ Config: `dbms.cypher.statistics_divergence_threshold` (default `0.75` — plan e
 
 ### Missing Index → NodeByLabelScan / AllNodesScan
 ```cypher
--- Force index hint when planner ignores it:
+// Force index hint when planner ignores it:
 MATCH (p:Person {email: $email})
 USING INDEX p:Person(email)
 RETURN p.name
--- Force label scan (sometimes faster for high selectivity):
+// Force label scan (sometimes faster for high selectivity):
 MATCH (p:Person {email: $email})
 USING SCAN p:Person
 RETURN p.name
@@ -162,7 +162,7 @@ RETURN p.name
 ### Wrong Anchor — Planner Picks Wrong Starting Node
 Reorder MATCH or use hints:
 ```cypher
--- Force join at specific node:
+// Force join at specific node:
 MATCH (a:Author)-[:WROTE]->(b:Book)-[:IN_CATEGORY]->(c:Category {name: $cat})
 USING JOIN ON b
 RETURN a.name, b.title
@@ -170,15 +170,15 @@ RETURN a.name, b.title
 
 ### CartesianProduct — Two Unconnected MATCHes
 ```cypher
--- Bad (Cartesian product):
+// Bad (Cartesian product):
 MATCH (a:Author {id: $aid})
 MATCH (b:Book  {id: $bid})
 RETURN a.name, b.title
 
--- Good (explicit join or WITH):
+// Good (explicit join or WITH):
 MATCH (a:Author {id: $aid})-[:WROTE]->(b:Book {id: $bid})
 RETURN a.name, b.title
--- Or: WITH between them to reset planning context
+// Or: WITH between them to reset planning context
 ```
 
 ### Eager — Read/Write Conflict
@@ -194,18 +194,18 @@ CALL (p) { SET p.tier = 'gold' } IN TRANSACTIONS OF 1000 ROWS
 
 ### Expensive CONTAINS / ENDS WITH
 ```cypher
--- Needs TEXT index (RANGE does NOT support these):
+// Needs TEXT index (RANGE does NOT support these):
 CREATE TEXT INDEX person_bio IF NOT EXISTS FOR (n:Person) ON (n.bio)
 MATCH (p:Person) WHERE p.bio CONTAINS $keyword RETURN p.name
 ```
 
 ### Over-Traversal — Push LIMIT Early
 ```cypher
--- Bad: LIMIT after expensive join
+// Bad: LIMIT after expensive join
 MATCH (a:Author)-[:WROTE]->(b:Book)-[:REVIEWED_BY]->(r:Review)
 RETURN a.name, b.title, r.text LIMIT 10
 
--- Good: anchor limit before fan-out
+// Good: anchor limit before fan-out
 MATCH (a:Author)-[:WROTE]->(b:Book)
 WITH a, b LIMIT 10
 MATCH (b)-[:REVIEWED_BY]->(r:Review)
@@ -225,7 +225,7 @@ RETURN a.name, b.title, r.text
 Pipelined is default for most queries. Parallel requires `dbms.cypher.parallel.worker_limit` configured; available on Enterprise and Aura Pro 2025+.
 
 ```cypher
--- Force parallel for large aggregation:
+// Force parallel for large aggregation:
 CYPHER 25 runtime=parallel
 MATCH (n:Transaction) WHERE n.amount > 1000
 RETURN n.currency, count(*), sum(n.amount)
@@ -236,22 +236,22 @@ RETURN n.currency, count(*), sum(n.amount)
 ## Query Monitoring Commands
 
 ```cypher
--- Live queries + resource usage:
+// Live queries + resource usage:
 SHOW QUERIES YIELD query, queryId, elapsedTimeMillis, allocatedBytes, status, username
 
--- Running transactions:
+// Running transactions:
 SHOW TRANSACTIONS YIELD transactionId, currentQuery, elapsedTime, status, username, cpuTime, activeLockCount
 
--- Kill a specific transaction:
+// Kill a specific transaction:
 TERMINATE TRANSACTION $transactionId
 
--- Kill a query:
+// Kill a query:
 TERMINATE QUERY $queryId
 
--- Graph count stats (node/rel counts by label/type — feed into planner):
+// Graph count stats (node/rel counts by label/type — feed into planner):
 CALL db.stats.retrieve('GRAPH COUNTS') YIELD section, data RETURN section, data
 
--- Token stats (label/property/rel-type IDs):
+// Token stats (label/property/rel-type IDs):
 CALL db.stats.retrieve('TOKENS') YIELD section, data RETURN section, data
 ```
 

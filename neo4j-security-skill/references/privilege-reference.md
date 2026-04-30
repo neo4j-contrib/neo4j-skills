@@ -62,7 +62,7 @@ GRANT DELETE    ON GRAPH mydb RELATIONSHIPS KNOWS TO role;
 ### Property-based (sub-graph) read
 
 ```cypher
--- Pattern in FOR clause must have exactly one property condition
+// Pattern in FOR clause must have exactly one property condition
 GRANT MATCH {*} ON GRAPH mydb
   FOR (n:Document) WHERE n.visibility = 'public'
   TO reader;
@@ -103,7 +103,7 @@ GRANT ALL ON DATABASE * TO role;                  -- all databases
 ## DBMS Privileges
 
 ```cypher
--- User management
+// User management
 GRANT SHOW USER     ON DBMS TO role;
 GRANT CREATE USER   ON DBMS TO role;
 GRANT SET USER STATUS ON DBMS TO role;
@@ -112,7 +112,7 @@ GRANT ALTER USER    ON DBMS TO role;
 GRANT DROP USER     ON DBMS TO role;
 GRANT USER MANAGEMENT ON DBMS TO role;   -- all user management
 
--- Role management
+// Role management
 GRANT SHOW ROLE     ON DBMS TO role;
 GRANT CREATE ROLE   ON DBMS TO role;
 GRANT RENAME ROLE   ON DBMS TO role;
@@ -121,26 +121,26 @@ GRANT ASSIGN ROLE   ON DBMS TO role;     -- GRANT ROLE ... TO user
 GRANT REMOVE ROLE   ON DBMS TO role;     -- REVOKE ROLE ... FROM user
 GRANT ROLE MANAGEMENT ON DBMS TO role;  -- all role management
 
--- Privilege management
+// Privilege management
 GRANT SHOW PRIVILEGE  ON DBMS TO role;
 GRANT ASSIGN PRIVILEGE ON DBMS TO role;
 GRANT REMOVE PRIVILEGE ON DBMS TO role;
 GRANT PRIVILEGE MANAGEMENT ON DBMS TO role; -- all privilege management
 
--- Database management
+// Database management
 GRANT CREATE DATABASE ON DBMS TO role;
 GRANT DROP DATABASE   ON DBMS TO role;
 GRANT ALTER DATABASE  ON DBMS TO role;
 GRANT SET DATABASE ACCESS ON DBMS TO role;
 GRANT DATABASE MANAGEMENT ON DBMS TO role; -- all database management
 
--- Procedure / function execution
+// Procedure / function execution
 GRANT EXECUTE PROCEDURE apoc.* TO role;
 GRANT EXECUTE BOOSTED PROCEDURE apoc.* TO role;  -- elevated mode
 GRANT EXECUTE USER DEFINED FUNCTION apoc.* TO role;
 GRANT EXECUTE BOOSTED USER DEFINED FUNCTION apoc.* TO role;
 
--- Full DBMS admin
+// Full DBMS admin
 GRANT ALL ON DBMS TO role;
 ```
 
@@ -149,13 +149,13 @@ GRANT ALL ON DBMS TO role;
 ## REVOKE Variants
 
 ```cypher
--- Remove a GRANT
+// Remove a GRANT
 REVOKE GRANT MATCH {*} ON GRAPH mydb NODES Person FROM analyst;
 
--- Remove a DENY
+// Remove a DENY
 REVOKE DENY READ {ssn} ON GRAPH mydb NODES Person FROM analyst;
 
--- Remove both GRANT and DENY at once
+// Remove both GRANT and DENY at once
 REVOKE MATCH {*} ON GRAPH mydb NODES Person FROM analyst;
 ```
 
