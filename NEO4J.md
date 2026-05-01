@@ -26,6 +26,7 @@ Configure via environment variables or agent plugin settings:
 | `neo4j-gds-skill` | Running graph algorithms (PageRank, Louvain, etc.) |
 | `neo4j-aura-graph-analytics-skill` | Graph algorithms on Neo4j Aura |
 | `neo4j-aura-provisioning-skill` | Creating/managing Aura instances via CLI or API |
+| `neo4j-aura-agent-skill` | Creating and managing Aura Agents (GraphRAG) backed by an AuraDB instance |
 | `neo4j-migration-skill` | Upgrading drivers or Cypher from 4.x/5.x to 2025.x |
 | `neo4j-graphql-skill` | Building GraphQL APIs backed by Neo4j |
 | `neo4j-spring-data-skill` | Spring Boot + Neo4j (SDN, @Node, @Relationship) |
