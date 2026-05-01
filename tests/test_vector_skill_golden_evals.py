@@ -52,6 +52,27 @@ class VectorSkillGoldenEvalTests(unittest.TestCase):
     def test_golden_eval_manifest_is_valid(self) -> None:
         data = json.loads(MANIFEST_FILE.read_text(encoding="utf-8"))
         self.assertEqual(ROOT / data["skill"], SKILL_FILE)
+        test_plan = data.get("testPlan")
+        self.assertIsInstance(test_plan, dict)
+        self.assertIsInstance(test_plan.get("purpose"), str)
+        self.assertGreater(len(test_plan["purpose"]), 40)
+        self.assertIsInstance(test_plan.get("principles"), list)
+        self.assertGreater(len(test_plan["principles"]), 0)
+        self.assertIsInstance(test_plan.get("outOfScope"), list)
+
+        tasks = test_plan.get("tasks")
+        self.assertIsInstance(tasks, list)
+        self.assertGreaterEqual(len(tasks), 3)
+        planned_eval_ids: set[str] = set()
+        for task in tasks:
+            self.assertIsInstance(task, dict)
+            self.assertIsInstance(task.get("id"), str)
+            self.assertIsInstance(task.get("evalId"), str)
+            self.assertIsInstance(task.get("description"), str)
+            self.assertGreater(len(task["description"]), 20)
+            self.assertNotIn(task["evalId"], planned_eval_ids)
+            planned_eval_ids.add(task["evalId"])
+
         evals = data.get("evals")
         self.assertIsInstance(evals, list)
         self.assertGreaterEqual(len(evals), 3)
@@ -60,6 +81,14 @@ class VectorSkillGoldenEvalTests(unittest.TestCase):
         for eval_case in evals:
             self.assertNotIn(eval_case["id"], seen_ids)
             seen_ids.add(eval_case["id"])
+            self.assertIsInstance(eval_case.get("task"), str)
+            self.assertGreater(len(eval_case["task"]), 10)
+            covers = eval_case.get("covers")
+            self.assertIsInstance(covers, list)
+            self.assertGreater(len(covers), 0)
+            for covered_behavior in covers:
+                self.assertIsInstance(covered_behavior, str)
+                self.assertGreater(len(covered_behavior), 5)
             self.assertGreater(len(eval_case["prompt"]), 40)
             checks = eval_case.get("checks")
             self.assertIsInstance(checks, list)
@@ -81,6 +110,7 @@ class VectorSkillGoldenEvalTests(unittest.TestCase):
                     for criterion in criteria:
                         self.assertIsInstance(criterion.get("id"), str)
                         self.assertIsInstance(criterion.get("description"), str)
+        self.assertEqual(planned_eval_ids, seen_ids)
 
     def test_runner_skips_cleanly_without_api_config(self) -> None:
         env = {

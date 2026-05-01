@@ -438,6 +438,8 @@ Use `SKILL_EVAL_MODEL` for the model under test. Use a stronger `SKILL_EVAL_JUDG
 - Use manifest `parameters` for runtime values.
 - Use `minVersion` when syntax, procedures, or store format expectations depend on Neo4j version.
 - Add golden evals to a manifest like `neo4j-vector-index-skill/tests/golden-evals.json`.
+- Start each golden eval manifest with a `testPlan` that names the behaviors under test and maps each task to one eval.
+- Add `task` and `covers` fields to every eval so reviewers can see why the case exists.
 - Golden eval prompts describe the user's scenario and task; checks encode the required behavior.
 - Do not solve the problem in the prompt just to make the current skill pass.
 - Keep failing evals if they identify missing skill guidance rather than test brittleness.

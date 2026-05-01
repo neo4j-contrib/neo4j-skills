@@ -97,6 +97,21 @@ Guidelines:
 
 Golden evals live in `neo4j-vector-index-skill/tests/golden-evals.json`. Each eval sends the skill and task prompt to the configured model, then evaluates the response with typed checks.
 
+The manifest must start with a `testPlan` object:
+
+- `purpose` states what behavior the eval suite is testing.
+- `principles` states the calibration rules for prompts and checks.
+- `tasks` maps each planned behavior to one `evalId`.
+- `outOfScope` records related behavior that this suite intentionally does not test yet.
+
+Each eval must include:
+
+- `id` matching one `testPlan.tasks[].evalId`.
+- `task` naming the scenario under test.
+- `covers` listing the behaviors the checks are intended to verify.
+- `prompt` with the user scenario and task.
+- `checks` with deterministic or judged requirements.
+
 Prompt design:
 
 - Describe the user's scenario, version, environment, and task.
