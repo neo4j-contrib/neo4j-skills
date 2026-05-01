@@ -92,7 +92,7 @@ AURA_INSTANCE_ID=<chosen-instance-id>
 NEO4J_URI=neo4j+s://<chosen-instance-id>.databases.neo4j.io
 ```
 
-If the list is empty: no AuraDB instances exist in this project — provision one first using `neo4j-aura-provisioning-skill`. **Stop and report.**
+If the list is empty: no AuraDB instances exist in this project — an Aura Agent cannot be created without one. **Stop and report.**
 If `401`: re-run Step 1. If `404`: verify `AURA_PROJECT_ID`. **Stop and report.**
 
 ---
