@@ -33,7 +33,7 @@ allowed-tools: Bash WebFetch
 - "Tool authentication" enabled at project/Security level
 - Project admin access
 - `AURA_CLIENT_ID` and `AURA_CLIENT_SECRET` from console.neo4j.io → Account Settings → API Credentials
-- `AURA_ORG_ID`, `AURA_PROJECT_ID`, `AURA_INSTANCE_ID` — see Step 2
+- `AURA_ORG_ID`, `AURA_PROJECT_ID` — see Step 2; `AURA_INSTANCE_ID` — resolved interactively in Step 2 if not already set
 - Python env: `uv sync` in skill directory (or `pip install neo4j neo4j-graphrag requests python-dotenv`)
 - `.env` and `schema.json` in `.gitignore`
 
@@ -73,8 +73,27 @@ Set in `.env`:
 ```
 AURA_ORG_ID=<organization-id>
 AURA_PROJECT_ID=<project-id>
-AURA_INSTANCE_ID=<auradb-instance-id>
 ```
+
+**Check `AURA_INSTANCE_ID`** — if it is already set in `.env`, skip the rest of this step.
+
+If not set, list available instances and ask the user to choose:
+
+```bash
+curl -s "https://api.neo4j.io/v1/instances?tenantId=${AURA_PROJECT_ID}" \
+  -H "Authorization: Bearer $TOKEN" \
+  | jq '.data[] | {id, name, status, region, type}'
+```
+
+Show the output to the user. Ask: **"Which instance should the agent connect to?"** Wait for the user to select one, then write to `.env`:
+
+```
+AURA_INSTANCE_ID=<chosen-instance-id>
+NEO4J_URI=neo4j+s://<chosen-instance-id>.databases.neo4j.io
+```
+
+If the list is empty: no AuraDB instances exist in this project — provision one first using `neo4j-aura-provisioning-skill`. **Stop and report.**
+If `401`: re-run Step 1. If `404`: verify `AURA_PROJECT_ID`. **Stop and report.**
 
 ---
 
