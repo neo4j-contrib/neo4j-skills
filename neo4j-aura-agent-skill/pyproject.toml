@@ -1,0 +1,12 @@
+[project]
+name = "neo4j-aura-agent-skill"
+version = "0.1.0"
+description = "Scripts for creating and managing Neo4j Aura Agents via the v2beta1 REST API"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "neo4j>=6.1.0",
+    "neo4j-graphrag>=1.15.0",
+    "python-dotenv>=1.2.2",
+    "requests>=2.33.1",
+]
