@@ -1,0 +1,22 @@
+{
+  "skill": "neo4j-vector-index-skill/SKILL.md",
+  "examples": [
+    {
+      "name": "detect-neo4j-version",
+      "heading": "Pre-flight — Determine Version",
+      "cypherBlock": 1
+    },
+    {
+      "name": "query-vector-index-procedure",
+      "heading": "Post-filter pattern (2025.x or arbitrary predicates)",
+      "cypherBlock": 1,
+      "setup": "examples/vector-query.setup.cypher",
+      "minVersion": "5.13",
+      "parameters": {
+        "queryEmbedding": [0.1, 0.2, 0.3],
+        "source": "docs"
+      },
+      "dropCypherVersionPragma": true
+    }
+  ]
+}

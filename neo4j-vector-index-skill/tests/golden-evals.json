@@ -1,0 +1,161 @@
+{
+  "skill": "neo4j-vector-index-skill/SKILL.md",
+  "testPlan": {
+    "purpose": "Check whether the vector index skill drives the model to choose the correct Neo4j vector-search workflow for the user scenario, without solving the task in the prompt.",
+    "principles": [
+      "Prompt describes the user scenario and task; checks encode required behavior.",
+      "Each eval covers one decision task and should fail only when the skill guidance is missing, weak, or contradicted.",
+      "Prefer deterministic checks for objective syntax requirements; reserve llm_judge for semantic requirements where wording can vary.",
+      "Keep compatibility branches explicit: current Cypher 25/SEARCH workflows and Neo4j 5.26 Community Edition LIST<FLOAT> workflows are different tasks."
+    ],
+    "tasks": [
+      {
+        "id": "current-index-search-workflow",
+        "evalId": "current-2026-index-search-workflow",
+        "description": "For current Neo4j, create a vector index with explicit dimensions, wait until ONLINE, then query with SEARCH."
+      },
+      {
+        "id": "neo4j-526-ce-workflow",
+        "evalId": "neo4j-526-ce-list-float-workflow",
+        "description": "For Neo4j 5.26 Community Edition, use LIST<FLOAT> storage and db.index.vector.queryNodes(), avoiding Cypher 25-only syntax, SEARCH, and native VECTOR types."
+      },
+      {
+        "id": "current-filtered-search-workflow",
+        "evalId": "current-filtered-search-with-index-metadata",
+        "description": "For current filtered vector search, create the vector index with filterable metadata in the WITH list and use SEARCH WHERE within its supported limits."
+      },
+      {
+        "id": "current-query-embedding-function",
+        "evalId": "current-query-embedding-function",
+        "description": "For current Cypher 25 query-time embedding, use ai.text.embed() and identify genai.vector.encode() as deprecated."
+      }
+    ],
+    "outOfScope": [
+      "Full GraphRAG retrieval_query design, covered by neo4j-graphrag-skill.",
+      "Embedding-provider API reference, covered by neo4j-genai-plugin-skill.",
+      "Performance tuning and memory sizing, which need separate evals once the skill scope is expanded."
+    ]
+  },
+  "evals": [
+    {
+      "id": "current-2026-index-search-workflow",
+      "task": "Current index creation and SEARCH query workflow",
+      "covers": [
+        "Cypher 25 pragma",
+        "CREATE VECTOR INDEX with explicit dimensions and similarity function",
+        "SHOW VECTOR INDEXES readiness check",
+        "SEARCH clause query path"
+      ],
+      "prompt": "I am using Neo4j 2026.01 with OpenAI text-embedding-3-small embeddings stored on :Chunk(embedding). Show a copy-paste-safe workflow to create the vector index, check that it is online, and query the top 10 chunks with a $queryEmbedding parameter.",
+      "checks": [
+        {"type": "literal", "scope": "code", "value": "CYPHER 25"},
+        {"type": "literal", "scope": "code", "value": "CREATE VECTOR INDEX"},
+        {"type": "literal", "scope": "code", "value": "vector.dimensions"},
+        {"type": "literal", "scope": "any", "value": "1536"},
+        {"type": "literal", "scope": "code", "value": "vector.similarity_function"},
+        {"type": "literal", "scope": "any", "value": "cosine"},
+        {"type": "literal", "scope": "code", "value": "SHOW VECTOR INDEXES"},
+        {"type": "literal", "scope": "any", "value": "ONLINE"},
+        {"type": "literal", "scope": "code", "value": "SEARCH c IN"},
+        {"type": "literal", "scope": "code", "value": "ORDER BY score DESC"},
+        {"type": "literal", "scope": "code", "expect": "absent", "value": "db.index.vector.queryNodes"},
+        {"type": "regex", "scope": "prose", "expect": "absent", "pattern": "vector\\.dimensions\\s+(?:is|are)\\s+optional"}
+      ]
+    },
+    {
+      "id": "neo4j-526-ce-list-float-workflow",
+      "task": "Neo4j 5.26 Community Edition compatibility workflow",
+      "covers": [
+        "LIST<FLOAT> embedding storage",
+        "CREATE VECTOR INDEX without native VECTOR types",
+        "db.index.vector.queryNodes() query path",
+        "Avoidance of Cypher 25-only SEARCH workflow"
+      ],
+      "prompt": "I am using Neo4j 5.26 Community Edition. My application already generates embeddings. Show a copy-paste-safe workflow to create a vector index on :Chunk(embedding), insert or update chunks with list embeddings using a $rows parameter, wait for the index to be ONLINE, and query the top 10 chunks using a $queryEmbedding parameter. Do not use placeholder ellipses. The query example must yield node AS c, score and order by score DESC.",
+      "checks": [
+        {"type": "literal", "scope": "prose", "value": "Neo4j 5.26"},
+        {"type": "regex", "scope": "prose", "pattern": "\\b(?:CE|Community Edition)\\b"},
+        {"type": "literal", "scope": "any", "value": "LIST<FLOAT>"},
+        {"type": "literal", "scope": "code", "value": "CREATE VECTOR INDEX"},
+        {"type": "literal", "scope": "code", "value": "vector.dimensions"},
+        {"type": "literal", "scope": "code", "value": "vector.similarity_function"},
+        {"type": "literal", "scope": "code", "value": "SHOW VECTOR INDEXES"},
+        {"type": "literal", "scope": "any", "value": "ONLINE"},
+        {"type": "literal", "scope": "code", "value": "SET c.embedding"},
+        {"type": "literal", "scope": "code", "value": "$rows"},
+        {"type": "literal", "scope": "code", "value": "$queryEmbedding"},
+        {"type": "literal", "scope": "code", "value": "db.index.vector.queryNodes"},
+        {"type": "regex", "scope": "code", "pattern": "YIELD\\s+node\\s+AS\\s+c\\s*,\\s*score"},
+        {"type": "literal", "scope": "code", "value": "ORDER BY score DESC"},
+        {"type": "literal", "scope": "code", "expect": "absent", "value": "CYPHER 25"},
+        {"type": "literal", "scope": "code", "expect": "absent", "value": "SEARCH c IN"},
+        {"type": "literal", "scope": "code", "expect": "absent", "value": "ai.text.embed"},
+        {"type": "literal", "scope": "code", "expect": "absent", "value": "genai.vector.encode"},
+        {"type": "literal", "scope": "code", "expect": "absent", "value": "db.index.vector.create"},
+        {"type": "literal", "scope": "code", "expect": "absent", "value": "apoc.periodic.iterate"},
+        {"type": "regex", "scope": "code", "expect": "absent", "pattern": "\\.\\.\\."},
+        {"type": "regex", "scope": "code", "expect": "absent", "pattern": "\\bVECTOR\\s*<"},
+        {"type": "regex", "scope": "code", "expect": "absent", "pattern": "\\bvector\\s*\\("},
+        {"type": "regex", "scope": "code", "expect": "absent", "pattern": "CREATE\\s+CONSTRAINT[\\s\\S]*VECTOR"},
+        {"type": "regex", "scope": "code", "expect": "absent", "pattern": "FOR\\s*\\([^)]*\\)\\s+ON\\s*\\([^)]*\\)\\s+WITH\\s*\\["}
+      ]
+    },
+    {
+      "id": "current-filtered-search-with-index-metadata",
+      "task": "Current filtered SEARCH workflow",
+      "covers": [
+        "CREATE VECTOR INDEX WITH filterable metadata",
+        "SEARCH WHERE filter syntax",
+        "Filter properties must be declared in the index",
+        "AND-only in-index filter limitation"
+      ],
+      "prompt": "I am using Neo4j 2026.01. I need vector search over :Chunk(embedding), filtered to source = $source and lang = 'en'. Show the index creation statement and the query.",
+      "checks": [
+        {"type": "literal", "scope": "code", "value": "CYPHER 25"},
+        {"type": "literal", "scope": "code", "value": "CREATE VECTOR INDEX"},
+        {"type": "regex", "scope": "code", "pattern": "WITH\\s*\\[[^\\]]*c\\.source[^\\]]*c\\.lang[^\\]]*\\]"},
+        {"type": "literal", "scope": "code", "value": "SEARCH c IN"},
+        {"type": "literal", "scope": "code", "value": "WHERE"},
+        {"type": "regex", "scope": "code", "pattern": "c\\.source\\s*=\\s*\\$source"},
+        {"type": "regex", "scope": "code", "pattern": "c\\.lang\\s*=\\s*'?en'?"},
+        {"type": "literal", "scope": "code", "value": "AND"},
+        {"type": "literal", "scope": "code", "expect": "absent", "value": "db.index.vector.queryNodes"},
+        {
+          "type": "llm_judge",
+          "blocking": false,
+          "criteria": [
+            {
+              "id": "mentions_with_list_requirement",
+              "description": "The answer says that properties filtered inside SEARCH must be declared in the vector index WITH list. Equivalent wording is acceptable."
+            },
+            {
+              "id": "mentions_and_only_filtering",
+              "description": "The answer says that in-index SEARCH filters support AND-only predicates and do not support OR. Equivalent wording is acceptable."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "current-query-embedding-function",
+      "task": "Current Cypher 25 query-time embedding function",
+      "covers": [
+        "ai.text.embed() as current function",
+        "genai.vector.encode() deprecated guidance",
+        "Cypher 25 copy-paste-safe example",
+        "Do not hardcode provider token"
+      ],
+      "prompt": "I am using Neo4j 2026.01 and Cypher 25. Should I use genai.vector.encode() for query embeddings? Show the current way to embed a query and search chunk_embedding.",
+      "checks": [
+        {"type": "literal", "scope": "code", "value": "CYPHER 25"},
+        {"type": "literal", "scope": "any", "value": "ai.text.embed"},
+        {"type": "literal", "scope": "prose", "value": "genai.vector.encode"},
+        {"type": "literal", "scope": "prose", "value": "deprecated"},
+        {"type": "literal", "scope": "any", "value": "$openaiKey"},
+        {"type": "literal", "scope": "any", "value": "chunk_embedding"},
+        {"type": "literal", "scope": "code", "value": "SEARCH c IN"},
+        {"type": "literal", "scope": "code", "expect": "absent", "value": "genai.vector.encode"}
+      ]
+    }
+  ]
+}
