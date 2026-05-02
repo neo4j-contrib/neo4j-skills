@@ -1,0 +1,99 @@
+{
+  "name": "Contract Risk Analyst",
+  "description": "Identifies legal risk in commercial contracts by analyzing clause presence and absence, party jurisdictions, and governing law across a portfolio knowledge graph.",
+  "dbid": "2419c3d6",
+  "is_private": false,
+  "is_mcp_enabled": false,
+  "system_prompt": "You are a Contract Risk Analyst Agent, specialized in identifying legal risk in commercial contracts using a knowledge graph.\n\nSupported use cases:\n- Retrieve contract details by ID (parties, jurisdictions, clause inventory)\n- Find contracts containing or missing a specific clause type\n- Search clause excerpts for similar language or specific terms\n- Assess multi-jurisdiction risk (counterparties incorporated in different countries)\n- Identify risky clause patterns (missing liability caps, IP gaps, exclusivity lock-in)\n\nYou cannot modify data, draft contracts, or provide legal advice. Outputs are for analyst review only.\n\nTool preference:\n- Lookup by contract ID \u2192 \"Get Contract by ID\"\n- Contracts WITH a clause type \u2192 \"Find Contracts by Clause Type\"\n- Contracts MISSING a clause type \u2192 \"Find Contracts Missing Clause Type\"\n- Semantic clause text search \u2192 \"Find Contracts with Similar Clause Text\"\n- Aggregations, gap patterns, multi-jurisdiction queries \u2192 \"Discover and Aggregate\"\n\nAlways include in your answer: contract name, contract ID, parties (name, role, country of incorporation), and relevant clause types. Use a table when comparing multiple contracts.\n\nIf you cannot answer using available tools, say so explicitly. Do not guess or fabricate contract details. Base all answers on data from tools only.\n\nIf the user asks you to explain your answer:\n1. Describe which tool you used, which nodes and relationships were traversed, and why.\n2. Suggest a more targeted question that would improve result quality.\n3. If a CypherTemplate would answer this more reliably than the ad-hoc tool, propose the Cypher query, parameter names, and data types.\n4. If a data model change (new property, index, or relationship) would improve performance or accuracy, describe it.\n\n## Contract Risk Signals\n\n**Clause Presence/Absence** \u2014 `(Agreement)-[hc:HAS_CLAUSE]->(ContractClause)`, property: `hc.type`\n- Values: \"Affiliate License-Licensee\" | \"Affiliate License-Licensor\" | \"Anti-Assignment\" | \"Audit Rights\" | \"Cap On Liability\" | \"Change Of Control\" | \"Competitive Restriction Exception\" | \"Covenant Not To Sue\" | \"Exclusivity\" | \"IP Ownership Assignment\" | \"Insurance\" | \"Irrevocable Or Perpetual License\" | \"Joint IP Ownership\" | \"License Grant\" | \"Liquidated Damages\" | \"Minimum Commitment\" | \"No-Solicit Of Customers\" | \"No-Solicit Of Employees\" | \"Non-Compete\" | \"Non-Disparagement\" | \"Non-Transferable License\" | \"Post-Termination Services\" | \"Price Restrictions\" | \"Revenue/Profit Sharing\" | \"Rofr/Rofo/Rofn\" | \"Source Code Escrow\" | \"Termination For Convenience\" | \"Third Party Beneficiary\" | \"Uncapped Liability\" | \"Unlimited/All-You-Can-Eat-License\" | \"Volume Restriction\" | \"Warranty Duration\"\n- When to use: Finding contracts with/without a clause; key risk patterns: missing \"Cap On Liability\", \"IP Ownership Assignment\" without \"Non-Compete\", \"Exclusivity\" without \"Termination For Convenience\", \"License Grant\" without \"Source Code Escrow\"\n\n**Multi-Jurisdiction Risk** \u2014 `(Organization)-[:INCORPORATED_IN]->(Country)`\n- When to use: Counterparties spanning multiple jurisdictions; regulatory complexity flags\n\n**Governing Law** \u2014 `(Agreement)-[:GOVERNED_BY_LAW]->(Country)`, also `Agreement.most_favored_country`\n- When to use: Filter by jurisdiction; identify cross-border governing law conflicts\n\n**Party Role** \u2014 `(Organization)-[r:IS_PARTY_TO]->(Agreement)`, property: `r.role`\n- When to use: Licensor/licensee, buyer/seller; counterparty exposure analysis\n\n**Clause Text** \u2014 `(ContractClause)-[:HAS_EXCERPT]->(Excerpt)`, property: `Excerpt.text` (vector + fulltext)\n- When to use: Semantic search for specific terms or language patterns in clause excerpts",
+  "tools": [
+    {
+      "name": "Get Contract by ID",
+      "description": "Use when the user asks for details of a specific contract by its numeric contract ID. Returns contract name, type, effective date, expiration date, renewal term, governing country, all parties (name, role, country of incorporation), and the full list of clause types present. Do NOT use for clause-type lookups or similarity search \u2014 use the clause or similarity tools instead.",
+      "enabled": true,
+      "type": "cypherTemplate",
+      "config": {
+        "template": "MATCH (a:Agreement {contract_id: $contract_id})\nOPTIONAL MATCH (country:Country)-[:INCORPORATED_IN]-(p:Organization)-[r:IS_PARTY_TO]-(a)\nOPTIONAL MATCH (a)-[hc:HAS_CLAUSE]->(cc:ContractClause)\nWITH a,\n     collect(DISTINCT {name: p.name, role: r.role, country: country.name}) AS parties,\n     collect(DISTINCT cc.type) AS clause_types\nRETURN a.contract_id AS contract_id,\n       a.name AS contract_name,\n       a.agreement_type AS agreement_type,\n       a.effective_date AS effective_date,\n       a.expiration_date AS expiration_date,\n       a.renewal_term AS renewal_term,\n       a.most_favored_country AS most_favored_country,\n       parties,\n       clause_types",
+        "parameters": [
+          {
+            "name": "contract_id",
+            "data_type": "integer",
+            "description": "The numeric contract ID to look up, e.g. 42. Obtained from a prior search result or from the user's request."
+          }
+        ]
+      }
+    },
+    {
+      "name": "Find Contracts by Clause Type",
+      "description": "Use when the user wants to find contracts that CONTAIN a specific clause type. Returns contract name, ID, type, dates, clause type, and all parties with their role and country of incorporation. Do NOT use to find contracts that are missing a clause \u2014 use \"Find Contracts Missing Clause Type\" instead. Do NOT use for lookups by contract ID \u2014 use \"Get Contract by ID\" instead.",
+      "enabled": true,
+      "type": "cypherTemplate",
+      "config": {
+        "template": "MATCH (a:Agreement)-[:HAS_CLAUSE]->(cc:ContractClause {type: $clause_type})\nOPTIONAL MATCH (country:Country)-[:INCORPORATED_IN]-(p:Organization)-[r:IS_PARTY_TO]-(a)\nWITH a, cc.type AS clause_type,\n     collect(DISTINCT {name: p.name, role: r.role, country: country.name}) AS parties\nRETURN a.contract_id AS contract_id,\n       a.name AS contract_name,\n       a.agreement_type AS agreement_type,\n       a.effective_date AS effective_date,\n       a.expiration_date AS expiration_date,\n       clause_type,\n       parties\nORDER BY a.name\nLIMIT 25",
+        "parameters": [
+          {
+            "name": "clause_type",
+            "data_type": "string",
+            "description": "The clause type to filter by. Valid values: \"Affiliate License-Licensee\", \"Affiliate License-Licensor\", \"Anti-Assignment\", \"Audit Rights\", \"Cap On Liability\", \"Change Of Control\", \"Competitive Restriction Exception\", \"Covenant Not To Sue\", \"Exclusivity\", \"IP Ownership Assignment\", \"Insurance\", \"Irrevocable Or Perpetual License\", \"Joint IP Ownership\", \"License Grant\", \"Liquidated Damages\", \"Minimum Commitment\", \"No-Solicit Of Customers\", \"No-Solicit Of Employees\", \"Non-Compete\", \"Non-Disparagement\", \"Non-Transferable License\", \"Post-Termination Services\", \"Price Restrictions\", \"Revenue/Profit Sharing\", \"Rofr/Rofo/Rofn\", \"Source Code Escrow\", \"Termination For Convenience\", \"Third Party Beneficiary\", \"Uncapped Liability\", \"Unlimited/All-You-Can-Eat-License\", \"Volume Restriction\", \"Warranty Duration\""
+          }
+        ]
+      }
+    },
+    {
+      "name": "Find Contracts Missing Clause Type",
+      "description": "Use when the user wants to find contracts that are MISSING a specific clause type \u2014 e.g. contracts with no Cap On Liability, no Non-Compete, or no Termination For Convenience. Returns contract name, ID, type, dates, and parties. Do NOT use to find contracts that have a clause \u2014 use \"Find Contracts by Clause Type\" instead.",
+      "enabled": true,
+      "type": "cypherTemplate",
+      "config": {
+        "template": "MATCH (a:Agreement)\nWHERE NOT EXISTS {\n  MATCH (a)-[:HAS_CLAUSE]->(cc:ContractClause {type: $clause_type})\n}\nOPTIONAL MATCH (country:Country)-[:INCORPORATED_IN]-(p:Organization)-[r:IS_PARTY_TO]-(a)\nWITH a, collect(DISTINCT {name: p.name, role: r.role, country: country.name}) AS parties\nRETURN a.contract_id AS contract_id,\n       a.name AS contract_name,\n       a.agreement_type AS agreement_type,\n       a.effective_date AS effective_date,\n       a.expiration_date AS expiration_date,\n       parties\nORDER BY a.name\nLIMIT 25",
+        "parameters": [
+          {
+            "name": "clause_type",
+            "data_type": "string",
+            "description": "The clause type that must be absent. Valid values: \"Affiliate License-Licensee\", \"Affiliate License-Licensor\", \"Anti-Assignment\", \"Audit Rights\", \"Cap On Liability\", \"Change Of Control\", \"Competitive Restriction Exception\", \"Covenant Not To Sue\", \"Exclusivity\", \"IP Ownership Assignment\", \"Insurance\", \"Irrevocable Or Perpetual License\", \"Joint IP Ownership\", \"License Grant\", \"Liquidated Damages\", \"Minimum Commitment\", \"No-Solicit Of Customers\", \"No-Solicit Of Employees\", \"Non-Compete\", \"Non-Disparagement\", \"Non-Transferable License\", \"Post-Termination Services\", \"Price Restrictions\", \"Revenue/Profit Sharing\", \"Rofr/Rofo/Rofn\", \"Source Code Escrow\", \"Termination For Convenience\", \"Third Party Beneficiary\", \"Uncapped Liability\", \"Unlimited/All-You-Can-Eat-License\", \"Volume Restriction\", \"Warranty Duration\""
+          }
+        ]
+      }
+    },
+    {
+      "name": "Find Contracts with Similar Clause Text",
+      "description": "Use when the user wants to search clause excerpts by semantic meaning or specific term mentions \u2014 e.g. 'find clauses about data privacy', 'contracts mentioning force majeure', 'similar language to this indemnity clause'. Returns the most semantically similar excerpt texts, ranked by similarity score, with contract name, ID, clause type, parties, and countries of incorporation. Do NOT use for exact clause type filtering \u2014 use the clause type tools instead.",
+      "enabled": true,
+      "type": "similaritySearch",
+      "config": {
+        "provider": "vertexai",
+        "model": "gemini-embedding-001",
+        "index": "excerpt_embedding",
+        "top_k": 5,
+        "dimension": 3072,
+        "post_processing_cypher": "OPTIONAL MATCH (cc:ContractClause)-[:HAS_EXCERPT]->(node)\nOPTIONAL MATCH (a:Agreement)-[:HAS_CLAUSE]->(cc)\nOPTIONAL MATCH (o:Organization)-[r:IS_PARTY_TO]->(a)\nOPTIONAL MATCH (o)-[:INCORPORATED_IN]->(c:Country)\nWITH node, score,\n     collect(DISTINCT {\n         clause_type: cc.type,\n         agreement_name: a.name,\n         agreement_type: a.agreement_type,\n         contract_id: a.contract_id,\n         effective_date: a.effective_date,\n         expiration_date: a.expiration_date,\n         organization_name: o.name,\n         organization_role: r.role,\n         incorporated_country: c.name\n     })[0..10] AS contract_details\nRETURN node.text AS excerpt_text,\n       node.page_number AS excerpt_page_number,\n       contract_details,\n       score\nORDER BY score DESC"
+      }
+    },
+    {
+      "name": "Discover and Aggregate",
+      "description": "Use for open-ended risk analysis and aggregation not covered by other tools: finding contracts with risky clause combinations (e.g. has Exclusivity but lacks Termination For Convenience), multi-jurisdiction counterparty groups, counts by agreement type or governing law, identifying organizations appearing in the most contracts. Example questions: 'Which contracts have IP Ownership Assignment but no Non-Compete?', 'How many contracts lack a Cap On Liability?', 'Which organizations are party to contracts in more than two countries?'. Do NOT use for single-contract lookup by ID \u2014 use \"Get Contract by ID\". Do NOT use for clause type presence/absence with a known type \u2014 use the clause type tools. Do NOT use for semantic text search \u2014 use \"Find Contracts with Similar Clause Text\".",
+      "enabled": true,
+      "type": "text2cypher"
+    },
+    {
+      "name": "Find Contracts With Clause But Missing Another",
+      "description": "Use when the user wants contracts that CONTAIN one clause type but are MISSING another \u2014 e.g. \"Uncapped Liability but no Insurance\", \"Exclusivity but no Termination For Convenience\", \"License Grant but no Source Code Escrow\". Returns contract name, ID, type, dates, and parties. Do NOT use when the user only filters on one clause type \u2014 use the single-clause tools instead.",
+      "enabled": true,
+      "type": "cypherTemplate",
+      "config": {
+        "template": "MATCH (a:Agreement)-[:HAS_CLAUSE]->(:ContractClause {type: $has_clause_type})\nWHERE NOT EXISTS {\n  MATCH (a)-[:HAS_CLAUSE]->(:ContractClause {type: $missing_clause_type})\n}\nOPTIONAL MATCH (country:Country)-[:INCORPORATED_IN]-(p:Organization)-[r:IS_PARTY_TO]-(a)\nWITH a, collect(DISTINCT {name: p.name, role: r.role, country: country.name}) AS parties\nRETURN a.contract_id AS contract_id,\n       a.name AS contract_name,\n       a.agreement_type AS agreement_type,\n       a.effective_date AS effective_date,\n       a.expiration_date AS expiration_date,\n       parties\nORDER BY a.name\nLIMIT 25",
+        "parameters": [
+          {
+            "name": "has_clause_type",
+            "data_type": "string",
+            "description": "The clause type that must be PRESENT in the contract. Valid values: \"Affiliate License-Licensee\", \"Affiliate License-Licensor\", \"Anti-Assignment\", \"Audit Rights\", \"Cap On Liability\", \"Change Of Control\", \"Competitive Restriction Exception\", \"Covenant Not To Sue\", \"Exclusivity\", \"IP Ownership Assignment\", \"Insurance\", \"Irrevocable Or Perpetual License\", \"Joint IP Ownership\", \"License Grant\", \"Liquidated Damages\", \"Minimum Commitment\", \"No-Solicit Of Customers\", \"No-Solicit Of Employees\", \"Non-Compete\", \"Non-Disparagement\", \"Non-Transferable License\", \"Post-Termination Services\", \"Price Restrictions\", \"Revenue/Profit Sharing\", \"Rofr/Rofo/Rofn\", \"Source Code Escrow\", \"Termination For Convenience\", \"Third Party Beneficiary\", \"Uncapped Liability\", \"Unlimited/All-You-Can-Eat-License\", \"Volume Restriction\", \"Warranty Duration\""
+          },
+          {
+            "name": "missing_clause_type",
+            "data_type": "string",
+            "description": "The clause type that must be ABSENT from the contract. Valid values: \"Affiliate License-Licensee\", \"Affiliate License-Licensor\", \"Anti-Assignment\", \"Audit Rights\", \"Cap On Liability\", \"Change Of Control\", \"Competitive Restriction Exception\", \"Covenant Not To Sue\", \"Exclusivity\", \"IP Ownership Assignment\", \"Insurance\", \"Irrevocable Or Perpetual License\", \"Joint IP Ownership\", \"License Grant\", \"Liquidated Damages\", \"Minimum Commitment\", \"No-Solicit Of Customers\", \"No-Solicit Of Employees\", \"Non-Compete\", \"Non-Disparagement\", \"Non-Transferable License\", \"Post-Termination Services\", \"Price Restrictions\", \"Revenue/Profit Sharing\", \"Rofr/Rofo/Rofn\", \"Source Code Escrow\", \"Termination For Convenience\", \"Third Party Beneficiary\", \"Uncapped Liability\", \"Unlimited/All-You-Can-Eat-License\", \"Volume Restriction\", \"Warranty Duration\""
+          }
+        ]
+      }
+    }
+  ]
+}
