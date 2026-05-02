@@ -153,6 +153,7 @@ Before designing tools, read [references/authoring-guide.md](references/authorin
 4. "Any counting, grouping, or date-range questions?" → Text2Cypher
 5. "Search for semantically similar text?" → check `schema.json → metadata → vector_index`
    - No VECTOR index found: inform user; skip SimilaritySearch; delegate to `neo4j-vector-index-skill` first
+   - VECTOR index found: ask the user — **"Which embedding provider and model should be used? What output dimension?"** See supported models in `references/REFERENCE.md → Embedding Provider Options`. Do NOT guess or default.
 
 Tool selection:
 
@@ -164,7 +165,15 @@ Tool selection:
 
 **CypherTemplate parameters**: for each parameter, read `aura_data_type` from `schema.json → node_props` or `rel_props` and use it as `data_type`. If the property has `low_cardinality: true`, the parameter `description` MUST list the valid values — copy them from the `values` array in `schema.json`. Example: `"description": "Agreement type to filter by. Valid values: \"Distributor Agreement\", \"License Agreement\", \"NDA\""`. Properties with `has_fulltext_index: true` are especially likely to be filter targets and must include valid values when low cardinality.
 
-**SimilaritySearch `index`**: use `name` from `schema.json → metadata → vector_index` where `state = ONLINE`.
+**SimilaritySearch configuration** — ask the user for all three before drafting the tool config:
+
+| Field | What to ask | Source |
+|---|---|---|
+| `provider` | "openai" or "vertexai"? | User confirms |
+| `model` | Which model? | User picks from `references/REFERENCE.md → Embedding Provider Options` |
+| `dimension` | What output dimension? | Required if model is configurable (see table); fixed models use the table value |
+
+`index`: use `name` from `schema.json → metadata → vector_index` where `state = ONLINE`. `dimension` must match `vector.dimensions` in the same index entry.
 
 **Signals inventory**: for each label or relationship that appears in a tool or the user's stated questions, write a signal block in the system prompt. See `references/authoring-guide.md → Signals inventory` for the template and rules.
 

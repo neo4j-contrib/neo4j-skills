@@ -114,21 +114,23 @@ All fields optional: `name`, `description`, `system_prompt`, `dbid`, `is_private
 
 ## Embedding Provider Options
 
-### OpenAI (also via Azure OpenAI)
+Always confirm `provider`, `model`, and `dimension` with the user before writing a SimilaritySearch tool config. Do not default.
 
-| Model | Dimensions |
-|---|---|
-| `text-embedding-3-small` | 1536 |
-| `text-embedding-3-large` | 3072 |
-| `text-embedding-ada-002` | 1536 |
+### OpenAI (`provider: "openai"`)
 
-### Vertex AI (Google)
+| Model | Default Dimension | Configurable |
+|---|---|---|
+| `text-embedding-3-small` | 1536 | Yes |
+| `text-embedding-3-large` | 3072 | Yes |
+| `text-embedding-ada-002` | 1536 | No — always 1536 |
 
-| Model | Notes |
-|---|---|
-| `gemini-embedding-001` | General purpose |
-| `text-embedding-005` | Optimized for retrieval |
-| `text-multi-lingual-embedding-002` | Multilingual |
+### Vertex AI (`provider: "vertexai"`)
+
+| Model | Default Dimension | Configurable | Notes |
+|---|---|---|---|
+| `gemini-embedding-001` | 3072 | Yes (1–3072) | General purpose |
+| `text-embedding-005` | 768 | Yes (1–768) | Optimized for retrieval |
+| `text-multilingual-embedding-002` | 768 | Yes (1–768) | Multilingual |
 
 ---
 
