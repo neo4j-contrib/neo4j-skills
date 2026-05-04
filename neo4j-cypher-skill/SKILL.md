@@ -292,7 +292,7 @@ Default to 2025.01-safe features when version unknown.
 | `CONCURRENT TRANSACTIONS`, `REPORT STATUS` | 2025.01 | drop / omit |
 | `SEARCH` clause (vector/fulltext) | 2026.01 | `CALL db.index.vector.queryNodes(...)` (deprecated 2026.04) |
 | `ACYCLIC` path mode (no repeated nodes in path) | 2026.03 | post-filter with `size(nodes(p)) = size(apoc.coll.toSet(nodes(p)))` |
-| GQL aliases: `FOR`=`UNWIND`, `PROPERTY_EXISTS`=`IS NOT NULL`, `IS [NOT] LABELED`=`n:Label` | 2026.03–04 | GQL compliance only — use Cypher equivalents |
+| GQL aliases: `FOR`=`UNWIND`, `PROPERTY_EXISTS`=`IS NOT NULL`, `IS [NOT] LABELED`=`n:Label`; function aliases (`local_time`, `zoned_datetime`, `duration_between`, `collect_list`, etc.) | 2026.02–04 | GQL compliance only — use Cypher equivalents; full list → [references/cypher-syntax.md](references/cypher-syntax.md) |
 | **GRAPH TYPE** schema DDL (`ALTER CURRENT GRAPH TYPE SET`, `EXTEND GRAPH TYPE WITH`, `DROP GRAPH TYPE ELEMENTS`, `SHOW CURRENT GRAPH TYPE`) | **2026.02 — PREVIEW** | Use individual `CREATE CONSTRAINT` / `CREATE INDEX` |
 
 ---
@@ -329,6 +329,7 @@ Full anti-patterns → [references/performance.md](references/performance.md)
 - TypeErrors: use `toIntegerOrNull()`/`toFloatOrNull()`; guard with `IS NOT NULL`
 - Variable out of scope: not listed in `WITH` → use `count(*)` not `count(droppedVar)`
 - Timeouts: fix AllNodesScan → add early `LIMIT` → `CALL IN TRANSACTIONS OF 1000 ROWS`
+- Long-running query progress [2026.03]: `SHOW TRANSACTIONS YIELD currentQuery, status, currentQueryProgress`
 - DateTime mismatch: `ZONED DATETIME >= date(...)` → 0 rows; use `datetime()` or `.year`
 - `Z` suffix ≠ UTC timezone: ISO strings with `Z` are stored as a UTC-offset, not the UTC zone — range queries across `Z` and `UTC` stored values return 0 rows. Coerce on write: `datetime({datetime: datetime($isoStr), timezone: 'UTC'})`
 - Duration: `.inDays`/`.inMonths` don't exist; use `.days`/`.months`

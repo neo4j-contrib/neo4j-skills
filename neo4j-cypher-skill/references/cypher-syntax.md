@@ -246,7 +246,7 @@ RETURN n.name, n.value
 
 **DateTime vs date() mismatch**: `datetime_prop >= date('2025-01-01')` returns 0 rows — use `.year` accessor or `datetime()` literals for `ZONED DATETIME` properties.
 
-**GQL compliance aliases [2026.03–04]** — valid syntax, but use the Cypher form in new code:
+**GQL compliance aliases [2026.02–04]** — valid syntax, but use the Cypher form in new code:
 | GQL alias | Cypher equivalent |
 |---|---|
 | `FOR x IN list` | `UNWIND list AS x` |
@@ -254,6 +254,7 @@ RETURN n.name, n.value
 | `n IS [NOT] LABELED Label` | `n:Label` / `NOT n:Label` |
 | `FILTER` | `WHERE` |
 | `LET x = expr` | `WITH expr AS x` |
+| GQL function aliases `[2026.02]`: `ceiling`, `ln`, `local_time`, `local_datetime`, `zoned_time`, `zoned_datetime`, `duration_between`, `path_length`, `collect_list`, `percentile_cont`, `percentile_disc`, `stdev_samp`, `stdev_pop` | `ceil`, `log`, `localtime`, `localdatetime`, `time`, `datetime`, `duration.between`, `length`, `collect`, `percentileCont`, `percentileDisc`, `stDev`, `stDevP` |
 
 ---
 
