@@ -1,14 +1,14 @@
 ---
 name: neo4j-aura-agent-skill
 description: Manages Neo4j Aura Agents via the v2beta1 REST API — create, list, get, update, delete,
-  and invoke GraphRAG agents backed by an AuraDB instance. Use when configuring Aura Agent tools
+  and invoke Aura agents backed by an AuraDB instance. Use when configuring Aura Agent tools
   (CypherTemplate, SimilaritySearch, Text2Cypher), setting system prompts, deploying agents to REST
   or MCP endpoints, or invoking agents with natural language queries. Covers OAuth2 auth,
   organization/project scoping, tool parameter schemas, and InvokeAgentResponse format.
   Does NOT cover AuraDB instance provisioning — use neo4j-aura-provisioning-skill.
   Does NOT cover vector index creation — use neo4j-vector-index-skill.
 version: 1.0.0
-allowed-tools: Bash WebFetch
+allowed-tools: Bash WebFetch  
 ---
 
 ## When to Use
@@ -23,6 +23,20 @@ allowed-tools: Bash WebFetch
 - **Creating vector indexes** → `neo4j-vector-index-skill`
 - **Running Cypher directly** → `neo4j-cypher-skill`
 - **Building Aura Graph Analytics sessions** → `neo4j-aura-graph-analytics-skill`
+
+---
+
+## What are Aura Agents
+
+Aura Agents are AI-powered GraphRAG agents that sit on top of an AuraDB instance and answer natural language questions about your graph data. They are managed via the Aura v2beta1 REST API and expose three tool types:
+
+- **CypherTemplate** — pre-defined parameterized queries for fast, predictable lookups (e.g. "find all contracts for company X")
+- **SimilaritySearch** — vector similarity search over a VECTOR index for semantically related content
+- **Text2Cypher** — open-ended natural language → Cypher translation for aggregations and discovery
+
+**Use Aura Agents when** you want to expose your graph to end users or downstream applications via natural language, without writing application code. The Aura Agent reasons and dynamically uses tools to formulate answers. It takes care of response formatting. Agents are accessible as a REST endpoint or MCP server endpoint, and support both single-turn and multi-turn conversations.
+
+**Do not use Aura Agents when** you need full Cypher control, low-latency point lookups, or direct graph writes — run Cypher directly instead.
 
 ---
 

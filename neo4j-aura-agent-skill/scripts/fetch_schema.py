@@ -86,7 +86,7 @@ def main():
                 p["aura_data_type"] = aura_type(p.get("type", ""))
 
         # Fast data gate — exits before any expensive queries if DB is too empty
-        node_count = _count_nodes(driver, database)
+        node_count = _get_node_count(driver, database)
         schema.setdefault("metadata", {})["node_count"] = node_count
         _validate_data(schema, node_count)  # sys.exit(1) on failure; finally still runs
 
@@ -133,10 +133,9 @@ def main():
 
 # ── Data gate ────────────────────────────────────────────────────────────────
 
-def _count_nodes(driver, database: str) -> int:
-    # LIMIT 2 stops the scan as soon as the minimum is satisfied
+def _get_node_count(driver, database: str) -> int:
     records, _, _ = driver.execute_query(
-        "MATCH (n) WITH n LIMIT 2 RETURN count(n) AS node_count",
+        "MATCH (n) RETURN count(n) AS node_count",
         database_=database,
     )
     return records[0]["node_count"] if records else 0
@@ -161,38 +160,63 @@ def _validate_data(schema: dict, node_count: int) -> None:
 # ── Cardinality enrichment ────────────────────────────────────────────────────
 
 def _enrich_with_cardinality(driver, database: str, schema: dict) -> None:
+    # APOC is assumed available — it is bundled with all AuraDB instances.
+    # apoc.meta.schema() returns property types and indexed flags in one call.
+    # Only STRING+indexed properties are filter targets that need cardinality queries.
+    records, _, _ = driver.execute_query(
+        "CALL apoc.meta.schema() YIELD value RETURN value",
+        database_=database,
+    )
+    apoc_schema = records[0]["value"] if records else {}
+
     for label, props in schema.get("node_props", {}).items():
+        apoc_props = (apoc_schema.get(label) or {}).get("properties", {})
         for prop in props:
             if prop.get("aura_data_type") != "string":
                 continue
             pname = prop["property"]
-            query = (
-                f"MATCH (n:`{label}`) WHERE n.`{pname}` IS NOT NULL "
-                f"WITH DISTINCT n.`{pname}` AS v LIMIT {CARDINALITY_THRESHOLD + 1} "
-                f"RETURN collect(v) AS values"
-            )
-            _check_cardinality(driver, database, prop, query)
+            if apoc_props.get(pname, {}).get("indexed", False):
+                _check_cardinality(
+                    driver, database, prop,
+                    f"MATCH (n:`{label}`) WHERE n[$prop] IS NOT NULL "
+                    "WITH DISTINCT n[$prop] AS v LIMIT $limit ",
+                    pname,
+                )
+            else:
+                prop["low_cardinality"] = False
 
     for rel_type, props in schema.get("rel_props", {}).items():
+        apoc_props = (apoc_schema.get(rel_type) or {}).get("properties", {})
         for prop in props:
             if prop.get("aura_data_type") != "string":
                 continue
             pname = prop["property"]
-            query = (
-                f"MATCH ()-[r:`{rel_type}`]->() WHERE r.`{pname}` IS NOT NULL "
-                f"WITH DISTINCT r.`{pname}` AS v LIMIT {CARDINALITY_THRESHOLD + 1} "
-                f"RETURN collect(v) AS values"
-            )
-            _check_cardinality(driver, database, prop, query)
+            if apoc_props.get(pname, {}).get("indexed", False):
+                _check_cardinality(
+                    driver, database, prop,
+                    f"MATCH ()-[r:`{rel_type}`]->() WHERE r[$prop] IS NOT NULL "
+                    "WITH DISTINCT r[$prop] AS v LIMIT $limit ",
+                    pname,
+                )
+            else:
+                prop["low_cardinality"] = False
 
 
-def _check_cardinality(driver, database: str, prop: dict, query: str) -> None:
+def _check_cardinality(driver, database: str, prop: dict, base_query: str, pname: str) -> None:
     try:
-        records, _, _ = driver.execute_query(query, database_=database)
-        values = list(records[0]["values"]) if records else []
-        if len(values) <= CARDINALITY_THRESHOLD:
+        records, _, _ = driver.execute_query(
+            base_query + "RETURN count(v) AS cnt",
+            prop=pname, limit=CARDINALITY_THRESHOLD + 1, database_=database,
+        )
+        cnt = records[0]["cnt"] if records else 0
+        if cnt <= CARDINALITY_THRESHOLD:
             prop["low_cardinality"] = True
-            prop["values"] = sorted(str(v) for v in values if v is not None)
+            records, _, _ = driver.execute_query(
+                base_query + "RETURN collect(v) AS values",
+                prop=pname, limit=CARDINALITY_THRESHOLD + 1, database_=database,
+            )
+            raw = records[0]["values"] if records else []
+            prop["values"] = sorted(str(v) for v in raw if v is not None)
         else:
             prop["low_cardinality"] = False
     except Exception:

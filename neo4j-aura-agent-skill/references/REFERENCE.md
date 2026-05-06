@@ -1,5 +1,7 @@
 # Aura Agent API Reference (v2beta1)
 
+Full API specification: https://neo4j.com/docs/aura/platform/api/specification/aura_api_spec_v2beta1.yaml
+
 ## Base URL
 
 ```
