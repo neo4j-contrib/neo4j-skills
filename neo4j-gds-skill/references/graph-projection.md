@@ -4,10 +4,40 @@
 
 | Type | Procedure | When |
 |---|---|---|
+| Session remote | Python: `gds.graph.project(graph_name, query)` with `gds.graph.project.remote(...)` inside query | Aura Graph Analytics attached/self-managed sessions |
 | Cypher | Python: `gds.graph.cypher.project(...)` with `RETURN gds.graph.project` clause inside | Current GDS-doc default; filtering, transformation, computed properties, heterogeneous |
 | Native | Python: `gds.graph.project(...)` | Simple labels + relationship types; shortest Python-client path |
 
-Use Cypher projection for new Cypher examples. Avoid legacy `gds.graph.project.cypher(...)` for new work.
+Prefer session remote projection for AuraDB when Aura Graph Analytics is available. Use Cypher projection for embedded plugin Cypher examples. Avoid legacy `gds.graph.project.cypher(...)` for new work.
+
+---
+
+## Aura Graph Analytics Remote Projection
+
+```python
+G, result = gds.graph.project(
+    graph_name="my-graph",
+    query="""
+    CYPHER runtime=parallel
+    MATCH (source:Person)-[r:KNOWS]->(target:Person)
+    RETURN gds.graph.project.remote(source, target, {
+      sourceNodeLabels: labels(source),
+      targetNodeLabels: labels(target),
+      sourceNodeProperties: source { .score },
+      targetNodeProperties: target { .score },
+      relationshipType: type(r),
+      relationshipProperties: r { .weight }
+    })
+    """,
+    undirected_relationship_types=["KNOWS"],
+)
+```
+
+Rules:
+- Session remote projection uses `gds.graph.project.remote(...)`, not `gds.graph.cypher.project(...)`.
+- Native projection and legacy Cypher projection are not supported in Aura Graph Analytics.
+- `gds.graph.project(...)` receives `graph_name`; remote function receives source, target, data config.
+- Standalone sessions use `gds.graph.construct`, not remote projection.
 
 ---
 
@@ -100,7 +130,7 @@ Null node properties in projection → algorithm errors. Always specify `default
 from graphdatascience import GraphDataScience
 gds = GraphDataScience("bolt://localhost:7687", auth=("neo4j", "pw"))
 
-# Simple native projection
+# Simple native projection — plugin/simple client only
 G, result = gds.graph.project("myGraph", "Person", "KNOWS")
 
 # Multi-label, multi-rel, properties
@@ -146,6 +176,7 @@ G, result = gds.graph.cypher.project(
 Use `gds.graph.project($graph_name, source, target, {...})` in the RETURN — the `$graph_name` parameter is injected automatically.
 Query must end with exactly one `RETURN gds.graph.project(...)`. If not, use `gds.run_cypher(...)` then `gds.graph.get("filteredGraph")`.
 Do not use `gds.graph.project.cypher(...)` for new Cypher projections; it maps to the legacy deprecated projection procedure.
+Do not use this endpoint for Aura Graph Analytics Sessions; use remote projection.
 
 ---
 
@@ -194,7 +225,8 @@ est = gds.pageRank.estimate(G, dampingFactor=0.85)
 est = gds.fastRP.estimate(G, embeddingDimension=256)
 ```
 
-Rule: if `requiredMemory` exceeds available JVM heap (`dbms.memory.heap.max_size`), reduce graph size or increase heap before projecting. Treat 80% of configured heap as a review threshold, not a hard guarantee.
+Plugin rule: if `requiredMemory` exceeds available JVM heap (`dbms.memory.heap.max_size`), reduce graph size or increase heap before projecting. Treat 80% of configured heap as a review threshold, not a hard guarantee.
+Session rule: use `sessions.estimate(...)` before choosing `SessionMemory` when graph size is known.
 
 ---
 
@@ -218,7 +250,7 @@ gds.graph.drop("myGraph")     # Drop by name
 G.drop()                      # Drop via object
 ```
 
-Always drop graphs after use. Catalog graphs persist until dropped, source database stops/drops, or DBMS stops; leaked projections consume JVM heap until one of those events.
+Always drop graphs after use. Plugin catalog graphs persist until dropped, source database stops/drops, or DBMS stops. Session graphs consume session memory until dropped or session deleted.
 
 ---
 
