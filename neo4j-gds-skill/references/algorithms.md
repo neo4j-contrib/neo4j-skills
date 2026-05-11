@@ -1,18 +1,18 @@
 # GDS Algorithm Reference
 
-Full catalog of GDS procedures. All support stream/stats/mutate/write modes unless noted.
+Core catalog of commonly used GDS procedures. Mode availability varies by algorithm; check `CALL gds.list()` or the algorithm syntax page before assuming `stream` / `stats` / `mutate` / `write`.
 
 ## Centrality
 
-| Algorithm | Procedure | Tier | Best For |
-|---|---|---|---|
-| PageRank | `gds.pageRank` | Community | Network influence via incoming links |
-| Betweenness Centrality | `gds.betweenness` | Community | Bottleneck/bridge nodes |
-| Degree Centrality | `gds.degree` | Community | Most-connected nodes (fast) |
-| ArticleRank | `gds.articleRank` | Community | PageRank variant dampening high-degree nodes |
-| Eigenvector | `gds.eigenvector` | Community | Influence via well-connected neighbors |
-| Closeness | `gds.closeness` | Community | Average distance to all other nodes |
-| HITS | `gds.hits` | Community | Authority/hub scores (web-like graphs) |
+| Algorithm | Procedure | Best For |
+|---|---|---|
+| PageRank | `gds.pageRank` | Network influence via incoming links |
+| Betweenness Centrality | `gds.betweenness` | Bottleneck/bridge nodes |
+| Degree Centrality | `gds.degree` | Most-connected nodes (fast) |
+| ArticleRank | `gds.articleRank` | PageRank variant dampening high-degree nodes |
+| Eigenvector | `gds.eigenvector` | Influence via well-connected neighbors |
+| Closeness | `gds.closeness` | Average distance to all other nodes |
+| HITS | `gds.hits` | Authority/hub scores (web-like graphs) |
 
 ### PageRank — key parameters
 | Parameter | Default | Notes |
@@ -28,18 +28,18 @@ Spider traps (closed groups, no outlinks) inflate scores — increase `dampingFa
 
 ## Community Detection
 
-| Algorithm | Procedure | Tier | Notes |
-|---|---|---|---|
-| Louvain | `gds.louvain` | Community | Best general-purpose; modularity maximization |
-| Leiden | `gds.leiden` | Community | Refinement of Louvain; avoids poorly connected communities |
-| WCC | `gds.wcc` | Community | Weakly connected components; run first to partition graph |
-| SCC | `gds.scc` | Community | Strongly connected components (directed graphs only) |
-| Label Propagation | `gds.labelPropagation` | Community | Fast, large graphs; non-deterministic |
-| K-Core Decomposition | `gds.kcore` | Community | Dense subgraphs by degree threshold |
-| Triangle Count | `gds.triangleCount` | Community | Counts triangles per node; prerequisite for LCC |
-| Local Clustering Coefficient | `gds.localClusteringCoefficient` | Community | Ratio of closed triangles |
-| K-Means | `gds.kmeans` | Community | Requires node embedding properties as input |
-| HDBSCAN | `gds.hdbscan` | Community | Density-based; finds variable-density communities |
+| Algorithm | Procedure | Notes |
+|---|---|---|
+| Louvain | `gds.louvain` | Best general-purpose; modularity maximization |
+| Leiden | `gds.leiden` | Refinement of Louvain; avoids poorly connected communities |
+| WCC | `gds.wcc` | Weakly connected components; run first to partition graph |
+| SCC | `gds.scc` | Strongly connected components (directed graphs only) |
+| Label Propagation | `gds.labelPropagation` | Fast, large graphs; non-deterministic |
+| K-Core Decomposition | `gds.kcore` | Dense subgraphs by degree threshold |
+| Triangle Count | `gds.triangleCount` | Counts triangles per node; prerequisite for LCC |
+| Local Clustering Coefficient | `gds.localClusteringCoefficient` | Ratio of closed triangles |
+| K-Means | `gds.kmeans` | Requires node embedding properties as input |
+| HDBSCAN | `gds.hdbscan` | Density-based; finds variable-density communities |
 
 ### WCC parameters
 | Parameter | Notes |
@@ -51,38 +51,40 @@ Spider traps (closed groups, no outlinks) inflate scores — increase `dampingFa
 
 ## Similarity
 
-| Algorithm | Procedure | Tier | Input | Notes |
-|---|---|---|---|---|
-| KNN | `gds.knn` | Community | Node properties (Float[]) | Cosine/Euclidean/Pearson auto-selected for Float[] |
-| Node Similarity | `gds.nodeSimilarity` | Community | Graph topology | Jaccard from common neighbors; no properties needed |
-| Filtered Node Similarity | `gds.nodeSimilarity` | Community | Graph topology | With `sourceNodeFilter`/`targetNodeFilter` |
+| Algorithm | Procedure | Input | Notes |
+|---|---|---|---|
+| KNN | `gds.knn` | Node properties | Defaults metric by type; override with `{embedding: 'COSINE'}` |
+| Node Similarity | `gds.nodeSimilarity` | Bipartite graph topology | Jaccard / Overlap / Cosine from common neighbors; no node properties needed |
+| Filtered Node Similarity | `gds.nodeSimilarity` | Bipartite graph topology | With `sourceNodeFilter`/`targetNodeFilter` |
 
 ### KNN — key parameters
 | Parameter | Default | Notes |
 |---|---|---|
-| `nodeProperties` | required | List of Float[] property names |
+| `nodeProperties` | required | String, map, or list of strings/maps |
 | `topK` | 10 | Neighbors per node |
 | `sampleRate` | 0.5 | Accuracy vs speed; 1.0 = exact |
 | `similarityCutoff` | 0.0 | Only return pairs above threshold |
 | `writeRelationshipType` | required for write | Relationship type to create |
 | `writeProperty` | required for write | Property name for similarity score |
+| `mutateRelationshipType` | required for mutate | Relationship type to add to in-memory graph |
+| `mutateProperty` | required for mutate | Relationship property for similarity score |
 
-Similarity metric auto-selected by property type: `Float[]` → cosine/Euclidean/Pearson; `Integer[]` → Jaccard/Overlap; scalar → inverse distance.
+Available metrics by property type: `Float[]` → `COSINE`, `EUCLIDEAN`, `PEARSON`; `Integer[]` → `JACCARD`, `OVERLAP`; scalar numbers → default inverse distance metric only.
 
 ---
 
 ## Path Finding
 
-| Algorithm | Procedure | Tier | Use Case |
-|---|---|---|---|
-| Dijkstra (single) | `gds.shortestPath.dijkstra` | Community | Shortest path, positive weights |
-| Dijkstra (all) | `gds.allShortestPaths.dijkstra` | Community | All shortest from one source |
-| A* | `gds.shortestPath.astar` | Community | Spatial graphs with lat/lon heuristic |
-| Yen's k-Shortest | `gds.shortestPath.yens` | Community | k alternative shortest paths |
-| Bellman-Ford | `gds.bellmanFord` | Community | Graphs with negative weights |
-| Random Walk | `gds.randomWalk` | Community | Sample graph neighborhoods |
-| BFS | `gds.bfs` | Community | Breadth-first traversal order |
-| DFS | `gds.dfs` | Community | Depth-first traversal order |
+| Algorithm | Procedure | Use Case |
+|---|---|---|
+| Dijkstra source-target | `gds.shortestPath.dijkstra` | Shortest path, positive weights |
+| Dijkstra single-source | `gds.allShortestPaths.dijkstra` | All shortest paths from one source |
+| A* | `gds.shortestPath.astar` | Spatial graphs with lat/lon heuristic |
+| Yen's k-Shortest | `gds.shortestPath.yens` | k alternative shortest paths |
+| Bellman-Ford | `gds.bellmanFord` | Graphs with negative weights |
+| Random Walk | `gds.randomWalk` | Sample graph neighborhoods |
+| BFS | `gds.bfs` | Breadth-first traversal order |
+| DFS | `gds.dfs` | Depth-first traversal order |
 
 ```cypher
 MATCH (source:Location {name: 'A'}), (target:Location {name: 'B'})
@@ -98,12 +100,12 @@ RETURN totalCost, [nodeId IN nodeIds | gds.util.asNode(nodeId).name] AS nodes
 
 ## Node Embeddings
 
-| Algorithm | Procedure | Tier | Inductive? | Best For |
-|---|---|---|---|---|
-| FastRP | `gds.fastRP` | Community | Yes (with `randomSeed`) | Fast production ML; structural vector search |
-| GraphSAGE | `gds.graphSage` | Community | Yes | Feature-rich nodes; generalizes to unseen nodes |
-| Node2Vec | `gds.node2vec` | Community | No (transductive) | Structural similarity; same graph train+predict |
-| HashGNN | `gds.hashgnn` | Community | Yes | GNN-style, limited compute, fast |
+| Algorithm | Procedure | Inductive? | Best For |
+|---|---|---|---|
+| FastRP | `gds.fastRP` | Yes (set `randomSeed` for reproducibility) | Fast, scalable, production ML |
+| GraphSAGE | `gds.beta.graphSage` | Yes | Feature-rich nodes; generalizes to unseen nodes |
+| Node2Vec | `gds.node2vec` | No (transductive) | Structural similarity; same graph train+predict |
+| HashGNN | `gds.hashgnn` | Yes | GNN-style, limited compute, fast |
 
 ### FastRP — key parameters
 | Parameter | Default | Notes |

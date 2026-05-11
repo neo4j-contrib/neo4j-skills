@@ -4,10 +4,10 @@
 
 | Type | Procedure | When |
 |---|---|---|
-| Native | `gds.graph.project` | Standard — labels + rel types; 5–10× faster than Cypher |
-| Cypher | `gds.graph.cypher.project` | Filtering, transformation, computed properties, heterogeneous |
+| Cypher | Python: `gds.graph.cypher.project(...)` with `RETURN gds.graph.project` clause inside | Current GDS-doc default; filtering, transformation, computed properties, heterogeneous |
+| Native | Python: `gds.graph.project(...)` | Simple labels + relationship types; shortest Python-client path |
 
-Always prefer native projection. Use Cypher projection only when native can't express the requirement.
+Use Cypher projection for new Cypher examples. Avoid legacy `gds.graph.project.cypher(...)` for new work.
 
 ---
 
@@ -100,7 +100,7 @@ Null node properties in projection → algorithm errors. Always specify `default
 from graphdatascience import GraphDataScience
 gds = GraphDataScience("bolt://localhost:7687", auth=("neo4j", "pw"))
 
-# Simple
+# Simple native projection
 G, result = gds.graph.project("myGraph", "Person", "KNOWS")
 
 # Multi-label, multi-rel, properties
@@ -144,6 +144,8 @@ G, result = gds.graph.cypher.project(
 ```
 
 Use `gds.graph.project($graph_name, source, target, {...})` in the RETURN — the `$graph_name` parameter is injected automatically.
+Query must end with exactly one `RETURN gds.graph.project(...)`. If not, use `gds.run_cypher(...)` then `gds.graph.get("filteredGraph")`.
+Do not use `gds.graph.project.cypher(...)` for new Cypher projections; it maps to the legacy deprecated projection procedure.
 
 ---
 
@@ -192,7 +194,7 @@ est = gds.pageRank.estimate(G, dampingFactor=0.85)
 est = gds.fastRP.estimate(G, embeddingDimension=256)
 ```
 
-Rule: if `requiredMemory` > 80% of available JVM heap (`dbms.memory.heap.max_size`), increase heap before projecting.
+Rule: if `requiredMemory` exceeds available JVM heap (`dbms.memory.heap.max_size`), reduce graph size or increase heap before projecting. Treat 80% of configured heap as a review threshold, not a hard guarantee.
 
 ---
 
@@ -216,7 +218,7 @@ gds.graph.drop("myGraph")     # Drop by name
 G.drop()                      # Drop via object
 ```
 
-Always drop graphs after use. The graph catalog persists until Neo4j restarts — leaked projections consume JVM heap permanently until restart.
+Always drop graphs after use. Catalog graphs persist until dropped, source database stops/drops, or DBMS stops; leaked projections consume JVM heap until one of those events.
 
 ---
 
