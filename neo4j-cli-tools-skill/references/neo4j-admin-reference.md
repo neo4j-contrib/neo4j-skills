@@ -159,6 +159,8 @@ neo4j-admin database import \
 - `--array-delimiter=<char>` - Array value delimiter (default: semicolon)
 - `--skip-duplicate-nodes` - Skip duplicate node IDs
 - `--skip-bad-relationships` - Skip relationships with invalid nodes
+- `--target-format=backup` - Produce a backup artifact instead of a live store [2026.04]
+- `--compress` - Zstd-compress output; only valid with `--target-format=backup` [2026.04]
 
 #### check
 
@@ -182,7 +184,23 @@ neo4j-admin database copy <source-db> <target-db>
 
 ```bash
 neo4j-admin database copy production staging
+
+# Produce a compressed backup-format copy [2026.04]
+neo4j-admin database copy production /backups/prod-copy \
+  --target-format=backup --compress
 ```
+
+**Options**:
+- `--target-format=backup` - Emit a backup artifact instead of a live store [2026.04]
+- `--compress` - Zstd-compress output; only valid with `--target-format=backup` [2026.04]
+
+#### backup inspect
+
+```bash
+neo4j-admin backup inspect /backups/full
+```
+
+Results ordered by append index; ties broken by time (since 2026.04).
 
 #### migrate
 

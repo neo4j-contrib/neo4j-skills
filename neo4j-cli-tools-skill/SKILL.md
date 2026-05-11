@@ -207,7 +207,7 @@ neo4j-admin database restore \
 ## Important Notes
 
 - Configuration priority: CLI flags > environment variables > config files
-- Neo4j 2026.01 is the current version (as of documentation date)
+- Neo4j 2026.04.0 is the current version (as of documentation date)
 - Always execute neo4j-admin commands as the Neo4j system user
 
 ## Environment Variables

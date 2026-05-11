@@ -32,13 +32,13 @@ allowed-tools: Bash WebFetch
 <dependency>
     <groupId>org.neo4j.driver</groupId>
     <artifactId>neo4j-java-driver</artifactId>
-    <version>6.0.5</version>
+    <version>6.1.0</version>
 </dependency>
 ```
 
 ### Gradle
 ```groovy
-implementation 'org.neo4j.driver:neo4j-java-driver:6.0.5'
+implementation 'org.neo4j.driver:neo4j-java-driver:6.1.0'
 ```
 
 Check latest: https://central.sonatype.com/artifact/org.neo4j.driver/neo4j-java-driver

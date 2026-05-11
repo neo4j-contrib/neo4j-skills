@@ -74,7 +74,7 @@ Full provider config table → [references/providers.md](references/providers.md
 
 ## Embedding
 
-### Single embed [2025.12]
+### Single embed [2025.11]
 
 ```cypher
 CYPHER 25
@@ -92,7 +92,7 @@ CALL {
 
 `ai.text.embed()` returns `VECTOR` — directly storable and queryable in a vector index.
 
-### Batch embed procedure [2025.12]
+### Batch embed procedure [2025.11]
 
 ```cypher
 CYPHER 25
@@ -119,7 +119,7 @@ RETURN name, requiredConfigType
 
 ---
 
-## Text Completion [2025.12]
+## Text Completion [2025.11]
 
 ```cypher
 CYPHER 25
@@ -132,7 +132,7 @@ RETURN ai.text.completion(
 
 Returns `STRING`.
 
-### Aggregate completion — summarize across rows
+### Aggregate completion — summarize across rows [2026.03]
 
 ```cypher
 CYPHER 25
@@ -149,7 +149,7 @@ RETURN ai.text.aggregateCompletion(
 
 ---
 
-## Pure-Cypher GraphRAG Pattern [2025.12]
+## Pure-Cypher GraphRAG Pattern
 
 Embed question → vector search → graph traverse → LLM completion — all in one Cypher query:
 
@@ -173,7 +173,7 @@ Key insight (Bergman): shortest path between seed nodes surfaces relationships n
 
 ---
 
-## Structured Output [2025.12]
+## Structured Output [2026.02]
 
 Returns `MAP` — directly storable as node properties or used downstream in Cypher.
 
@@ -204,7 +204,7 @@ MERGE (t:Tag {name: tag})
 MERGE (p)-[:TAGGED]->(t)
 ```
 
-### Aggregate structured completion — extract across multiple rows
+### Aggregate structured completion — extract across multiple rows [2026.03]
 
 ```cypher
 CYPHER 25
@@ -229,7 +229,7 @@ RETURN ai.text.aggregateStructuredCompletion(
 
 ## Chat [2025.12]
 
-Supported providers: **openai** and **azure-openai** only.
+Supported providers: `openai` and `azure-openai` only.
 
 ```cypher
 // Start new conversation (chatId = null → new session)
@@ -257,7 +257,7 @@ Returns `MAP { message: STRING, chatId: STRING }`. Store `chatId` to continue se
 
 ---
 
-## Tokenization & Chunking [2025.12]
+## Tokenization & Chunking [2026.04]
 
 ```cypher
 // Count tokens before sending to LLM
@@ -268,9 +268,16 @@ RETURN ai.text.tokenCount($text, 'openai', { token: $openaiKey, model: 'gpt-4o-m
 CYPHER 25
 UNWIND ai.text.chunkByTokenLimit($longText, 512, 'gpt-4', 50) AS chunk
 MERGE (c:Chunk { text: chunk })
+
+// List providers supporting tokenCount
+CYPHER 25
+CALL ai.text.tokenCount.providers() YIELD name, requiredConfigType
+RETURN name, requiredConfigType
 ```
 
-`ai.text.chunkByTokenLimit(input, limit, model='gpt-4', overlap=0)` — `model` controls tokenizer; `overlap` = tokens of overlap between chunks.
+Signatures:
+- `ai.text.tokenCount(input, provider, configuration = {}) :: INTEGER` — provider-driven tokenizer; uses provider config (token/model).
+- `ai.text.chunkByTokenLimit(input, limit, model = 'gpt-4', overlap = 0) :: LIST<STRING>` — local tokenizer keyed off `model`; no provider call, no `token` required.
 
 ---
 
@@ -316,7 +323,7 @@ Before bulk writes:
 - [ ] `model` key explicit in config (no silent defaults)
 - [ ] Provider string lowercase (`'openai'`, `'vertexai'`, `'bedrock-titan'`)
 - [ ] Bulk writes use `IN TRANSACTIONS OF 500 ROWS`; count target nodes first
-- [ ] `genai.vector.encode()` replaced with `ai.text.embed()` [2025.12]
+- [ ] `genai.vector.encode()` replaced with `ai.text.embed()` [2025.11+]
 - [ ] Chat sessions: store returned `chatId` for continuation; only openai/azure-openai supported
 - [ ] Structured output schema uses `additionalProperties: false` to prevent hallucination keys
 
