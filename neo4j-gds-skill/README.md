@@ -19,6 +19,7 @@ Agent skill for Neo4j Graph Data Science (GDS) — running graph algorithms on s
 - GDS >= 2.6 (Python client v1.21)
 - Neo4j >= 5.x (self-managed) or Aura Pro
 - Python >= 3.10
+- Neo4j Python Driver >= 4.4.12
 
 ## Not covered
 

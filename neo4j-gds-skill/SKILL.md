@@ -88,7 +88,9 @@ G, result = gds.graph.project(
 )
 ```
 
-### Cypher Projection (use when native can't express filter/transform)
+Native projection: simplest label/type projection; still supported. Current GDS manual uses Cypher projection as norm; native projection will be deprecated in some future release.
+
+### Cypher Projection (use for new Cypher workflows, filters, transforms)
 
 ```python
 G, result = gds.graph.cypher.project(
@@ -102,7 +104,7 @@ G, result = gds.graph.cypher.project(
 )
 ```
 
-Native projection over Cypher projection whenever possible — 5–10× faster on large graphs.
+`gds.graph.cypher.project` must end with one `RETURN gds.graph.project(...)` clause. If validation fails, use `gds.run_cypher(...)` then `gds.graph.get("graphName")`.
 
 ### Weighted Projection (Cypher projection syntax)
 
@@ -135,7 +137,7 @@ Use `count(r)` to aggregate multiple parallel relationships into a single weight
 
 ### Undirected Projection (native syntax)
 
-Pass `orientation: 'UNDIRECTED'` per relationship type — or use `undirectedRelationshipTypes: ['*']` in Cypher projection (second config map).
+Pass `orientation: 'UNDIRECTED'` per relationship type in native projection — or use `undirectedRelationshipTypes: ['*']` in Cypher projection (second config map).
 
 Leiden **requires** undirected relationships. Community detection and similarity algorithms generally work better on undirected graphs.
 
@@ -180,12 +182,12 @@ print(est["requiredMemory"])
 |---|---|---|---|
 | `stream` | None | Row per node/pair | Inspect results; top-N |
 | `stats` | None | Single aggregate row | Summary/convergence check |
-| `mutate` | Adds property to in-memory graph only | Stats row | Chain algorithms |
-| `write` | Persists property to Neo4j DB | Stats row | Final step — make queryable |
+| `mutate` | Adds node property or relationship type/property to in-memory graph only | Stats row | Chain algorithms |
+| `write` | Persists node property or relationship to Neo4j DB | Stats row | Final step — make queryable |
 
 Pattern: `stream` to verify → `mutate` to chain → `write` to persist.
 
-`mutateProperty` must not already exist in the in-memory graph.
+`mutateProperty` must not exist in the in-memory graph. Relationship algorithms such as KNN also require `mutateRelationshipType`.
 After `write`, re-project to use written properties in subsequent GDS calls (in-memory graph does not see DB writes).
 
 ---
@@ -376,7 +378,7 @@ G.drop()
 | Shortest path (positive weights) | Dijkstra / A* |
 | k alternative paths | Yen's |
 | Fast scalable embeddings | FastRP |
-| Feature-rich nodes | GraphSAGE (Beta) |
+| Feature-rich nodes | GraphSAGE (`gds.beta.graphSage`) |
 
 Full algorithm catalog → [references/algorithms.md](references/algorithms.md)
 
@@ -388,7 +390,7 @@ Full algorithm catalog → [references/algorithms.md](references/algorithms.md)
 |---|---|---|
 | `Unknown function 'gds.version'` | GDS not installed / wrong tier | Install plugin; on Aura BC/VDC use `neo4j-aura-graph-analytics-skill` |
 | `Insufficient heap memory` / OOM | Graph too large for available JVM heap | Run `gds.graph.project.estimate` first; increase `dbms.memory.heap.max_size` |
-| `Procedure not found: gds.leiden` | Algorithm not licensed / older GDS | Check `CALL gds.list()` for available procedures; upgrade GDS or use Louvain |
+| `Procedure not found: gds.leiden` | Older or incompatible GDS | Check `CALL gds.list()` for available procedures; upgrade GDS or use Louvain |
 | `Node property 'X' not found` after mutate | Property not projected or wrong graph name | Verify `G.node_properties("Label")` includes the property; check `mutateProperty` spelling |
 | `Graph 'myGraph' already exists` | Leftover projection from failed run | `CALL gds.graph.drop('myGraph')` or `G.drop()` |
 | `mutateProperty already exists` | Re-running algorithm on same projection | Drop and re-project, or use different `mutateProperty` name |
@@ -435,6 +437,8 @@ Built-in test datasets: `gds.graph.load_cora()`, `gds.graph.load_karate_club()`,
 | `gds.pageRank.write(...)` | `write-cypher` |
 | `gds.graph.drop(...)` | `write-cypher` |
 | List available procedures | `read-cypher` → `CALL gds.list()` |
+
+Before any `write-cypher`: show exact Cypher, expected nodes/relationships affected, and ask for confirmation. For algorithm `write` mode, estimate or run `stats` first when available.
 
 ---
 
