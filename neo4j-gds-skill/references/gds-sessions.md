@@ -33,6 +33,7 @@ gds = sessions.get_or_create(
     ttl=timedelta(hours=2),
     db_connection=DbmsConnectionInfo(
         aura_instance_id=os.environ["AURA_INSTANCEID"],
+        database=os.environ["NEO4J_DATABASE"]
         username=os.environ["NEO4J_USERNAME"],
         password=os.environ["NEO4J_PASSWORD"],
     ),
@@ -66,7 +67,7 @@ Use estimate before `get_or_create` when graph size is known. Pick the next supp
 ## Remote Projection
 
 ```python
-G, result = gds.graph.project(
+G, result = gds.v2.graph.project(
     graph_name="product-graph",
     query="""
     CYPHER runtime=parallel
@@ -92,11 +93,13 @@ Rules:
 - Use `undirected_relationship_types=[...]` parameter for remote projection orientation.
 - Native projection and legacy Cypher projection are not supported in Aura Graph Analytics.
 - Standalone sessions cannot use remote projection; use `gds.graph.construct`.
+- only specify nodeLabels, relationshipType and properties if actually needed later by any algorithms
+- prefer using the gds.v2 endpoints if available
 
 ## Run Algorithms
 
 ```python
-gds.pageRank.mutate(G, mutateProperty="pagerank")
+gds.v2.page_rank.mutate(G, mutate_property="pagerank")
 gds.fastRP.mutate(
     G,
     featureProperties=["pagerank"],
@@ -108,14 +111,23 @@ df = gds.graph.nodeProperties.stream(
     G,
     db_node_properties=["name"],
     node_properties=["pagerank", "embedding"],
+gds.v2.fast_rp.mutate(
+    G,
+    feature_properties=["pagerank"],
+    embedding_dimension=128,
+    random_seed=42,
+    mutate_property="embedding",
 )
+df = gds.v2.graph.node_properties.stream(
+    G,
+    db_node_properties=["name"],
+    node_properties=["pagerank", "embedding"],
 ```
 
 Algorithm calls use same Python-client shape as plugin calls after projection.
 
 Limitations:
-- Model publishing not supported (`gds.model.publish`).
-- Topological link prediction alpha procedures not supported.
+- Check the gds.v2 result for availability of endpoints
 - Check current API reference before using alpha/beta procedures.
 
 ## Remote Write-back
@@ -123,15 +135,13 @@ Limitations:
 Attached and self-managed sessions:
 
 ```python
-gds.graph.nodeProperties.write(G, "embedding")
+gds.v2.graph.node_properties.write(G, "embedding")
 
-gds.wcc.write(
+gds.v2.wcc.write(
     G,
-    writeProperty="componentId",
-    concurrency=12,
-    arrowConfiguration={"batchSize": 25_000},
+    write_property="componentId",
+    arrow_configuration={"batchSize": 25_000},
 )
-```
 
 Standalone sessions: stream results and persist through target-system client.
 
@@ -139,6 +149,7 @@ Before write-back:
 - Run `stream` or `stats` first when available.
 - Confirm target property/relationship does not overwrite needed data.
 - Tune `concurrency` and `arrowConfiguration.batchSize` for large writes.
+- Ask for user confirmation before writing back to the database. 
 
 ## Query Source Database
 

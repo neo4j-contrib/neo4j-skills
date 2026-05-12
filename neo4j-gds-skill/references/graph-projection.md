@@ -15,7 +15,7 @@ Prefer session remote projection for AuraDB when Aura Graph Analytics is availab
 ## Aura Graph Analytics Remote Projection
 
 ```python
-G, result = gds.graph.project(
+G, result = gds.v2.graph.project(
     graph_name="my-graph",
     query="""
     CYPHER runtime=parallel
