@@ -100,17 +100,6 @@ Rules:
 
 ```python
 gds.v2.page_rank.mutate(G, mutate_property="pagerank")
-gds.fastRP.mutate(
-    G,
-    featureProperties=["pagerank"],
-    embeddingDimension=128,
-    randomSeed=42,
-    mutateProperty="embedding",
-)
-df = gds.graph.nodeProperties.stream(
-    G,
-    db_node_properties=["name"],
-    node_properties=["pagerank", "embedding"],
 gds.v2.fast_rp.mutate(
     G,
     feature_properties=["pagerank"],
