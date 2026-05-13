@@ -4,7 +4,7 @@
 |---|---|---|
 | Topological link prediction | ❌ Not supported | ✅ |
 | ML model persistence across sessions | ❌ Session-local only | ✅ Persistent in model catalog |
-| Cypher procedures (`CALL gds.*`) | ❌ Python client only | ✅ |
+| Cypher API (`CALL gds.*`) | ✅ AuraDB attached sessions only; limited vs plugin | ✅ |
 | Non-Neo4j data sources | ✅ Pandas, Spark, Arrow | ❌ |
 | Aura BC / VDC | ✅ | ❌ |
 | Aura Pro | ❌ | ✅ |

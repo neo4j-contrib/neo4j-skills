@@ -2,6 +2,8 @@
 
 Core catalog of commonly used GDS procedures. Mode availability varies by algorithm; check `CALL gds.list()` or the algorithm syntax page before assuming `stream` / `stats` / `mutate` / `write`.
 
+Python client: prefer `gds.v2.*` endpoints and snake_case parameters. Procedure tables show Cypher procedure names.
+
 ## Centrality
 
 | Algorithm | Procedure | Best For |
@@ -15,12 +17,12 @@ Core catalog of commonly used GDS procedures. Mode availability varies by algori
 | HITS | `gds.hits` | Authority/hub scores (web-like graphs) |
 
 ### PageRank — key parameters
-| Parameter | Default | Notes |
-|---|---|---|
-| `dampingFactor` | 0.85 | Probability of following a link; lower = more teleportation |
-| `maxIterations` | 20 | |
-| `tolerance` | 1e-7 | Convergence threshold |
-| `relationshipWeightProperty` | — | Optional weight property |
+| V2 parameter | Cypher/v1 parameter | Default | Notes |
+|---|---|---|---|
+| `damping_factor` | `dampingFactor` | 0.85 | Probability of following a link; lower = more teleportation |
+| `max_iterations` | `maxIterations` | 20 | |
+| `tolerance` | `tolerance` | 1e-7 | Convergence threshold |
+| `relationship_weight_property` | `relationshipWeightProperty` | — | Optional weight property |
 
 Spider traps (closed groups, no outlinks) inflate scores — increase `dampingFactor`. Negative weights silently ignored.
 
@@ -45,7 +47,7 @@ Spider traps (closed groups, no outlinks) inflate scores — increase `dampingFa
 | Parameter | Notes |
 |---|---|
 | `threshold` | Only traverse rels with weight >= threshold |
-| `minComponentSize` | Only return nodes in components >= N nodes |
+| `min_component_size` / `minComponentSize` | Only return nodes in components >= N nodes |
 
 ---
 
@@ -58,16 +60,16 @@ Spider traps (closed groups, no outlinks) inflate scores — increase `dampingFa
 | Filtered Node Similarity | `gds.nodeSimilarity` | Bipartite graph topology | With `sourceNodeFilter`/`targetNodeFilter` |
 
 ### KNN — key parameters
-| Parameter | Default | Notes |
-|---|---|---|
-| `nodeProperties` | required | String, map, or list of strings/maps |
-| `topK` | 10 | Neighbors per node |
-| `sampleRate` | 0.5 | Accuracy vs speed; 1.0 = exact |
-| `similarityCutoff` | 0.0 | Only return pairs above threshold |
-| `writeRelationshipType` | required for write | Relationship type to create |
-| `writeProperty` | required for write | Property name for similarity score |
-| `mutateRelationshipType` | required for mutate | Relationship type to add to in-memory graph |
-| `mutateProperty` | required for mutate | Relationship property for similarity score |
+| V2 parameter | Cypher/v1 parameter | Default | Notes |
+|---|---|---|---|
+| `node_properties` | `nodeProperties` | required | String, map, or list of strings/maps |
+| `top_k` | `topK` | 10 | Neighbors per node |
+| `sample_rate` | `sampleRate` | 0.5 | Accuracy vs speed; 1.0 = exact |
+| `similarity_cutoff` | `similarityCutoff` | 0.0 | Only return pairs above threshold |
+| `write_relationship_type` | `writeRelationshipType` | required for write | Relationship type to create |
+| `write_property` | `writeProperty` | required for write | Property name for similarity score |
+| `mutate_relationship_type` | `mutateRelationshipType` | required for mutate | Relationship type to add to in-memory graph |
+| `mutate_property` | `mutateProperty` | required for mutate | Relationship property for similarity score |
 
 Available metrics by property type: `Float[]` → `COSINE`, `EUCLIDEAN`, `PEARSON`; `Integer[]` → `JACCARD`, `OVERLAP`; scalar numbers → default inverse distance metric only.
 
@@ -108,27 +110,29 @@ RETURN totalCost, [nodeId IN nodeIds | gds.util.asNode(nodeId).name] AS nodes
 | HashGNN | `gds.hashgnn` | Yes | GNN-style, limited compute, fast |
 
 ### FastRP — key parameters
-| Parameter | Default | Notes |
-|---|---|---|
-| `embeddingDimension` | required | 128–512 typical |
-| `iterationWeights` | `[0.0, 1.0, 1.0]` | `[self, 1-hop, 2-hop]` neighborhood weights |
-| `featureProperties` | `[]` | Node properties to incorporate |
-| `propertyRatio` | 0.0 | Fraction of dims for node properties (requires `featureProperties`) |
-| `normalizationStrength` | 0.0 | Negative = downplay high-degree hubs |
-| `randomSeed` | — | Set for reproducibility |
+| V2 parameter | Cypher/v1 parameter | Default | Notes |
+|---|---|---|---|
+| `embedding_dimension` | `embeddingDimension` | required | 128–512 typical |
+| `iteration_weights` | `iterationWeights` | `[0.0, 1.0, 1.0]` | `[self, 1-hop, 2-hop]` neighborhood weights |
+| `feature_properties` | `featureProperties` | `[]` | Node properties to incorporate |
+| `property_ratio` | `propertyRatio` | 0.0 | Fraction of dims for node properties (requires `feature_properties`) |
+| `normalization_strength` | `normalizationStrength` | 0.0 | Negative = downplay high-degree hubs |
+| `random_seed` | `randomSeed` | — | Set for reproducibility |
 
 ### Node2Vec — key parameters
-| Parameter | Default | Notes |
-|---|---|---|
-| `embeddingDimension` | 128 | |
-| `walkLength` | 80 | Steps per random walk |
-| `walksPerNode` | 10 | Random walks per node |
-| `inOutFactor` | 1.0 | DFS bias (>1) vs BFS bias (<1) |
-| `returnFactor` | 1.0 | Probability of returning to previous node |
+| V2 parameter | Cypher/v1 parameter | Default | Notes |
+|---|---|---|---|
+| `embedding_dimension` | `embeddingDimension` | 128 | |
+| `walk_length` | `walkLength` | 80 | Steps per random walk |
+| `walks_per_node` | `walksPerNode` | 10 | Random walks per node |
+| `in_out_factor` | `inOutFactor` | 1.0 | DFS bias (>1) vs BFS bias (<1) |
+| `return_factor` | `returnFactor` | 1.0 | Probability of returning to previous node |
 
 ---
 
 ## ML Pipelines
+
+Pipeline APIs may lag v2 coverage. Prefer v2 pipeline endpoints when available; otherwise use v1 fallback and keep camelCase parameters.
 
 ### Node Classification
 
@@ -161,10 +165,10 @@ model.predict_stream(G, topN=10, threshold=0.5)
 ## Built-in Test Datasets
 
 ```python
-G = gds.graph.load_cora()         # 2,708 Paper nodes, 5,429 CITES edges
-G = gds.graph.load_karate_club()  # 34 Person nodes, 78 KNOWS edges
-G = gds.graph.load_imdb()         # 12,772 nodes, heterogeneous
-G = gds.graph.load_lastfm()       # 19,914 nodes, user-artist graph
+G = gds.v2.graph.datasets.load_cora()         # 2,708 Paper nodes, 5,429 CITES edges
+G = gds.v2.graph.datasets.load_karate_club()  # 34 Person nodes, 78 KNOWS edges
+G = gds.v2.graph.datasets.load_imdb()         # 12,772 nodes, heterogeneous
+G = gds.v2.graph.datasets.load_lastfm()       # 19,914 nodes, user-artist graph
 ```
 
 ---

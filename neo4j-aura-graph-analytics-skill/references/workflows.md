@@ -27,12 +27,11 @@ gds = sessions.get_or_create(
     db_connection=DbmsConnectionInfo.from_env(),
     ttl=timedelta(hours=4),
 )
-gds.verify_connectivity()
+gds.v2.verify_session_connectivity()
+gds.v2.verify_db_connectivity()
 
 # 4. Project
-G, _ = gds.graph.project(
-    "social",
-    """
+query = """
     CALL () {
         MATCH (p:Person)
         OPTIONAL MATCH (p)-[r:KNOWS]->(p2:Person)
@@ -47,16 +46,22 @@ G, _ = gds.graph.project(
         targetNodeProperties: targetNodeProperties,
         relationshipType: type(rel)
     })
-    """,
+"""
+
+G, _ = gds.v2.graph.project(
+    graph_name="social",
+    query=query,
+    undirected_relationship_types=["KNOWS"],
 )
+# V1 fallback: gds.graph.project(graph_name="social", query=query, undirected_relationship_types=["KNOWS"])
 
 # 5. Analyse
-gds.pageRank.mutate(G, mutateProperty="pagerank")
-gds.fastRP.mutate(G, embeddingDimension=128, mutateProperty="embedding",
-                  featureProperties=["pagerank"], randomSeed=42)
+gds.v2.page_rank.mutate(G, mutate_property="pagerank")
+gds.v2.fast_rp.mutate(G, embedding_dimension=128, mutate_property="embedding",
+                      feature_properties=["pagerank"], random_seed=42)
 
 # 6. Write back
-gds.graph.nodeProperties.write(G, ["pagerank", "embedding"])
+gds.v2.graph.node_properties.write(G, ["pagerank", "embedding"])
 
 # 7. Cleanup
 sessions.delete(session_name="prod-analysis")
@@ -81,11 +86,11 @@ gds = sessions.get_or_create(
 nodes = pd.read_csv("nodes.csv")   # required: nodeId (int), labels (str)
 edges = pd.read_csv("edges.csv")   # required: sourceNodeId, targetNodeId, relationshipType
 
-G = gds.graph.construct("my-graph", nodes, edges)
+G = gds.v2.graph.construct("my-graph", nodes, edges)
 
-gds.louvain.mutate(G, mutateProperty="community")
+gds.v2.louvain.mutate(G, mutate_property="community")
 
-result = gds.graph.nodeProperties.stream(G, ["community"], separate_property_columns=True)
+result = gds.v2.graph.node_properties.stream(G, ["community"])
 output = result.merge(nodes[["nodeId", "name"]], how="left")
 print(output.sort_values("community"))
 
@@ -95,7 +100,7 @@ gds.delete()
 ## Multiple Node/Relationship DataFrames
 
 ```python
-G = gds.graph.construct("multi-graph", [nodes1, nodes2], [rels1, rels2])
+G = gds.v2.graph.construct("multi-graph", [nodes1, nodes2], [rels1, rels2])
 ```
 
 ## Spark Integration

@@ -95,8 +95,8 @@ Add to `~/.agents/plugins/marketplace.json`:
 
 | Skill | Description |
 |---|---|
-| [`neo4j-gds-skill`](./neo4j-gds-skill) | Run graph algorithms (PageRank, Louvain, node embeddings) on self-managed Neo4j using GDS. |
-| [`neo4j-aura-graph-analytics-skill`](./neo4j-aura-graph-analytics-skill) | Run GDS-compatible graph algorithms on Neo4j Aura via the Graph Analytics API. |
+| [`neo4j-gds-skill`](./neo4j-gds-skill) | Run GDS algorithms with the embedded GDS plugin on Aura Pro, self-managed, local, or offline Neo4j. |
+| [`neo4j-aura-graph-analytics-skill`](./neo4j-aura-graph-analytics-skill) | Run serverless Aura Graph Analytics sessions via Python client or AuraDB Cypher API projection/session management. |
 | [`neo4j-snowflake-graph-analytics-skill`](./neo4j-snowflake-graph-analytics-skill) | Run Neo4j Graph Analytics algorithms (PageRank, Louvain, WCC, Dijkstra, KNN, Node2Vec) directly inside Snowflake without moving data. |
 
 ### Drivers

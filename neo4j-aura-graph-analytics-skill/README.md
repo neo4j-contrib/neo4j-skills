@@ -8,11 +8,13 @@ Guides agents through **Aura Graph Analytics (AGA)** — Neo4j's serverless, on-
 - Memory estimation and `SessionMemory` tier selection
 - Session creation, reconnection, listing, and deletion (`get_or_create`, TTL)
 - Three data source modes: AuraDB-connected, self-managed Neo4j, standalone (Pandas/Spark)
-- Remote graph projection (`gds.graph.project.remote()`)
-- Standalone graph construction from DataFrames (`gds.graph.construct()`)
+- Remote graph projection (`gds.v2.graph.project(..., query)` with `gds.graph.project.remote()`)
+- Python client v2 endpoint shape (`gds.v2.*`) without mixing camelCase/snake_case; v1 fallback when needed
+- AuraDB Cypher API projection with `memory` or `sessionId`
+- Standalone graph construction from DataFrames (`gds.v2.graph.construct()`)
 - Algorithm execution: mutate / stream / write modes
 - Async job polling pattern
-- Result retrieval (`gds.graph.nodeProperties.stream()`, `db_node_properties`)
+- Result retrieval (`gds.v2.graph.node_properties.stream()`, `db_node_properties`)
 - Write-back to connected Neo4j; cleanup before session deletion
 - Common errors and mitigations (session expired, graph not projected, memory exceeded)
 

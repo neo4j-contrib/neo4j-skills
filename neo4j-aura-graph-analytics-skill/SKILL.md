@@ -1,12 +1,11 @@
 ---
 name: neo4j-aura-graph-analytics-skill
-description: Serverless GDS sessions on Neo4j Aura — covers GdsSessions, AuraAPICredentials,
-  DbmsConnectionInfo, SessionMemory, get_or_create, remote graph projection, gds.graph.project.remote,
-  gds.graph.construct, algorithm execution (mutate/stream/write), async job polling,
-  result retrieval, and session lifecycle. Use when running graph algorithms on Aura
-  Business Critical or VDC, processing graph data from Pandas/Spark, or using the
-  graphdatascience Python client in AGA (serverless) mode. Covers all three data source
-  three source modes (AuraDB-connected, self-managed Neo4j, standalone from DataFrames).
+description: Serverless Aura Graph Analytics (AGA) GDS Sessions — covers GdsSessions,
+  AuraGraphDataScience, AuraAPICredentials, DbmsConnectionInfo, SessionMemory, get_or_create,
+  remote graph projection with gds.v2.graph.project and gds.graph.project.remote, gds.v2
+  session endpoints, gds.v2.graph.construct, AuraDB Cypher API memory/sessionId projection, algorithms,
+  write-back, and session lifecycle. Use for AuraDB-connected, self-managed Neo4j, or standalone
+  DataFrame/Spark session workloads.
   Does NOT cover the embedded GDS plugin on Aura Pro or self-managed Neo4j — use neo4j-gds-skill.
   Does NOT handle Cypher authoring — use neo4j-cypher-skill.
   Does NOT cover Snowflake Graph Analytics — use neo4j-snowflake-graph-analytics-skill.
@@ -15,7 +14,10 @@ allowed-tools: Bash WebFetch
 ---
 
 ## When to Use
-- Running GDS algorithms on **Aura Business Critical (BC)** or **Virtual Dedicated Cloud (VDC)**
+- Running GDS algorithms in Aura Graph Analytics GDS Sessions
+- Creating `GdsSessions` or using `AuraGraphDataScience`
+- Remote projecting connected Neo4j data with `gds.graph.project.remote(...)`
+- Using AuraDB Cypher API projection with `{ memory: ... }` or `{ sessionId: ... }`
 - Processing graph data from non-Neo4j sources (Pandas, Spark, CSV)
 - On-demand / pipeline workloads — ephemeral sessions, pay per session-minute
 - Full isolation from the live database during analytics
@@ -30,12 +32,14 @@ allowed-tools: Bash WebFetch
 
 ## Deployment Decision Table
 
-| Deployment | Skill |
+| Deployment | Use |
 |---|---|
 | Aura Free | ❌ AGA not available |
 | Aura Pro | `neo4j-gds-skill` (embedded plugin) |
-| Aura Business Critical | **this skill** |
-| Aura Virtual Dedicated Cloud | **this skill** |
+| AuraDB + Python client sessions | **this skill** |
+| AuraDB + Cypher API | **this skill** for AGA-specific projection/session notes; `neo4j-cypher-skill` for query authoring |
+| Self-managed Neo4j + AGA session | **this skill** |
+| Self-managed Neo4j + embedded plugin | `neo4j-gds-skill` |
 | Non-Neo4j data (Pandas, Spark) | **this skill** (standalone mode) |
 
 ---
@@ -43,7 +47,11 @@ allowed-tools: Bash WebFetch
 ## Defaults
 
 - `graphdatascience >= 1.15` required; `>= 1.18` for Spark
-- Always call `gds.verify_connectivity()` after session creation
+- Prefer v2 endpoints: `gds.v2.graph.project(...)`, `gds.v2.page_rank.*`, `gds.v2.graph.node_properties.*`
+- Use snake_case parameters end-to-end; never mix v2 with camelCase params
+- Fallback to v1 only when v2 endpoint missing or known incompatible; label fallback clearly
+- Always call `gds.v2.verify_session_connectivity()` after session creation
+- For connected sessions, call `gds.v2.verify_db_connectivity()` when source DB reachability matters
 - Always estimate memory before creating a session for large graphs
 - Always set TTL; default is 1 hour idle, max 7 days
 - Close session when done — `gds.delete()` or `sessions.delete(name)` stops billing
@@ -111,7 +119,8 @@ gds = sessions.get_or_create(
     db_connection=db_connection,
     ttl=timedelta(hours=2),
 )
-gds.verify_connectivity()
+gds.v2.verify_session_connectivity()
+gds.v2.verify_db_connectivity()
 ```
 
 **Mode B — Self-managed Neo4j:**
@@ -128,7 +137,8 @@ gds = sessions.get_or_create(
     ttl=timedelta(hours=2),
     cloud_location=CloudLocation("gcp", "europe-west1"),
 )
-gds.verify_connectivity()
+gds.v2.verify_session_connectivity()
+gds.v2.verify_db_connectivity()
 ```
 
 **Mode C — Standalone (no Neo4j DB):**
@@ -139,7 +149,7 @@ gds = sessions.get_or_create(
     ttl=timedelta(hours=1),
     cloud_location=CloudLocation("gcp", "europe-west1"),
 )
-gds.verify_connectivity()
+gds.v2.verify_session_connectivity()
 ```
 
 `get_or_create()` is idempotent — reconnects to existing session by name.
@@ -148,9 +158,7 @@ gds.verify_connectivity()
 
 **From connected Neo4j (remote projection):**
 ```python
-G, result = gds.graph.project(
-    "my-graph",
-    """
+query = """
     CALL () {
         MATCH (p:Person)
         OPTIONAL MATCH (p)-[r:KNOWS]->(p2:Person)
@@ -165,12 +173,62 @@ G, result = gds.graph.project(
         targetNodeProperties: targetNodeProperties,
         relationshipType:     type(rel)
     })
-    """,
+"""
+
+G, result = gds.v2.graph.project(
+    graph_name="my-graph",
+    query=query,
+    undirected_relationship_types=["KNOWS"],
 )
 print(f"Projected {G.node_count()} nodes, {G.relationship_count()} relationships")
 ```
 
 `CALL () { ... }` is required for multi-pattern MATCH. Use `UNION` inside `CALL` for multiple labels/rel types.
+Remote query uses `gds.graph.project.remote(...)`; graph name is passed to `gds.v2.graph.project(...)`, not inside the query.
+V1 fallback: `gds.graph.project(graph_name="my-graph", query=query, undirected_relationship_types=["KNOWS"])`.
+
+**AuraDB Cypher API projection:**
+```cypher
+CYPHER runtime=parallel
+MATCH (source)
+OPTIONAL MATCH (source)-->(target)
+RETURN gds.graph.project(
+  'my-graph',
+  source,
+  target,
+  {},
+  { memory: '2GB' }
+)
+```
+
+Existing explicit session:
+```cypher
+CYPHER runtime=parallel
+MATCH (source)
+OPTIONAL MATCH (source)-->(target)
+RETURN gds.graph.project(
+  'my-graph',
+  source,
+  target,
+  {},
+  { sessionId: '00000000-11111111' }
+)
+```
+
+Cypher API uses `gds.graph.project(...)`, not `gds.graph.project.remote(...)`. `memory`, `ttl`, `sessionId`, and `batchSize` belong in fifth configuration argument.
+
+Session management via Cypher API:
+```cypher
+CALL gds.session.getOrCreate('test-session', '2GB', duration({minutes: 30}))
+YIELD id, name, status
+RETURN id, name, status
+
+CALL gds.session.list()
+YIELD id, name, status, memory
+RETURN id, name, status, memory
+```
+
+Implicit Cypher API sessions are deleted when all projected graphs in the session are dropped.
 
 **From Pandas DataFrames (standalone mode):**
 ```python
@@ -184,8 +242,8 @@ rels_df = pd.DataFrame([
     {"sourceNodeId": 0, "targetNodeId": 1, "relationshipType": "KNOWS"},
 ])
 
-G = gds.graph.construct("my-graph", nodes_df, rels_df)
-# Multiple DataFrames: gds.graph.construct("g", [nodes1, nodes2], [rels1, rels2])
+G = gds.v2.graph.construct("my-graph", nodes_df, rels_df)
+# Multiple DataFrames: gds.v2.graph.construct("g", [nodes1, nodes2], [rels1, rels2])
 ```
 
 Required columns — nodes: `nodeId` (int), `labels` (str). Relationships: `sourceNodeId`, `targetNodeId`, `relationshipType`. String node properties not supported — drop before `construct()`.
@@ -194,23 +252,23 @@ Required columns — nodes: `nodeId` (int), `labels` (str). Relationships: `sour
 
 ```python
 # Mutate — chain results without writing to DB
-gds.pageRank.mutate(G, mutateProperty="pagerank", dampingFactor=0.85)
-gds.fastRP.mutate(G,
-    mutateProperty="embedding",
-    embeddingDimension=128,
-    featureProperties=["pagerank"],
-    randomSeed=42,
+gds.v2.page_rank.mutate(G, mutate_property="pagerank", damping_factor=0.85)
+gds.v2.fast_rp.mutate(G,
+    mutate_property="embedding",
+    embedding_dimension=128,
+    feature_properties=["pagerank"],
+    random_seed=42,
 )
 
 # Stream — inspect results as DataFrame
-df = gds.pageRank.stream(G)
+df = gds.v2.page_rank.stream(G)
 print(df.sort_values("score", ascending=False).head(10))
 
 # Write — persist to connected Neo4j DB (connected modes only)
-gds.louvain.write(G, writeProperty="community")
+gds.v2.louvain.write(G, write_property="community")
 ```
 
-All GDS algorithms work in AGA except topological link prediction. See `neo4j-gds-skill` for the full algorithm reference.
+V1 fallback: `gds.pageRank.mutate(..., mutateProperty="pagerank")`. See `neo4j-gds-skill` for plugin algorithm reference only; AGA has separate limitations.
 
 ### Step 6 — Async Job Polling
 
@@ -219,7 +277,7 @@ Algorithm calls may return a job handle for long-running computations. Poll unti
 ```python
 import time
 
-job = gds.pageRank.mutate(G, mutateProperty="pagerank")
+job = gds.v2.page_rank.mutate(G, mutate_property="pagerank")
 
 # If job object returned (async mode), poll explicitly:
 if hasattr(job, "status"):
@@ -236,10 +294,9 @@ Do NOT assume immediate completion on large graphs. Check `.status()` before rea
 
 ```python
 # Stream node properties — one column per property
-result_df = gds.graph.nodeProperties.stream(
+result_df = gds.v2.graph.node_properties.stream(
     G,
     node_properties=["pagerank", "embedding"],
-    separate_property_columns=True,
     db_node_properties=["name"],   # pull from connected DB for context (connected modes only)
 )
 result_df.head(10)
@@ -247,7 +304,7 @@ result_df.head(10)
 
 Standalone mode — no `db_node_properties`; join back to source DataFrame:
 ```python
-result_df = gds.graph.nodeProperties.stream(G, ["pagerank"], separate_property_columns=True)
+result_df = gds.v2.graph.node_properties.stream(G, ["pagerank"])
 result_df.merge(nodes_df[["nodeId", "name"]], how="left")
 ```
 
@@ -255,16 +312,16 @@ result_df.merge(nodes_df[["nodeId", "name"]], how="left")
 
 ```python
 # Write multiple node properties to connected Neo4j
-gds.graph.nodeProperties.write(G, ["pagerank", "embedding"])
+gds.v2.graph.node_properties.write(G, ["pagerank", "embedding"])
 
 # Write relationship properties
-gds.graph.relationshipProperties.write(G, G.relationship_types(), ["score"])
+gds.v2.graph.relationships.write(G, "SIMILAR", ["score"])
 
 # Run Cypher against connected DB from within session
 gds.run_cypher("MATCH (n:Person) RETURN count(n)")
 
 # Drop projected graph (frees session memory)
-G.drop()
+gds.v2.graph.drop(G)
 
 # Delete session — stops billing
 sessions.delete(session_name="my-analysis")
@@ -292,11 +349,11 @@ gds = sessions.get_or_create(session_name="my-analysis", memory=..., db_connecti
 |---|---|---|
 | `AuthenticationError` / 401 | Wrong `CLIENT_ID`/`CLIENT_SECRET` | Regenerate in Aura Console → Account → API credentials |
 | `SessionNotFoundError` | Session expired (TTL exceeded) or name typo | `sessions.list()` to check; recreate session |
-| `GraphNotFoundError` | Projection dropped or session reconnected without re-projecting | Re-run `gds.graph.project()` or `gds.graph.construct()` |
+| `GraphNotFoundError` | Projection dropped or session reconnected without re-projecting | Re-run `gds.v2.graph.project()` or `gds.v2.graph.construct()` |
 | Algorithm job `FAILED` | Memory limit exceeded or unsupported algorithm | Increase `SessionMemory`; check topological link prediction not used |
 | `MemoryEstimationExceeded` | Graph larger than estimated | Re-estimate with actual counts; pick next tier up |
 | Results empty after session reconnect | Results not written before session was closed | Always write/stream before `gds.delete()` |
-| `String node properties not supported` | String column in nodes DataFrame | Drop string columns before `gds.graph.construct()` |
+| `String node properties not supported` | String column in nodes DataFrame | Drop string columns before `gds.v2.graph.construct()` |
 | `AGA not enabled for project` | AGA feature not activated | Enable in Aura Console → project settings |
 
 ---
@@ -312,6 +369,8 @@ Load on demand:
 | Need | URL |
 |---|---|
 | AGA Python client docs | `https://neo4j.com/docs/graph-data-science-client/current/aura-graph-analytics/` |
+| AGA Cypher API docs | `https://neo4j.com/docs/graph-data-science/current/aura-graph-analytics/cypher/` |
+| Python client v2 docs | `https://neo4j.com/docs/graph-data-science-client/current/v2_endpoints/` |
 | AuraDB tutorial notebook | `https://github.com/neo4j/graph-data-science-client/blob/main/examples/graph-analytics-serverless.ipynb` |
 | GDS algorithm reference | `https://neo4j.com/docs/graph-data-science/current/algorithms/` |
 
@@ -322,7 +381,12 @@ Load on demand:
 - [ ] AGA feature enabled for Aura project (Aura Console → project settings)
 - [ ] Memory estimated before session creation (`sessions.estimate(...)`)
 - [ ] Cloud location chosen near data source
-- [ ] `gds.verify_connectivity()` called after session creation
+- [ ] `gds.v2.verify_session_connectivity()` called after session creation
+- [ ] Connected sessions call `gds.v2.verify_db_connectivity()` when source DB access required
+- [ ] Remote projection uses `gds.v2.graph.project(..., query)` with `gds.graph.project.remote(...)` inside query
+- [ ] Remote projection graph name passed to endpoint, not remote function
+- [ ] AuraDB Cypher API projection uses fifth config map for `memory` or `sessionId`
+- [ ] Explicit Cypher API sessions use `gds.session.getOrCreate(...)`; implicit sessions dropped with projected graph
 - [ ] TTL set to avoid unexpected costs on idle sessions
 - [ ] Async algorithm jobs polled until `RUNNING_DONE` before reading results
 - [ ] Results written back (connected modes) or streamed and persisted (standalone) before deletion
