@@ -83,8 +83,8 @@ gds = sessions.get_or_create(
     cloud_location=CloudLocation("gcp", "europe-west1"),
 )
 
-nodes = pd.read_csv("nodes.csv")   # required: nodeId (int), labels (str)
-edges = pd.read_csv("edges.csv")   # required: sourceNodeId, targetNodeId, relationshipType
+nodes = pd.read_csv("nodes.csv")   # nodeId (int), labels (str)
+edges = pd.read_csv("edges.csv")   # sourceNodeId, targetNodeId, relationshipType
 
 G = gds.v2.graph.construct("my-graph", nodes, edges)
 

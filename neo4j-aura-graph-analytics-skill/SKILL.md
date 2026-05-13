@@ -49,12 +49,12 @@ allowed-tools: Bash WebFetch
 - `graphdatascience >= 1.15` required; `>= 1.18` for Spark
 - Prefer v2 endpoints: `gds.v2.graph.project(...)`, `gds.v2.page_rank.*`, `gds.v2.graph.node_properties.*`
 - Use snake_case parameters end-to-end; never mix v2 with camelCase params
-- Fallback to v1 only when v2 endpoint missing or known incompatible; label fallback clearly
-- Always call `gds.v2.verify_session_connectivity()` after session creation
-- For connected sessions, call `gds.v2.verify_db_connectivity()` when source DB reachability matters
-- Always estimate memory before creating a session for large graphs
-- Always set TTL; default is 1 hour idle, max 7 days
-- Close session when done — `gds.delete()` or `sessions.delete(name)` stops billing
+- Use v1 if v2 endpoint missing/incompatible; label fallback
+- Call `gds.v2.verify_session_connectivity()` after session creation
+- Connected sessions: call `gds.v2.verify_db_connectivity()` when source DB access required
+- Estimate memory before large sessions
+- Set TTL; default 1h idle, max 7d
+- Close session when done: `gds.delete()` or `sessions.delete(name)` stops billing
 - Use `AuraAPICredentials.from_env()` — never hardcode credentials
 
 ---
@@ -80,7 +80,7 @@ sessions = GdsSessions(api_credentials=AuraAPICredentials.from_env())
 # Create API credentials in Aura Console → Account → API credentials
 ```
 
-If member of multiple projects, set `AURA_PROJECT_ID` or pass `project_id=` explicitly.
+If member of multiple projects: set `AURA_PROJECT_ID` or pass `project_id=`.
 
 ### Step 2 — Estimate Memory
 
@@ -96,7 +96,7 @@ memory = sessions.estimate(
         AlgorithmCategory.COMMUNITY_DETECTION,
     ],
 )
-# Returns a SessionMemory tier, e.g. SessionMemory.m_8GB
+# Returns SessionMemory tier, e.g. SessionMemory.m_8GB
 # Fixed tiers: m_2GB … m_256GB — see references/limitations.md
 ```
 
@@ -152,7 +152,7 @@ gds = sessions.get_or_create(
 gds.v2.verify_session_connectivity()
 ```
 
-`get_or_create()` is idempotent — reconnects to existing session by name.
+`get_or_create()` is idempotent; reconnects to existing session by name.
 
 ### Step 4 — Project Graph
 
@@ -183,8 +183,8 @@ G, result = gds.v2.graph.project(
 print(f"Projected {G.node_count()} nodes, {G.relationship_count()} relationships")
 ```
 
-`CALL () { ... }` is required for multi-pattern MATCH. Use `UNION` inside `CALL` for multiple labels/rel types.
-Remote query uses `gds.graph.project.remote(...)`; graph name is passed to `gds.v2.graph.project(...)`, not inside the query.
+`CALL () { ... }` required for multi-pattern MATCH. Use `UNION` inside `CALL` for multiple labels/rel types.
+Remote query uses `gds.graph.project.remote(...)`; pass graph name to `gds.v2.graph.project(...)`, not query.
 V1 fallback: `gds.graph.project(graph_name="my-graph", query=query, undirected_relationship_types=["KNOWS"])`.
 
 **AuraDB Cypher API projection:**
@@ -215,7 +215,7 @@ RETURN gds.graph.project(
 )
 ```
 
-Cypher API uses `gds.graph.project(...)`, not `gds.graph.project.remote(...)`. `memory`, `ttl`, `sessionId`, and `batchSize` belong in fifth configuration argument.
+Cypher API uses `gds.graph.project(...)`, not `gds.graph.project.remote(...)`. Put `memory`, `ttl`, `sessionId`, `batchSize` in fifth config argument.
 
 Session management via Cypher API:
 ```cypher
@@ -228,7 +228,7 @@ YIELD id, name, status, memory
 RETURN id, name, status, memory
 ```
 
-Implicit Cypher API sessions are deleted when all projected graphs in the session are dropped.
+Implicit Cypher API sessions delete when all projected graphs in session are dropped.
 
 **From Pandas DataFrames (standalone mode):**
 ```python
@@ -246,7 +246,7 @@ G = gds.v2.graph.construct("my-graph", nodes_df, rels_df)
 # Multiple DataFrames: gds.v2.graph.construct("g", [nodes1, nodes2], [rels1, rels2])
 ```
 
-Required columns — nodes: `nodeId` (int), `labels` (str). Relationships: `sourceNodeId`, `targetNodeId`, `relationshipType`. String node properties not supported — drop before `construct()`.
+Required columns — nodes: `nodeId` (int), `labels` (str). Relationships: `sourceNodeId`, `targetNodeId`, `relationshipType`. Drop string node properties before `construct()`.
 
 ### Step 5 — Run Algorithms
 
@@ -268,11 +268,11 @@ print(df.sort_values("score", ascending=False).head(10))
 gds.v2.louvain.write(G, write_property="community")
 ```
 
-V1 fallback: `gds.pageRank.mutate(..., mutateProperty="pagerank")`. See `neo4j-gds-skill` for plugin algorithm reference only; AGA has separate limitations.
+V1 fallback: `gds.pageRank.mutate(..., mutateProperty="pagerank")`. Plugin algorithm reference → `neo4j-gds-skill`; AGA limitations differ.
 
 ### Step 6 — Async Job Polling
 
-Algorithm calls may return a job handle for long-running computations. Poll until done:
+Long-running algorithms may return job handle. Poll until done:
 
 ```python
 import time
@@ -288,21 +288,21 @@ if hasattr(job, "status"):
         raise RuntimeError(f"Algorithm job failed: {job.status()}")
 ```
 
-Do NOT assume immediate completion on large graphs. Check `.status()` before reading results.
+Large graphs: check `.status()` before reading results.
 
 ### Step 7 — Retrieve Results
 
 ```python
-# Stream node properties — one column per property
+# Stream node properties
 result_df = gds.v2.graph.node_properties.stream(
     G,
     node_properties=["pagerank", "embedding"],
-    db_node_properties=["name"],   # pull from connected DB for context (connected modes only)
+    db_node_properties=["name"],   # connected modes only
 )
 result_df.head(10)
 ```
 
-Standalone mode — no `db_node_properties`; join back to source DataFrame:
+Standalone mode: no `db_node_properties`; join source DataFrame:
 ```python
 result_df = gds.v2.graph.node_properties.stream(G, ["pagerank"])
 result_df.merge(nodes_df[["nodeId", "name"]], how="left")
@@ -311,24 +311,24 @@ result_df.merge(nodes_df[["nodeId", "name"]], how="left")
 ### Step 8 — Write Back and Clean Up
 
 ```python
-# Write multiple node properties to connected Neo4j
+# Write node properties to connected Neo4j
 gds.v2.graph.node_properties.write(G, ["pagerank", "embedding"])
 
 # Write relationship properties
 gds.v2.graph.relationships.write(G, "SIMILAR", ["score"])
 
-# Run Cypher against connected DB from within session
+# Query connected DB from session
 gds.run_cypher("MATCH (n:Person) RETURN count(n)")
 
-# Drop projected graph (frees session memory)
+# Drop projected graph
 gds.v2.graph.drop(G)
 
-# Delete session — stops billing
+# Delete session
 sessions.delete(session_name="my-analysis")
 # or: gds.delete()
 ```
 
-Write before deleting — results not written back are lost when session closes.
+Write before delete; unwritten results lost when session closes.
 
 ### Session Management
 

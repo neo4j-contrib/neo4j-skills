@@ -42,7 +42,7 @@ allowed-tools: Bash WebFetch
 
 ## Pre-flight
 
-Use only when embedded GDS plugin is available.
+Use only with embedded GDS plugin.
 
 ```python
 from graphdatascience import GraphDataScience
@@ -56,7 +56,7 @@ print(gds.server_version())
 RETURN gds.version() AS gds_version
 ```
 
-Fails with `Unknown function 'gds.version'` → GDS plugin unavailable. For AuraDB serverless analytics, use `neo4j-aura-graph-analytics-skill`; for self-managed/local, install or enable GDS plugin.
+If `Unknown function 'gds.version'` → GDS plugin unavailable. AuraDB serverless analytics → `neo4j-aura-graph-analytics-skill`. Self-managed/local → install or enable GDS plugin.
 
 ```bash
 pip install graphdatascience              # Python client
@@ -66,10 +66,10 @@ pip install graphdatascience[rust_ext]    # 3–10× faster serialization
 Compatibility: graphdatascience v1.21 — GDS >= 2.6 and < 2.28 / < 2026.4, Python >= 3.10 and < 3.15, Neo4j Driver >= 4.4.12 and < 7.0.
 
 V2 rules:
-- Prefer `gds.v2.*` for Python client calls whenever endpoint exists.
+- Prefer `gds.v2.*` when endpoint exists.
 - Use snake_case endpoints and parameters: `page_rank`, `fast_rp`, `mutate_property`, `write_property`.
 - Use typed result attributes: `result.write_millis`, not `result["writeMillis"]`.
-- Fallback to v1 only when v2 endpoint missing or known incompatible; label fallback clearly.
+- Use v1 if v2 endpoint missing/incompatible; label fallback.
 
 ---
 
@@ -97,7 +97,7 @@ G, result = gds.v2.graph.project(
 )
 ```
 
-Native projection: plugin/simple Python-client workflow only. Not supported in Aura Graph Analytics Sessions.
+Native projection: plugin/simple Python-client workflow only. AGA Sessions → `neo4j-aura-graph-analytics-skill`.
 V1 fallback: `gds.graph.project(...)`.
 
 ### Cypher Projection (use for new Cypher workflows, filters, transforms)
@@ -114,15 +114,15 @@ G, result = gds.graph.cypher.project(
 )
 ```
 
-`gds.graph.cypher.project` must end with one `RETURN gds.graph.project(...)` clause. If validation fails, use `gds.run_cypher(...)` then `gds.graph.get("graphName")`.
-Use v1 `gds.graph.cypher.project(...)` only when v2 graph projection cannot express the needed filter/transform.
+`gds.graph.cypher.project` must end with one `RETURN gds.graph.project(...)` clause. If validation fails: use `gds.run_cypher(...)`, then `gds.graph.get("graphName")`.
+Use v1 `gds.graph.cypher.project(...)` if v2 graph projection cannot express required filter/transform.
 
-For Aura Graph Analytics Sessions, use `neo4j-aura-graph-analytics-skill`; do not use plugin Cypher projection.
+AGA Sessions → `neo4j-aura-graph-analytics-skill`; never use plugin Cypher projection.
 
 ### Undirected Projection
 
-Pass `orientation: 'UNDIRECTED'` per relationship type in native projection.
-For plugin Cypher projection, use `undirectedRelationshipTypes: ['*']` in the fifth `gds.graph.project(...)` configuration argument.
+Native projection: set `orientation: 'UNDIRECTED'` per relationship type.
+Plugin Cypher projection: set `undirectedRelationshipTypes: ['*']` in fifth `gds.graph.project(...)` config argument.
 
 Leiden is defined for directed and undirected graphs. Project undirected relationships when community structure is naturally symmetric.
 
@@ -134,14 +134,14 @@ G.relationship_count()      # 87_211
 G.node_properties()         # projected + mutated properties by label
 G.relationship_properties() # projected + mutated properties by type
 G.size_in_bytes()
-gds.v2.graph.drop(G)        # always drop after use — frees JVM heap
+gds.v2.graph.drop(G)        # frees JVM heap
 
 G = gds.v2.graph.get("myGraph")       # re-attach to existing projection
 
 gds.v2.graph.list()
 ```
 
-### Memory Estimation — always run before large projections and algorithms
+### Memory Estimation — run before large projections and algorithms
 
 ```cypher
 CALL gds.graph.project.estimate(['Person'], 'KNOWS')
@@ -157,7 +157,7 @@ est = gds.v2.page_rank.estimate(G, damping_factor=0.85)
 print(est.required_memory)
 ```
 
-Projection estimate fallback: use v1 `gds.graph.project.estimate(...)` if no v2 estimate endpoint is available.
+Projection estimate fallback: use v1 `gds.graph.project.estimate(...)` if v2 estimate endpoint unavailable.
 
 ---
 
@@ -347,7 +347,7 @@ gds.v2.fast_rp.mutate(G, embedding_dimension=128, random_seed=42, mutate_propert
 gds.v2.knn.write(G, node_properties=["emb"], top_k=10,
                  write_relationship_type="SIMILAR", write_property="score")
 
-# 5. Cleanup — always
+# 5. Cleanup
 gds.v2.graph.drop(G)
 ```
 
@@ -378,8 +378,8 @@ Full algorithm catalog → [references/algorithms.md](references/algorithms.md)
 
 | Error | Cause | Fix |
 |---|---|---|
-| `Unknown function 'gds.version'` | Embedded GDS plugin unavailable | Use `neo4j-aura-graph-analytics-skill` for AGA; install plugin for self-managed/local |
-| `Insufficient heap memory` / OOM | Graph too large for available JVM heap | Run `gds.graph.project.estimate` first; increase `dbms.memory.heap.max_size` |
+| `Unknown function 'gds.version'` | Embedded GDS plugin unavailable | AGA → `neo4j-aura-graph-analytics-skill`; self-managed/local → install plugin |
+| `Insufficient heap memory` / OOM | Graph too large for available JVM heap | Run `gds.graph.project.estimate`; increase `dbms.memory.heap.max_size` |
 | `Procedure not found: gds.leiden` | Older or incompatible GDS | Check `CALL gds.list()` for available procedures; upgrade GDS or use Louvain |
 | `Node property 'X' not found` after mutate | Property not projected or wrong graph name | Verify `G.node_properties()` includes the property; check `mutate_property` spelling |
 | `Graph 'myGraph' already exists` | Leftover projection from failed run | `CALL gds.graph.drop('myGraph')` or `gds.v2.graph.drop(G)` |
@@ -391,12 +391,12 @@ Full algorithm catalog → [references/algorithms.md](references/algorithms.md)
 ## Full Workflow
 
 1. Create `gds` with `GraphDataScience(...)`.
-2. Verify plugin with `gds.server_version()` or `RETURN gds.version()`.
-3. Estimate memory with `gds.graph.project.estimate(...)` and algorithm `.estimate(...)`.
-4. Project named graph with `gds.v2.graph.project(...)` when possible.
+2. Verify plugin: `gds.server_version()` or `RETURN gds.version()`.
+3. Estimate memory: `gds.graph.project.estimate(...)` and algorithm `.estimate(...)`.
+4. Project named graph with `gds.v2.graph.project(...)`.
 5. Run `gds.v2.*.stream` first; switch to `mutate`; use `write` only when satisfied.
 6. Drop graph with `gds.v2.graph.drop(G)`.
-7. Use v1 fallback only for endpoints missing in v2, such as plugin Cypher projection.
+7. Use v1 only for endpoints missing in v2, such as plugin Cypher projection.
 
 Built-in test datasets: `gds.v2.graph.datasets.load_cora()`, `gds.v2.graph.datasets.load_karate_club()`, `gds.v2.graph.datasets.load_imdb()`
 
