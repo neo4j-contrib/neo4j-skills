@@ -7,12 +7,14 @@ Goal: scan Neo4j release notes and deprecation pages, then update any SKILL.md a
 
 ## Step 1 — Fetch release signals
 
-Fetch and read each source. Extract: new syntax, deprecated APIs, removed features, version bumps, new config options, new tools/libraries. Note the source URL and Neo4j version for each finding.
+Fetch and read each source. Extract: new syntax, deprecated APIs, removed features, version bumps, new config options, new tools/libraries. Note the source URL and Neo4j (or GDS) version for each finding.
 
 **Release notes / changelogs:**
 - https://neo4j.com/release-notes/ — scan releases published in the last 30 days
 - https://github.com/neo4j/neo4j/wiki/Neo4j-2026-changelog
 - https://github.com/neo4j/neo4j/wiki/Changelog — scan entries from the last 30 days
+- https://github.com/neo4j/graph-data-science/releases - scan entries from the last 30 days
+- https://github.com/neo4j/graph-data-science-client/releases - scan entries from the last 30 days
 
 **Deprecation and removal pages:**
 - https://neo4j.com/docs/cypher-manual/current/deprecations-additions-removals-compatibility/
@@ -21,7 +23,7 @@ Fetch and read each source. Extract: new syntax, deprecated APIs, removed featur
 
 For each finding, note:
 - What changed (new / deprecated / removed / renamed)
-- Which Neo4j version introduced it
+- Which Neo4j (or GDS) version introduced it
 - Which skill(s) it likely affects
 
 ---
@@ -51,7 +53,7 @@ Doc roots:
 - Go driver: https://neo4j.com/docs/go-manual/current/
 - .NET driver: https://neo4j.com/docs/dotnet-manual/current/
 - GDS: https://neo4j.com/docs/graph-data-science/current/
-- GraphRAG Python client: https://neo4j.com/docs/graph-data-science-client/current/
+- GDS Python client: https://neo4j.com/docs/graph-data-science-client/current/
 - GraphQL: https://neo4j.com/docs/graphql/current/
 - Aura: https://neo4j.com/docs/aura/current/
 - Kafka connector: https://neo4j.com/docs/kafka/current/
