@@ -3,12 +3,12 @@ name: Skill Lint
 on:
   pull_request:
     paths:
-      - '**-skill/SKILL.md'
+      - 'skills/**/SKILL.md'
       - 'scripts/lint_skills.py'
   push:
     branches: [main]
     paths:
-      - '**-skill/SKILL.md'
+      - 'skills/**/SKILL.md'
       - 'scripts/lint_skills.py'
 
 jobs:

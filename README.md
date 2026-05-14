@@ -55,7 +55,7 @@ Add to `~/.agents/plugins/marketplace.json`:
   "plugins": [
     {
       "name": "neo4j-skills",
-      "source": { "source": "local", "path": "./plugins/neo4j-skills" },
+      "source": { "source": "local", "path": "./.codex/plugins/neo4j-skills" },
       "policy": { "installation": "AVAILABLE" },
       "category": "Database"
     }
@@ -69,55 +69,55 @@ Add to `~/.agents/plugins/marketplace.json`:
 
 | Skill | Description |
 |---|---|
-| [`neo4j-cypher-skill`](./neo4j-cypher-skill) | Write, optimize, and debug Cypher queries. Covers CYPHER 25 syntax, query planning, indexes, and common patterns. |
-| [`neo4j-modeling-skill`](./neo4j-modeling-skill) | Design and review graph data models. Covers node/relationship patterns, property choices, and relational-to-graph migration. |
-| [`neo4j-getting-started-skill`](./neo4j-getting-started-skill) | Zero-to-app walkthrough: provision → model → load → query. Use for first-time setup on Aura or Docker. |
+| [`neo4j-cypher-skill`](./skills/neo4j-cypher-skill) | Write, optimize, and debug Cypher queries. Covers CYPHER 25 syntax, query planning, indexes, and common patterns. |
+| [`neo4j-modeling-skill`](./skills/neo4j-modeling-skill) | Design and review graph data models. Covers node/relationship patterns, property choices, and relational-to-graph migration. |
+| [`neo4j-getting-started-skill`](./skills/neo4j-getting-started-skill) | Zero-to-app walkthrough: provision → model → load → query. Use for first-time setup on Aura or Docker. |
 
 ### Importing Data
 
 | Skill | Description |
 |---|---|
-| [`neo4j-import-skill`](./neo4j-import-skill) | Load structured data (CSV, JSON) via `LOAD CSV`, `neo4j-admin import`, and the Data Importer GUI. |
-| [`neo4j-document-import-skill`](./neo4j-document-import-skill) | Extract knowledge graphs from unstructured documents and PDFs using `SimpleKGPipeline`. |
-| [`neo4j-migration-skill`](./neo4j-migration-skill) | Upgrade drivers and Cypher from 4.x/5.x to 2025.x. Covers API changes, deprecated functions, and Cypher 25 syntax. |
+| [`neo4j-import-skill`](./skills/neo4j-import-skill) | Load structured data (CSV, JSON) via `LOAD CSV`, `neo4j-admin import`, and the Data Importer GUI. |
+| [`neo4j-document-import-skill`](./skills/neo4j-document-import-skill) | Extract knowledge graphs from unstructured documents and PDFs using `SimpleKGPipeline`. |
+| [`neo4j-migration-skill`](./skills/neo4j-migration-skill) | Upgrade drivers and Cypher from 4.x/5.x to 2025.x. Covers API changes, deprecated functions, and Cypher 25 syntax. |
 
 ### AI & Search
 
 | Skill | Description |
 |---|---|
-| [`neo4j-vector-index-skill`](./neo4j-vector-index-skill) | Create and query vector indexes for semantic similarity search. Covers index creation, embedding ingestion, and `ai.text.embed()` [2025.12]. |
-| [`neo4j-genai-plugin-skill`](./neo4j-genai-plugin-skill) | In-Cypher LLM integration via `ai.text.*` functions [2025.12]: embeddings, text completion, structured output, chat, tokenization, and pure-Cypher GraphRAG. |
-| [`neo4j-graphrag-skill`](./neo4j-graphrag-skill) | Build GraphRAG retrieval pipelines with `neo4j-graphrag`. Covers retriever selection (`VectorCypherRetriever`, `HybridCypherRetriever`), `retrieval_query` patterns, and LangChain/LlamaIndex integration. |
-| [`neo4j-agent-memory-skill`](./neo4j-agent-memory-skill) | Graph-native agent memory: short-term (conversations), long-term (POLE+O entity model), and reasoning traces. Covers `neo4j-agent-memory`, NAMS, MCP, LangChain, CrewAI, ADK. |
-| [`neo4j-mcp-skill`](./neo4j-mcp-skill) | Set up and use the Neo4j MCP server for tool-based agent access to the database. |
+| [`neo4j-vector-index-skill`](./skills/neo4j-vector-index-skill) | Create and query vector indexes for semantic similarity search. Covers index creation, embedding ingestion, and `ai.text.embed()` [2025.12]. |
+| [`neo4j-genai-plugin-skill`](./skills/neo4j-genai-plugin-skill) | In-Cypher LLM integration via `ai.text.*` functions [2025.12]: embeddings, text completion, structured output, chat, tokenization, and pure-Cypher GraphRAG. |
+| [`neo4j-graphrag-skill`](./skills/neo4j-graphrag-skill) | Build GraphRAG retrieval pipelines with `neo4j-graphrag`. Covers retriever selection (`VectorCypherRetriever`, `HybridCypherRetriever`), `retrieval_query` patterns, and LangChain/LlamaIndex integration. |
+| [`neo4j-agent-memory-skill`](./skills/neo4j-agent-memory-skill) | Graph-native agent memory: short-term (conversations), long-term (POLE+O entity model), and reasoning traces. Covers `neo4j-agent-memory`, NAMS, MCP, LangChain, CrewAI, ADK. |
+| [`neo4j-mcp-skill`](./skills/neo4j-mcp-skill) | Set up and use the Neo4j MCP server for tool-based agent access to the database. |
 
 ### Graph Data Science
 
 | Skill | Description |
 |---|---|
-| [`neo4j-gds-skill`](./neo4j-gds-skill) | Run graph algorithms (PageRank, Louvain, node embeddings) on self-managed Neo4j using GDS. |
-| [`neo4j-aura-graph-analytics-skill`](./neo4j-aura-graph-analytics-skill) | Run GDS-compatible graph algorithms on Neo4j Aura via the Graph Analytics API. |
-| [`neo4j-snowflake-graph-analytics-skill`](./neo4j-snowflake-graph-analytics-skill) | Run Neo4j Graph Analytics algorithms (PageRank, Louvain, WCC, Dijkstra, KNN, Node2Vec) directly inside Snowflake without moving data. |
+| [`neo4j-gds-skill`](./skills/neo4j-gds-skill) | Run graph algorithms (PageRank, Louvain, node embeddings) on self-managed Neo4j using GDS. |
+| [`neo4j-aura-graph-analytics-skill`](./skills/neo4j-aura-graph-analytics-skill) | Run GDS-compatible graph algorithms on Neo4j Aura via the Graph Analytics API. |
+| [`neo4j-snowflake-graph-analytics-skill`](./skills/neo4j-snowflake-graph-analytics-skill) | Run Neo4j Graph Analytics algorithms (PageRank, Louvain, WCC, Dijkstra, KNN, Node2Vec) directly inside Snowflake without moving data. |
 
 ### Drivers
 
 | Skill | Description |
 |---|---|
-| [`neo4j-driver-python-skill`](./neo4j-driver-python-skill) | Python driver: `execute_query`, sessions, transactions, async, UNWIND batching, data types. |
-| [`neo4j-driver-javascript-skill`](./neo4j-driver-javascript-skill) | JavaScript/TypeScript driver v6: `executeQuery`, managed transactions, RxJS, data types. |
-| [`neo4j-driver-java-skill`](./neo4j-driver-java-skill) | Java driver: `ExecutableQuery`, managed/explicit transactions, object mapping, reactive. |
-| [`neo4j-driver-dotnet-skill`](./neo4j-driver-dotnet-skill) | .NET/C# driver: `ExecuteReadAsync`/`ExecuteWriteAsync`, DI registration, `IResultCursor`. |
-| [`neo4j-driver-go-skill`](./neo4j-driver-go-skill) | Go driver v6: `ExecuteQuery`, generic helpers, spatial types, connection configuration. |
+| [`neo4j-driver-python-skill`](./skills/neo4j-driver-python-skill) | Python driver: `execute_query`, sessions, transactions, async, UNWIND batching, data types. |
+| [`neo4j-driver-javascript-skill`](./skills/neo4j-driver-javascript-skill) | JavaScript/TypeScript driver v6: `executeQuery`, managed transactions, RxJS, data types. |
+| [`neo4j-driver-java-skill`](./skills/neo4j-driver-java-skill) | Java driver: `ExecutableQuery`, managed/explicit transactions, object mapping, reactive. |
+| [`neo4j-driver-dotnet-skill`](./skills/neo4j-driver-dotnet-skill) | .NET/C# driver: `ExecuteReadAsync`/`ExecuteWriteAsync`, DI registration, `IResultCursor`. |
+| [`neo4j-driver-go-skill`](./skills/neo4j-driver-go-skill) | Go driver v6: `ExecuteQuery`, generic helpers, spatial types, connection configuration. |
 
 ### Frameworks & Platforms
 
 | Skill | Description |
 |---|---|
-| [`neo4j-graphql-skill`](./neo4j-graphql-skill) | Build GraphQL APIs backed by Neo4j using `@neo4j/graphql`. Covers type definitions, `@relationship`, `@cypher`, and filtering. |
-| [`neo4j-spring-data-skill`](./neo4j-spring-data-skill) | Spring Boot + Neo4j with Spring Data Neo4j: `@Node`, `@Relationship`, repositories, projections. |
-| [`neo4j-cli-tools-skill`](./neo4j-cli-tools-skill) | DB admin via `neo4j-admin`, `cypher-shell`, `aura-cli`, and `neo4j-cli` (preview unified CLI). Covers backups, imports, user management, Aura provisioning, and agent skill install. |
-| [`neo4j-aura-provisioning-skill`](./neo4j-aura-provisioning-skill) | Create and manage Neo4j Aura instances via the Aura CLI and REST API. Covers async polling, credential handling, and tier selection. |
-| [`neo4j-aura-agent-skill`](./neo4j-aura-agent-skill) | Create, configure, and invoke Aura Agents via the v2beta1 REST API. Covers CypherTemplate, SimilaritySearch, and Text2Cypher tools, system prompts, REST/MCP deployment, and OAuth2 auth. |
+| [`neo4j-graphql-skill`](./skills/neo4j-graphql-skill) | Build GraphQL APIs backed by Neo4j using `@neo4j/graphql`. Covers type definitions, `@relationship`, `@cypher`, and filtering. |
+| [`neo4j-spring-data-skill`](./skills/neo4j-spring-data-skill) | Spring Boot + Neo4j with Spring Data Neo4j: `@Node`, `@Relationship`, repositories, projections. |
+| [`neo4j-cli-tools-skill`](./skills/neo4j-cli-tools-skill) | DB admin via `neo4j-admin`, `cypher-shell`, `aura-cli`, and `neo4j-cli` (preview unified CLI). Covers backups, imports, user management, Aura provisioning, and agent skill install. |
+| [`neo4j-aura-provisioning-skill`](./skills/neo4j-aura-provisioning-skill) | Create and manage Neo4j Aura instances via the Aura CLI and REST API. Covers async polling, credential handling, and tier selection. |
+| [`neo4j-aura-agent-skill`](./skills/neo4j-aura-agent-skill) | Create, configure, and invoke Aura Agents via the v2beta1 REST API. Covers CypherTemplate, SimilaritySearch, and Text2Cypher tools, system prompts, REST/MCP deployment, and OAuth2 auth. |
 
 ## What are Agent Skills?
 

@@ -161,8 +161,9 @@ def main() -> int:
         skill_dirs = sorted({p.parent for p in tracked if p.parent.name.endswith('-skill')})
         skill_files = sorted(p for p in tracked if p.name == 'SKILL.md' and p.parent.name.endswith('-skill'))
     else:
-        skill_dirs = sorted(root.glob('*-skill'))
-        skill_files = sorted(root.glob('*-skill/SKILL.md'))
+        skills_root = root / 'skills'
+        skill_dirs = sorted(skills_root.glob('*-skill'))
+        skill_files = sorted(skills_root.glob('*-skill/SKILL.md'))
 
     all_errors: list[str] = []
 

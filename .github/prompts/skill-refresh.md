@@ -31,7 +31,7 @@ For each finding, note:
 Discover skills dynamically:
 
 ```bash
-ls -d neo4j-*-skill/
+ls -d skills/neo4j-*-skill/
 ```
 
 For each affected skill, read its `SKILL.md` and any linked `references/` files before making changes.

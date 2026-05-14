@@ -2,7 +2,7 @@
 
 A `SKILL.md` is an on-demand operational playbook for an autonomous coding agent — runbook with judgment, checklist with decision logic, guardrail against improvisational mistakes.
 
-All skills live in `neo4j-*-skill/` directories. Run `python3 scripts/lint_skills.py` before every commit.
+All skills live in `skills/neo4j-*-skill/` directories. Run `python3 scripts/lint_skills.py` before every commit.
 
 ## Language Style — Write for Agents, Not Humans
 

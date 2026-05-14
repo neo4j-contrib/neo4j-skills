@@ -16,7 +16,7 @@
     "graphrag",
     "gds"
   ],
-  "skills": "./",
+  "skills": "./skills",
   "interface": {
     "displayName": "Neo4j Graph Database",
     "shortDescription": "Interact with Neo4j graph databases using Cypher, drivers, and graph algorithms.",
