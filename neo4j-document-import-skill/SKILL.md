@@ -51,15 +51,19 @@ allowed-tools: Bash WebFetch
 ## Install
 
 ```bash
-pip install neo4j-graphrag              # includes SimpleKGPipeline
-pip install neo4j-graphrag[openai]      # + OpenAI LLM/embedder
-pip install neo4j-graphrag[anthropic]   # + Anthropic Claude
-pip install neo4j-graphrag[google]      # + Vertex AI / Gemini
+pip install neo4j-graphrag                   # includes SimpleKGPipeline
+pip install neo4j-graphrag[openai]           # + OpenAI LLM/embedder
+pip install neo4j-graphrag[anthropic]        # + Anthropic Claude
+pip install neo4j-graphrag[google]           # + Vertex AI / Gemini
+pip install neo4j-graphrag[bedrock]          # + Amazon Bedrock (boto3) — added v1.15.0
+pip install neo4j-graphrag[ollama]           # + Ollama (local)
+pip install neo4j-graphrag[mistralai]        # + MistralAI
+pip install neo4j-graphrag[fuzzy-matching]   # + FuzzyMatchResolver (rapidfuzz)
 # spaCy entity resolver (Python <= 3.13 only — unsupported on 3.14+):
 pip install neo4j-graphrag[nlp]
 ```
 
-Requires: `neo4j>=6.0.0`, Python>=3.10, Neo4j>=5.18.1 (Aura>=5.18.0).
+Requires: `neo4j>=5.17.0` (driver 6.x supported), Python>=3.10, Neo4j>=5.18.1 (Aura>=5.18.0).
 
 ---
 
@@ -78,20 +82,39 @@ patterns = [
     ("Article", "MENTIONS", "Organization"),
 ]
 
-# Option B — Rich schema (better extraction quality)
+# Option B — Rich GraphSchema (production; best extraction quality)
 from neo4j_graphrag.experimental.components.schema import (
-    SchemaBuilder, SchemaEntity, SchemaRelation
+    GraphSchema, NodeType, RelationshipType, PropertyType, ConstraintType
 )
-schema = SchemaBuilder().create_schema_from_dict({
-    "entities": {
-        "Person": {"description": "A human individual", "properties": {"name": "str", "role": "str"}},
-        "Organization": {"description": "A company or institution", "properties": {"name": "str", "industry": "str"}},
-    },
-    "relations": {
-        "WORKS_AT": {"description": "Employment relationship"},
-    },
-    "patterns": [("Person", "WORKS_AT", "Organization")],
-})
+schema = GraphSchema(
+    node_types=[
+        NodeType(
+            label="Person",
+            description="A human individual",
+            properties=[
+                PropertyType(name="name", type="STRING"),
+                PropertyType(name="role", type="STRING"),
+            ],
+        ),
+        NodeType(
+            label="Organization",
+            description="A company or institution",
+            properties=[
+                PropertyType(name="name", type="STRING"),
+                PropertyType(name="industry", type="STRING"),
+            ],
+        ),
+    ],
+    relationship_types=[
+        RelationshipType(label="WORKS_AT", description="Employment relationship"),
+    ],
+    patterns=[("Person", "WORKS_AT", "Organization")],
+    # Optional: constraints emitted to ParquetWriter metadata (v1.15.0+)
+    constraints=[
+        ConstraintType(label="Person", property_name="name", type="UNIQUENESS"),
+        ConstraintType(label="Organization", property_name="name", type="KEY"),
+    ],
+)
 
 # Option C — Auto-extract schema from text (no constraints)
 schema = "EXTRACTED"   # LLM infers types; noisier output
@@ -117,8 +140,10 @@ driver = GraphDatabase.driver(
 )
 
 llm = OpenAILLM(
-    model_name="gpt-4o",
-    model_params={"temperature": 0, "response_format": {"type": "json_object"}},
+    model_name="gpt-4.1",
+    model_params={"temperature": 0},
+    # Note: SimpleKGPipeline auto-enables structured output for OpenAI/VertexAI LLMs (v1.14.0+)
+    # Do NOT set response_format manually — it is managed by the pipeline
 )
 embedder = OpenAIEmbeddings()   # OPENAI_API_KEY from env
 
@@ -126,9 +151,7 @@ pipeline = SimpleKGPipeline(
     llm=llm,
     driver=driver,
     embedder=embedder,
-    entities=entities,          # from Step 1
-    relations=relations,
-    patterns=patterns,
+    schema=schema,              # GraphSchema, dict, "FREE", or "EXTRACTED"
     from_file=True,             # False → pass text= instead of file_path=
     on_error="IGNORE",          # RAISE to surface extraction failures
     perform_entity_resolution=True,
@@ -138,19 +161,30 @@ pipeline = SimpleKGPipeline(
 
 **LLM alternatives** (same interface):
 - `AnthropicLLM(model_name="claude-3-5-sonnet-20241022")`
-- `VertexAILLM(model_name="gemini-1.5-pro-002")`
+- `VertexAILLM(model_name="gemini-2.0-flash")`
 - `OllamaLLM(model_name="llama3")` — local; no API key needed
+- `BedrockLLM(model_id="anthropic.claude-3-5-sonnet-20241022-v2:0")` — Amazon Bedrock (v1.15.0+)
 
 ---
 
 ## Step 3 — Run the Pipeline
 
 ```python
-# From PDF or Markdown file:
+# From PDF file:
 result = asyncio.run(pipeline.run_async(
-    file_path="report.pdf",
+    file_path="report.pdf",        # auto-dispatches to PdfLoader
     document_metadata={"source": "Q4 report", "year": 2025},
 ))
+
+# From Markdown file (v1.15.0+):
+result = asyncio.run(pipeline.run_async(
+    file_path="notes.md",          # auto-dispatches to MarkdownLoader
+    document_metadata={"source": "meeting notes"},
+))
+
+# Note: old `from_pdf=True` parameter is DEPRECATED since v1.15.0; use `from_file=True` instead
+# pipeline = SimpleKGPipeline(..., from_file=True)   ← correct
+# pipeline = SimpleKGPipeline(..., from_pdf=True)    ← deprecated
 
 # From raw text:
 result = asyncio.run(pipeline.run_async(
@@ -403,7 +437,10 @@ If rows returned: wait, then re-run. ONLINE = safe to ingest.
 | Chunking loses sentence mid-way | `approximate=False` (default) cuts at exact token count | Set `approximate=True` in `FixedSizeSplitter` |
 | `chunk_size` too large → LLM timeouts | Extraction prompt + chunk exceeds context | Keep chunk_size ≤ 512 for GPT-4o extraction; ≤ 2048 absolute max |
 | `SpaCySemanticMatchResolver` fails on Python 3.14 | spaCy not supported on 3.14+ | Use `FuzzyMatchResolver` or downgrade to Python 3.13 |
-| `neo4j-driver` package not found | Deprecated package name since 6.0 | Use `neo4j` package: `pip install neo4j>=6.0.0` |
+| `neo4j-driver` package not found | Deprecated package name since 6.0 | Use `neo4j` package: `pip install neo4j>=5.17.0` |
+| `ValidationError` on `NodeType` with no properties | `NodeType` requires ≥1 property since v1.13.0 | Add at least `PropertyType(name="name", type="STRING")`; string-list labels get it automatically |
+| `from_pdf` deprecation warning | `from_pdf=True` removed in v1.15.0 | Use `from_file=True` instead |
+| `response_format` in `model_params` ignored | `SimpleKGPipeline` auto-enables structured output for OpenAI/VertexAI (v1.14.0+) | Remove `response_format` from `model_params`; the pipeline manages it |
 
 ---
 
@@ -423,14 +460,16 @@ If rows returned: wait, then re-run. ONLINE = safe to ingest.
 
 ---
 
-## GraphSchema — Current API (≥1.7.1)
+## GraphSchema — Current API (≥1.8.0)
 
-`entities`/`relations`/`potential_schema` deprecated since 1.7.1. Use `schema=GraphSchema(...)`:
+`entities`/`relations`/`potential_schema` are deprecated. Use `schema=GraphSchema(...)`.
 
 ```python
 from neo4j_graphrag.experimental.components.schema import (
-    GraphSchema, NodeType, RelationshipType, PropertyType
+    GraphSchema, NodeType, RelationshipType, PropertyType,
+    ConstraintType, GraphConstraintType,
 )
+
 schema = GraphSchema(
     node_types=[
         NodeType(label="Person", properties=[PropertyType(name="name", type="STRING")]),
@@ -438,11 +477,57 @@ schema = GraphSchema(
     ],
     relationship_types=[RelationshipType(label="WORKS_AT")],
     patterns=[("Person", "WORKS_AT", "Organization")],
+    # Constraints (v1.15.0+) — emitted to ParquetWriter metadata and enforce schema
+    constraints=[
+        # UNIQUENESS — property must be unique across nodes of that label
+        ConstraintType(label="Person", property_name="name", type=GraphConstraintType.UNIQUENESS),
+        # KEY — uniqueness + existence (null not allowed)
+        ConstraintType(label="Organization", property_name="name", type=GraphConstraintType.KEY),
+        # EXISTENCE — property must be non-null (replaces deprecated PropertyType.required)
+        ConstraintType(label="Event", property_name="date", type=GraphConstraintType.EXISTENCE),
+        # Composite KEY (v1.15.0+)
+        ConstraintType(
+            label="Person",
+            property_names=("first_name", "last_name"),
+            type=GraphConstraintType.KEY,
+        ),
+    ],
 )
 pipeline = SimpleKGPipeline(llm=llm, driver=driver, embedder=embedder, schema=schema)
 ```
 
-`schema="FREE"` (no guidance) or `schema="EXTRACTED"` (LLM infers) — exploration only, noisier output.
+`schema="FREE"` (no guidance) or `schema="EXTRACTED"` (LLM infers types) — exploration only, noisier output.
+
+### Auto-Extract Schema from Text (v1.15.0+)
+
+When no `schema` is passed to `SimpleKGPipeline`, `SchemaFromTextExtractor` runs automatically.
+To run it explicitly:
+
+```python
+from neo4j_graphrag.experimental.components.graph_schema_extraction import (
+    SchemaFromTextExtractor,
+    SchemaFromExistingGraphExtractor,
+)
+
+# Infer schema from sample text
+extractor = SchemaFromTextExtractor(llm=llm, use_structured_output=True)
+schema = asyncio.run(extractor.run(text=sample_text))
+
+# Derive schema from an existing Neo4j graph
+extractor = SchemaFromExistingGraphExtractor(driver=driver)
+schema = asyncio.run(extractor.run())
+```
+
+### Parquet Export (experimental, v1.14.0+)
+
+```python
+from neo4j_graphrag.experimental.components.parquet_output import ParquetWriter
+
+# Use ParquetWriter instead of KGWriter inside a Pipeline to export to Parquet files
+writer = ParquetWriter(output_dir="/data/kg_export/")
+# Produces one Parquet file per node label and per relationship type
+# Metadata includes UNIQUENESS, EXISTENCE, and KEY constraints (v1.15.0/1.16.0)
+```
 
 ---
 
