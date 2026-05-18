@@ -103,11 +103,23 @@ Auth options: `AuthTokens.basic(u,p)` · `AuthTokens.bearer(token)` · `AuthToke
 | `driver.executableQuery()` | Default for most queries | ✅ | ❌ eager |
 | `session.executeRead/Write()` | Large results, callback control | ✅ | ✅ |
 | `session.beginTransaction()` | Multi-method, external coordination | ❌ | ✅ |
-| `session.run()` | Self-managing queries (`CALL IN TRANSACTIONS`) | ❌ | ✅ |
+| `session.run()` | Self-managing queries (`CALL IN TRANSACTIONS`) | ⚠️ one-shot [6.1+] | ✅ |
 | `driver.asyncSession()` | Non-blocking `CompletableFuture` | ✅ | ✅ |
 | `driver.rxSession()` | Reactor/RxJava backpressure | ✅ | ✅ |
 
 `CALL { … } IN TRANSACTIONS` and `USING PERIODIC COMMIT` self-manage their transaction — use `session.run()` only. `executableQuery` and `executeRead/Write` will fail for these queries.
+
+`session.run()` retry [6.1+]: single immediate retry on idempotent errors only (enabled by default). Disable per driver or per session:
+
+```java
+// Driver-level — disable for all sessions
+var config = Config.builder().withAutoCommitRetriesDisabled(true).build();
+
+// Session-level — overrides driver
+var sessionConfig = SessionConfig.builder()
+    .withAutoCommitRetriesMode(AutoCommitRetriesMode.DISABLED)  // DEFAULT = follow driver
+    .build();
+```
 
 ---
 

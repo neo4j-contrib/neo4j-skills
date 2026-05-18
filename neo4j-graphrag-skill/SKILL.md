@@ -82,6 +82,8 @@ Using external vector DB?       → WeaviateNeo4jRetriever / PineconeNeo4jRetrie
 
 For custom Cypher hybrid search outside the `neo4j-graphrag` retriever APIs, use `neo4j-vector-index-skill`.
 
+**Vector backend selection [v1.16+, auto]**: on Neo4j 2026.01+ all four vector/hybrid retrievers auto-route through the Cypher 25 `SEARCH ... WHERE` clause when filters are SEARCH-compatible (simple AND comparisons) and all filter props are declared in the index `WITH [n.prop]` list. `$or`, `$in`, `$like`, or undeclared props → automatic fallback to `db.index.vector.queryNodes()` procedure path (with warning log). Declare filterable properties via `filterable_properties=[...]` on `create_vector_index()`.
+
 ---
 
 ## Step 3 — Create Indexes (run once)
@@ -232,6 +234,8 @@ results = retriever.search(query_text="Which people work at Neo4j?")
 ```
 
 If `neo4j_schema=None`: retriever fetches schema automatically. For large schemas, pass a trimmed string to reduce LLM prompt size.
+
+**Destructive-query guard [v1.16+]**: `Text2CypherRetriever` runs `EXPLAIN` on the generated Cypher before execution and rejects queries that produce writes (`CREATE`, `MERGE`, `DELETE`, `SET`, `REMOVE`, etc.). LLM-generated writes are never executed against the graph.
 
 ---
 

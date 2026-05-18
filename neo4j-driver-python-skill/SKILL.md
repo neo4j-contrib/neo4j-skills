@@ -106,8 +106,10 @@ Auth options: `("user", "pass")` tuple, `basic_auth()`, `bearer_auth("jwt")`, `k
 |---|---|---|---|
 | `driver.execute_query()` | Most queries — simple, safe default | ✅ | ❌ eager |
 | `session.execute_read/write()` | Large results / multiple queries in one tx | ✅ | ✅ |
-| `session.run()` | `LOAD CSV`, `CALL {} IN TRANSACTIONS`, scripts | ❌ | ✅ |
+| `session.run()` | `LOAD CSV`, `CALL {} IN TRANSACTIONS`, scripts | ⚠️ one-shot [6.2+] | ✅ |
 | `AsyncGraphDatabase` | asyncio applications | ✅ | ✅ |
+
+`session.run()` retry [6.2+]: single immediate retry on DBMS-marked idempotent errors only (currently admission control). Disable with `disable_auto_commit_retries=True` at driver or session level.
 
 ---
 
@@ -192,13 +194,18 @@ session.execute_read(get_people)
 
 ## Implicit Transactions (`session.run`)
 
-Not auto-retried. Use only for `LOAD CSV`, `CALL {} IN TRANSACTIONS`, or quick scripts.
+Use only for `LOAD CSV`, `CALL {} IN TRANSACTIONS`, or quick scripts. `session.run()` does a single immediate retry on idempotent (DBMS-marked) errors only [6.2+]; other errors do not retry.
 
 ```python
 with driver.session(database="neo4j") as session:
     result = session.run("CREATE (p:Person {name: $name})", name="Alice")
     summary = result.consume()   # call consume() to guarantee commit before proceeding
     print(summary.counters.nodes_created)
+
+# Opt out of one-shot retry [6.2+] — driver- or session-level
+driver = GraphDatabase.driver(URI, auth=AUTH, disable_auto_commit_retries=True)
+with driver.session(database="neo4j", disable_auto_commit_retries=True) as session:
+    session.run("...")
 ```
 
 ---
