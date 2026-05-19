@@ -8,7 +8,7 @@ Skill for the Neo4j Visualization Library (NVL) — covering:
 - `nvlResultTransformer` for piping `driver.executeQuery` results straight into NVL
 - Canvas vs WebGL renderer selection (~1k vs 100k+ nodes)
 - Layout selection (`forceDirected`, `hierarchical`, `circular`, `grid`, `free`, `d3Force`)
-- Container setup, generic SSR client-only guidance, Web Worker fallback, telemetry opt-out
+- Container setup, Web Worker fallback, telemetry opt-out
 
 **Not covered** (see sibling tools / skills):
 - Out-of-the-box embedded graph view with default styling → `GraphVisualization` component in `@neo4j-ndl/react` (Neo4j Needle design system) — wraps NVL with defaults

@@ -16,10 +16,10 @@ allowed-tools: Bash WebFetch
 ---
 
 ## When to Use
+- Building a Neo4j graph visualization app from the ground up with custom interactions, rendering, or data shapes
 - Rendering a Neo4j graph in a browser (vanilla JS, React, Vite)
 - Visualizing `driver.executeQuery` results as an interactive graph
 - Wiring zoom, pan, drag, click, hover, lasso, or box-select interactions
-- Choosing Canvas vs WebGL renderer for a given graph size
 - Embedding NVL inside an existing app and synchronizing graph state
 
 ## When NOT to Use
@@ -124,7 +124,6 @@ const options: NvlOptions = {
   maxZoom: 8,
   layout: 'forceDirected',
   renderer: 'canvas',
-  disableTelemetry: true,
   styling: { defaultNodeColor: '#0e86d4', defaultRelationshipColor: '#888' }
 }
 const callbacks: ExternalCallbacks = {
@@ -194,7 +193,7 @@ import type { NVL } from '@neo4j-nvl/base'
 export function GraphView({ nodes, rels }) {
   const nvlRef = useRef<NVL>(null)
 
-  const nvlOptions: NvlOptions = { initialZoom: 1, renderer: 'canvas', disableTelemetry: true }
+  const nvlOptions: NvlOptions = { initialZoom: 1, renderer: 'canvas' }
 
   const mouseEventCallbacks: MouseEventCallbacks = {
     onNodeClick:         (node, hits, evt) => console.log('node',  node.id),
@@ -347,8 +346,7 @@ container.addEventListener('click', (evt) => {
 | New `NVL` per React render | Use `<InteractiveNvlWrapper>` / `<BasicNvlWrapper>` or wrap in `useEffect` + `destroy()` |
 | Forgetting `nvl.destroy()` on teardown | Call `destroy()` on unmount; React wrappers handle this automatically |
 | Vanilla handlers not torn down | Call `.destroy()` on every interaction before `nvl.destroy()` |
-| SSR build crashes with `window is not defined` | Gate the import behind a client-only boundary; NVL needs DOM at construction |
-| Vite worker / strict CSP error | `nvlOptions: { disableWebWorkers: true }` (NVL has a non-worker fallback) |
+| Worker construction blocked (strict CSP / sandboxed runtime / older bundler) | `nvlOptions: { disableWebWorkers: true }` (NVL has a non-worker fallback) |
 | Telemetry enabled in regulated env | `nvlOptions: { disableTelemetry: true }` |
 | Layout never settles | Pin anchor nodes with `pinNode(id)`; tune `layoutTimeLimit` |
 | `selectOnClick` fires double | Toggle once at mount; don't flip `interactionOptions` per render |
@@ -361,7 +359,7 @@ container.addEventListener('click', (evt) => {
 
 Load on demand:
 - [references/api-surface.md](references/api-surface.md) — complete `NVL` method table; `Node`, `Relationship`, `NvlOptions`, `LayoutOptions`, `ExternalCallbacks`, `HitTargets`, `NvlMouseEvent`, `StyledCaption`, `Point`; every interaction-handler class + its options + its callback signatures; React `<InteractiveNvlWrapper>` / `<BasicNvlWrapper>` / `<StaticPictureWrapper>` props; `MouseEventCallbacks` and `KeyboardEventCallbacks` shapes; named exports inventory; `nvlResultTransformer` signature
-- [references/troubleshooting.md](references/troubleshooting.md) — zero-height container, Vite/Webpack worker config, `disableWebWorkers` fallback, Canvas/WebGL trade-offs + WebGL2 note, WebGL texture-size cap, `onWebGLContextLost` recovery, generic SSR client-only guidance, telemetry opt-out, memory leaks, stuck layouts, double selection, hit-margin tuning, license restriction
+- [references/troubleshooting.md](references/troubleshooting.md) — zero-height container, build-tool-agnostic `disableWebWorkers` fallback, Canvas/WebGL trade-offs + WebGL2 note, WebGL texture-size cap, `onWebGLContextLost` recovery, telemetry opt-out, memory leaks, stuck layouts, double selection, hit-margin tuning, license restriction
 
 Canonical web documentation (use `WebFetch` when references above are insufficient):
 - https://neo4j.com/docs/nvl/current/ — user guide (installation, base library, interaction handlers, React wrappers)
@@ -382,6 +380,5 @@ Canonical web documentation (use `WebFetch` when references above are insufficie
 - [ ] `nvl.destroy()` called on React unmount (manual instances only — wrappers handle it)
 - [ ] `disableTelemetry: true` set when in regulated / offline environments
 - [ ] `disableWebWorkers: true` set when bundler / CSP blocks worker construction
-- [ ] SSR builds gate NVL imports behind a client-only boundary
 - [ ] Graph updates use `addAndUpdateElementsInGraph` / `updateElementsInGraph` — not `restart`
 - [ ] License compatible: target is a Neo4j product

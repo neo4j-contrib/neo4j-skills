@@ -38,11 +38,11 @@ For driver setup → `neo4j-driver-javascript-skill`.
 
 ---
 
-## Vite Web Worker errors / strict CSP
+## Web Worker construction blocked
 
-**Cause:** NVL's layout-workers package spawns Web Workers. Some hosting environments (CSP `worker-src 'none'`, embedded iframes, sandboxed runtimes) block worker construction.
+**Cause:** NVL's `@neo4j-nvl/layout-workers` spawns Web Workers for the force-directed and hierarchical layouts. Some environments block worker construction — strict CSP (`worker-src 'none'`), sandboxed iframes, custom runtimes, or older build tools that don't bundle workers correctly.
 
-**Fix:** Disable workers — NVL has a synchronous fallback (slower for large graphs, identical output):
+**Fix:** Disable workers — NVL has a synchronous fallback (slower for large graphs, identical output). Applies to any build tool (Vite, Webpack, Rollup, esbuild, Parcel, etc.):
 
 ```javascript
 const nvl = new NVL(container, nodes, rels, { disableWebWorkers: true })
@@ -54,15 +54,7 @@ React:
 <InteractiveNvlWrapper nvlOptions={{ disableWebWorkers: true }} ... />
 ```
 
-Default Vite + React setup needs no extra worker config — NVL handles worker construction internally.
-
----
-
-## Webpack worker errors
-
-**Cause:** Older Webpack configs without native Web Worker support.
-
-**Fix:** Same `disableWebWorkers: true` fallback. Webpack 5 native worker handling needs no extra loader.
+Most modern bundlers handle worker construction natively — try the default setup first, fall back to `disableWebWorkers: true` only when worker errors actually appear.
 
 ---
 
@@ -107,16 +99,6 @@ const nvl = new NVL(container, nodes, rels,
   { onWebGLContextLost: () => nvl.restart({ renderer: 'canvas' }, true) }
 )
 ```
-
----
-
-## Server-side rendering (DOM not available)
-
-**Cause:** NVL constructs against `HTMLElement` and uses Canvas / WebGL APIs — it must mount only on the client. Any SSR pass throws `window is not defined`, `document is not defined`, or similar.
-
-**Fix:** In any SSR framework (Next.js, Remix, SvelteKit, Nuxt, etc.), gate the NVL-using component behind a client-only boundary — dynamic / lazy import with SSR disabled, or a "mounted" state flag. The exact API varies per framework; consult the framework's client-only docs.
-
-**Status:** NVL has not yet been validated against an official SSR boilerplate. If it works in your setup, the pattern is just "do not run NVL on the server".
 
 ---
 
