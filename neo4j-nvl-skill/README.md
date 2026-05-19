@@ -29,4 +29,8 @@ npm install @neo4j-nvl/react                  # optional, for React apps
 
 Starter templates: https://github.com/neo4j-devtools/nvl-boilerplates
 
-Available via the Neo4j skills plugin in this repository.
+**Install skill:**
+
+```bash
+npx skills add https://github.com/neo4j-contrib/neo4j-skills
+```

@@ -321,7 +321,7 @@ const nvlResultTransformer: ResultTransformer<
 >
 ```
 
-Usage: `driver.executeQuery(cypher, params, { resultTransformer: nvlResultTransformer })`. Returns deduplicated `{ nodes, relationships }`.
+Usage: `driver.executeQuery(cypher, params, { database: 'neo4j', resultTransformer: nvlResultTransformer })`. Returns deduplicated `{ nodes, relationships }`.
 
 ---
 

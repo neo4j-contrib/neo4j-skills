@@ -10,14 +10,14 @@ description: Neo4j Visualization Library (NVL) — framework-agnostic graph rend
   or vanilla JS apps.
   Does NOT handle Cypher query authoring — use neo4j-cypher-skill.
   Does NOT handle driver lifecycle, sessions, or executeQuery setup — use neo4j-driver-javascript-skill.
+  Does NOT handle GraphVisualization/Needle default embed — use @neo4j-ndl/react.
 compatibility: "@neo4j-nvl/base 1.1+; React 19 for @neo4j-nvl/react; modern browsers with Canvas2D + WebGL2"
 version: 1.0.0
 allowed-tools: Bash WebFetch
 ---
 
 ## When to Use
-- Building a Neo4j graph visualization app from the ground up with custom interactions, rendering, or data shapes
-- Rendering a Neo4j graph in a browser (vanilla JS, React, Vite)
+- Rendering a Neo4j graph in a browser (vanilla JS, React, Vite) with custom interactions, rendering, or data shapes
 - Visualizing `driver.executeQuery` results as an interactive graph
 - Wiring zoom, pan, drag, click, hover, lasso, or box-select interactions
 - Embedding NVL inside an existing app and synchronizing graph state
@@ -116,9 +116,8 @@ With options + callbacks:
 
 ```javascript
 import { NVL } from '@neo4j-nvl/base'
-import type { NvlOptions, ExternalCallbacks } from '@neo4j-nvl/base'
 
-const options: NvlOptions = {
+const options = {
   initialZoom: 1.0,
   minZoom: 0.1,
   maxZoom: 8,
@@ -126,7 +125,7 @@ const options: NvlOptions = {
   renderer: 'canvas',
   styling: { defaultNodeColor: '#0e86d4', defaultRelationshipColor: '#888' }
 }
-const callbacks: ExternalCallbacks = {
+const callbacks = {
   onInitialization: () => console.log('NVL ready'),
   onLayoutDone: () => nvl.fit([]),
   onError: (err) => console.error('NVL error', err)
@@ -231,10 +230,11 @@ No interactions wired. The ref exposes every NVL method via `IncludeMethods<NVL>
 
 ```tsx
 import { BasicNvlWrapper } from '@neo4j-nvl/react'
+import type { NVL } from '@neo4j-nvl/base'
 import { useRef } from 'react'
 
 export function MiniGraph({ nodes, rels }) {
-  const nvlRef = useRef<any>(null)
+  const nvlRef = useRef<NVL>(null)
 
   return (
     <div style={{ width: '100%', height: 400 }}>
@@ -262,7 +262,7 @@ import neo4j from 'neo4j-driver'
 import { NVL, nvlResultTransformer } from '@neo4j-nvl/base'
 
 const driver = neo4j.driver(process.env.NEO4J_URI,
-  neo4j.auth.basic(process.env.NEO4J_USER, process.env.NEO4J_PASSWORD))
+  neo4j.auth.basic(process.env.NEO4J_USERNAME, process.env.NEO4J_PASSWORD))
 
 const { nodes, relationships } = await driver.executeQuery(
   'MATCH (a)-[r]-(b) RETURN a, r, b LIMIT 25',
@@ -282,7 +282,7 @@ new NVL(container, result.records, [])   // breaks
 const { nodes, relationships } = await driver.executeQuery(
   'MATCH (a)-[r]-(b) RETURN a, r, b',
   {},
-  { resultTransformer: nvlResultTransformer }
+  { database: 'neo4j', resultTransformer: nvlResultTransformer }
 )
 new NVL(container, nodes, relationships)
 ```

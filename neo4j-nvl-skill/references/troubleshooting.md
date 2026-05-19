@@ -29,7 +29,7 @@ new NVL(container, res.records, [])    // ids missing, shape wrong
 import { nvlResultTransformer } from '@neo4j-nvl/base'
 const { nodes, relationships } = await driver.executeQuery(
   'MATCH (a)-[r]-(b) RETURN a,r,b LIMIT 25', {},
-  { resultTransformer: nvlResultTransformer }
+  { database: 'neo4j', resultTransformer: nvlResultTransformer }
 )
 new NVL(container, nodes, relationships)
 ```
