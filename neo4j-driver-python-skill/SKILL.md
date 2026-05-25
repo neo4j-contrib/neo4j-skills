@@ -33,7 +33,7 @@ pip install neo4j                  # package name is `neo4j`, NOT `neo4j-driver`
 pip install neo4j-rust-ext         # optional: 3–10× faster serialization, same API
 ```
 
-**Python >=3.10 required** for v6.x.
+**Python >=3.10 required** for v6.x. Python 3.14 supported [6.1+]. Pandas 3 and PyArrow 23/24 supported [6.2+].
 
 ---
 
