@@ -1,0 +1,37 @@
+{
+  "id": "automated-facial-recognition",
+  "name": "Automated Facial Recognition",
+  "description": "Facial biometric matching using vector embeddings on Face nodes. Uses cosine similarity for identity verification. Source: https://neo4j.com/developer/industry-use-cases/finserv/retail-banking/automated-facial-recognition/",
+  "industry": "Financial Services",
+  "tags": [
+    "facial-recognition",
+    "KYC",
+    "biometrics",
+    "vector-search"
+  ],
+  "initialGraph": {
+    "nodes": [
+      {
+        "id": "n0",
+        "position": {
+          "x": 400,
+          "y": 250
+        },
+        "caption": "Face",
+        "labels": [
+          "Face"
+        ],
+        "properties": {
+          "faceId": "string",
+          "embedding": "list_of_float"
+        },
+        "style": {
+          "color": "#68BC00",
+          "radius": 60
+        }
+      }
+    ],
+    "relationships": [],
+    "style": {}
+  }
+}

@@ -1,0 +1,176 @@
+{
+  "id": "multi-omics",
+  "name": "Multi-omics Data Integration",
+  "description": "Extends the single-omics model to integrate multiple omics layers (transcriptomics, proteomics, metabolomics) with ontologies (GO, EFO, MONDO, HPO). Adds Molecule (metabolites) and EFO (phenotype) nodes, and extends experimental measurements to proteins and molecules. Source: https://neo4j.com/developer/industry-use-cases/life-sciences/research-development/multi-omics/",
+  "industry": "Healthcare & Life Sciences",
+  "tags": [
+    "multi-omics",
+    "transcriptomics",
+    "proteomics",
+    "metabolomics",
+    "systems-biology",
+    "research"
+  ],
+  "initialGraph": {
+    "nodes": [
+      {
+        "id": "n0",
+        "position": { "x": 100, "y": 300 },
+        "caption": "Project",
+        "labels": ["Project"],
+        "properties": {
+          "sid": "string",
+          "name": "string"
+        },
+        "style": { "color": "#68BC00", "radius": 50 }
+      },
+      {
+        "id": "n1",
+        "position": { "x": 300, "y": 300 },
+        "caption": "Sample",
+        "labels": ["Sample"],
+        "properties": {
+          "sid": "string",
+          "name": "string"
+        },
+        "style": { "color": "#009CE0", "radius": 50 }
+      },
+      {
+        "id": "n2",
+        "position": { "x": 300, "y": 150 },
+        "caption": "Tissue",
+        "labels": ["Tissue"],
+        "properties": {
+          "sid": "string",
+          "name": "string"
+        },
+        "style": { "color": "#FA28FF", "radius": 45 }
+      },
+      {
+        "id": "n3",
+        "position": { "x": 500, "y": 300 },
+        "caption": "Experiment",
+        "labels": ["Experiment"],
+        "properties": {
+          "sid": "string",
+          "type": "string"
+        },
+        "style": { "color": "#7B64FF", "radius": 50 }
+      },
+      {
+        "id": "n4",
+        "position": { "x": 400, "y": 500 },
+        "caption": "Comparison",
+        "labels": ["Comparison"],
+        "properties": {
+          "sid": "string",
+          "name": "string"
+        },
+        "style": { "color": "#FE9200", "radius": 50 }
+      },
+      {
+        "id": "n5",
+        "position": { "x": 700, "y": 300 },
+        "caption": "Gene",
+        "labels": ["Gene"],
+        "properties": {
+          "sid": "string",
+          "source": "string",
+          "symbol": "string"
+        },
+        "style": { "color": "#FCDC00", "radius": 50 }
+      },
+      {
+        "id": "n6",
+        "position": { "x": 700, "y": 150 },
+        "caption": "ID",
+        "labels": ["ID"],
+        "properties": {
+          "sid": "string",
+          "source": "string"
+        },
+        "style": { "color": "#A4DD00", "radius": 40 }
+      },
+      {
+        "id": "n7",
+        "position": { "x": 900, "y": 300 },
+        "caption": "Protein",
+        "labels": ["Protein"],
+        "properties": {
+          "sid": "string",
+          "name": "string",
+          "uniprotId": "string"
+        },
+        "style": { "color": "#68CCCA", "radius": 45 }
+      },
+      {
+        "id": "n8",
+        "position": { "x": 900, "y": 150 },
+        "caption": "GO",
+        "labels": ["GO"],
+        "properties": {
+          "sid": "string",
+          "name": "string"
+        },
+        "style": { "color": "#DBDF00", "radius": 40 }
+      },
+      {
+        "id": "n9",
+        "position": { "x": 700, "y": 500 },
+        "caption": "Disease",
+        "labels": ["Disease"],
+        "properties": {
+          "sid": "string",
+          "name": "string"
+        },
+        "style": { "color": "#FF6B6B", "radius": 45 }
+      },
+      {
+        "id": "n10",
+        "position": { "x": 1100, "y": 300 },
+        "caption": "Molecule",
+        "labels": ["Molecule"],
+        "properties": {
+          "sid": "string",
+          "name": "string",
+          "formula": "string"
+        },
+        "style": { "color": "#B0BC00", "radius": 45 }
+      },
+      {
+        "id": "n11",
+        "position": { "x": 300, "y": 500 },
+        "caption": "EFO",
+        "labels": ["EFO"],
+        "properties": {
+          "sid": "string",
+          "name": "string"
+        },
+        "style": { "color": "#AEA1FF", "radius": 40 }
+      }
+    ],
+    "relationships": [
+      { "id": "r0", "type": "HAS_SAMPLE", "fromId": "n0", "toId": "n1", "properties": {} },
+      { "id": "r1", "type": "TAKEN_FROM", "fromId": "n1", "toId": "n2", "properties": {} },
+      { "id": "r2", "type": "HAS_EXPERIMENT", "fromId": "n1", "toId": "n3", "properties": {} },
+      { "id": "r3", "type": "HAS_PHENOTYPE", "fromId": "n1", "toId": "n11", "properties": {} },
+      { "id": "r4", "type": "COMPARES", "fromId": "n4", "toId": "n3", "properties": {} },
+      { "id": "r5", "type": "INCLUDES_CONTROL", "fromId": "n4", "toId": "n1", "properties": {} },
+      { "id": "r6", "type": "INCLUDES_CASE", "fromId": "n4", "toId": "n1", "properties": {} },
+      { "id": "r7", "type": "STUDIES_DISEASE", "fromId": "n4", "toId": "n9", "properties": {} },
+      { "id": "r8", "type": "FOUND_DIFFERENTIAL", "fromId": "n4", "toId": "n5", "properties": { "logFC": "float", "pValue": "float", "adjPValue": "float", "regulated": "string", "significance": "string" } },
+      { "id": "r9", "type": "FOUND_DIFFERENTIAL", "fromId": "n4", "toId": "n7", "properties": { "logFC": "float", "pValue": "float", "adjPValue": "float", "regulated": "string", "significance": "string" } },
+      { "id": "r10", "type": "FOUND_DIFFERENTIAL", "fromId": "n4", "toId": "n10", "properties": { "logFC": "float", "pValue": "float", "adjPValue": "float", "regulated": "string", "significance": "string" } },
+      { "id": "r11", "type": "HAS_VALUE", "fromId": "n3", "toId": "n5", "properties": { "logFC": "float", "pValue": "float", "adjPValue": "float", "regulated": "string" } },
+      { "id": "r12", "type": "HAS_VALUE", "fromId": "n3", "toId": "n7", "properties": { "logFC": "float", "pValue": "float", "adjPValue": "float", "regulated": "string" } },
+      { "id": "r13", "type": "HAS_VALUE", "fromId": "n3", "toId": "n10", "properties": { "logFC": "float", "pValue": "float", "adjPValue": "float", "regulated": "string" } },
+      { "id": "r14", "type": "MAPPED", "fromId": "n5", "toId": "n6", "properties": {} },
+      { "id": "r15", "type": "CODES", "fromId": "n5", "toId": "n7", "properties": {} },
+      { "id": "r16", "type": "ASSOCIATED_WITH", "fromId": "n7", "toId": "n8", "properties": {} },
+      { "id": "r17", "type": "INTERACTS_WITH", "fromId": "n7", "toId": "n7", "properties": { "score": "float" } },
+      { "id": "r18", "type": "RELATED_TO", "fromId": "n5", "toId": "n9", "properties": {} }
+    ],
+    "style": {}
+  },
+  "notes": "Multi-omics extends the single-omics model with proteomics and metabolomics layers. New Molecule node captures metabolites; new EFO node captures experimental factor/phenotype ontology terms. HAS_VALUE and FOUND_DIFFERENTIAL extend from Gene to Protein and Molecule to represent measurements across all omics layers."
+}

@@ -1,0 +1,134 @@
+{
+  "id": "engineering-traceability",
+  "name": "Engineering Traceability",
+  "description": "Traces customer requests through requirements, designs and test cases for full lifecycle traceability. Source: https://neo4j.com/developer/industry-use-cases/manufacturing/product-design-and-engineering/engineering-traceability/",
+  "industry": "Manufacturing",
+  "tags": [
+    "traceability",
+    "engineering",
+    "requirements",
+    "testing"
+  ],
+  "initialGraph": {
+    "nodes": [
+      {
+        "id": "n0",
+        "position": {
+          "x": 150,
+          "y": 100
+        },
+        "caption": "CustomerRequest",
+        "labels": [
+          "CustomerRequest"
+        ],
+        "properties": {
+          "id": "string",
+          "description": "string",
+          "status": "string",
+          "source": "string"
+        },
+        "style": {
+          "color": "#68BC00",
+          "radius": 50
+        }
+      },
+      {
+        "id": "n1",
+        "position": {
+          "x": 450,
+          "y": 100
+        },
+        "caption": "Requirement",
+        "labels": [
+          "Requirement"
+        ],
+        "properties": {
+          "id": "string",
+          "title": "string",
+          "description": "string",
+          "status": "string",
+          "source": "string"
+        },
+        "style": {
+          "color": "#009CE0",
+          "radius": 50
+        }
+      },
+      {
+        "id": "n2",
+        "position": {
+          "x": 450,
+          "y": 350
+        },
+        "caption": "Design",
+        "labels": [
+          "Design"
+        ],
+        "properties": {
+          "id": "string",
+          "name": "string",
+          "description": "string",
+          "status": "string",
+          "source": "string"
+        },
+        "style": {
+          "color": "#FA28FF",
+          "radius": 50
+        }
+      },
+      {
+        "id": "n3",
+        "position": {
+          "x": 150,
+          "y": 350
+        },
+        "caption": "TestCase",
+        "labels": [
+          "TestCase"
+        ],
+        "properties": {
+          "id": "string",
+          "title": "string",
+          "description": "string",
+          "status": "string",
+          "source": "string"
+        },
+        "style": {
+          "color": "#7B64FF",
+          "radius": 50
+        }
+      }
+    ],
+    "relationships": [
+      {
+        "id": "r0",
+        "type": "SATISFIES",
+        "fromId": "n0",
+        "toId": "n1",
+        "properties": {}
+      },
+      {
+        "id": "r1",
+        "type": "IMPLEMENTED_BY",
+        "fromId": "n1",
+        "toId": "n2",
+        "properties": {}
+      },
+      {
+        "id": "r2",
+        "type": "DEPENDS_ON",
+        "fromId": "n2",
+        "toId": "n2",
+        "properties": {}
+      },
+      {
+        "id": "r3",
+        "type": "TESTED_BY",
+        "fromId": "n2",
+        "toId": "n3",
+        "properties": {}
+      }
+    ],
+    "style": {}
+  }
+}

@@ -1,0 +1,111 @@
+{
+  "id": "drug-safety",
+  "name": "Drug Safety & Pharmacovigilance (FAERS)",
+  "description": "Pharmacovigilance data model using FDA FAERS (FDA Adverse Event Reporting System) structure. Tracks adverse drug events, drug-drug interactions, and post-marketing safety surveillance. Source: https://neo4j.com/developer/industry-use-cases/life-sciences/medical-care/drug-safety/",
+  "industry": "Healthcare & Life Sciences",
+  "tags": [
+    "pharmacovigilance",
+    "drug-safety",
+    "FAERS",
+    "adverse-events",
+    "ADR",
+    "post-marketing-surveillance"
+  ],
+  "initialGraph": {
+    "nodes": [
+      {
+        "id": "n0",
+        "position": { "x": 400, "y": 300 },
+        "caption": "Case",
+        "labels": ["Case"],
+        "properties": {
+          "caseId": "string",
+          "primaryId": "string",
+          "eventDate": "date",
+          "reportDate": "date",
+          "reporterOccupation": "string",
+          "age": "integer",
+          "ageGroup": "string",
+          "sex": "string",
+          "weight": "float"
+        },
+        "style": { "color": "#68BC00", "radius": 55 }
+      },
+      {
+        "id": "n1",
+        "position": { "x": 100, "y": 100 },
+        "caption": "Outcome",
+        "labels": ["Outcome"],
+        "properties": {
+          "code": "string",
+          "description": "string"
+        },
+        "style": { "color": "#009CE0", "radius": 45 }
+      },
+      {
+        "id": "n2",
+        "position": { "x": 400, "y": 100 },
+        "caption": "MedDraTerm",
+        "labels": ["MedDraTerm"],
+        "properties": {
+          "name": "string",
+          "meddraCode": "string"
+        },
+        "style": { "color": "#FA28FF", "radius": 50 }
+      },
+      {
+        "id": "n3",
+        "position": { "x": 700, "y": 300 },
+        "caption": "DrugCase",
+        "labels": ["DrugCase"],
+        "properties": {
+          "drugCaseId": "string",
+          "role": "string",
+          "dose": "string",
+          "route": "string",
+          "startDate": "date",
+          "endDate": "date"
+        },
+        "style": { "color": "#7B64FF", "radius": 50 }
+      },
+      {
+        "id": "n4",
+        "position": { "x": 950, "y": 300 },
+        "caption": "Drug",
+        "labels": ["Drug"],
+        "properties": {
+          "name": "string",
+          "activeIngredient": "string",
+          "rxnormCode": "string",
+          "atcCode": "string",
+          "tradeNameValidated": "boolean"
+        },
+        "style": { "color": "#FE9200", "radius": 50 }
+      },
+      {
+        "id": "n5",
+        "position": { "x": 100, "y": 500 },
+        "caption": "Manufacturer",
+        "labels": ["Manufacturer"],
+        "properties": {
+          "name": "string"
+        },
+        "style": { "color": "#FCDC00", "radius": 45 }
+      }
+    ],
+    "relationships": [
+      { "id": "r0", "type": "HAS_OUTCOME", "fromId": "n0", "toId": "n1", "properties": {} },
+      { "id": "r1", "type": "HAS_REACTION", "fromId": "n0", "toId": "n2", "properties": {} },
+      { "id": "r2", "type": "REPORTED_BY", "fromId": "n0", "toId": "n5", "properties": {} },
+      { "id": "r3", "type": "PRIMARY_SUSPECT_DRUG", "fromId": "n0", "toId": "n3", "properties": {} },
+      { "id": "r4", "type": "SECONDARY_SUSPECT_DRUG", "fromId": "n0", "toId": "n3", "properties": {} },
+      { "id": "r5", "type": "CONCOMITANT_DRUG", "fromId": "n0", "toId": "n3", "properties": {} },
+      { "id": "r6", "type": "DRUG_NOT_ADMINISTERED", "fromId": "n0", "toId": "n3", "properties": {} },
+      { "id": "r7", "type": "CONCERNS_DRUG", "fromId": "n3", "toId": "n4", "properties": {} },
+      { "id": "r8", "type": "INDICATION_FOR_USE", "fromId": "n3", "toId": "n2", "properties": {} },
+      { "id": "r9", "type": "INTERACTING_DRUG", "fromId": "n4", "toId": "n4", "properties": {} }
+    ],
+    "style": {}
+  },
+  "notes": "Case nodes also receive secondary labels (Adult, Infant, Child, Male, Female, etc) for grouping. DrugCase represents a drug instance tied to a specific case with role/dose/route. Drugs use RxNorm; adverse events use MedDRA preferred terms."
+}

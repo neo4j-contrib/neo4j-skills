@@ -1,0 +1,123 @@
+{
+  "id": "process-monitoring-cpa",
+  "name": "Process Monitoring & Critical Path Analysis",
+  "description": "Models manufacturing processes with machines, jobs, dependencies and queue management for CPA. Source: https://neo4j.com/developer/industry-use-cases/manufacturing/production-planning-and-optimization/process-monitoring-and-cpa/",
+  "industry": "Manufacturing",
+  "tags": [
+    "process-monitoring",
+    "critical-path",
+    "production",
+    "scheduling"
+  ],
+  "initialGraph": {
+    "nodes": [
+      {
+        "id": "n0",
+        "position": {
+          "x": 150,
+          "y": 100
+        },
+        "caption": "Machine",
+        "labels": [
+          "Machine"
+        ],
+        "properties": {
+          "processor_id": "string",
+          "name": "string",
+          "load": "integer"
+        },
+        "style": {
+          "color": "#68BC00",
+          "radius": 55
+        }
+      },
+      {
+        "id": "n1",
+        "position": {
+          "x": 450,
+          "y": 100
+        },
+        "caption": "Process",
+        "labels": [
+          "Process"
+        ],
+        "properties": {
+          "process_id": "string",
+          "name": "string"
+        },
+        "style": {
+          "color": "#009CE0",
+          "radius": 50
+        }
+      },
+      {
+        "id": "n2",
+        "position": {
+          "x": 300,
+          "y": 350
+        },
+        "caption": "Job",
+        "labels": [
+          "Job"
+        ],
+        "properties": {
+          "job_id": "string",
+          "name": "string",
+          "status": "string",
+          "duration": "float",
+          "quality_score": "float",
+          "completion_progress": "float"
+        },
+        "style": {
+          "color": "#FA28FF",
+          "radius": 55
+        }
+      }
+    ],
+    "relationships": [
+      {
+        "id": "r0",
+        "type": "RUNS_ON",
+        "fromId": "n2",
+        "toId": "n0",
+        "properties": {}
+      },
+      {
+        "id": "r1",
+        "type": "IS_INSTANCE_OF",
+        "fromId": "n2",
+        "toId": "n1",
+        "properties": {}
+      },
+      {
+        "id": "r2",
+        "type": "DEPENDS_ON",
+        "fromId": "n2",
+        "toId": "n2",
+        "properties": {}
+      },
+      {
+        "id": "r3",
+        "type": "WAITS",
+        "fromId": "n2",
+        "toId": "n2",
+        "properties": {}
+      },
+      {
+        "id": "r4",
+        "type": "QUEUE_HEAD",
+        "fromId": "n0",
+        "toId": "n2",
+        "properties": {}
+      },
+      {
+        "id": "r5",
+        "type": "QUEUE_TAIL",
+        "fromId": "n0",
+        "toId": "n2",
+        "properties": {}
+      }
+    ],
+    "style": {}
+  }
+}

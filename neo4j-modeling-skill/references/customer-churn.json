@@ -1,0 +1,83 @@
+{
+  "id": "customer-churn",
+  "name": "Graph-Aware Finance Churn Prediction",
+  "description": "Models user/card/merchant/transaction flow for predicting silent (dormancy) churn in retail banking using GDS FastRP embeddings and Random Forest. Source: https://neo4j.com/developer/industry-use-cases/finserv/retail-banking/customer-churn/",
+  "industry": "Financial Services",
+  "tags": [
+    "churn",
+    "retention",
+    "retail-banking",
+    "GDS",
+    "FastRP",
+    "embeddings",
+    "dormancy"
+  ],
+  "initialGraph": {
+    "nodes": [
+      {
+        "id": "n0",
+        "position": { "x": 100, "y": 200 },
+        "caption": "User",
+        "labels": ["User"],
+        "properties": {
+          "userId": "string",
+          "userLatitude": "float",
+          "userLongitude": "float",
+          "income": "float",
+          "debt": "float",
+          "creditScore": "integer",
+          "churned": "boolean",
+          "riskProbability": "float"
+        },
+        "style": { "color": "#68BC00", "radius": 55 }
+      },
+      {
+        "id": "n1",
+        "position": { "x": 400, "y": 200 },
+        "caption": "Card",
+        "labels": ["Card"],
+        "properties": {
+          "cardId": "string",
+          "type": "string",
+          "issuedDate": "date"
+        },
+        "style": { "color": "#009CE0", "radius": 50 }
+      },
+      {
+        "id": "n2",
+        "position": { "x": 700, "y": 200 },
+        "caption": "Transaction",
+        "labels": ["Transaction"],
+        "properties": {
+          "transactionId": "string",
+          "amount": "float",
+          "currency": "string",
+          "date": "datetime"
+        },
+        "style": { "color": "#FA28FF", "radius": 50 }
+      },
+      {
+        "id": "n3",
+        "position": { "x": 1000, "y": 200 },
+        "caption": "Merchant",
+        "labels": ["Merchant"],
+        "properties": {
+          "merchantId": "string",
+          "name": "string",
+          "category": "string",
+          "latitude": "float",
+          "longitude": "float"
+        },
+        "style": { "color": "#7B64FF", "radius": 50 }
+      }
+    ],
+    "relationships": [
+      { "id": "r0", "type": "OWNS", "fromId": "n0", "toId": "n1", "properties": {} },
+      { "id": "r1", "type": "PERFORMED", "fromId": "n1", "toId": "n2", "properties": {} },
+      { "id": "r2", "type": "TO", "fromId": "n2", "toId": "n3", "properties": {} },
+      { "id": "r3", "type": "SHOPPED_AT", "fromId": "n0", "toId": "n3", "properties": { "weight": "integer" } }
+    ],
+    "style": {}
+  },
+  "notes": "SHOPPED_AT is a GDS-projected/aggregated relationship: User→Merchant weighted by transaction count. It simplifies the User→Card→Transaction→Merchant path for FastRP embedding and similarity analysis."
+}

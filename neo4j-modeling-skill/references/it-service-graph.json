@@ -1,0 +1,114 @@
+{
+  "id": "it-service-graph",
+  "name": "IT Service Graph",
+  "description": "Industry-agnostic CMDB-style IT service graph modeling infrastructure (datacenters, sections/rooms, racks, servers), software, services, and customers. Enables service chain, root-cause, and impact analysis across the IT landscape. Source: https://neo4j.com/developer/industry-use-cases/agnostic/it-service-graph/it-service-graph/",
+  "industry": "Industry Agnostic",
+  "tags": [
+    "CMDB",
+    "IT-operations",
+    "service-chain",
+    "impact-analysis",
+    "root-cause",
+    "dependencies"
+  ],
+  "initialGraph": {
+    "nodes": [
+      {
+        "id": "n0",
+        "position": { "x": 100, "y": 100 },
+        "caption": "Datacenter",
+        "labels": ["Datacenter"],
+        "properties": {
+          "dcName": "string",
+          "dcCity": "string",
+          "dcGeoLocation": "string"
+        },
+        "style": { "color": "#68BC00", "radius": 55 }
+      },
+      {
+        "id": "n1",
+        "position": { "x": 100, "y": 280 },
+        "caption": "Section",
+        "labels": ["Section", "Room"],
+        "properties": {
+          "name": "string",
+          "geoLocation": "string"
+        },
+        "style": { "color": "#009CE0", "radius": 45 }
+      },
+      {
+        "id": "n2",
+        "position": { "x": 100, "y": 460 },
+        "caption": "Rack",
+        "labels": ["Rack"],
+        "properties": {
+          "rackName": "string",
+          "geoLocation": "string",
+          "freeUnits": "integer"
+        },
+        "style": { "color": "#FA28FF", "radius": 45 }
+      },
+      {
+        "id": "n3",
+        "position": { "x": 400, "y": 460 },
+        "caption": "Server",
+        "labels": ["Server", "VM", "Container"],
+        "properties": {
+          "assetNumber": "string",
+          "name": "string",
+          "firstSeen": "date",
+          "leaseEnd": "date"
+        },
+        "style": { "color": "#7B64FF", "radius": 50 }
+      },
+      {
+        "id": "n4",
+        "position": { "x": 700, "y": 460 },
+        "caption": "Software",
+        "labels": ["Software"],
+        "properties": {
+          "swName": "string",
+          "swVersion": "string",
+          "lastUpdated": "date",
+          "swVendor": "string"
+        },
+        "style": { "color": "#FE9200", "radius": 50 }
+      },
+      {
+        "id": "n5",
+        "position": { "x": 700, "y": 280 },
+        "caption": "Service",
+        "labels": ["Service"],
+        "properties": {
+          "serviceName": "string",
+          "serviceOwner": "string"
+        },
+        "style": { "color": "#FCDC00", "radius": 50 }
+      },
+      {
+        "id": "n6",
+        "position": { "x": 700, "y": 100 },
+        "caption": "Customer",
+        "labels": ["Customer"],
+        "properties": {
+          "customerName": "string",
+          "customerDept": "string",
+          "customerImportance": "integer"
+        },
+        "style": { "color": "#A4DD00", "radius": 50 }
+      }
+    ],
+    "relationships": [
+      { "id": "r0", "type": "IN_SECTION", "fromId": "n0", "toId": "n1", "properties": {} },
+      { "id": "r1", "type": "IN_RACK", "fromId": "n1", "toId": "n2", "properties": {} },
+      { "id": "r2", "type": "LOCATED_IN", "fromId": "n3", "toId": "n0", "properties": {} },
+      { "id": "r3", "type": "INSTALLED_ON", "fromId": "n4", "toId": "n3", "properties": {} },
+      { "id": "r4", "type": "DELIVERS", "fromId": "n4", "toId": "n5", "properties": {} },
+      { "id": "r5", "type": "RUNS", "fromId": "n3", "toId": "n5", "properties": { "since": "date", "serviceSLA": "integer" } },
+      { "id": "r6", "type": "USED_BY", "fromId": "n5", "toId": "n6", "properties": { "since": "date" } },
+      { "id": "r7", "type": "IN_ROOM", "fromId": "n1", "toId": "n1", "properties": {} }
+    ],
+    "style": {}
+  },
+  "notes": "Full service chain template for impact analysis: (Rack)<-[:IN_RACK]-(Section)<-[:IN_SECTION]-(Datacenter)<-[:LOCATED_IN]-(Server)<-[:INSTALLED_ON]-(Software)-[:DELIVERS]->(Service)-[:USED_BY]->(Customer). Server additionally RUNS Service directly. Section/Room can have an IN_ROOM self-relationship to express room hierarchy within a section."
+}

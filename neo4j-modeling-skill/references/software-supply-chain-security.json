@@ -1,0 +1,151 @@
+{
+  "id": "software-supply-chain-security",
+  "name": "Software Supply Chain Security (SBOM)",
+  "description": "Models software bill of materials connecting applications to libraries, vulnerabilities, and the CISA KEV catalog for supply chain risk analysis. Source: https://neo4j.com/developer/industry-use-cases/cybersecurity/software-supply-chain-security/",
+  "industry": "Cybersecurity",
+  "tags": [
+    "SBOM",
+    "supply-chain",
+    "dependencies",
+    "software-security"
+  ],
+  "initialGraph": {
+    "nodes": [
+      {
+        "id": "n0",
+        "position": {
+          "x": 400,
+          "y": 50
+        },
+        "caption": "Application",
+        "labels": [
+          "Application"
+        ],
+        "properties": {
+          "appId": "string",
+          "name": "string",
+          "version": "string"
+        },
+        "style": {
+          "color": "#68BC00",
+          "radius": 55
+        }
+      },
+      {
+        "id": "n1",
+        "position": {
+          "x": 200,
+          "y": 200
+        },
+        "caption": "Library",
+        "labels": [
+          "Library"
+        ],
+        "properties": {
+          "name": "string",
+          "version": "string",
+          "ecosystem": "string"
+        },
+        "style": {
+          "color": "#009CE0",
+          "radius": 55
+        }
+      },
+      {
+        "id": "n2",
+        "position": {
+          "x": 600,
+          "y": 200
+        },
+        "caption": "CVE",
+        "labels": [
+          "CVE"
+        ],
+        "properties": {
+          "id": "string",
+          "baseScore": "float",
+          "kev_addedDate": "datetime"
+        },
+        "style": {
+          "color": "#7B64FF",
+          "radius": 50
+        }
+      },
+      {
+        "id": "n3",
+        "position": {
+          "x": 200,
+          "y": 400
+        },
+        "caption": "BuildArtifact",
+        "labels": [
+          "BuildArtifact"
+        ],
+        "properties": {
+          "id": "string"
+        },
+        "style": {
+          "color": "#FE9200",
+          "radius": 45
+        }
+      },
+      {
+        "id": "n4",
+        "position": {
+          "x": 600,
+          "y": 400
+        },
+        "caption": "Repo",
+        "labels": [
+          "Repo"
+        ],
+        "properties": {
+          "name": "string",
+          "criticality": "string"
+        },
+        "style": {
+          "color": "#A4DD00",
+          "radius": 45
+        }
+      }
+    ],
+    "relationships": [
+      {
+        "id": "r0",
+        "type": "RUNNING_AS",
+        "fromId": "n3",
+        "toId": "n0",
+        "properties": {}
+      },
+      {
+        "id": "r1",
+        "type": "DEPENDENCY_OF",
+        "fromId": "n1",
+        "toId": "n1",
+        "properties": {}
+      },
+      {
+        "id": "r2",
+        "type": "IDENTIFIED_IN",
+        "fromId": "n2",
+        "toId": "n1",
+        "properties": {}
+      },
+      {
+        "id": "r3",
+        "type": "DEPENDENCY_OF",
+        "fromId": "n1",
+        "toId": "n3",
+        "properties": {}
+      },
+      {
+        "id": "r4",
+        "type": "BUILT_FROM",
+        "fromId": "n3",
+        "toId": "n4",
+        "properties": {}
+      }
+    ],
+    "style": {}
+  }
+}

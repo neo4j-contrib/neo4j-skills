@@ -1,15 +1,7 @@
 ---
 name: neo4j-modeling-skill
-description: Design, review, and refactor Neo4j graph data models. Use when choosing node
-  labels vs relationship types vs properties, migrating relational/document schemas to
-  graph, detecting anti-patterns (generic labels, supernodes, missing constraints),
-  designing intermediate nodes for n-ary relationships, enforcing schema with constraints
-  and indexes, or assessing an existing model against graph modeling best practices.
-  Does NOT handle Cypher query authoring — use neo4j-cypher-skill.
-  Does NOT handle Spring Data Neo4j entity mapping — use neo4j-spring-data-skill.
-  Does NOT handle GraphQL type definitions — use neo4j-graphql-skill.
-  Does NOT handle data import — use neo4j-import-skill.
-version: 1.0.0
+description: Design, review, refactor, and visually model Neo4j property graph schemas. Use when choosing node labels vs relationship types vs properties, migrating relational or document schemas to graph, detecting anti-patterns (generic labels, supernodes, missing constraints), designing intermediate nodes for n-ary relationships, enforcing schema with constraints and indexes, assessing an existing model, or creating interactive visual schema diagrams. Also triggers for "design a graph schema", "visualise", "arrows.app", "reference model", "interactive schema editor", or any Neo4j use case. Does NOT handle Cypher query authoring — use neo4j-cypher-skill. Does NOT handle Spring Data Neo4j entity mapping — use neo4j-spring-data-skill. Does NOT handle GraphQL type definitions — use neo4j-graphql-skill. Does NOT handle data import — use neo4j-import-skill. Does NOT trigger for graph charts (bar/line/pie), mathematical graphs, or visualising query results.
+version: 1.1.0
 allowed-tools: WebFetch Bash
 ---
 
@@ -22,6 +14,8 @@ allowed-tools: WebFetch Bash
 - Designing intermediate nodes for n-ary or complex relationships
 - Detecting and mitigating supernode / high-fanout problems
 - Choosing and creating constraints + indexes for a model
+- Creating interactive visual schema diagrams
+- Loading from 32 pre-built reference models or user-uploaded arrows.app JSON
 
 ## When NOT to Use
 
@@ -29,6 +23,7 @@ allowed-tools: WebFetch Bash
 - **Spring Data Neo4j (@Node, @Relationship)** → `neo4j-spring-data-skill`
 - **GraphQL type definitions** → `neo4j-graphql-skill`
 - **Importing data (LOAD CSV, APOC import)** → `neo4j-import-skill`
+- **Graph charts (bar/line/pie), mathematical graphs, query result visualisation** — out of scope
 
 ---
 
@@ -63,13 +58,13 @@ MCP tool map:
 2. Nodes = entities (nouns) with identity; rels = connections (verbs) with direction
 3. Labels PascalCase; rel types SCREAMING_SNAKE_CASE; properties camelCase
 4. Every node type used in MERGE has a uniqueness constraint on its key property
-5. Add property type constraints (`REQUIRE n.prop IS :: STRING`) where the type is known — helps the query planner and catches bad writes early
+5. Add property type constraints (`REQUIRE n.prop IS :: STRING`) where type is known
 6. No generic labels (`:Entity`, `:Node`, `:Thing`); no generic rel types (`:RELATED_TO`, `:HAS`)
-7. Security labels (used for row-level access control) should start with a common prefix (e.g. `Sec`) so application code can reliably filter them out of the domain schema
+7. Security labels (row-level access control) start with common prefix (e.g. `Sec`)
 8. Rel direction encodes semantic meaning — not arbitrary
 9. Inspect schema before proposing any change on an existing database
-10. All constraint/index DDL uses `IF NOT EXISTS` — safe to rerun
-11. **On Neo4j 2026.02+ (Enterprise/Aura):** consider `ALTER CURRENT GRAPH TYPE SET { … }` or `EXTEND GRAPH TYPE WITH { … }` to declare the full model in one block instead of individual `CREATE CONSTRAINT` statements — see `neo4j-cypher-skill/references/graph-type.md`. **PREVIEW** — syntax may change before GA.
+10. All constraint/index DDL uses `IF NOT EXISTS`
+11. **On Neo4j 2026.02+ (Enterprise/Aura):** consider `ALTER CURRENT GRAPH TYPE SET { … }` — see `neo4j-cypher-skill/references/graph-type.md`. PREVIEW — syntax may change before GA.
 
 ---
 
@@ -80,7 +75,7 @@ MCP tool map:
 | Question | Answer | Model as |
 |---|---|---|
 | Is it a thing with identity, queried as entry point? | Yes | Node |
-| Is it a connection between two things with direction? | Yes | Relationship |
+| Is a connection between two things with direction? | Yes | Relationship |
 | Does the connection have its own properties or multiple targets? | Yes | Intermediate node |
 | Is it a scalar always returned with its parent, never filtered alone? | Yes | Property on parent |
 | Is it a category used for type-based filtering or path traversal? | Yes | Label (not a property) |
@@ -97,8 +92,6 @@ MCP tool map:
 | Example: `:Active`, `:Verified`, `:Premium` | Example: `status`, `score`, `email` |
 
 Rule: adding a label is cheap; scanning all `:Label` nodes is fast. Never model high-cardinality values as labels.
-
----
 
 ### Intermediate Node Pattern
 
@@ -118,7 +111,6 @@ Use when a relationship needs its own properties, connects >2 entities, or is in
 
 **Employment overlap example:**
 ```cypher
-// Find colleagues who overlapped at same company
 MATCH (p1:Person)-[:WORKED_AT]->(e1:Employment)-[:AT]->(c:Company)<-[:AT]-(e2:Employment)<-[:WORKED_AT]-(p2:Person)
 WHERE p1 <> p2
   AND e1.startDate <= e2.endDate AND e2.startDate <= e1.endDate
@@ -146,7 +138,7 @@ Promote relationship to intermediate node when:
 | NULL FK (optional relation) | Absent relationship | No node created; absence is the signal |
 | Polymorphic FK (Rails-style) | Multiple labels or relationship types | Split into type-specific rels |
 | Self-referential FK | Same-label relationship | `:Employee {managerId}` → `(e)-[:REPORTS_TO]->(m)` |
-| Audit/history columns | Intermediate versioning node | See References for versioning pattern |
+| Audit/history columns | Intermediate versioning node | See references/modeling-patterns.md |
 
 ---
 
@@ -154,17 +146,12 @@ Promote relationship to intermediate node when:
 
 **Detect:**
 ```cypher
-// Find top-10 highest-degree nodes
 MATCH (n)
 RETURN labels(n) AS labels, elementId(n) AS id, count{ (n)--() } AS degree
-ORDER BY degree DESC LIMIT 10
+ORDER BY degree DESC LIMIT 10;
 ```
 
-Node with degree >> median for its label = supernode candidate. Any node with >100K relationships will degrade traversal queries that pass through it.
-
-**Causes:**
-- Domain supernodes: airports, celebrities, popular hashtags — unavoidable
-- Modeling supernodes: gender, country, status modeled as nodes with millions of edges — avoidable
+Node with degree >> median for its label = supernode candidate. Any node with >100K relationships degrades traversal queries that pass through it.
 
 **Mitigation strategies (in priority order):**
 
@@ -173,20 +160,9 @@ Node with degree >> median for its label = supernode candidate. Any node with >1
 | **Query direction** | Directional asymmetry exists | Query from low-degree side; exploit direction |
 | **Relationship type split** | Supernode serves multiple roles | `:FOLLOWS` + `:FAN` instead of single `:RELATED_TO` |
 | **Label segregation** | Supernode conflates entity types | `:Celebrity` vs `:User` → query only relevant subtype |
-| **Bucket pattern** | Time-series or high-volume event nodes | See below |
+| **Bucket pattern** | Time-series or high-volume event nodes | See references/modeling-patterns.md |
 | **Avoid modeling** | Low-cardinality categoricals | Use label instead of node (`:Active` not `(:Status {name:"Active"})`) |
 | **Join hint** | Query tuning last resort | `USING JOIN ON n` in Cypher |
-
-**Bucket pattern (time-series / high-volume):**
-```cypher
-// Instead of: (:User)-[:VIEWED]->(:Page) (millions of rels per user)
-// Bucket by hour:
-(u:User)-[:VIEWED_IN]->(b:ViewBucket {userId: u.id, hour: '2025-04-28T14'})-[:VIEWED]->(p:Page)
-
-// Query last hour's views without traversing full history:
-MATCH (u:User {id: $uid})-[:VIEWED_IN]->(b:ViewBucket {hour: $hour})-[:VIEWED]->(p)
-RETURN p.url
-```
 
 ---
 
@@ -202,70 +178,6 @@ RETURN p.url
 
 ---
 
-### Schema Enforcement — What to Create for Each Element
-
-Run all DDL with `IF NOT EXISTS`. Apply before importing data.
-
-```cypher
-// 1. Uniqueness constraint — every node type used in MERGE
-CREATE CONSTRAINT person_id_unique IF NOT EXISTS
-  FOR (p:Person) REQUIRE p.id IS UNIQUE;
-
-// 2. Existence constraint (Enterprise) — mandatory properties
-CREATE CONSTRAINT person_name_exists IF NOT EXISTS
-  FOR (p:Person) REQUIRE p.name IS NOT NULL;
-
-// 3. Property type constraint (Enterprise) — enforce data type
-CREATE CONSTRAINT person_born_integer IF NOT EXISTS
-  FOR (p:Person) REQUIRE p.born IS :: INTEGER;
-
-// 4. Key constraint (Enterprise) — unique + exists in one
-CREATE CONSTRAINT movie_tmdbid_key IF NOT EXISTS
-  FOR (m:Movie) REQUIRE m.tmdbId IS NODE KEY;
-
-// 5. Range index — equality and range filters on properties
-CREATE INDEX person_name_idx IF NOT EXISTS
-  FOR (p:Person) ON (p.name);
-
-// 6. Fulltext index — CONTAINS, STARTS WITH, free text search
-CREATE FULLTEXT INDEX person_fulltext IF NOT EXISTS
-  FOR (n:Person) ON EACH [n.name, n.bio];
-
-// 7. Vector index — embedding similarity search
-CREATE VECTOR INDEX chunk_embedding_idx IF NOT EXISTS
-  FOR (c:Chunk) ON (c.embedding)
-  OPTIONS { indexConfig: { `vector.dimensions`: 1536, `vector.similarity_function`: 'cosine' } };
-
-// 8. Relationship index — filter on rel properties
-CREATE INDEX acted_in_year_idx IF NOT EXISTS
-  FOR ()-[r:ACTED_IN]-() ON (r.year);
-```
-
-After creating indexes, poll until ONLINE:
-```cypher
-SHOW INDEXES YIELD name, state WHERE state <> 'ONLINE' RETURN name, state;
-```
-Do NOT use an index until state = `ONLINE`.
-
----
-
-### Vector / Embedding Property Modeling
-
-Store embeddings on dedicated `:Chunk` nodes, never on business nodes:
-
-```
-(:Document)-[:HAS_CHUNK]->(c:Chunk {text: "...", embedding: [...]})
-```
-
-Rules:
-- Chunk node: `text` (source text), `embedding` (float array), `chunkIndex` (int)
-- Parent document: metadata only (title, url, createdAt)
-- Vector index on `c.embedding` only
-- Chunk size 200–500 tokens with 20% overlap is production default [field]
-- Do NOT put embedding on `:Document` — makes the node too large and pollutes traversal
-
----
-
 ### Anti-Patterns Table
 
 | Anti-pattern | Problem | Fix |
@@ -278,8 +190,155 @@ Rules:
 | MERGE without uniqueness constraint | Duplicate nodes silently created | Add constraint before any MERGE |
 | Missing relationship direction meaning | Arbitrary direction; confusing model | Direction = semantic flow of action |
 | Junction table modeled as bare property | Loses history and extensibility | Intermediate node with its own properties |
-| `id` as property name | `id(n)` is a deprecated Cypher function (use `elementId(n)`); bare `id` is fine as a property name in practice, but domain-qualified names (`personId`, `movieId`) are clearer and avoid any future ambiguity | Prefer `personId`, `movieId`, `tmdbId` where it aids readability |
+| `id` as property name | `id(n)` is deprecated (use `elementId(n)`); bare `id` is fine but domain-qualified names (`personId`, `movieId`) are clearer | Prefer `personId`, `movieId`, `tmdbId` |
 | All dates as strings | No range queries; no temporal operators | Use Neo4j `date()` or `datetime()` type |
+
+---
+
+## Schema Enforcement
+
+See [references/schema-enforcement.md](references/schema-enforcement.md) for full constraint/index DDL examples, vector index setup, and embedding property modeling rules.
+
+---
+
+## Visual Modeling
+
+When the user wants to create, visualise, or edit a graph schema interactively, run the injector script to produce an interactive React artifact.
+
+### The Injector Script
+
+`scripts/inject.py` lives in this skill's folder. Resolve the absolute path from where this SKILL.md was loaded — do NOT hardcode `/mnt/skills/...`:
+
+```bash
+SCRIPT=$(find /mnt /opt ~/.claude /skills /workspace 2>/dev/null \
+  -name inject.py -path '*/neo4j-modeling-skill/*' | head -1)
+python3 "$SCRIPT" <input> [output.jsx]
+```
+
+The script auto-detects `<input>`:
+
+| Input type | Example |
+|---|---|
+| Reference model ID | `inject.py claims-fraud` |
+| File path | `inject.py /path/to/schema.json` |
+| Stdin | `cat schema.json | inject.py` |
+| List catalog | `inject.py --list` |
+
+Accepted wrapping formats (auto-unwrapped): bare `{nodes, relationships}`, arrows.app `{graph: {...}}`, reference model `{initialGraph: {...}}`.
+
+Default output: `/mnt/user-data/outputs/graph-schema-editor.jsx` when that directory exists; otherwise the current working directory. Pass a `.jsx` path as the second argument to override.
+
+### Outputs
+
+Each injection writes **three sibling files** with matching basename:
+
+- **`.jsx`** — interactive React editor (renders in claude.ai artifacts)
+- **`.json`** — arrows.app-compatible schema (paste into https://arrows.app)
+- **`.svg`** — static dark-theme rendering for non-artifact environments
+
+### Minimal Schema Shape
+
+Each **node** needs only `caption`. Supply `properties` when you have them. Everything else is auto-filled.
+
+| Field | Required? | Default when omitted |
+|---|---|---|
+| `caption` | yes | — |
+| `properties` | no | `{}` |
+| `id` | no | `n0`, `n1`, … |
+| `position` | no | Circular auto-layout centred on viewport |
+| `labels` | no | `[caption]` |
+| `style.color` | no | Cycled through 10-colour palette |
+| `style.radius` | no | `55` |
+
+Each **relationship** needs `type`, and either `from`/`to` (caption lookup) or `fromId`/`toId` (explicit ids — required when two nodes share a caption).
+
+| Field | Required? | Notes |
+|---|---|---|
+| `type` | yes | UPPER_SNAKE_CASE, e.g. `ACTED_IN` |
+| `from` or `fromId` | yes | Caption lookup OR explicit id |
+| `to` or `toId` | yes | Caption lookup OR explicit id |
+| `properties` | no | `{}` |
+| `id` | no | `r0`, `r1`, … |
+
+### Custom Domain — Stdin Pattern
+
+```bash
+cat <<'EOF' | python3 inject.py
+{
+  "nodes": [
+    { "caption": "Customer", "properties": { "customerId": "string", "name": "string" } },
+    { "caption": "Order",    "properties": { "orderId": "string", "total": "float" } },
+    { "caption": "Product",  "properties": { "sku": "string", "price": "float" } }
+  ],
+  "relationships": [
+    { "type": "PLACED",   "from": "Customer", "to": "Order" },
+    { "type": "CONTAINS", "from": "Order",    "to": "Product", "properties": { "quantity": "integer" } }
+  ]
+}
+EOF
+```
+
+### Multi-Label Nodes
+
+Neo4j supports multiple labels per node. Supply a `labels` array with more than one entry:
+
+```json
+{
+  "nodes": [
+    { "caption": "Account", "labels": ["Account", "Internal"], "properties": { "accountNumber": "string" } },
+    { "caption": "Account", "labels": ["Account", "External"], "properties": { "accountNumber": "string" } }
+  ],
+  "relationships": [
+    { "type": "TRANSFERRED_TO", "fromId": "n0", "toId": "n1" }
+  ]
+}
+```
+
+Invariants: `caption` is always the first element of `labels`; duplicates and empties are dropped. Relationship endpoints cannot resolve by caption when two nodes share one — use explicit `fromId`/`toId`.
+
+### Reference Models
+
+32 pre-built models across Financial Services, Insurance, Healthcare & Life Sciences, Manufacturing, Cybersecurity, and Industry Agnostic. Run `inject.py --list` for the live catalog. See [references/reference-models.md](references/reference-models.md) for the full catalog with keyword mapping.
+
+When a reference model is injected, the script surfaces its name and source URL — share these with the user.
+
+### Presenting Results
+
+**In claude.ai (artifacts render):** Call `present_files` on the `.jsx` first. Mention `.json` and `.svg` as companion files. Brief orientation:
+
+- Double-click canvas (or "Add Node") to add nodes
+- Drag from a node's edge to another node to create a relationship
+- Click any element to edit in sidebar — primary label, additional labels, properties, colour, radius
+- Scroll wheel zooms; drag canvas to pan
+- Export → "Copy JSON" gives arrows.app-compatible JSON
+
+**In CLI / API (no artifact rendering):** Lead with `.svg` for visual preview, `.json` as portable artifact. User can paste JSON into https://arrows.app for visual editing, then export back and re-feed to the injector.
+
+### Editing in arrows.app
+
+The exported `.json` is byte-compatible with https://arrows.app:
+
+1. Open https://arrows.app and click *Use Storage > Local*
+2. Paste contents of `.json`
+3. Edit visually with arrows.app's full toolset
+4. Use *Export* → *JSON* to get updated schema
+5. Paste JSON back in chat — injector handles both formats interchangeably
+
+### Saving User Edits
+
+The `.jsx` artifact runs in a sandbox — it cannot write to disk. Round-trip:
+
+1. User clicks **Export → Copy JSON** in the editor
+2. User pastes it in chat ("here's my updated schema" or "save my changes")
+3. **Re-run the injector against the pasted JSON:**
+
+```bash
+cat <<'EOF' | python3 inject.py
+{ "style": {...}, "nodes": [...], "relationships": [...] }
+EOF
+```
+
+This refreshes `.jsx`, `.json`, and `.svg` so all three stay in sync.
 
 ---
 
@@ -348,13 +407,17 @@ Severity semantics:
 - [ ] Indexes polled to ONLINE before use
 - [ ] Assessment output follows the structured format above
 - [ ] Every prohibition paired with a concrete fix
+- [ ] Visual artifact presented when user wants to see/edit schema interactively
+- [ ] Reference model source URL shared when loading a pre-built model
 
 ---
 
 ## References
 
 Load on demand:
+- [references/schema-enforcement.md](references/schema-enforcement.md) — constraint/index DDL, vector/embedding modeling
 - [references/modeling-patterns.md](references/modeling-patterns.md) — time-series, versioning, multi-tenancy, linked list, access control patterns
+- [references/reference-models.md](references/reference-models.md) — full catalog of 32 pre-built industry reference models
 - [Neo4j Data Modeling Guide](https://neo4j.com/docs/getting-started/data-modeling/guide-data-modeling/)
 - [Neo4j Modeling Tips](https://neo4j.com/docs/getting-started/data-modeling/modeling-tips/)
 - [GraphAcademy: Graph Data Modeling Fundamentals](https://graphacademy.neo4j.com/courses/modeling-fundamentals/)

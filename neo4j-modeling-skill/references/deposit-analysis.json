@@ -1,0 +1,97 @@
+{
+  "id": "deposit-analysis",
+  "name": "Deposit Analysis",
+  "description": "Models customer deposit behaviour using the transaction base model pattern. Source: https://neo4j.com/developer/industry-use-cases/finserv/retail-banking/deposit-analysis/",
+  "industry": "Financial Services",
+  "tags": [
+    "retail-banking",
+    "deposits",
+    "customer-analytics"
+  ],
+  "initialGraph": {
+    "nodes": [
+      {
+        "id": "n0",
+        "position": {
+          "x": 400,
+          "y": 100
+        },
+        "caption": "Customer",
+        "labels": [
+          "Customer"
+        ],
+        "properties": {
+          "customerId": "string"
+        },
+        "style": {
+          "color": "#68BC00",
+          "radius": 55
+        }
+      },
+      {
+        "id": "n1",
+        "position": {
+          "x": 150,
+          "y": 300
+        },
+        "caption": "Account",
+        "labels": [
+          "Account"
+        ],
+        "properties": {
+          "accountId": "string",
+          "accountNumber": "string"
+        },
+        "style": {
+          "color": "#009CE0",
+          "radius": 55
+        }
+      },
+      {
+        "id": "n2",
+        "position": {
+          "x": 400,
+          "y": 450
+        },
+        "caption": "Transaction",
+        "labels": [
+          "Transaction"
+        ],
+        "properties": {
+          "transactionId": "string",
+          "amount": "float",
+          "type": "string",
+          "timestamp": "datetime"
+        },
+        "style": {
+          "color": "#FA28FF",
+          "radius": 50
+        }
+      }
+    ],
+    "relationships": [
+      {
+        "id": "r0",
+        "type": "HAS_ACCOUNT",
+        "fromId": "n0",
+        "toId": "n1",
+        "properties": {}
+      },
+      {
+        "id": "r1",
+        "type": "PERFORMS",
+        "fromId": "n1",
+        "toId": "n2",
+        "properties": {}
+      },
+      {
+        "id": "r2",
+        "type": "BENEFITS_TO",
+        "fromId": "n2",
+        "toId": "n1",
+        "properties": {}
+      }
+    ],
+    "style": {}
+  }
+}

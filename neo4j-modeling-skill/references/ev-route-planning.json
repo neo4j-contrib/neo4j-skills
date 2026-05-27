@@ -1,0 +1,114 @@
+{
+  "id": "ev-route-planning",
+  "name": "Electric Vehicle Route Planning",
+  "description": "Models road networks with cities, charging stations and EVs for energy-aware route optimization using Cypher 25 stateful path finding. Source: https://neo4j.com/developer/industry-use-cases/manufacturing/supply-chain-management/ev-route-planning/",
+  "industry": "Manufacturing",
+  "tags": [
+    "EV",
+    "route-planning",
+    "supply-chain",
+    "logistics",
+    "Cypher-25"
+  ],
+  "initialGraph": {
+    "nodes": [
+      {
+        "id": "n0",
+        "position": {
+          "x": 300,
+          "y": 100
+        },
+        "caption": "Geo",
+        "labels": [
+          "Geo"
+        ],
+        "properties": {
+          "name": "string",
+          "geo": "point"
+        },
+        "style": {
+          "color": "#68BC00",
+          "radius": 55
+        }
+      },
+      {
+        "id": "n1",
+        "position": {
+          "x": 600,
+          "y": 100
+        },
+        "caption": "ChargingStation",
+        "labels": [
+          "ChargingStation",
+          "Geo"
+        ],
+        "properties": {
+          "name": "string",
+          "power_kw": "float",
+          "geo": "point"
+        },
+        "style": {
+          "color": "#009CE0",
+          "radius": 50
+        }
+      },
+      {
+        "id": "n2",
+        "position": {
+          "x": 450,
+          "y": 350
+        },
+        "caption": "Car",
+        "labels": [
+          "Car"
+        ],
+        "properties": {
+          "id": "string",
+          "battery_capacity_kwh": "float",
+          "efficiency_kwh_per_km": "float",
+          "current_soc_percent": "float"
+        },
+        "style": {
+          "color": "#FA28FF",
+          "radius": 50
+        }
+      }
+    ],
+    "relationships": [
+      {
+        "id": "r0",
+        "type": "ROAD",
+        "fromId": "n0",
+        "toId": "n0",
+        "properties": {
+          "distance_km": "float",
+          "speed_limit_kph": "float",
+          "hourly_expected_speed_kph": "list_of_float"
+        }
+      },
+      {
+        "id": "r1",
+        "type": "ROAD",
+        "fromId": "n0",
+        "toId": "n1",
+        "properties": {
+          "distance_km": "float",
+          "speed_limit_kph": "float",
+          "hourly_expected_speed_kph": "list_of_float"
+        }
+      },
+      {
+        "id": "r2",
+        "type": "CHARGE",
+        "fromId": "n1",
+        "toId": "n1",
+        "properties": {
+          "station_id": "string",
+          "power_kw": "float",
+          "time_in_minutes": "integer"
+        }
+      }
+    ],
+    "style": {}
+  }
+}

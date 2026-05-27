@@ -1,0 +1,39 @@
+{
+  "id": "entity-resolution",
+  "name": "Entity Resolution",
+  "description": "Industry-agnostic entity resolution / record linkage model. Deduplicates Address nodes using Levenshtein similarity on address fields and geographic distance between postcode-derived coordinates, creating SIMILAR_ADDRESS self-relationships for further resolution. Source: https://neo4j.com/developer/industry-use-cases/agnostic/entity-resolution/",
+  "industry": "Industry Agnostic",
+  "tags": [
+    "entity-resolution",
+    "record-linkage",
+    "deduplication",
+    "data-quality",
+    "address-matching",
+    "KYC"
+  ],
+  "initialGraph": {
+    "nodes": [
+      {
+        "id": "n1",
+        "position": { "x": 500, "y": 200 },
+        "caption": "Address",
+        "labels": ["Address"],
+        "properties": {
+          "RegAddressAddressLine1": "string",
+          "RegAddressAddressLine2": "string",
+          "RegAddressPostTown": "string",
+          "RegAddressPostCode": "string",
+          "FullAddress": "string",
+          "Latitude": "float",
+          "Longitude": "float"
+        },
+        "style": { "color": "#009CE0", "radius": 55 }
+      }
+    ],
+    "relationships": [
+      { "id": "r2", "type": "SIMILAR_ADDRESS", "fromId": "n1", "toId": "n1", "properties": { "line_1_sim": "float", "line_2_sim": "float", "full_address_sim": "float", "post_sim": "float", "distanceMeters": "float" } }
+    ],
+    "style": {}
+  },
+  "notes": "SIMILAR_ADDRESS is a self-loop on Address nodes created via APOC Levenshtein similarity (apoc.text.levenshteinSimilarity) across address lines and postcodes, combined with point.distance geographic comparison. Thresholds used in the reference: full_address_sim > 0.6, post_sim > 0.7."
+}

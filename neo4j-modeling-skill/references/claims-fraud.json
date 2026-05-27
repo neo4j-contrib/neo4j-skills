@@ -1,0 +1,127 @@
+{
+  "id": "claims-fraud",
+  "name": "Insurance Claims Fraud",
+  "description": "Detects claims fraud via Claimant, Claim, MedicalProfessional, Vehicle connections. Source: https://neo4j.com/developer/industry-use-cases/insurance/claims-fraud/",
+  "industry": "Insurance",
+  "tags": [
+    "insurance",
+    "claims-fraud",
+    "crash-for-cash"
+  ],
+  "initialGraph": {
+    "nodes": [
+      {
+        "id": "n0",
+        "position": {
+          "x": 150,
+          "y": 200
+        },
+        "caption": "Claimant",
+        "labels": [
+          "Claimant"
+        ],
+        "properties": {
+          "name": "string"
+        },
+        "style": {
+          "color": "#68BC00",
+          "radius": 55
+        }
+      },
+      {
+        "id": "n1",
+        "position": {
+          "x": 450,
+          "y": 200
+        },
+        "caption": "Claim",
+        "labels": [
+          "Claim"
+        ],
+        "properties": {
+          "claimID": "string",
+          "date": "date",
+          "amountClaimed": "float"
+        },
+        "style": {
+          "color": "#009CE0",
+          "radius": 55
+        }
+      },
+      {
+        "id": "n2",
+        "position": {
+          "x": 450,
+          "y": 450
+        },
+        "caption": "MedicalProfessional",
+        "labels": [
+          "MedicalProfessional"
+        ],
+        "properties": {
+          "name": "string"
+        },
+        "style": {
+          "color": "#FA28FF",
+          "radius": 50
+        }
+      },
+      {
+        "id": "n3",
+        "position": {
+          "x": 150,
+          "y": 450
+        },
+        "caption": "Vehicle",
+        "labels": [
+          "Vehicle"
+        ],
+        "properties": {
+          "VIN": "string"
+        },
+        "style": {
+          "color": "#FE9200",
+          "radius": 50
+        }
+      }
+    ],
+    "relationships": [
+      {
+        "id": "r0",
+        "type": "HAS_CLAIM",
+        "fromId": "n0",
+        "toId": "n1",
+        "properties": {}
+      },
+      {
+        "id": "r1",
+        "type": "TREATED_BY",
+        "fromId": "n1",
+        "toId": "n2",
+        "properties": {}
+      },
+      {
+        "id": "r2",
+        "type": "OWNS",
+        "fromId": "n0",
+        "toId": "n3",
+        "properties": {}
+      },
+      {
+        "id": "r3",
+        "type": "INVOLVED_IN",
+        "fromId": "n3",
+        "toId": "n1",
+        "properties": {}
+      },
+      {
+        "id": "r4",
+        "type": "TREATS",
+        "fromId": "n2",
+        "toId": "n0",
+        "properties": {}
+      }
+    ],
+    "style": {}
+  }
+}

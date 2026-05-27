@@ -1,0 +1,79 @@
+{
+  "id": "regulatory-dependency-mapping",
+  "name": "Regulatory Dependency Mapping",
+  "description": "Maps regulatory dependencies between standards and sections. Source: https://neo4j.com/developer/industry-use-cases/finserv/investment-banking/regulatory-dependency-mapping/",
+  "industry": "Financial Services",
+  "tags": [
+    "regulatory",
+    "compliance",
+    "investment-banking"
+  ],
+  "initialGraph": {
+    "nodes": [
+      {
+        "id": "n0",
+        "position": {
+          "x": 400,
+          "y": 100
+        },
+        "caption": "Standard",
+        "labels": [
+          "Standard"
+        ],
+        "properties": {
+          "id": "string"
+        },
+        "style": {
+          "color": "#68BC00",
+          "radius": 55
+        }
+      },
+      {
+        "id": "n1",
+        "position": {
+          "x": 400,
+          "y": 350
+        },
+        "caption": "Section",
+        "labels": [
+          "Section"
+        ],
+        "properties": {
+          "id": "string",
+          "title": "string",
+          "last_updated": "datetime"
+        },
+        "style": {
+          "color": "#009CE0",
+          "radius": 50
+        }
+      }
+    ],
+    "relationships": [
+      {
+        "id": "r0",
+        "type": "DEPENDS_ON",
+        "fromId": "n1",
+        "toId": "n0",
+        "properties": {}
+      },
+      {
+        "id": "r1",
+        "type": "DEPENDS_ON",
+        "fromId": "n1",
+        "toId": "n1",
+        "properties": {}
+      },
+      {
+        "id": "r2",
+        "type": "RELATED",
+        "fromId": "n1",
+        "toId": "n1",
+        "properties": {
+          "subsection": "string"
+        }
+      }
+    ],
+    "style": {}
+  }
+}

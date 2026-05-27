@@ -1,0 +1,328 @@
+{
+  "id": "transaction-base-model",
+  "name": "Transaction & Account Base Model",
+  "description": "Neo4j standardised banking data model for transactions, accounts, customers, KYC identity documents, digital sessions, and fraud investigations. Source: https://neo4j.com/developer/industry-use-cases/data-models/transaction-graph/transaction/transaction-base-model/",
+  "industry": "Financial Services",
+  "tags": ["banking", "transactions", "fraud", "KYC", "AML", "retail-banking", "payments"],
+  "initialGraph": {
+    "nodes": [
+      {
+        "id": "n0",
+        "position": { "x": 400, "y": 100 },
+        "caption": "Customer",
+        "labels": ["Customer"],
+        "properties": {
+          "customerId": "string",
+          "firstName": "string",
+          "middleName": "string",
+          "lastName": "string",
+          "dateOfBirth": "date",
+          "placeOfBirth": "string",
+          "countryOfBirth": "string"
+        },
+        "style": { "color": "#68BC00", "radius": 55 }
+      },
+      {
+        "id": "n1",
+        "position": { "x": 100, "y": 300 },
+        "caption": "Account",
+        "labels": ["Account"],
+        "properties": {
+          "accountNumber": "string",
+          "accountType": "string",
+          "openedDate": "datetime",
+          "closedDate": "datetime",
+          "suspendedDate": "datetime"
+        },
+        "style": { "color": "#009CE0", "radius": 55 }
+      },
+      {
+        "id": "n2",
+        "position": { "x": 400, "y": 450 },
+        "caption": "Transaction",
+        "labels": ["Transaction"],
+        "properties": {
+          "transactionId": "string",
+          "amount": "float",
+          "currency": "string",
+          "date": "datetime",
+          "message": "string",
+          "type": "string"
+        },
+        "style": { "color": "#FA28FF", "radius": 50 }
+      },
+      {
+        "id": "n3",
+        "position": { "x": 700, "y": 300 },
+        "caption": "Counterparty",
+        "labels": ["Counterparty"],
+        "properties": {
+          "counterpartyId": "string",
+          "name": "string",
+          "type": "string",
+          "registrationNumber": "string",
+          "createdAt": "datetime"
+        },
+        "style": { "color": "#7B64FF", "radius": 50 }
+      },
+      {
+        "id": "n4",
+        "position": { "x": 100, "y": 600 },
+        "caption": "Movement",
+        "labels": ["Movement"],
+        "properties": {
+          "movementId": "string",
+          "amount": "float",
+          "currency": "string",
+          "date": "datetime",
+          "description": "string",
+          "status": "string",
+          "sequenceNumber": "integer",
+          "authorisedBy": "string",
+          "validatedBy": "string",
+          "createdAt": "datetime"
+        },
+        "style": { "color": "#FE9200", "radius": 45 }
+      },
+      {
+        "id": "n5",
+        "position": { "x": 700, "y": 100 },
+        "caption": "Address",
+        "labels": ["Address"],
+        "properties": {
+          "addressLine1": "string",
+          "addressLine2": "string",
+          "postTown": "string",
+          "postCode": "string",
+          "region": "string",
+          "latitude": "float",
+          "longitude": "float",
+          "createdAt": "datetime"
+        },
+        "style": { "color": "#FCDC00", "radius": 45 }
+      },
+      {
+        "id": "n6",
+        "position": { "x": 950, "y": 100 },
+        "caption": "Country",
+        "labels": ["Country"],
+        "properties": {
+          "code": "string",
+          "name": "string"
+        },
+        "style": { "color": "#73D8FF", "radius": 40 }
+      },
+      {
+        "id": "n7",
+        "position": { "x": 150, "y": -100 },
+        "caption": "Email",
+        "labels": ["Email"],
+        "properties": {
+          "address": "string",
+          "domain": "string",
+          "createdAt": "datetime"
+        },
+        "style": { "color": "#A4DD00", "radius": 40 }
+      },
+      {
+        "id": "n8",
+        "position": { "x": 400, "y": -100 },
+        "caption": "Phone",
+        "labels": ["Phone"],
+        "properties": {
+          "phoneNumber": "string",
+          "countryCode": "string",
+          "createdAt": "datetime"
+        },
+        "style": { "color": "#68CCCA", "radius": 40 }
+      },
+      {
+        "id": "n9",
+        "position": { "x": 650, "y": -100 },
+        "caption": "Passport",
+        "labels": ["Passport"],
+        "properties": {
+          "passportNumber": "string",
+          "issueDate": "date",
+          "expiryDate": "date",
+          "issuingCountry": "string",
+          "nationality": "string",
+          "createdAt": "datetime"
+        },
+        "style": { "color": "#AEA1FF", "radius": 40 }
+      },
+      {
+        "id": "n10",
+        "position": { "x": 900, "y": -100 },
+        "caption": "DrivingLicense",
+        "labels": ["DrivingLicense"],
+        "properties": {
+          "licenseNumber": "string",
+          "issueDate": "date",
+          "expiryDate": "date",
+          "issuingCountry": "string",
+          "createdAt": "datetime"
+        },
+        "style": { "color": "#FDA1FF", "radius": 40 }
+      },
+      {
+        "id": "n11",
+        "position": { "x": -200, "y": 100 },
+        "caption": "Session",
+        "labels": ["Session"],
+        "properties": {
+          "sessionId": "string",
+          "status": "string",
+          "createdAt": "datetime"
+        },
+        "style": { "color": "#F44E3B", "radius": 45 }
+      },
+      {
+        "id": "n12",
+        "position": { "x": -200, "y": -100 },
+        "caption": "Device",
+        "labels": ["Device"],
+        "properties": {
+          "deviceId": "string",
+          "deviceType": "string",
+          "userAgent": "string",
+          "createdAt": "datetime"
+        },
+        "style": { "color": "#D33115", "radius": 40 }
+      },
+      {
+        "id": "n13",
+        "position": { "x": -450, "y": -100 },
+        "caption": "IP",
+        "labels": ["IP"],
+        "properties": {
+          "ipAddress": "string",
+          "createdAt": "datetime"
+        },
+        "style": { "color": "#E27300", "radius": 40 }
+      },
+      {
+        "id": "n14",
+        "position": { "x": -450, "y": 100 },
+        "caption": "ISP",
+        "labels": ["ISP"],
+        "properties": {
+          "name": "string",
+          "createdAt": "datetime"
+        },
+        "style": { "color": "#B0BC00", "radius": 35 }
+      },
+      {
+        "id": "n15",
+        "position": { "x": -450, "y": -300 },
+        "caption": "Location",
+        "labels": ["Location"],
+        "properties": {
+          "city": "string",
+          "postCode": "string",
+          "country": "string",
+          "latitude": "float",
+          "longitude": "float",
+          "createdAt": "datetime"
+        },
+        "style": { "color": "#16A5A5", "radius": 40 }
+      },
+      {
+        "id": "n16",
+        "position": { "x": 100, "y": -300 },
+        "caption": "Face",
+        "labels": ["Face"],
+        "properties": {
+          "faceId": "string",
+          "embedding": "list_of_float",
+          "createdAt": "datetime"
+        },
+        "style": { "color": "#7B64FF", "radius": 35 }
+      },
+      {
+        "id": "n17",
+        "position": { "x": 400, "y": 700 },
+        "caption": "Alert",
+        "labels": ["Alert"],
+        "properties": {
+          "alertId": "string",
+          "ruleName": "string",
+          "ruleId": "string",
+          "severity": "string",
+          "triggeredAt": "datetime"
+        },
+        "style": { "color": "#F44E3B", "radius": 40 }
+      },
+      {
+        "id": "n18",
+        "position": { "x": 700, "y": 700 },
+        "caption": "Case",
+        "labels": ["Case"],
+        "properties": {
+          "caseId": "string",
+          "status": "string",
+          "outcome": "string",
+          "financialStakes": "float",
+          "investigatedBy": "string",
+          "createdAt": "datetime",
+          "closedAt": "datetime"
+        },
+        "style": { "color": "#D33115", "radius": 45 }
+      }
+    ],
+    "relationships": [
+      { "id": "r0", "type": "HAS_ACCOUNT", "fromId": "n0", "toId": "n1", "properties": { "role": "string", "since": "datetime" } },
+      { "id": "r1", "type": "PERFORMS", "fromId": "n1", "toId": "n2", "properties": {} },
+      { "id": "r2", "type": "BENEFITS_TO", "fromId": "n2", "toId": "n1", "properties": {} },
+      { "id": "r3", "type": "HAS_ACCOUNT", "fromId": "n3", "toId": "n1", "properties": { "since": "datetime" } },
+      { "id": "r4", "type": "IMPLIED", "fromId": "n2", "toId": "n4", "properties": { "totalMovements": "integer" } },
+      { "id": "r5", "type": "HAS_ADDRESS", "fromId": "n0", "toId": "n5", "properties": { "addedAt": "datetime", "lastChangedAt": "datetime", "isCurrent": "boolean" } },
+      { "id": "r6", "type": "HAS_ADDRESS", "fromId": "n3", "toId": "n5", "properties": { "since": "datetime", "isCurrent": "boolean" } },
+      { "id": "r7", "type": "LOCATED_IN", "fromId": "n5", "toId": "n6", "properties": {} },
+      { "id": "r8", "type": "IS_HOSTED", "fromId": "n1", "toId": "n6", "properties": {} },
+      { "id": "r9", "type": "HAS_EMAIL", "fromId": "n0", "toId": "n7", "properties": { "since": "datetime" } },
+      { "id": "r10", "type": "HAS_PHONE", "fromId": "n0", "toId": "n8", "properties": { "since": "datetime" } },
+      { "id": "r11", "type": "HAS_PASSPORT", "fromId": "n0", "toId": "n9", "properties": { "verificationDate": "datetime", "verificationMethod": "string", "verificationStatus": "string" } },
+      { "id": "r12", "type": "HAS_DRIVING_LICENSE", "fromId": "n0", "toId": "n10", "properties": { "verificationDate": "datetime", "verificationMethod": "string", "verificationStatus": "string" } },
+      { "id": "r13", "type": "HAS_NATIONALITY", "fromId": "n0", "toId": "n6", "properties": {} },
+      { "id": "r14", "type": "HAS_FACE", "fromId": "n0", "toId": "n16", "properties": { "verificationDate": "datetime", "verificationMethod": "string", "verificationStatus": "string" } },
+      { "id": "r15", "type": "SESSION_USES_DEVICE", "fromId": "n11", "toId": "n12", "properties": {} },
+      { "id": "r16", "type": "USES_IP", "fromId": "n11", "toId": "n13", "properties": {} },
+      { "id": "r17", "type": "USED_BY", "fromId": "n12", "toId": "n0", "properties": { "lastUsed": "datetime" } },
+      { "id": "r18", "type": "IS_ALLOCATED_TO", "fromId": "n13", "toId": "n14", "properties": { "createdAt": "datetime" } },
+      { "id": "r19", "type": "LOCATED_IN", "fromId": "n13", "toId": "n15", "properties": { "createdAt": "datetime" } },
+      { "id": "r20", "type": "LOCATED_IN", "fromId": "n15", "toId": "n6", "properties": {} },
+      { "id": "r21", "type": "TRIGGERED", "fromId": "n17", "toId": "n18", "properties": {} },
+      { "id": "r22", "type": "SUBJECT_OF", "fromId": "n1", "toId": "n18", "properties": {} },
+      { "id": "r23", "type": "SUBJECT_OF", "fromId": "n0", "toId": "n18", "properties": {} }
+    ],
+    "style": {}
+  },
+  "additionalLabels": {
+    "Account": ["Internal", "External", "HighRiskJurisdiction", "Flagged", "UnderInvestigation", "Confirmed"]
+  },
+  "constraints": [
+    "CREATE CONSTRAINT customer_id IF NOT EXISTS FOR (c:Customer) REQUIRE c.customerId IS NODE KEY",
+    "CREATE CONSTRAINT account_number IF NOT EXISTS FOR (a:Account) REQUIRE a.accountNumber IS NODE KEY",
+    "CREATE CONSTRAINT transaction_id IF NOT EXISTS FOR (t:Transaction) REQUIRE t.transactionId IS NODE KEY",
+    "CREATE CONSTRAINT email_address IF NOT EXISTS FOR (e:Email) REQUIRE e.address IS NODE KEY",
+    "CREATE CONSTRAINT phone_number IF NOT EXISTS FOR (p:Phone) REQUIRE p.number IS NODE KEY",
+    "CREATE CONSTRAINT passport_number IF NOT EXISTS FOR (p:Passport) REQUIRE (p.passportNumber, p.issuingCountry) IS NODE KEY",
+    "CREATE CONSTRAINT driving_license_composite IF NOT EXISTS FOR (d:DrivingLicense) REQUIRE (d.licenseNumber, d.issuingCountry) IS NODE KEY",
+    "CREATE CONSTRAINT device_id IF NOT EXISTS FOR (d:Device) REQUIRE d.deviceId IS NODE KEY",
+    "CREATE CONSTRAINT ip_address IF NOT EXISTS FOR (i:IP) REQUIRE i.ipAddress IS NODE KEY",
+    "CREATE CONSTRAINT session_id IF NOT EXISTS FOR (s:Session) REQUIRE s.sessionId IS NODE KEY",
+    "CREATE CONSTRAINT face_id IF NOT EXISTS FOR (f:Face) REQUIRE f.faceId IS NODE KEY",
+    "CREATE CONSTRAINT counterparty_id IF NOT EXISTS FOR (cp:Counterparty) REQUIRE cp.counterpartyId IS NODE KEY",
+    "CREATE CONSTRAINT movement_id IF NOT EXISTS FOR (m:Movement) REQUIRE m.movementId IS NODE KEY",
+    "CREATE CONSTRAINT isp_name IF NOT EXISTS FOR (i:ISP) REQUIRE i.name IS NODE KEY",
+    "CREATE CONSTRAINT country_code IF NOT EXISTS FOR (c:Country) REQUIRE c.code IS NODE KEY",
+    "CREATE CONSTRAINT address_composite IF NOT EXISTS FOR (a:Address) REQUIRE (a.addressLine1, a.postTown, a.postCode) IS NODE KEY",
+    "CREATE CONSTRAINT alert_id IF NOT EXISTS FOR (a:Alert) REQUIRE a.alertId IS NODE KEY",
+    "CREATE CONSTRAINT case_id IF NOT EXISTS FOR (c:Case) REQUIRE c.caseId IS NODE KEY"
+  ],
+  "indexes": [
+    "CREATE INDEX transaction_date_idx IF NOT EXISTS FOR (t:Transaction) ON (t.date)",
+    "CREATE INDEX transaction_amount_idx IF NOT EXISTS FOR (t:Transaction) ON (t.amount)"
+  ]
+}

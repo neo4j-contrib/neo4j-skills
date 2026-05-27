@@ -1,0 +1,53 @@
+{
+  "id": "quote-fraud",
+  "name": "Insurance Quote Fraud",
+  "description": "Detects quote manipulation via linked list of Quote nodes tracking sequential changes with time deltas. Source: https://neo4j.com/developer/industry-use-cases/insurance/quote-fraud/",
+  "industry": "Insurance",
+  "tags": [
+    "insurance",
+    "quote-fraud",
+    "ghost-broking"
+  ],
+  "initialGraph": {
+    "nodes": [
+      {
+        "id": "n0",
+        "position": {
+          "x": 400,
+          "y": 300
+        },
+        "caption": "Quote",
+        "labels": [
+          "Quote"
+        ],
+        "properties": {
+          "firstname": "string",
+          "surname": "string",
+          "dob": "date",
+          "postcode": "string",
+          "passport": "string",
+          "longitude": "float",
+          "latitude": "float",
+          "created_date": "datetime",
+          "change_info": "string"
+        },
+        "style": {
+          "color": "#009CE0",
+          "radius": 60
+        }
+      }
+    ],
+    "relationships": [
+      {
+        "id": "r0",
+        "type": "NEXT_QUOTE",
+        "fromId": "n0",
+        "toId": "n0",
+        "properties": {
+          "diff_seconds": "integer"
+        }
+      }
+    ],
+    "style": {}
+  }
+}
