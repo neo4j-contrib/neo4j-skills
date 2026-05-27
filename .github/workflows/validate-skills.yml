@@ -1,0 +1,62 @@
+name: Validate skills
+
+on:
+  pull_request:
+    paths:
+      - "neo4j-*-skill/**"
+      - "scripts/**"
+      - "tests/**"
+      - "requirements-dev.txt"
+      - ".github/workflows/validate-skills.yml"
+  push:
+    paths:
+      - "neo4j-*-skill/**"
+      - "scripts/**"
+      - "tests/**"
+      - "requirements-dev.txt"
+      - ".github/workflows/validate-skills.yml"
+
+jobs:
+  lint-skills:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Run repo-wide skill lint tests
+        run: python tests/test_lint_skills.py
+
+  test-vector-skill:
+    runs-on: ubuntu-latest
+    env:
+      SKILL_EVAL_API_KEY: ${{ secrets.SKILL_EVAL_API_KEY }}
+      SKILL_EVAL_MODEL: ${{ vars.SKILL_EVAL_MODEL }}
+      SKILL_EVAL_JUDGE_MODEL: ${{ vars.SKILL_EVAL_JUDGE_MODEL }}
+      SKILL_EVAL_STRESS_MODEL: ${{ vars.SKILL_EVAL_STRESS_MODEL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install test dependencies
+        run: python -m pip install -r requirements-dev.txt
+      - name: Extract testable Cypher examples
+        run: python scripts/extract_cypher_examples.py --manifest neo4j-vector-index-skill/tests/cypher-examples.json --pretty
+      - name: Run vector skill tests
+        run: python -m pytest tests/test_vector_skill.py -v
+      - name: Validate optional vector golden evals
+        run: python -m pytest tests/test_vector_skill_golden_evals.py -v
+      - name: Run optional smaller-model vector golden evals
+        if: ${{ env.SKILL_EVAL_API_KEY != '' && env.SKILL_EVAL_STRESS_MODEL != '' }}
+        continue-on-error: true
+        env:
+          SKILL_EVAL_MODEL: ${{ env.SKILL_EVAL_STRESS_MODEL }}
+        run: |
+          python scripts/run_golden_evals.py \
+            --manifest neo4j-vector-index-skill/tests/golden-evals.json \
+            --require-api \
+            --fail-on-advisory \
+            --json-output /tmp/vector-skill-smaller-model-evals.json \
+            --jsonl-output /tmp/vector-skill-smaller-model-evals.jsonl \
+            --output-dir /tmp/vector-skill-smaller-model-outputs

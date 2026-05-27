@@ -369,6 +369,89 @@ The test: *would a developer need to look this up?* If yes, it stays.
 
 ---
 
+## Test Harness
+
+The repo has two test scopes:
+
+| Scope | Purpose | Command |
+|---|---|---|
+| Repo-wide lint | Validate every skill structure, metadata, links, size, and obvious secret leaks | `python3 scripts/lint_skills.py` |
+| Test suite | Run lint wrapper plus focused vector-skill executable tests and golden eval validation | `python3 -m pytest tests -v` |
+
+Install test dependencies before running Python tests:
+
+```bash
+python3 -m pip install -r requirements-dev.txt
+```
+
+### Vector Skill Executable Cypher Tests
+
+Executable Cypher examples are currently implemented for `neo4j-vector-index-skill`.
+Run them directly:
+
+```bash
+python3 scripts/run_cypher_examples.py \
+  --manifest neo4j-vector-index-skill/tests/cypher-examples.json
+```
+
+Default behavior starts a disposable Neo4j Docker container. Prefer this for local runs.
+
+Configured `NEO4J_TEST_URI` runs are destructive: the runner drops constraints, drops indexes, and deletes nodes before each example and at the end. Use only a disposable database and opt in explicitly:
+
+```bash
+NEO4J_TEST_ALLOW_DESTRUCTIVE=1 \
+NEO4J_TEST_URI=neo4j://localhost:7687 \
+NEO4J_TEST_USERNAME=neo4j \
+NEO4J_TEST_PASSWORD=password \
+python3 scripts/run_cypher_examples.py \
+  --manifest neo4j-vector-index-skill/tests/cypher-examples.json
+```
+
+### Vector Skill Golden Evals
+
+Live golden evals are optional. Configure them with environment variables or `.config/skill-evals.env`:
+
+```bash
+SKILL_EVAL_MODEL=gpt-4o-mini
+SKILL_EVAL_JUDGE_MODEL=gpt-5.5
+OPENAI_API_KEY=...
+```
+
+Run CI-equivalent local golden evals:
+
+```bash
+python3 scripts/run_golden_evals.py \
+  --manifest neo4j-vector-index-skill/tests/golden-evals.json \
+  --require-api \
+  --fail-on-advisory \
+  --repeat 3
+```
+
+Use `SKILL_EVAL_MODEL` for the model under test. Use a stronger `SKILL_EVAL_JUDGE_MODEL` for semantic checks.
+
+### Extending Tests
+
+- Keep test metadata out of `SKILL.md`; store it under the skill's `tests/` directory.
+- Add executable Cypher examples to a manifest like `neo4j-vector-index-skill/tests/cypher-examples.json`.
+- Select examples by heading and fenced-block number; do not mark every Cypher block executable.
+- Keep setup files minimal, local to the skill, and free of secrets.
+- Use manifest `parameters` for runtime values.
+- Use `minVersion` when syntax, procedures, or store format expectations depend on Neo4j version.
+- Add golden evals to a manifest like `neo4j-vector-index-skill/tests/golden-evals.json`.
+- Start each golden eval manifest with a `testPlan` that names the behaviors under test and maps each task to one eval.
+- Add `task` and `covers` fields to every eval so reviewers can see why the case exists.
+- Golden eval prompts describe the user's scenario and task; checks encode the required behavior.
+- Do not solve the problem in the prompt just to make the current skill pass.
+- Keep failing evals if they identify missing skill guidance rather than test brittleness.
+- Prefer deterministic `literal` or `regex` checks for objective requirements.
+- Use `llm_judge` only for semantic criteria where wording can vary; keep advisory until calibrated.
+- Run golden evals with `--fail-on-advisory --repeat 3` before making advisory checks block CI.
+- When adding tests for another skill, follow the vector-skill pattern: skill-local manifests, skill-local fixtures, repo-level pytest wrapper.
+
+Detailed test guidance lives in `tests/README.md`.
+
+---
+
 ## Anti-Patterns
 
 **Excessive architecture overviews** — detailed "why" explanations push agents into reading irrelevant docs. Focus on "what" and "how"; keep "why" in commit messages.
@@ -395,7 +478,13 @@ The test: *would a developer need to look this up?* If yes, it stays.
 python3 scripts/lint_skills.py
 ```
 
-The linter uses `git ls-files` to find tracked `SKILL.md` files and checks:
+Lint one skill:
+
+```bash
+python3 scripts/lint_skills.py --skill-dir neo4j-vector-index-skill
+```
+
+The linter checks tracked skills and filesystem `neo4j-*-skill/` directories so new untracked skill directories are caught before staging.
 
 | Rule | Detail |
 |---|---|
@@ -404,8 +493,13 @@ The linter uses `git ls-files` to find tracked `SKILL.md` files and checks:
 | `description` not block scalar | Detected via `>` prefix in parsed value |
 | No unknown frontmatter fields | `status`, `version` are allowed extensions; anything else fails |
 | `compatibility` length | Hard fail if > 500 chars |
+| Duplicate skill names | Hard fail |
+| `SKILL.md` size | Hard fail if over 500 lines |
+| Local Markdown links | Hard fail if referenced local file does not exist |
+| Obvious secrets | Hard fail for API keys, private key blocks, and hardcoded password-like values |
+| Cypher comments | Hard fail for SQL-style `--` comments inside `cypher` fenced blocks |
 
-Stage new skills with `git add` before running — the linter only sees tracked files.
+Run lint before every commit.
 
 ---
 
