@@ -1,0 +1,255 @@
+{
+  "id": "transaction-monitoring",
+  "name": "Transaction Monitoring",
+  "description": "AML transaction monitoring linking accounts, transactions, counterparties and jurisdictions. Source: https://neo4j.com/developer/industry-use-cases/finserv/retail-banking/transaction-monitoring/transaction-monitoring-introduction/",
+  "industry": "Financial Services",
+  "tags": [
+    "AML",
+    "transaction-monitoring",
+    "compliance"
+  ],
+  "initialGraph": {
+    "nodes": [
+      {
+        "id": "n0",
+        "position": {
+          "x": 400,
+          "y": 50
+        },
+        "caption": "Customer",
+        "labels": [
+          "Customer"
+        ],
+        "properties": {
+          "customerId": "string",
+          "name": "string",
+          "riskRating": "string"
+        },
+        "style": {
+          "color": "#68BC00",
+          "radius": 55
+        }
+      },
+      {
+        "id": "n1",
+        "position": {
+          "x": 150,
+          "y": 200
+        },
+        "caption": "Account",
+        "labels": [
+          "Account",
+          "Internal"
+        ],
+        "properties": {
+          "accountNumber": "string",
+          "accountType": "string",
+          "openedDate": "datetime"
+        },
+        "style": {
+          "color": "#009CE0",
+          "radius": 55
+        }
+      },
+      {
+        "id": "n2",
+        "position": {
+          "x": 400,
+          "y": 350
+        },
+        "caption": "Transaction",
+        "labels": [
+          "Transaction"
+        ],
+        "properties": {
+          "transactionId": "string",
+          "amount": "float",
+          "currency": "string",
+          "date": "datetime",
+          "type": "string"
+        },
+        "style": {
+          "color": "#FA28FF",
+          "radius": 50
+        }
+      },
+      {
+        "id": "n3",
+        "position": {
+          "x": 650,
+          "y": 200
+        },
+        "caption": "Counterparty",
+        "labels": [
+          "Counterparty"
+        ],
+        "properties": {
+          "counterpartyId": "string",
+          "name": "string",
+          "type": "string"
+        },
+        "style": {
+          "color": "#7B64FF",
+          "radius": 50
+        }
+      },
+      {
+        "id": "n4",
+        "position": {
+          "x": 650,
+          "y": 50
+        },
+        "caption": "Country",
+        "labels": [
+          "Country"
+        ],
+        "properties": {
+          "code": "string",
+          "name": "string"
+        },
+        "style": {
+          "color": "#73D8FF",
+          "radius": 40
+        }
+      },
+      {
+        "id": "n5",
+        "position": {
+          "x": 400,
+          "y": 550
+        },
+        "caption": "Alert",
+        "labels": [
+          "Alert"
+        ],
+        "properties": {
+          "alertId": "string",
+          "ruleName": "string",
+          "severity": "string",
+          "triggeredAt": "datetime"
+        },
+        "style": {
+          "color": "#F44E3B",
+          "radius": 45
+        }
+      },
+      {
+        "id": "n6",
+        "position": {
+          "x": 150,
+          "y": 400
+        },
+        "caption": "Case",
+        "labels": [
+          "Case"
+        ],
+        "properties": {
+          "caseId": "string",
+          "status": "string",
+          "outcome": "string",
+          "createdAt": "datetime",
+          "closedAt": "datetime",
+          "financialStakes": "float",
+          "investigatedBy": "string"
+        },
+        "style": {
+          "color": "#D33115",
+          "radius": 45
+        }
+      },
+      {
+        "id": "n7",
+        "position": {
+          "x": 900,
+          "y": 350
+        },
+        "caption": "Account",
+        "labels": [
+          "Account",
+          "External",
+          "HighRiskJurisdiction"
+        ],
+        "properties": {
+          "accountNumber": "string"
+        },
+        "style": {
+          "color": "#FB9E00",
+          "radius": 55
+        }
+      }
+    ],
+    "relationships": [
+      {
+        "id": "r0",
+        "type": "HAS_ACCOUNT",
+        "fromId": "n0",
+        "toId": "n1",
+        "properties": {}
+      },
+      {
+        "id": "r1",
+        "type": "PERFORMS",
+        "fromId": "n1",
+        "toId": "n2",
+        "properties": {}
+      },
+      {
+        "id": "r2",
+        "type": "BENEFITS_TO",
+        "fromId": "n2",
+        "toId": "n1",
+        "properties": {}
+      },
+      {
+        "id": "r3",
+        "type": "HAS_ACCOUNT",
+        "fromId": "n3",
+        "toId": "n1",
+        "properties": {}
+      },
+      {
+        "id": "r4",
+        "type": "IS_HOSTED",
+        "fromId": "n1",
+        "toId": "n4",
+        "properties": {}
+      },
+      {
+        "id": "r5",
+        "type": "TRIGGERED",
+        "fromId": "n5",
+        "toId": "n6",
+        "properties": {}
+      },
+      {
+        "id": "r6",
+        "type": "SUBJECT_OF",
+        "fromId": "n1",
+        "toId": "n6",
+        "properties": {}
+      },
+      {
+        "id": "r7",
+        "type": "SUBJECT_OF",
+        "fromId": "n0",
+        "toId": "n6",
+        "properties": {}
+      },
+      {
+        "id": "r8",
+        "type": "BENEFITS_TO",
+        "fromId": "n2",
+        "toId": "n7",
+        "properties": {}
+      },
+      {
+        "id": "r9",
+        "type": "IS_HOSTED",
+        "fromId": "n7",
+        "toId": "n4",
+        "properties": {}
+      }
+    ],
+    "style": {}
+  }
+}

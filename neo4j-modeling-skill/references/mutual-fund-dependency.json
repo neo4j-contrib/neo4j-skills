@@ -1,0 +1,89 @@
+{
+  "id": "mutual-fund-dependency",
+  "name": "Mutual Fund Dependency Analytics",
+  "description": "Analyses investment dependencies between funds and underlying stocks. Source: https://neo4j.com/developer/industry-use-cases/finserv/investment-banking/mutual-fund-dependency/",
+  "industry": "Financial Services",
+  "tags": [
+    "investment-banking",
+    "mutual-funds",
+    "portfolio"
+  ],
+  "initialGraph": {
+    "nodes": [
+      {
+        "id": "n0",
+        "position": {
+          "x": 150,
+          "y": 200
+        },
+        "caption": "Fund",
+        "labels": [
+          "Fund"
+        ],
+        "properties": {
+          "name": "string",
+          "isin": "string"
+        },
+        "style": {
+          "color": "#68BC00",
+          "radius": 55
+        }
+      },
+      {
+        "id": "n1",
+        "position": {
+          "x": 400,
+          "y": 200
+        },
+        "caption": "Holdings",
+        "labels": [
+          "Holdings"
+        ],
+        "properties": {},
+        "style": {
+          "color": "#009CE0",
+          "radius": 40
+        }
+      },
+      {
+        "id": "n2",
+        "position": {
+          "x": 650,
+          "y": 200
+        },
+        "caption": "Stock",
+        "labels": [
+          "Stock"
+        ],
+        "properties": {
+          "name": "string",
+          "symbol": "string",
+          "isin": "string"
+        },
+        "style": {
+          "color": "#FA28FF",
+          "radius": 55
+        }
+      }
+    ],
+    "relationships": [
+      {
+        "id": "r0",
+        "type": "HOLDINGS",
+        "fromId": "n0",
+        "toId": "n1",
+        "properties": {}
+      },
+      {
+        "id": "r1",
+        "type": "INVESTED_IN",
+        "fromId": "n1",
+        "toId": "n2",
+        "properties": {
+          "pct": "float"
+        }
+      }
+    ],
+    "style": {}
+  }
+}

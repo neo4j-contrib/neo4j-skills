@@ -1,0 +1,305 @@
+{
+  "id": "publication-intelligence",
+  "name": "Publication Intelligence",
+  "description": "Analyses scientific publication networks with papers, authors, institutions, journals, keywords, figures, genes, proteins, SNPs and diseases. Source: https://neo4j.com/developer/industry-use-cases/life-sciences/competitive-intelligence/publication-intelligence/",
+  "industry": "Healthcare & Life Sciences",
+  "tags": [
+    "publication",
+    "research",
+    "competitive-intelligence",
+    "KOL"
+  ],
+  "initialGraph": {
+    "nodes": [
+      {
+        "id": "n0",
+        "position": {
+          "x": 500,
+          "y": 250
+        },
+        "caption": "Publication",
+        "labels": [
+          "Publication"
+        ],
+        "properties": {
+          "id": "string",
+          "pmid": "string",
+          "title": "string",
+          "text": "string",
+          "abstract": "string",
+          "year": "integer",
+          "citations": "integer"
+        },
+        "style": {
+          "color": "#68BC00",
+          "radius": 55
+        }
+      },
+      {
+        "id": "n1",
+        "position": {
+          "x": 300,
+          "y": 200
+        },
+        "caption": "Author",
+        "labels": [
+          "Author"
+        ],
+        "properties": {
+          "name": "string",
+          "h_index": "integer",
+          "expertise": "string"
+        },
+        "style": {
+          "color": "#009CE0",
+          "radius": 50
+        }
+      },
+      {
+        "id": "n2",
+        "position": {
+          "x": 100,
+          "y": 200
+        },
+        "caption": "Institution",
+        "labels": [
+          "Institution"
+        ],
+        "properties": {
+          "name": "string",
+          "type": "string",
+          "country": "string"
+        },
+        "style": {
+          "color": "#FA28FF",
+          "radius": 45
+        }
+      },
+      {
+        "id": "n3",
+        "position": {
+          "x": 300,
+          "y": 300
+        },
+        "caption": "Journal",
+        "labels": [
+          "Journal"
+        ],
+        "properties": {
+          "name": "string",
+          "impactFactor": "float"
+        },
+        "style": {
+          "color": "#7B64FF",
+          "radius": 45
+        }
+      },
+      {
+        "id": "n4",
+        "position": {
+          "x": 400,
+          "y": 80
+        },
+        "caption": "Keyword",
+        "labels": [
+          "Keyword"
+        ],
+        "properties": {
+          "term": "string"
+        },
+        "style": {
+          "color": "#FE9200",
+          "radius": 42
+        }
+      },
+      {
+        "id": "n5",
+        "position": {
+          "x": 600,
+          "y": 80
+        },
+        "caption": "Figure",
+        "labels": [
+          "Figure"
+        ],
+        "properties": {
+          "id": "string",
+          "caption": "string"
+        },
+        "style": {
+          "color": "#FCDC00",
+          "radius": 40
+        }
+      },
+      {
+        "id": "n6",
+        "position": {
+          "x": 800,
+          "y": 250
+        },
+        "caption": "Disease",
+        "labels": [
+          "Disease"
+        ],
+        "properties": {
+          "name": "string"
+        },
+        "style": {
+          "color": "#A4DD00",
+          "radius": 45
+        }
+      },
+      {
+        "id": "n7",
+        "position": {
+          "x": 600,
+          "y": 420
+        },
+        "caption": "Gene",
+        "labels": [
+          "Gene"
+        ],
+        "properties": {
+          "symbol": "string",
+          "name": "string"
+        },
+        "style": {
+          "color": "#68CCCA",
+          "radius": 45
+        }
+      },
+      {
+        "id": "n8",
+        "position": {
+          "x": 400,
+          "y": 420
+        },
+        "caption": "Protein",
+        "labels": [
+          "Protein"
+        ],
+        "properties": {
+          "name": "string"
+        },
+        "style": {
+          "color": "#DBDF00",
+          "radius": 42
+        }
+      },
+      {
+        "id": "n9",
+        "position": {
+          "x": 250,
+          "y": 500
+        },
+        "caption": "SNP",
+        "labels": [
+          "SNP"
+        ],
+        "properties": {
+          "rsid": "string",
+          "variant": "string",
+          "clinical_significance": "string"
+        },
+        "style": {
+          "color": "#FF6B6B",
+          "radius": 40
+        }
+      }
+    ],
+    "relationships": [
+      {
+        "id": "r0",
+        "type": "HAS_AUTHOR",
+        "fromId": "n0",
+        "toId": "n1",
+        "properties": {}
+      },
+      {
+        "id": "r1",
+        "type": "IS_PART_OF",
+        "fromId": "n1",
+        "toId": "n2",
+        "properties": {}
+      },
+      {
+        "id": "r2",
+        "type": "PUBLISHED_IN",
+        "fromId": "n0",
+        "toId": "n3",
+        "properties": {}
+      },
+      {
+        "id": "r3",
+        "type": "HAS_KEYWORD",
+        "fromId": "n0",
+        "toId": "n4",
+        "properties": {}
+      },
+      {
+        "id": "r4",
+        "type": "IS_A",
+        "fromId": "n4",
+        "toId": "n4",
+        "properties": {}
+      },
+      {
+        "id": "r5",
+        "type": "HAS_FIGURE",
+        "fromId": "n0",
+        "toId": "n5",
+        "properties": {}
+      },
+      {
+        "id": "r6",
+        "type": "CITES",
+        "fromId": "n0",
+        "toId": "n0",
+        "properties": {}
+      },
+      {
+        "id": "r7",
+        "type": "MENTIONS",
+        "fromId": "n0",
+        "toId": "n6",
+        "properties": {}
+      },
+      {
+        "id": "r8",
+        "type": "MENTIONS",
+        "fromId": "n0",
+        "toId": "n7",
+        "properties": {}
+      },
+      {
+        "id": "r9",
+        "type": "MENTIONS",
+        "fromId": "n0",
+        "toId": "n8",
+        "properties": {}
+      },
+      {
+        "id": "r10",
+        "type": "CODES",
+        "fromId": "n8",
+        "toId": "n7",
+        "properties": {}
+      },
+      {
+        "id": "r11",
+        "type": "ASSOCIATED_WITH",
+        "fromId": "n9",
+        "toId": "n7",
+        "properties": {}
+      },
+      {
+        "id": "r12",
+        "type": "MENTIONS_VARIANT",
+        "fromId": "n0",
+        "toId": "n9",
+        "properties": {}
+      }
+    ],
+    "style": {}
+  }
+}

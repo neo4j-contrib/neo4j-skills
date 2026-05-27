@@ -1,0 +1,95 @@
+{
+  "id": "ubo-company-ownership",
+  "name": "Ultimate Beneficial Owner (UBO) & Company Ownership",
+  "description": "Models corporate ownership hierarchies across individuals, companies, and legal entities for UBO identification and AML/KYC compliance (6AMLD). Built on UK Companies House datasets. Source: https://neo4j.com/developer/industry-use-cases/finserv/retail-banking/company-ownership-ubo-graphs/",
+  "industry": "Financial Services",
+  "tags": [
+    "UBO",
+    "beneficial-ownership",
+    "KYC",
+    "AML",
+    "6AMLD",
+    "company-ownership",
+    "corporate-structure"
+  ],
+  "initialGraph": {
+    "nodes": [
+      {
+        "id": "n0",
+        "position": { "x": 400, "y": 100 },
+        "caption": "Company",
+        "labels": ["Company"],
+        "properties": {
+          "companyNumber": "string",
+          "companyName": "string",
+          "companyCategory": "string",
+          "companyStatus": "string",
+          "incorporationDate": "date",
+          "jurisdiction": "string"
+        },
+        "style": { "color": "#68BC00", "radius": 55 }
+      },
+      {
+        "id": "n1",
+        "position": { "x": 100, "y": 300 },
+        "caption": "Individual",
+        "labels": ["Individual"],
+        "properties": {
+          "personId": "string",
+          "firstName": "string",
+          "lastName": "string",
+          "dateOfBirth": "date",
+          "nationality": "string",
+          "countryOfResidence": "string"
+        },
+        "style": { "color": "#009CE0", "radius": 50 }
+      },
+      {
+        "id": "n2",
+        "position": { "x": 700, "y": 300 },
+        "caption": "LegalEntity",
+        "labels": ["LegalEntity"],
+        "properties": {
+          "entityId": "string",
+          "name": "string",
+          "entityType": "string",
+          "jurisdiction": "string"
+        },
+        "style": { "color": "#FA28FF", "radius": 50 }
+      },
+      {
+        "id": "n3",
+        "position": { "x": 400, "y": 450 },
+        "caption": "Address",
+        "labels": ["Address"],
+        "properties": {
+          "addressLine1": "string",
+          "postTown": "string",
+          "postCode": "string",
+          "country": "string"
+        },
+        "style": { "color": "#7B64FF", "radius": 45 }
+      },
+      {
+        "id": "n4",
+        "position": { "x": 100, "y": 450 },
+        "caption": "SIC",
+        "labels": ["SIC"],
+        "properties": {
+          "sicCode": "string",
+          "description": "string"
+        },
+        "style": { "color": "#FE9200", "radius": 40 }
+      }
+    ],
+    "relationships": [
+      { "id": "r0", "type": "OWNS", "fromId": "n0", "toId": "n0", "properties": { "ownership_pct_min": "float", "ownership_pct_max": "float", "natureOfControl": "string" } },
+      { "id": "r1", "type": "OWNS", "fromId": "n1", "toId": "n0", "properties": { "ownership_pct_min": "float", "ownership_pct_max": "float", "natureOfControl": "string" } },
+      { "id": "r2", "type": "OWNS", "fromId": "n2", "toId": "n0", "properties": { "ownership_pct_min": "float", "ownership_pct_max": "float", "natureOfControl": "string" } },
+      { "id": "r3", "type": "REGISTERED_AT", "fromId": "n0", "toId": "n3", "properties": {} },
+      { "id": "r4", "type": "HAS_SIC", "fromId": "n0", "toId": "n4", "properties": {} }
+    ],
+    "style": {}
+  },
+  "notes": "UBO is typically determined by finding the Individual(s) at the top of the OWNS/CONTROLS chain holding >=25% (direct + indirect). Use apoc.path.expandConfig on OWNS with variable depth to traverse multi-layer hierarchies."
+}

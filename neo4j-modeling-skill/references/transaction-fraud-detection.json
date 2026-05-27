@@ -1,0 +1,165 @@
+{
+  "id": "transaction-fraud-detection",
+  "name": "Transaction Fraud Detection (IEEE-CIS)",
+  "description": "Graph-based fraud detection with Transaction, Card, Device, Email, Address, Identity nodes for ML feature engineering. Source: https://neo4j.com/developer/industry-use-cases/finserv/retail-banking/ieee-cis-fraud-graphs/",
+  "industry": "Financial Services",
+  "tags": [
+    "fraud-detection",
+    "IEEE-CIS",
+    "machine-learning",
+    "GDS"
+  ],
+  "initialGraph": {
+    "nodes": [
+      {
+        "id": "n0",
+        "position": {
+          "x": 400,
+          "y": 100
+        },
+        "caption": "Transaction",
+        "labels": [
+          "Transaction"
+        ],
+        "properties": {
+          "transactionId": "string",
+          "amount": "float",
+          "isFraud": "boolean",
+          "productCD": "string"
+        },
+        "style": {
+          "color": "#FA28FF",
+          "radius": 55
+        }
+      },
+      {
+        "id": "n1",
+        "position": {
+          "x": 150,
+          "y": 100
+        },
+        "caption": "Card",
+        "labels": [
+          "Card"
+        ],
+        "properties": {
+          "cardId": "string"
+        },
+        "style": {
+          "color": "#009CE0",
+          "radius": 45
+        }
+      },
+      {
+        "id": "n2",
+        "position": {
+          "x": 650,
+          "y": 100
+        },
+        "caption": "Device",
+        "labels": [
+          "Device"
+        ],
+        "properties": {
+          "deviceId": "string"
+        },
+        "style": {
+          "color": "#D33115",
+          "radius": 45
+        }
+      },
+      {
+        "id": "n3",
+        "position": {
+          "x": 150,
+          "y": 350
+        },
+        "caption": "Email",
+        "labels": [
+          "Email"
+        ],
+        "properties": {
+          "domain": "string"
+        },
+        "style": {
+          "color": "#A4DD00",
+          "radius": 40
+        }
+      },
+      {
+        "id": "n4",
+        "position": {
+          "x": 400,
+          "y": 350
+        },
+        "caption": "Address",
+        "labels": [
+          "Address"
+        ],
+        "properties": {
+          "addressId": "string"
+        },
+        "style": {
+          "color": "#FCDC00",
+          "radius": 40
+        }
+      },
+      {
+        "id": "n5",
+        "position": {
+          "x": 650,
+          "y": 350
+        },
+        "caption": "Identity",
+        "labels": [
+          "Identity"
+        ],
+        "properties": {
+          "identityId": "string"
+        },
+        "style": {
+          "color": "#7B64FF",
+          "radius": 40
+        }
+      }
+    ],
+    "relationships": [
+      {
+        "id": "r0",
+        "type": "USED_CARD",
+        "fromId": "n0",
+        "toId": "n1",
+        "properties": {}
+      },
+      {
+        "id": "r1",
+        "type": "USED_DEVICE",
+        "fromId": "n0",
+        "toId": "n2",
+        "properties": {}
+      },
+      {
+        "id": "r2",
+        "type": "HAS_EMAIL",
+        "fromId": "n0",
+        "toId": "n3",
+        "properties": {}
+      },
+      {
+        "id": "r3",
+        "type": "HAS_ADDRESS",
+        "fromId": "n0",
+        "toId": "n4",
+        "properties": {}
+      },
+      {
+        "id": "r4",
+        "type": "HAS_IDENTITY",
+        "fromId": "n0",
+        "toId": "n5",
+        "properties": {}
+      }
+    ],
+    "style": {}
+  }
+}

@@ -1,0 +1,118 @@
+{
+  "id": "pipeline-intelligence",
+  "name": "Pharma Pipeline Intelligence",
+  "description": "Models the pharmaceutical R&D pipeline — companies, drugs, proteins/genes, diseases, clinical trials and phases — for competitive landscape analysis and strategic decisioning. Source: https://neo4j.com/developer/industry-use-cases/life-sciences/competitive-intelligence/pipeline-intelligence/",
+  "industry": "Healthcare & Life Sciences",
+  "tags": [
+    "pipeline",
+    "pharma",
+    "competitive-intelligence",
+    "drug-development",
+    "clinical-trials",
+    "R&D"
+  ],
+  "initialGraph": {
+    "nodes": [
+      {
+        "id": "n0",
+        "position": { "x": 100, "y": 200 },
+        "caption": "Company",
+        "labels": ["Company"],
+        "properties": {
+          "name": "string",
+          "country": "string",
+          "market_cap": "integer",
+          "focus": "string"
+        },
+        "style": { "color": "#68BC00", "radius": 55 }
+      },
+      {
+        "id": "n1",
+        "position": { "x": 400, "y": 350 },
+        "caption": "Drug",
+        "labels": ["Drug"],
+        "properties": {
+          "name": "string",
+          "mechanism": "string",
+          "modality": "string",
+          "status": "string"
+        },
+        "style": { "color": "#009CE0", "radius": 55 }
+      },
+      {
+        "id": "n2",
+        "position": { "x": 400, "y": 100 },
+        "caption": "Protein",
+        "labels": ["Protein"],
+        "properties": {
+          "name": "string",
+          "function": "string"
+        },
+        "style": { "color": "#FA28FF", "radius": 45 }
+      },
+      {
+        "id": "n3",
+        "position": { "x": 250, "y": 100 },
+        "caption": "Gene",
+        "labels": ["Gene"],
+        "properties": {
+          "symbol": "string",
+          "name": "string"
+        },
+        "style": { "color": "#7B64FF", "radius": 45 }
+      },
+      {
+        "id": "n4",
+        "position": { "x": 700, "y": 200 },
+        "caption": "ClinicalTrial",
+        "labels": ["ClinicalTrial"],
+        "properties": {
+          "nct_id": "string",
+          "status": "string",
+          "start_date": "date",
+          "completion_date": "date",
+          "enrollment": "integer",
+          "termination_reason": "string"
+        },
+        "style": { "color": "#FE9200", "radius": 50 }
+      },
+      {
+        "id": "n5",
+        "position": { "x": 900, "y": 200 },
+        "caption": "Phase",
+        "labels": ["Phase"],
+        "properties": {
+          "name": "string",
+          "number": "integer"
+        },
+        "style": { "color": "#FCDC00", "radius": 42 }
+      },
+      {
+        "id": "n6",
+        "position": { "x": 550, "y": 500 },
+        "caption": "Disease",
+        "labels": ["Disease"],
+        "properties": {
+          "name": "string",
+          "therapeuticArea": "string",
+          "icd10": "string"
+        },
+        "style": { "color": "#A4DD00", "radius": 50 }
+      }
+    ],
+    "relationships": [
+      { "id": "r0", "type": "IN_PIPELINE", "fromId": "n0", "toId": "n1", "properties": {} },
+      { "id": "r1", "type": "TARGETS", "fromId": "n1", "toId": "n2", "properties": { "mechanism": "string" } },
+      { "id": "r2", "type": "TARGETS", "fromId": "n1", "toId": "n3", "properties": { "mechanism": "string" } },
+      { "id": "r3", "type": "INVESTIGATED_IN", "fromId": "n1", "toId": "n4", "properties": {} },
+      { "id": "r4", "type": "INVESTIGATED_IN", "fromId": "n2", "toId": "n4", "properties": {} },
+      { "id": "r5", "type": "INVESTIGATED_IN", "fromId": "n3", "toId": "n4", "properties": {} },
+      { "id": "r6", "type": "HAS_PHASE", "fromId": "n4", "toId": "n5", "properties": {} },
+      { "id": "r7", "type": "FOR_DISEASE", "fromId": "n4", "toId": "n6", "properties": {} },
+      { "id": "r8", "type": "TREATS", "fromId": "n1", "toId": "n6", "properties": {} },
+      { "id": "r9", "type": "ASSOCIATED_WITH", "fromId": "n2", "toId": "n6", "properties": {} },
+      { "id": "r10", "type": "ASSOCIATED_WITH", "fromId": "n3", "toId": "n6", "properties": {} }
+    ],
+    "style": {}
+  }
+}

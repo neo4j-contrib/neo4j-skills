@@ -1,0 +1,235 @@
+{
+  "id": "patient-journey",
+  "name": "Patient Journey",
+  "description": "Tracks patient healthcare journeys through encounters, observations, diagnoses, prescriptions, and providers. Source: https://neo4j.com/developer/industry-use-cases/life-sciences/medical-care/patient-journey/",
+  "industry": "Healthcare & Life Sciences",
+  "tags": [
+    "healthcare",
+    "patient-journey",
+    "clinical",
+    "OMOP"
+  ],
+  "initialGraph": {
+    "nodes": [
+      {
+        "id": "n0",
+        "position": {
+          "x": 400,
+          "y": 50
+        },
+        "caption": "Patient",
+        "labels": [
+          "Patient"
+        ],
+        "properties": {
+          "id": "string",
+          "name": "string",
+          "birthDate": "date"
+        },
+        "style": {
+          "color": "#68BC00",
+          "radius": 55
+        }
+      },
+      {
+        "id": "n1",
+        "position": {
+          "x": 200,
+          "y": 200
+        },
+        "caption": "Encounter",
+        "labels": [
+          "Encounter"
+        ],
+        "properties": {
+          "id": "string",
+          "date": "datetime",
+          "type": "string",
+          "description": "string"
+        },
+        "style": {
+          "color": "#009CE0",
+          "radius": 50
+        }
+      },
+      {
+        "id": "n2",
+        "position": {
+          "x": 500,
+          "y": 350
+        },
+        "caption": "Observation",
+        "labels": [
+          "Observation"
+        ],
+        "properties": {
+          "id": "string",
+          "code": "string",
+          "description": "string",
+          "value": "string",
+          "unit": "string"
+        },
+        "style": {
+          "color": "#FA28FF",
+          "radius": 45
+        }
+      },
+      {
+        "id": "n3",
+        "position": {
+          "x": 200,
+          "y": 500
+        },
+        "caption": "Drug",
+        "labels": [
+          "Drug"
+        ],
+        "properties": {
+          "name": "string",
+          "code": "string",
+          "dosage": "string",
+          "frequency": "string"
+        },
+        "style": {
+          "color": "#7B64FF",
+          "radius": 45
+        }
+      },
+      {
+        "id": "n4",
+        "position": {
+          "x": 500,
+          "y": 500
+        },
+        "caption": "Condition",
+        "labels": [
+          "Condition"
+        ],
+        "properties": {
+          "description": "string",
+          "code": "string"
+        },
+        "style": {
+          "color": "#FE9200",
+          "radius": 45
+        }
+      },
+      {
+        "id": "n5",
+        "position": {
+          "x": 700,
+          "y": 200
+        },
+        "caption": "Provider",
+        "labels": [
+          "Provider"
+        ],
+        "properties": {
+          "id": "string",
+          "name": "string"
+        },
+        "style": {
+          "color": "#FCDC00",
+          "radius": 45
+        }
+      },
+      {
+        "id": "n6",
+        "position": {
+          "x": 900,
+          "y": 100
+        },
+        "caption": "Speciality",
+        "labels": [
+          "Speciality"
+        ],
+        "properties": {
+          "name": "string"
+        },
+        "style": {
+          "color": "#A4DD00",
+          "radius": 40
+        }
+      },
+      {
+        "id": "n7",
+        "position": {
+          "x": 900,
+          "y": 300
+        },
+        "caption": "Organisation",
+        "labels": [
+          "Organisation"
+        ],
+        "properties": {
+          "id": "string",
+          "name": "string",
+          "address": "string"
+        },
+        "style": {
+          "color": "#68CCCA",
+          "radius": 40
+        }
+      }
+    ],
+    "relationships": [
+      {
+        "id": "r0",
+        "type": "HAS_ENCOUNTER",
+        "fromId": "n0",
+        "toId": "n1",
+        "properties": {}
+      },
+      {
+        "id": "r1",
+        "type": "HAS_OBSERVATION",
+        "fromId": "n1",
+        "toId": "n2",
+        "properties": {}
+      },
+      {
+        "id": "r2",
+        "type": "PRESCRIBED",
+        "fromId": "n1",
+        "toId": "n3",
+        "properties": {}
+      },
+      {
+        "id": "r3",
+        "type": "DIAGNOSED",
+        "fromId": "n1",
+        "toId": "n4",
+        "properties": {}
+      },
+      {
+        "id": "r4",
+        "type": "ATTENDED_BY",
+        "fromId": "n1",
+        "toId": "n5",
+        "properties": {}
+      },
+      {
+        "id": "r5",
+        "type": "HAS_SPECIALITY",
+        "fromId": "n5",
+        "toId": "n6",
+        "properties": {}
+      },
+      {
+        "id": "r6",
+        "type": "BELONGS_TO",
+        "fromId": "n5",
+        "toId": "n7",
+        "properties": {}
+      },
+      {
+        "id": "r7",
+        "type": "NEXT",
+        "fromId": "n1",
+        "toId": "n1",
+        "properties": {}
+      }
+    ],
+    "style": {}
+  }
+}

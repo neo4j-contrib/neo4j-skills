@@ -1,0 +1,80 @@
+{
+  "id": "configurable-bom",
+  "name": "Configurable Bill of Materials",
+  "description": "Models configurable product structures (150% BOM / CBOM) with assemblies, config groups, parts, and variant resolution via RESOLVED_LINK. Source: https://neo4j.com/developer/industry-use-cases/manufacturing/product-design-and-engineering/configurable-bom/",
+  "industry": "Manufacturing",
+  "tags": [
+    "BOM",
+    "CBOM",
+    "product-design",
+    "manufacturing",
+    "configuration",
+    "150-percent-BOM"
+  ],
+  "initialGraph": {
+    "nodes": [
+      {
+        "id": "n0",
+        "position": { "x": 400, "y": 50 },
+        "caption": "Product",
+        "labels": ["Product"],
+        "properties": {
+          "id": "string",
+          "desc": "string"
+        },
+        "style": { "color": "#68BC00", "radius": 55 }
+      },
+      {
+        "id": "n1",
+        "position": { "x": 200, "y": 250 },
+        "caption": "Assembly",
+        "labels": ["Assembly"],
+        "properties": {
+          "id": "string",
+          "desc": "string",
+          "category": "string"
+        },
+        "style": { "color": "#FE9200", "radius": 50 }
+      },
+      {
+        "id": "n2",
+        "position": { "x": 600, "y": 250 },
+        "caption": "ConfigGroup",
+        "labels": ["ConfigGroup"],
+        "properties": {
+          "id": "string",
+          "category": "string",
+          "options": "list",
+          "desc": "string"
+        },
+        "style": { "color": "#009CE0", "radius": 50 }
+      },
+      {
+        "id": "n3",
+        "position": { "x": 400, "y": 450 },
+        "caption": "Part",
+        "labels": ["Part"],
+        "properties": {
+          "id": "string",
+          "desc": "string",
+          "cost": "float",
+          "weight": "float"
+        },
+        "style": { "color": "#FA28FF", "radius": 50 }
+      }
+    ],
+    "relationships": [
+      { "id": "r0", "type": "HAS_PART", "fromId": "n0", "toId": "n3", "properties": { "qty": "integer" } },
+      { "id": "r1", "type": "REQUIRES", "fromId": "n0", "toId": "n1", "properties": { "qty": "integer", "note": "string" } },
+      { "id": "r2", "type": "HAS_OPTION", "fromId": "n1", "toId": "n2", "properties": {} },
+      { "id": "r3", "type": "REQUIRES", "fromId": "n1", "toId": "n2", "properties": { "qty": "integer", "note": "string" } },
+      { "id": "r4", "type": "REQUIRES", "fromId": "n1", "toId": "n1", "properties": { "qty": "integer", "note": "string" } },
+      { "id": "r5", "type": "HAS_PART", "fromId": "n1", "toId": "n3", "properties": { "qty": "integer" } },
+      { "id": "r6", "type": "HAS_OPTION", "fromId": "n2", "toId": "n3", "properties": {} },
+      { "id": "r7", "type": "REQUIRES", "fromId": "n2", "toId": "n3", "properties": { "qty": "integer", "note": "string" } },
+      { "id": "r8", "type": "RESOLVED_LINK", "fromId": "n3", "toId": "n3", "properties": { "id_variant": "string", "rel_type": "string", "qty": "integer" } }
+    ],
+    "style": {}
+  },
+  "notes": "RESOLVED_LINK is dynamically materialised by the variant-resolution query and can appear along any edge of a resolved path. HAS_PART carries qty; REQUIRES carries qty and note; HAS_OPTION has no properties in the 150% BOM. Resolved BOM materialises RESOLVED_LINK between nodes with id_variant, rel_type, and qty."
+}

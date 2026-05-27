@@ -1,0 +1,85 @@
+{
+  "id": "iam-effective-access",
+  "name": "Identity & Access Management (Effective Access Analysis)",
+  "description": "Industry-agnostic IAM model for effective access analysis across identities, nested groups, roles, entitlements and resources. Computes effective access dynamically through graph traversal rather than pre-computed ACLs. Source: https://neo4j.com/developer/industry-use-cases/agnostic/iam/access-and-authorization/effective-access-analysis/",
+  "industry": "Industry Agnostic",
+  "tags": [
+    "IAM",
+    "access-control",
+    "RBAC",
+    "effective-access",
+    "authorization",
+    "audit",
+    "compliance"
+  ],
+  "initialGraph": {
+    "nodes": [
+      {
+        "id": "n0",
+        "position": { "x": 100, "y": 200 },
+        "caption": "Identity",
+        "labels": ["Identity"],
+        "properties": {
+          "id": "string",
+          "type": "string"
+        },
+        "style": { "color": "#68BC00", "radius": 55 }
+      },
+      {
+        "id": "n1",
+        "position": { "x": 400, "y": 200 },
+        "caption": "Group",
+        "labels": ["Group"],
+        "properties": {
+          "id": "string",
+          "name": "string"
+        },
+        "style": { "color": "#009CE0", "radius": 50 }
+      },
+      {
+        "id": "n2",
+        "position": { "x": 700, "y": 200 },
+        "caption": "Role",
+        "labels": ["Role"],
+        "properties": {
+          "id": "string",
+          "name": "string"
+        },
+        "style": { "color": "#FA28FF", "radius": 50 }
+      },
+      {
+        "id": "n3",
+        "position": { "x": 1000, "y": 200 },
+        "caption": "Entitlement",
+        "labels": ["Entitlement"],
+        "properties": {
+          "id": "string",
+          "action": "string"
+        },
+        "style": { "color": "#7B64FF", "radius": 45 }
+      },
+      {
+        "id": "n4",
+        "position": { "x": 1000, "y": 400 },
+        "caption": "Resource",
+        "labels": ["Resource"],
+        "properties": {
+          "id": "string",
+          "type": "string"
+        },
+        "style": { "color": "#FE9200", "radius": 50 }
+      }
+    ],
+    "relationships": [
+      { "id": "r0", "type": "MEMBER_OF", "fromId": "n0", "toId": "n1", "properties": {} },
+      { "id": "r1", "type": "MEMBER_OF", "fromId": "n1", "toId": "n1", "properties": {} },
+      { "id": "r2", "type": "GRANTS_ROLE", "fromId": "n1", "toId": "n2", "properties": {} },
+      { "id": "r3", "type": "ASSIGNED_ROLE", "fromId": "n0", "toId": "n2", "properties": {} },
+      { "id": "r4", "type": "GRANTS", "fromId": "n2", "toId": "n3", "properties": {} },
+      { "id": "r5", "type": "APPLIES_TO", "fromId": "n3", "toId": "n4", "properties": {} },
+      { "id": "r6", "type": "PARENT_OF", "fromId": "n4", "toId": "n4", "properties": {} }
+    ],
+    "style": {}
+  },
+  "notes": "Effective-access traversal: (Identity)-[:MEMBER_OF]->(Group), (Group)-[:MEMBER_OF]->(Group) for nested groups, (Group)-[:GRANTS_ROLE]->(Role), (Identity)-[:ASSIGNED_ROLE]->(Role) for direct role assignment exceptions, (Role)-[:GRANTS]->(Entitlement), (Entitlement)-[:APPLIES_TO]->(Resource). Resource-[:PARENT_OF]->Resource captures folder/hierarchy. Example query: MATCH p=(i:Identity {id:'bob'})-->{1,50}(e:Entitlement)-[:APPLIES_TO]->(r:Resource) RETURN r.id, e.action."
+}

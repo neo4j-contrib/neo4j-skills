@@ -1,0 +1,191 @@
+{
+  "id": "fraud-event-sequence",
+  "name": "Fraud Event Sequence Model",
+  "description": "Event-oriented extension of the Transaction & Account Base Model for detecting account takeover fraud through chronological event sequences. Introduces Authentication, ChangePhone, ChangeEmail, ChangeAddress, AddExternalAccount, and Transfer event nodes linked via :NEXT chains. Source: https://neo4j.com/developer/industry-use-cases/data-models/transaction-graph/fraud-event-sequence/fraud-event-sequence-model/",
+  "industry": "Financial Services",
+  "tags": ["fraud-detection", "account-takeover", "event-sequence", "AML", "banking", "cybersecurity"],
+  "extends": "transaction-base-model",
+  "initialGraph": {
+    "nodes": [
+      {
+        "id": "n0",
+        "position": { "x": 400, "y": 50 },
+        "caption": "Customer",
+        "labels": ["Customer"],
+        "properties": {
+          "customerId": "string",
+          "firstName": "string",
+          "lastName": "string",
+          "dateOfBirth": "date"
+        },
+        "style": { "color": "#68BC00", "radius": 55 }
+      },
+      {
+        "id": "n1",
+        "position": { "x": 100, "y": 200 },
+        "caption": "Account",
+        "labels": ["Account", "Internal"],
+        "properties": {
+          "accountNumber": "string",
+          "accountType": "string",
+          "openedDate": "datetime"
+        },
+        "style": { "color": "#009CE0", "radius": 50 }
+      },
+      {
+        "id": "n2",
+        "position": { "x": -150, "y": 200 },
+        "caption": "Session",
+        "labels": ["Session"],
+        "properties": {
+          "sessionId": "string",
+          "status": "string",
+          "createdAt": "datetime"
+        },
+        "style": { "color": "#F44E3B", "radius": 45 }
+      },
+      {
+        "id": "n3",
+        "position": { "x": 100, "y": 400 },
+        "caption": "Authentication",
+        "labels": ["Authentication"],
+        "properties": {
+          "method": "string",
+          "status": "string",
+          "createdAt": "datetime"
+        },
+        "style": { "color": "#FE9200", "radius": 45 }
+      },
+      {
+        "id": "n4",
+        "position": { "x": 350, "y": 400 },
+        "caption": "ChangePhone",
+        "labels": ["ChangePhone"],
+        "properties": {
+          "createdAt": "datetime"
+        },
+        "style": { "color": "#FCDC00", "radius": 40 }
+      },
+      {
+        "id": "n5",
+        "position": { "x": 600, "y": 400 },
+        "caption": "ChangeEmail",
+        "labels": ["ChangeEmail"],
+        "properties": {
+          "createdAt": "datetime"
+        },
+        "style": { "color": "#A4DD00", "radius": 40 }
+      },
+      {
+        "id": "n6",
+        "position": { "x": 850, "y": 400 },
+        "caption": "ChangeAddress",
+        "labels": ["ChangeAddress"],
+        "properties": {
+          "createdAt": "datetime"
+        },
+        "style": { "color": "#68CCCA", "radius": 40 }
+      },
+      {
+        "id": "n7",
+        "position": { "x": 600, "y": 600 },
+        "caption": "AddExternalAccount",
+        "labels": ["AddExternalAccount"],
+        "properties": {
+          "createdAt": "datetime"
+        },
+        "style": { "color": "#AEA1FF", "radius": 42 }
+      },
+      {
+        "id": "n8",
+        "position": { "x": 350, "y": 600 },
+        "caption": "Transfer",
+        "labels": ["Transfer"],
+        "properties": {
+          "createdAt": "datetime"
+        },
+        "style": { "color": "#FA28FF", "radius": 42 }
+      },
+      {
+        "id": "n9",
+        "position": { "x": 350, "y": 200 },
+        "caption": "Phone",
+        "labels": ["Phone"],
+        "properties": {
+          "phoneNumber": "string",
+          "countryCode": "string",
+          "createdAt": "datetime"
+        },
+        "style": { "color": "#73D8FF", "radius": 35 }
+      },
+      {
+        "id": "n10",
+        "position": { "x": 600, "y": 200 },
+        "caption": "Email",
+        "labels": ["Email"],
+        "properties": {
+          "address": "string",
+          "domain": "string",
+          "createdAt": "datetime"
+        },
+        "style": { "color": "#B0BC00", "radius": 35 }
+      },
+      {
+        "id": "n11",
+        "position": { "x": 850, "y": 200 },
+        "caption": "Address",
+        "labels": ["Address"],
+        "properties": {
+          "addressLine1": "string",
+          "postTown": "string",
+          "postCode": "string",
+          "createdAt": "datetime"
+        },
+        "style": { "color": "#16A5A5", "radius": 35 }
+      },
+      {
+        "id": "n12",
+        "position": { "x": 850, "y": 600 },
+        "caption": "Transaction",
+        "labels": ["Transaction"],
+        "properties": {
+          "transactionId": "string",
+          "amount": "float",
+          "currency": "string",
+          "date": "datetime",
+          "type": "string"
+        },
+        "style": { "color": "#D33115", "radius": 45 }
+      }
+    ],
+    "relationships": [
+      { "id": "r0", "type": "HAS_ACCOUNT", "fromId": "n0", "toId": "n1", "properties": { "role": "string", "since": "datetime" } },
+      { "id": "r1", "type": "CONNECTS", "fromId": "n0", "toId": "n3", "properties": {} },
+      { "id": "r2", "type": "HAS_AUTHENTICATION", "fromId": "n2", "toId": "n3", "properties": {} },
+      { "id": "r3", "type": "HAS_CHANGE_PHONE", "fromId": "n2", "toId": "n4", "properties": {} },
+      { "id": "r4", "type": "HAS_CHANGE_EMAIL", "fromId": "n2", "toId": "n5", "properties": {} },
+      { "id": "r5", "type": "HAS_CHANGE_ADDRESS", "fromId": "n2", "toId": "n6", "properties": {} },
+      { "id": "r6", "type": "HAS_ADD_EXTERNAL_ACCOUNT", "fromId": "n2", "toId": "n7", "properties": {} },
+      { "id": "r7", "type": "HAS_TRANSFER", "fromId": "n2", "toId": "n8", "properties": {} },
+      { "id": "r8", "type": "NEXT", "fromId": "n3", "toId": "n4", "properties": {} },
+      { "id": "r9", "type": "NEXT", "fromId": "n4", "toId": "n5", "properties": {} },
+      { "id": "r10", "type": "NEXT", "fromId": "n5", "toId": "n6", "properties": {} },
+      { "id": "r11", "type": "NEXT", "fromId": "n6", "toId": "n7", "properties": {} },
+      { "id": "r12", "type": "NEXT", "fromId": "n7", "toId": "n8", "properties": {} },
+      { "id": "r13", "type": "OLD_PHONE", "fromId": "n4", "toId": "n9", "properties": {} },
+      { "id": "r14", "type": "NEW_PHONE", "fromId": "n4", "toId": "n9", "properties": {} },
+      { "id": "r15", "type": "OLD_EMAIL", "fromId": "n5", "toId": "n10", "properties": {} },
+      { "id": "r16", "type": "NEW_EMAIL", "fromId": "n5", "toId": "n10", "properties": {} },
+      { "id": "r17", "type": "OLD_ADDRESS", "fromId": "n6", "toId": "n11", "properties": {} },
+      { "id": "r18", "type": "NEW_ADDRESS", "fromId": "n6", "toId": "n11", "properties": {} },
+      { "id": "r19", "type": "ADD_ACCOUNT", "fromId": "n7", "toId": "n1", "properties": {} },
+      { "id": "r20", "type": "HAS_TRANSACTION", "fromId": "n8", "toId": "n12", "properties": {} },
+      { "id": "r21", "type": "PERFORMS", "fromId": "n1", "toId": "n12", "properties": {} },
+      { "id": "r22", "type": "BENEFITS_TO", "fromId": "n12", "toId": "n1", "properties": {} },
+      { "id": "r23", "type": "HAS_PHONE", "fromId": "n0", "toId": "n9", "properties": { "since": "datetime" } },
+      { "id": "r24", "type": "HAS_EMAIL", "fromId": "n0", "toId": "n10", "properties": { "since": "datetime" } },
+      { "id": "r25", "type": "HAS_ADDRESS", "fromId": "n0", "toId": "n11", "properties": { "addedAt": "datetime", "isCurrent": "boolean" } }
+    ],
+    "style": {}
+  }
+}

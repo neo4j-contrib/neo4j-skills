@@ -1,0 +1,119 @@
+{
+  "id": "synthetic-identity-fraud",
+  "name": "Synthetic Identity Fraud",
+  "description": "Detects synthetic identities via shared PII (email, phone, passport) between customers. Uses LINKED relationships for GDS community detection. Source: https://neo4j.com/developer/industry-use-cases/finserv/retail-banking/synthetic-identity-fraud/",
+  "industry": "Financial Services",
+  "tags": [
+    "fraud",
+    "synthetic-identity",
+    "KYC",
+    "GDS"
+  ],
+  "initialGraph": {
+    "nodes": [
+      {
+        "id": "n0",
+        "position": {
+          "x": 400,
+          "y": 100
+        },
+        "caption": "Customer",
+        "labels": [
+          "Customer"
+        ],
+        "properties": {
+          "customerId": "string"
+        },
+        "style": {
+          "color": "#68BC00",
+          "radius": 55
+        }
+      },
+      {
+        "id": "n1",
+        "position": {
+          "x": 150,
+          "y": 300
+        },
+        "caption": "Email",
+        "labels": [
+          "Email"
+        ],
+        "properties": {
+          "address": "string"
+        },
+        "style": {
+          "color": "#A4DD00",
+          "radius": 40
+        }
+      },
+      {
+        "id": "n2",
+        "position": {
+          "x": 400,
+          "y": 300
+        },
+        "caption": "Phone",
+        "labels": [
+          "Phone"
+        ],
+        "properties": {
+          "phoneNumber": "string"
+        },
+        "style": {
+          "color": "#68CCCA",
+          "radius": 40
+        }
+      },
+      {
+        "id": "n3",
+        "position": {
+          "x": 650,
+          "y": 300
+        },
+        "caption": "Passport",
+        "labels": [
+          "Passport"
+        ],
+        "properties": {
+          "passportNumber": "string"
+        },
+        "style": {
+          "color": "#AEA1FF",
+          "radius": 40
+        }
+      }
+    ],
+    "relationships": [
+      {
+        "id": "r0",
+        "type": "HAS_EMAIL",
+        "fromId": "n0",
+        "toId": "n1",
+        "properties": {}
+      },
+      {
+        "id": "r1",
+        "type": "HAS_PHONE",
+        "fromId": "n0",
+        "toId": "n2",
+        "properties": {}
+      },
+      {
+        "id": "r2",
+        "type": "HAS_PASSPORT",
+        "fromId": "n0",
+        "toId": "n3",
+        "properties": {}
+      },
+      {
+        "id": "r3",
+        "type": "LINKED",
+        "fromId": "n0",
+        "toId": "n0",
+        "properties": {}
+      }
+    ],
+    "style": {}
+  }
+}

@@ -1,0 +1,497 @@
+{
+  "version": "2.0",
+  "source": "https://neo4j.com/developer/industry-use-cases/",
+  "lastUpdated": "2026-04-23",
+  "industries": [
+    "Financial Services",
+    "Insurance",
+    "Healthcare & Life Sciences",
+    "Manufacturing",
+    "Cybersecurity",
+    "Industry Agnostic"
+  ],
+  "models": [
+    {
+      "id": "transaction-base-model",
+      "name": "Transaction & Account Base Model",
+      "file": "transaction-base-model.json",
+      "industry": "Financial Services",
+      "description": "Standardised banking data model for transactions, accounts, customers, KYC, sessions, and fraud investigations.",
+      "nodeCount": 19,
+      "relationshipCount": 24,
+      "tags": [
+        "banking",
+        "transactions",
+        "fraud",
+        "KYC",
+        "AML"
+      ]
+    },
+    {
+      "id": "fraud-event-sequence",
+      "name": "Fraud Event Sequence Model",
+      "file": "fraud-event-sequence-model.json",
+      "industry": "Financial Services",
+      "description": "Event-oriented extension for detecting account takeover fraud through chronological event chains.",
+      "nodeCount": 13,
+      "relationshipCount": 26,
+      "tags": [
+        "fraud-detection",
+        "account-takeover",
+        "event-sequence"
+      ]
+    },
+    {
+      "id": "regulatory-dependency-mapping",
+      "name": "Regulatory Dependency Mapping",
+      "file": "regulatory-dependency-mapping.json",
+      "industry": "Financial Services",
+      "description": "Maps regulatory dependencies between standards and sections.",
+      "nodeCount": 2,
+      "relationshipCount": 3,
+      "tags": [
+        "regulatory",
+        "compliance",
+        "investment-banking"
+      ]
+    },
+    {
+      "id": "mutual-fund-dependency",
+      "name": "Mutual Fund Dependency Analytics",
+      "file": "mutual-fund-dependency.json",
+      "industry": "Financial Services",
+      "description": "Analyses investment dependencies between funds and underlying stocks.",
+      "nodeCount": 3,
+      "relationshipCount": 2,
+      "tags": [
+        "investment-banking",
+        "mutual-funds",
+        "portfolio"
+      ]
+    },
+    {
+      "id": "deposit-analysis",
+      "name": "Deposit Analysis",
+      "file": "deposit-analysis.json",
+      "industry": "Financial Services",
+      "description": "Models customer deposit behaviour using the transaction base model pattern.",
+      "nodeCount": 3,
+      "relationshipCount": 3,
+      "tags": [
+        "retail-banking",
+        "deposits",
+        "customer-analytics"
+      ]
+    },
+    {
+      "id": "account-takeover-fraud",
+      "name": "Account Takeover Fraud",
+      "file": "account-takeover-fraud.json",
+      "industry": "Financial Services",
+      "description": "Detects ATO fraud using the transaction base model with event-based fraud detection. References the Fraud Event Sequence Data Model.",
+      "nodeCount": 19,
+      "relationshipCount": 35,
+      "tags": [
+        "fraud",
+        "account-takeover",
+        "retail-banking"
+      ]
+    },
+    {
+      "id": "automated-facial-recognition",
+      "name": "Automated Facial Recognition",
+      "file": "automated-facial-recognition.json",
+      "industry": "Financial Services",
+      "description": "Facial biometric matching using vector embeddings on Face nodes. Uses cosine similarity for identity verification.",
+      "nodeCount": 1,
+      "relationshipCount": 0,
+      "tags": [
+        "facial-recognition",
+        "KYC",
+        "biometrics",
+        "vector-search"
+      ]
+    },
+    {
+      "id": "synthetic-identity-fraud",
+      "name": "Synthetic Identity Fraud",
+      "file": "synthetic-identity-fraud.json",
+      "industry": "Financial Services",
+      "description": "Detects synthetic identities via shared PII (email, phone, passport) between customers. Uses LINKED relationships for GDS community detection.",
+      "nodeCount": 4,
+      "relationshipCount": 4,
+      "tags": [
+        "fraud",
+        "synthetic-identity",
+        "KYC",
+        "GDS"
+      ]
+    },
+    {
+      "id": "transaction-fraud-ring",
+      "name": "Transaction Fraud Ring",
+      "file": "transaction-fraud-ring.json",
+      "industry": "Financial Services",
+      "description": "Detects circular transaction flows between accounts. Uses Account and Transaction nodes with PERFORMS/BENEFITS_TO ring pattern.",
+      "nodeCount": 2,
+      "relationshipCount": 2,
+      "tags": [
+        "fraud-ring",
+        "transaction-fraud",
+        "APP-fraud"
+      ]
+    },
+    {
+      "id": "transaction-monitoring",
+      "name": "Transaction Monitoring",
+      "file": "transaction-monitoring.json",
+      "industry": "Financial Services",
+      "description": "AML transaction monitoring linking accounts, transactions, counterparties and jurisdictions.",
+      "nodeCount": 8,
+      "relationshipCount": 10,
+      "tags": [
+        "AML",
+        "transaction-monitoring",
+        "compliance"
+      ]
+    },
+    {
+      "id": "transaction-fraud-detection",
+      "name": "Transaction Fraud Detection (IEEE-CIS)",
+      "file": "transaction-fraud-detection.json",
+      "industry": "Financial Services",
+      "description": "Graph-based fraud detection with Transaction, Card, Device, Email, Address, Identity nodes for ML feature engineering.",
+      "nodeCount": 6,
+      "relationshipCount": 5,
+      "tags": [
+        "fraud-detection",
+        "IEEE-CIS",
+        "machine-learning",
+        "GDS"
+      ]
+    },
+    {
+      "id": "customer-churn",
+      "name": "Graph-Aware Finance Churn Prediction",
+      "file": "customer-churn.json",
+      "industry": "Financial Services",
+      "description": "Predicts silent (dormancy) churn in retail banking using User/Card/Transaction/Merchant graph and GDS FastRP embeddings with Random Forest.",
+      "nodeCount": 4,
+      "relationshipCount": 4,
+      "tags": [
+        "churn",
+        "retention",
+        "retail-banking",
+        "GDS",
+        "FastRP",
+        "embeddings"
+      ]
+    },
+    {
+      "id": "ubo-company-ownership",
+      "name": "Ultimate Beneficial Owner (UBO) & Company Ownership",
+      "file": "ubo-company-ownership.json",
+      "industry": "Financial Services",
+      "description": "Models corporate ownership hierarchies across individuals, companies, and legal entities for UBO identification and AML/KYC compliance (6AMLD).",
+      "nodeCount": 5,
+      "relationshipCount": 5,
+      "tags": [
+        "UBO",
+        "beneficial-ownership",
+        "KYC",
+        "AML",
+        "6AMLD",
+        "corporate-structure"
+      ]
+    },
+    {
+      "id": "claims-fraud",
+      "name": "Insurance Claims Fraud",
+      "file": "claims-fraud.json",
+      "industry": "Insurance",
+      "description": "Detects claims fraud via Claimant, Claim, MedicalProfessional, Vehicle connections.",
+      "nodeCount": 4,
+      "relationshipCount": 5,
+      "tags": [
+        "insurance",
+        "claims-fraud",
+        "crash-for-cash"
+      ]
+    },
+    {
+      "id": "quote-fraud",
+      "name": "Insurance Quote Fraud",
+      "file": "quote-fraud.json",
+      "industry": "Insurance",
+      "description": "Detects quote manipulation via linked list of Quote nodes tracking sequential changes with time deltas.",
+      "nodeCount": 1,
+      "relationshipCount": 1,
+      "tags": [
+        "insurance",
+        "quote-fraud",
+        "ghost-broking"
+      ]
+    },
+    {
+      "id": "patient-journey",
+      "name": "Patient Journey",
+      "file": "patient-journey.json",
+      "industry": "Healthcare & Life Sciences",
+      "description": "Tracks patient healthcare journeys through encounters, observations, diagnoses, prescriptions, and providers.",
+      "nodeCount": 8,
+      "relationshipCount": 8,
+      "tags": [
+        "healthcare",
+        "patient-journey",
+        "clinical",
+        "OMOP"
+      ]
+    },
+    {
+      "id": "patent-intelligence",
+      "name": "Patent Intelligence",
+      "file": "patent-intelligence.json",
+      "industry": "Healthcare & Life Sciences",
+      "description": "Maps pharmaceutical patent landscapes with owners, targets, diseases and drug classes.",
+      "nodeCount": 12,
+      "relationshipCount": 13,
+      "tags": [
+        "patent",
+        "competitive-intelligence",
+        "pharma"
+      ]
+    },
+    {
+      "id": "publication-intelligence",
+      "name": "Publication Intelligence",
+      "file": "publication-intelligence.json",
+      "industry": "Healthcare & Life Sciences",
+      "description": "Analyses scientific publication networks with papers, authors, institutions, journals and topics.",
+      "nodeCount": 10,
+      "relationshipCount": 13,
+      "tags": [
+        "publication",
+        "research",
+        "competitive-intelligence",
+        "KOL"
+      ]
+    },
+    {
+      "id": "pipeline-intelligence",
+      "name": "Pharma Pipeline Intelligence",
+      "file": "pipeline-intelligence.json",
+      "industry": "Healthcare & Life Sciences",
+      "description": "Models pharma R&D pipeline \u2014 companies, drugs, targets, diseases, clinical trials, development phases \u2014 for competitive landscape analysis.",
+      "nodeCount": 7,
+      "relationshipCount": 11,
+      "tags": [
+        "pipeline",
+        "pharma",
+        "competitive-intelligence",
+        "clinical-trials",
+        "R&D"
+      ]
+    },
+    {
+      "id": "drug-safety",
+      "name": "Drug Safety & Pharmacovigilance (FAERS)",
+      "file": "drug-safety.json",
+      "industry": "Healthcare & Life Sciences",
+      "description": "Pharmacovigilance model using FDA FAERS structure. Tracks adverse drug events, drug-drug interactions, and post-marketing safety surveillance.",
+      "nodeCount": 6,
+      "relationshipCount": 10,
+      "tags": [
+        "pharmacovigilance",
+        "drug-safety",
+        "FAERS",
+        "adverse-events",
+        "ADR"
+      ]
+    },
+    {
+      "id": "single-omics",
+      "name": "Single-omics Data Integration",
+      "file": "single-omics.json",
+      "industry": "Healthcare & Life Sciences",
+      "description": "Integrates single-omics data with genes, proteins, pathways and diseases.",
+      "nodeCount": 10,
+      "relationshipCount": 14,
+      "tags": [
+        "omics",
+        "genomics",
+        "proteomics",
+        "drug-discovery"
+      ]
+    },
+    {
+      "id": "multi-omics",
+      "name": "Multi-omics Data Integration",
+      "file": "multi-omics.json",
+      "industry": "Healthcare & Life Sciences",
+      "description": "Integrates multiple omics layers (genomics, transcriptomics, proteomics, metabolomics) into a unified graph.",
+      "nodeCount": 12,
+      "relationshipCount": 19,
+      "tags": [
+        "multi-omics",
+        "systems-biology",
+        "metabolomics"
+      ]
+    },
+    {
+      "id": "ev-route-planning",
+      "name": "Electric Vehicle Route Planning",
+      "file": "ev-route-planning.json",
+      "industry": "Manufacturing",
+      "description": "Models road networks with cities, charging stations and EVs for energy-aware route optimization using Cypher 25 stateful path finding.",
+      "nodeCount": 3,
+      "relationshipCount": 3,
+      "tags": [
+        "EV",
+        "route-planning",
+        "supply-chain",
+        "logistics"
+      ]
+    },
+    {
+      "id": "configurable-bom",
+      "name": "Configurable Bill of Materials",
+      "file": "configurable-bom.json",
+      "industry": "Manufacturing",
+      "description": "Models configurable product structures (150% BOM / CBOM) with config groups, parts, and variant resolution via RESOLVED_LINK.",
+      "nodeCount": 4,
+      "relationshipCount": 9,
+      "tags": [
+        "BOM",
+        "CBOM",
+        "product-design",
+        "manufacturing",
+        "configuration"
+      ]
+    },
+    {
+      "id": "engineering-traceability",
+      "name": "Engineering Traceability",
+      "file": "engineering-traceability.json",
+      "industry": "Manufacturing",
+      "description": "Traces customer requests through requirements, designs and test cases for full lifecycle traceability.",
+      "nodeCount": 4,
+      "relationshipCount": 4,
+      "tags": [
+        "traceability",
+        "engineering",
+        "requirements",
+        "testing"
+      ]
+    },
+    {
+      "id": "process-monitoring-cpa",
+      "name": "Process Monitoring & Critical Path Analysis",
+      "file": "process-monitoring-cpa.json",
+      "industry": "Manufacturing",
+      "description": "Models manufacturing processes with machines, jobs, dependencies and queue management for CPA.",
+      "nodeCount": 3,
+      "relationshipCount": 6,
+      "tags": [
+        "process-monitoring",
+        "critical-path",
+        "production",
+        "scheduling"
+      ]
+    },
+    {
+      "id": "vulnerability-prioritization",
+      "name": "Vulnerability Prioritization & Exposure Management",
+      "file": "vulnerability-prioritization.json",
+      "industry": "Cybersecurity",
+      "description": "VPEM model connecting code to cloud: compute instances, applications, libraries/SBOMs, CVEs, identities, IAM policies and cloud services. Includes CISA KEV threat intelligence.",
+      "nodeCount": 8,
+      "relationshipCount": 7,
+      "tags": [
+        "vulnerability",
+        "CVE",
+        "VPEM",
+        "exposure-management",
+        "IAM",
+        "CISA-KEV"
+      ]
+    },
+    {
+      "id": "attack-path-analysis",
+      "name": "Attack Path Analysis",
+      "file": "attack-path-analysis.json",
+      "industry": "Cybersecurity",
+      "description": "Extends the VPEM model with CAN_REACH for lateral movement simulation. Maps kill chains from initial foothold to crown jewel assets.",
+      "nodeCount": 6,
+      "relationshipCount": 6,
+      "tags": [
+        "attack-path",
+        "lateral-movement",
+        "penetration-testing"
+      ]
+    },
+    {
+      "id": "software-supply-chain-security",
+      "name": "Software Supply Chain Security (SBOM)",
+      "file": "software-supply-chain-security.json",
+      "industry": "Cybersecurity",
+      "description": "Models software bill of materials connecting applications to libraries, vulnerabilities, and the CISA KEV catalog for supply chain risk analysis.",
+      "nodeCount": 5,
+      "relationshipCount": 5,
+      "tags": [
+        "SBOM",
+        "supply-chain",
+        "dependencies",
+        "software-security"
+      ]
+    },
+    {
+      "id": "entity-resolution",
+      "name": "Entity Resolution",
+      "file": "entity-resolution.json",
+      "industry": "Industry Agnostic",
+      "description": "Industry-agnostic entity resolution / record linkage model. Deduplicates Addresses linked to Companies using Levenshtein similarity and geographic distance.",
+      "nodeCount": 1,
+      "relationshipCount": 1,
+      "tags": [
+        "entity-resolution",
+        "record-linkage",
+        "deduplication",
+        "data-quality",
+        "KYC"
+      ]
+    },
+    {
+      "id": "it-service-graph",
+      "name": "IT Service Graph",
+      "file": "it-service-graph.json",
+      "industry": "Industry Agnostic",
+      "description": "Industry-agnostic CMDB-style IT service graph modeling infrastructure, software, services, and customers. Enables root-cause, impact, and revenue-at-risk analysis.",
+      "nodeCount": 7,
+      "relationshipCount": 8,
+      "tags": [
+        "CMDB",
+        "IT-operations",
+        "service-chain",
+        "impact-analysis",
+        "dependencies"
+      ]
+    },
+    {
+      "id": "iam-effective-access",
+      "name": "Identity & Access Management (Effective Access Analysis)",
+      "file": "iam-effective-access.json",
+      "industry": "Industry Agnostic",
+      "description": "IAM model for effective access analysis across identities, nested groups, roles, entitlements and resources. Computes effective access dynamically through graph traversal.",
+      "nodeCount": 5,
+      "relationshipCount": 7,
+      "tags": [
+        "IAM",
+        "access-control",
+        "RBAC",
+        "effective-access",
+        "authorization",
+        "audit"
+      ]
+    }
+  ]
+}

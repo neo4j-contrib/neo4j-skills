@@ -1,0 +1,334 @@
+{
+  "id": "patent-intelligence",
+  "name": "Patent Intelligence",
+  "description": "Maps pharmaceutical patent landscapes with owners, applicants, inventors, claims, families, oppositions and citations. Source: https://neo4j.com/developer/industry-use-cases/life-sciences/competitive-intelligence/patent-intelligence/",
+  "industry": "Healthcare & Life Sciences",
+  "tags": [
+    "patent",
+    "competitive-intelligence",
+    "pharma"
+  ],
+  "initialGraph": {
+    "nodes": [
+      {
+        "id": "n0",
+        "position": {
+          "x": 400,
+          "y": 300
+        },
+        "caption": "Patent",
+        "labels": [
+          "Patent"
+        ],
+        "properties": {
+          "id": "string",
+          "title": "string",
+          "filingDate": "date"
+        },
+        "style": {
+          "color": "#68BC00",
+          "radius": 55
+        }
+      },
+      {
+        "id": "n1",
+        "position": {
+          "x": 150,
+          "y": 300
+        },
+        "caption": "Owner",
+        "labels": [
+          "Owner"
+        ],
+        "properties": {
+          "name": "string",
+          "country": "string"
+        },
+        "style": {
+          "color": "#009CE0",
+          "radius": 50
+        }
+      },
+      {
+        "id": "n2",
+        "position": {
+          "x": 150,
+          "y": 180
+        },
+        "caption": "Inventor",
+        "labels": [
+          "Inventor"
+        ],
+        "properties": {
+          "name": "string"
+        },
+        "style": {
+          "color": "#FA28FF",
+          "radius": 45
+        }
+      },
+      {
+        "id": "n3",
+        "position": {
+          "x": 150,
+          "y": 420
+        },
+        "caption": "Applicant",
+        "labels": [
+          "Applicant"
+        ],
+        "properties": {
+          "name": "string"
+        },
+        "style": {
+          "color": "#7B64FF",
+          "radius": 45
+        }
+      },
+      {
+        "id": "n4",
+        "position": {
+          "x": 400,
+          "y": 100
+        },
+        "caption": "Publication",
+        "labels": [
+          "Publication"
+        ],
+        "properties": {
+          "id": "string",
+          "title": "string"
+        },
+        "style": {
+          "color": "#FE9200",
+          "radius": 45
+        }
+      },
+      {
+        "id": "n5",
+        "position": {
+          "x": 550,
+          "y": 160
+        },
+        "caption": "Description",
+        "labels": [
+          "Description"
+        ],
+        "properties": {
+          "text": "string"
+        },
+        "style": {
+          "color": "#FCDC00",
+          "radius": 42
+        }
+      },
+      {
+        "id": "n6",
+        "position": {
+          "x": 700,
+          "y": 220
+        },
+        "caption": "Claim",
+        "labels": [
+          "Claim"
+        ],
+        "properties": {
+          "id": "string",
+          "text": "string"
+        },
+        "style": {
+          "color": "#A4DD00",
+          "radius": 45
+        }
+      },
+      {
+        "id": "n7",
+        "position": {
+          "x": 650,
+          "y": 400
+        },
+        "caption": "Family",
+        "labels": [
+          "Family"
+        ],
+        "properties": {
+          "id": "string",
+          "name": "string"
+        },
+        "style": {
+          "color": "#68CCCA",
+          "radius": 45
+        }
+      },
+      {
+        "id": "n8",
+        "position": {
+          "x": 850,
+          "y": 400
+        },
+        "caption": "Superfamily",
+        "labels": [
+          "Superfamily"
+        ],
+        "properties": {
+          "id": "string",
+          "name": "string"
+        },
+        "style": {
+          "color": "#DBDF00",
+          "radius": 42
+        }
+      },
+      {
+        "id": "n9",
+        "position": {
+          "x": 550,
+          "y": 500
+        },
+        "caption": "Opposition",
+        "labels": [
+          "Opposition"
+        ],
+        "properties": {
+          "id": "string",
+          "date": "date"
+        },
+        "style": {
+          "color": "#FF6B6B",
+          "radius": 42
+        }
+      },
+      {
+        "id": "n10",
+        "position": {
+          "x": 750,
+          "y": 550
+        },
+        "caption": "Opponent",
+        "labels": [
+          "Opponent"
+        ],
+        "properties": {
+          "name": "string"
+        },
+        "style": {
+          "color": "#B0BC00",
+          "radius": 42
+        }
+      },
+      {
+        "id": "n11",
+        "position": {
+          "x": 400,
+          "y": 550
+        },
+        "caption": "Priority",
+        "labels": [
+          "Priority"
+        ],
+        "properties": {
+          "id": "string",
+          "date": "date"
+        },
+        "style": {
+          "color": "#AEA1FF",
+          "radius": 42
+        }
+      }
+    ],
+    "relationships": [
+      {
+        "id": "r0",
+        "type": "HAS_OWNER",
+        "fromId": "n0",
+        "toId": "n1",
+        "properties": {}
+      },
+      {
+        "id": "r1",
+        "type": "HAS_INVENTOR",
+        "fromId": "n0",
+        "toId": "n2",
+        "properties": {}
+      },
+      {
+        "id": "r2",
+        "type": "HAS_APPLICANT",
+        "fromId": "n0",
+        "toId": "n3",
+        "properties": {}
+      },
+      {
+        "id": "r3",
+        "type": "CITES",
+        "fromId": "n0",
+        "toId": "n4",
+        "properties": {}
+      },
+      {
+        "id": "r4",
+        "type": "HAS_DESCRIPTION",
+        "fromId": "n0",
+        "toId": "n5",
+        "properties": {}
+      },
+      {
+        "id": "r5",
+        "type": "HAS_CLAIM",
+        "fromId": "n0",
+        "toId": "n6",
+        "properties": {}
+      },
+      {
+        "id": "r6",
+        "type": "HAS_SUBCLAIM",
+        "fromId": "n6",
+        "toId": "n6",
+        "properties": {}
+      },
+      {
+        "id": "r7",
+        "type": "NEXT",
+        "fromId": "n6",
+        "toId": "n6",
+        "properties": {}
+      },
+      {
+        "id": "r8",
+        "type": "BELONGS_TO",
+        "fromId": "n0",
+        "toId": "n7",
+        "properties": {}
+      },
+      {
+        "id": "r9",
+        "type": "PART_OF",
+        "fromId": "n7",
+        "toId": "n8",
+        "properties": {}
+      },
+      {
+        "id": "r10",
+        "type": "HAS_OPPOSITION",
+        "fromId": "n0",
+        "toId": "n9",
+        "properties": {}
+      },
+      {
+        "id": "r11",
+        "type": "RAISED",
+        "fromId": "n10",
+        "toId": "n9",
+        "properties": {}
+      },
+      {
+        "id": "r12",
+        "type": "HAS_PRIORITY",
+        "fromId": "n0",
+        "toId": "n11",
+        "properties": {}
+      }
+    ],
+    "style": {}
+  }
+}

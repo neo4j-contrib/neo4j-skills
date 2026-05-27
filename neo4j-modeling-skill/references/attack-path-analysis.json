@@ -1,0 +1,181 @@
+{
+  "id": "attack-path-analysis",
+  "name": "Attack Path Analysis",
+  "description": "Extends the VPEM model with CAN_REACH for lateral movement simulation. Maps kill chains from initial foothold to crown jewel assets. Source: https://neo4j.com/developer/industry-use-cases/cybersecurity/attack-path-analysis/",
+  "industry": "Cybersecurity",
+  "tags": [
+    "attack-path",
+    "lateral-movement",
+    "APA",
+    "cybersecurity"
+  ],
+  "extends": "vulnerability-prioritization",
+  "initialGraph": {
+    "nodes": [
+      {
+        "id": "n0",
+        "position": {
+          "x": 400,
+          "y": 50
+        },
+        "caption": "ComputeInstance",
+        "labels": [
+          "ComputeInstance"
+        ],
+        "properties": {
+          "instanceId": "string",
+          "hostname": "string",
+          "publicIp": "string"
+        },
+        "style": {
+          "color": "#68BC00",
+          "radius": 55
+        }
+      },
+      {
+        "id": "n1",
+        "position": {
+          "x": 150,
+          "y": 200
+        },
+        "caption": "Application",
+        "labels": [
+          "Application"
+        ],
+        "properties": {
+          "appId": "string",
+          "name": "string"
+        },
+        "style": {
+          "color": "#009CE0",
+          "radius": 50
+        }
+      },
+      {
+        "id": "n2",
+        "position": {
+          "x": 650,
+          "y": 200
+        },
+        "caption": "CVE",
+        "labels": [
+          "CVE"
+        ],
+        "properties": {
+          "id": "string",
+          "baseScore": "float",
+          "kev_addedDate": "datetime"
+        },
+        "style": {
+          "color": "#7B64FF",
+          "radius": 50
+        }
+      },
+      {
+        "id": "n3",
+        "position": {
+          "x": 150,
+          "y": 400
+        },
+        "caption": "Identity",
+        "labels": [
+          "Identity"
+        ],
+        "properties": {
+          "identityId": "string",
+          "name": "string",
+          "privilegeLevel": "string"
+        },
+        "style": {
+          "color": "#FE9200",
+          "radius": 45
+        }
+      },
+      {
+        "id": "n4",
+        "position": {
+          "x": 400,
+          "y": 400
+        },
+        "caption": "IAMPolicy",
+        "labels": [
+          "IAMPolicy"
+        ],
+        "properties": {
+          "policyId": "string",
+          "name": "string"
+        },
+        "style": {
+          "color": "#68CCCA",
+          "radius": 45
+        }
+      },
+      {
+        "id": "n5",
+        "position": {
+          "x": 650,
+          "y": 400
+        },
+        "caption": "CloudService",
+        "labels": [
+          "CloudService"
+        ],
+        "properties": {
+          "resource_name": "string",
+          "tier": "string"
+        },
+        "style": {
+          "color": "#FCDC00",
+          "radius": 50
+        }
+      }
+    ],
+    "relationships": [
+      {
+        "id": "r0",
+        "type": "HOSTED_ON",
+        "fromId": "n1",
+        "toId": "n0",
+        "properties": {}
+      },
+      {
+        "id": "r1",
+        "type": "IDENTIFIED_IN",
+        "fromId": "n2",
+        "toId": "n1",
+        "properties": {}
+      },
+      {
+        "id": "r2",
+        "type": "RUNS_AS",
+        "fromId": "n0",
+        "toId": "n3",
+        "properties": {}
+      },
+      {
+        "id": "r3",
+        "type": "ASSUMES",
+        "fromId": "n3",
+        "toId": "n4",
+        "properties": {}
+      },
+      {
+        "id": "r4",
+        "type": "HAS_ACCESS_TO",
+        "fromId": "n4",
+        "toId": "n5",
+        "properties": {}
+      },
+      {
+        "id": "r5",
+        "type": "CAN_REACH",
+        "fromId": "n0",
+        "toId": "n0",
+        "properties": {
+          "port": "integer"
+        }
+      }
+    ],
+    "style": {}
+  }
+}

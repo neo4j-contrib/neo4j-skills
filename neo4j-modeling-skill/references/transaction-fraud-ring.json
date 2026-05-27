@@ -1,0 +1,71 @@
+{
+  "id": "transaction-fraud-ring",
+  "name": "Transaction Fraud Ring",
+  "description": "Detects circular transaction flows between accounts. Uses Account and Transaction nodes with PERFORMS/BENEFITS_TO ring pattern. Source: https://neo4j.com/developer/industry-use-cases/finserv/retail-banking/transaction-ring/",
+  "industry": "Financial Services",
+  "tags": [
+    "fraud-ring",
+    "transaction-fraud",
+    "APP-fraud"
+  ],
+  "initialGraph": {
+    "nodes": [
+      {
+        "id": "n0",
+        "position": {
+          "x": 250,
+          "y": 250
+        },
+        "caption": "Account",
+        "labels": [
+          "Account"
+        ],
+        "properties": {
+          "accountNumber": "string"
+        },
+        "style": {
+          "color": "#009CE0",
+          "radius": 55
+        }
+      },
+      {
+        "id": "n1",
+        "position": {
+          "x": 550,
+          "y": 250
+        },
+        "caption": "Transaction",
+        "labels": [
+          "Transaction"
+        ],
+        "properties": {
+          "transactionId": "string",
+          "amount": "float",
+          "currency": "string",
+          "date": "datetime"
+        },
+        "style": {
+          "color": "#FA28FF",
+          "radius": 50
+        }
+      }
+    ],
+    "relationships": [
+      {
+        "id": "r0",
+        "type": "PERFORMS",
+        "fromId": "n0",
+        "toId": "n1",
+        "properties": {}
+      },
+      {
+        "id": "r1",
+        "type": "BENEFITS_TO",
+        "fromId": "n1",
+        "toId": "n0",
+        "properties": {}
+      }
+    ],
+    "style": {}
+  }
+}
