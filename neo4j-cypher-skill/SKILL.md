@@ -294,6 +294,7 @@ Default to 2025.01-safe features when version unknown.
 | `CONCURRENT TRANSACTIONS`, `REPORT STATUS` | 2025.01 | drop / omit |
 | `SEARCH` clause (vector/fulltext) | 2026.01 | `CALL db.index.vector.queryNodes(...)` (deprecated 2026.04) |
 | `ACYCLIC` path mode (no repeated nodes in path) | 2026.03 | post-filter with `size(nodes(p)) = size(apoc.coll.toSet(nodes(p)))` |
+| `string.indexOf()`, `string.join()`, `string.regexReplace()` | 2026.05 | `apoc.text.*` or app-side |
 | GQL aliases: `FOR`=`UNWIND`, `PROPERTY_EXISTS`=`IS NOT NULL`, `IS [NOT] LABELED`=`n:Label`; function aliases (`local_time`, `zoned_datetime`, `duration_between`, `collect_list`, etc.) | 2026.02–04 | GQL compliance only — use Cypher equivalents; full list → [references/cypher-syntax.md](references/cypher-syntax.md) |
 | **GRAPH TYPE** schema DDL (`ALTER CURRENT GRAPH TYPE SET`, `EXTEND GRAPH TYPE WITH`, `DROP GRAPH TYPE ELEMENTS`, `SHOW CURRENT GRAPH TYPE`) | **2026.02 — PREVIEW** | Use individual `CREATE CONSTRAINT` / `CREATE INDEX` |
 

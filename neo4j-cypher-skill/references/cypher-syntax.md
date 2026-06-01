@@ -302,6 +302,9 @@ replace(s, search, replacement)            // replace all occurrences
 size(s)                                     // character count (same as char_length)
 reverse(s)                                  // reverse string
 toString(x) / toStringOrNull(x)            // convert any type to STRING
+string.indexOf(input, value)                // index of first match, -1 if absent [2026.05, Cypher 25]
+string.join(list, delimiter)                // join LIST<STRING> with delimiter [2026.05, Cypher 25]
+string.regexReplace(original, regex, repl)  // regex replace all matches [2026.05, Cypher 25]
 ```
 
 All string functions return `null` when any argument is `null`.

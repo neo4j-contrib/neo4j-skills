@@ -41,6 +41,8 @@ YIELD graphName, nodeCount, relationshipCount, projectMillis
 }
 ```
 
+`VECTOR`-type properties projectable as node properties [GDS 2026.05].
+
 ### Relationship projection variants
 
 ```cypher
