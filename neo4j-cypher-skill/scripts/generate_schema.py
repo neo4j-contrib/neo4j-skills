@@ -19,18 +19,17 @@ def fetch_and_map_schema(db_name=None):
 
     try:
         with GraphDatabase.driver(URI, auth=(USERNAME, PASSWORD)) as driver:
-            records, _, _ = driver.execute_query(schema_query)
+            name = db_name or os.getenv("NEO4J_DATABASE", "neo4j")
+            records, _, _ = driver.execute_query(schema_query, database_=name)
 
             if not records:
                 print("No schema records returned from the database.")
                 return
 
             raw_schema = records[0].data()
-
-            name = db_name or os.getenv("NEO4J_DB_NAME", "neo4j")
             output_path = f"{name}-schema.json"
 
-            with open(output_path, "w") as f:
+            with open(output_path, "w", encoding="utf-8") as f:
                 json.dump(raw_schema, f, indent=2)
 
             print(f"Success! Schema saved to {output_path}")

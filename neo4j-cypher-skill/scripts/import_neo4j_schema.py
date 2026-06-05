@@ -1,5 +1,5 @@
 """
-Converts Neo4j schema formats into the guardrail's APOC-compatible assets/schema.json.
+Converts Neo4j schema JSON formats into an APOC meta.schema-compatible `*-schema.json` file.
 
 Supported formats (auto-detected):
   - neo4j-graphrag-python SchemaBuilder JSON

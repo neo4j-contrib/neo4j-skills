@@ -1,4 +1,3 @@
-import os
 import json
 
 VALID_TYPES = ["STRING", "INTEGER", "FLOAT", "BOOLEAN", "DATE", "DATETIME", "LIST"]
@@ -31,7 +30,7 @@ def define_properties():
 
 def main():
     print("\nNeo4j Schema Definition Tool")
-    print("Builds assets/schema.json for a new database without requiring a live connection.")
+    print("Builds <db-name>-schema.json by defining your graph schema before the database exists.")
     print("=" * 60)
 
     schema = {"value": {}}
