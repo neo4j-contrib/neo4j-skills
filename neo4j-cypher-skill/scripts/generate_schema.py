@@ -3,6 +3,12 @@ import json
 import sys
 from neo4j import GraphDatabase
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass  # python-dotenv optional; falls back to env vars already set
+
 URI = os.getenv("NEO4J_URI", "bolt://localhost:7687")
 USERNAME = os.getenv("NEO4J_USERNAME", "neo4j")
 PASSWORD = os.getenv("NEO4J_PASSWORD", "password")

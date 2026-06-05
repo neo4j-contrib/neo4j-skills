@@ -10,7 +10,15 @@ Name the file after your database: `<db-name>-schema.json` (e.g. `movies-schema.
 
 ### Generate from existing database (requires APOC)
 ```bash
-pip install neo4j
+pip install neo4j python-dotenv
+```
+Store credentials in `.env` (verify `.env` is in `.gitignore`):
+```
+NEO4J_URI=neo4j+s://<instance>.databases.neo4j.io
+NEO4J_USERNAME=neo4j
+NEO4J_PASSWORD=your-password
+```
+```bash
 python scripts/generate_schema.py <db-name>
 ```
 
