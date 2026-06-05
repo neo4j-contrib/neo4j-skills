@@ -28,7 +28,8 @@ GQL conformance note: `LET`, `FINISH`, `FILTER`, and `INSERT` are valid Cypher 2
 
 | ? | Known | Unknown |
 |---|---|---|
-| Schema | Use directly | Run Schema-First Protocol |
+| `assets/schema.json` present in repo | Use it directly — skip live inspection | — |
+| Schema (from context or live DB) | Use directly | Run Schema-First Protocol |
 | Neo4j version | Use version features | Default to 2025.01 safe set |
 | Executing (not generating)? | Use EXPLAIN + write gate | State query is unvalidated |
 
@@ -74,9 +75,13 @@ Never fill guessed names — realistic guesses get copied blindly.
 
 ## Schema-First Protocol
 
-Schema in context → use it, skip inspection.
+**Priority order:**
 
-Schema missing → run:
+1. `assets/schema.json` present in repo → read it directly, skip live inspection. Uses APOC meta.schema format — includes node labels, relationship types, property types, and directions. To generate: `python scripts/generate_schema.py` (requires APOC). To build for a new database from CSV: `python scripts/define_schema.py` (agent-driven, no live connection needed). See [neo4j-schema-guardrail](https://github.com/andwaller/neo4j-dynamic-schema-guardrail) for tooling.
+
+2. Schema in context → use it, skip inspection.
+
+3. Schema missing → run:
 ```cypher
 CALL db.schema.visualization() YIELD nodes, relationships RETURN nodes, relationships;
 SHOW INDEXES YIELD name, type, labelsOrTypes, properties, state WHERE state = 'ONLINE';
@@ -95,6 +100,24 @@ CALL db.schema.relTypeProperties() YIELD relType, propertyName, propertyTypes, m
 ```
 
 Validate before returning any query: label exists · rel type+direction correct · property on that label · index ONLINE.
+
+**Synonym mapping** — if a requested entity is not found in schema:
+- Unambiguous close match → resolve silently, note substitution, continue:
+  `ℹ️ Resolved 'Minifigure' → 'Minifig'. Proceeding.`
+- Ambiguous → suggest and halt:
+  `⚠️ 'Fig' not found. Did you mean: Minifig, figNum? Clarify before proceeding.`
+- No match → halt with validation matrix, do not guess:
+
+```
+Schema Validation Report
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Requested Entity    | Status
+─────────────────── | ──────
+Node: Character     | ❌ NOT FOUND
+Node: Movie         | ❌ NOT FOUND
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Halting. No Cypher generated.
+```
 
 ---
 
