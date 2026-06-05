@@ -77,7 +77,14 @@ Never fill guessed names — realistic guesses get copied blindly.
 
 **Priority order:**
 
-1. `<db-name>-schema.json` found anywhere in project → read it directly, skip live inspection. Name after your database (e.g. `movies-schema.json`, `supply-chain-schema.json`). Place wherever makes sense for the project — root, `config/`, `data/`, etc. Uses APOC meta.schema format — includes node labels, relationship types, property types, and directions. To generate: `python scripts/generate_schema.py` (requires APOC). To build for a new database from CSV: `python scripts/define_schema.py` (agent-driven, no live connection needed). See [neo4j-schema-guardrail](https://github.com/andwaller/neo4j-dynamic-schema-guardrail) for tooling.
+1. `<db-name>-schema.json` found anywhere in project → read it directly, skip live inspection. Name after your database (e.g. `movies-schema.json`, `supply-chain-schema.json`). Place wherever makes sense for the project. Uses APOC meta.schema format. Full format, scripts, and validation rules → [references/schema-guardrail.md](references/schema-guardrail.md).
+
+   When schema file present, apply before generating any Cypher:
+   - **Synonym mapping** — unambiguous match: resolve silently and continue. Ambiguous: suggest and halt. No match: output validation matrix and halt. Never guess.
+   - **Property type enforcement** — check declared type (`STRING`, `INTEGER`, etc.) for every filter value. Mismatch → halt.
+   - **Relationship direction** — read `direction` field from schema. Wrong direction → correct silently, note correction.
+
+   Scripts (in `scripts/`): `generate_schema.py` (existing DB, requires APOC), `define_schema.py` (agent-driven from CSV, no DB needed), `import_neo4j_schema.py` (converts graphrag / Neo4j standard JSON formats).
 
 2. Schema in context → use it, skip inspection.
 
