@@ -28,7 +28,7 @@ GQL conformance note: `LET`, `FINISH`, `FILTER`, and `INSERT` are valid Cypher 2
 
 | ? | Known | Unknown |
 |---|---|---|
-| `assets/schema.json` present in repo | Use it directly — skip live inspection | — |
+| `<db-name>-schema.json` found in project | Use it directly — skip live inspection | — |
 | Schema (from context or live DB) | Use directly | Run Schema-First Protocol |
 | Neo4j version | Use version features | Default to 2025.01 safe set |
 | Executing (not generating)? | Use EXPLAIN + write gate | State query is unvalidated |
@@ -77,7 +77,7 @@ Never fill guessed names — realistic guesses get copied blindly.
 
 **Priority order:**
 
-1. `assets/schema.json` present in repo → read it directly, skip live inspection. Uses APOC meta.schema format — includes node labels, relationship types, property types, and directions. To generate: `python scripts/generate_schema.py` (requires APOC). To build for a new database from CSV: `python scripts/define_schema.py` (agent-driven, no live connection needed). See [neo4j-schema-guardrail](https://github.com/andwaller/neo4j-dynamic-schema-guardrail) for tooling.
+1. `<db-name>-schema.json` found anywhere in project → read it directly, skip live inspection. Name after your database (e.g. `movies-schema.json`, `supply-chain-schema.json`). Place wherever makes sense for the project — root, `config/`, `data/`, etc. Uses APOC meta.schema format — includes node labels, relationship types, property types, and directions. To generate: `python scripts/generate_schema.py` (requires APOC). To build for a new database from CSV: `python scripts/define_schema.py` (agent-driven, no live connection needed). See [neo4j-schema-guardrail](https://github.com/andwaller/neo4j-dynamic-schema-guardrail) for tooling.
 
 2. Schema in context → use it, skip inspection.
 
