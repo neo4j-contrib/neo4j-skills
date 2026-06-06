@@ -14,6 +14,7 @@ python scripts/generate_schema.py <db-name>
 NEO4J_URI=neo4j+s://<instance>.databases.neo4j.io
 NEO4J_USERNAME=neo4j
 NEO4J_PASSWORD=your-password
+NEO4J_DATABASE=neo4j
 ```
 
 ### Build interactively (no DB needed)
