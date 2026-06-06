@@ -77,14 +77,15 @@ Never fill guessed names — realistic guesses get copied blindly.
 
 **Priority order:**
 
-1. `<db-name>-schema.json` found anywhere in project → read it directly, skip live inspection. Name after your database (e.g. `movies-schema.json`, `supply-chain-schema.json`). Place wherever makes sense for the project. Uses APOC meta.schema format. Full format, scripts, and validation rules → [references/schema-guardrail.md](references/schema-guardrail.md).
+1. `<db-name>-schema.json` found anywhere in project → read it directly, skip live inspection. State the file name and its `schema_retrieved_at` timestamp when using it. Format: APOC meta.schema — see [references/schema-guardrail.md](references/schema-guardrail.md). If the schema looks significantly outdated and the DB is reachable, offer to re-fetch.
 
-   When schema file present, apply before generating any Cypher:
-   - **Synonym mapping** — unambiguous match: resolve silently and continue. Ambiguous: suggest and halt. No match: output validation matrix and halt. Never guess.
-   - **Property type enforcement** — check declared type (`STRING`, `INTEGER`, etc.) for every filter value. Mismatch → halt.
-   - **Relationship direction** — read `direction` field from schema. Wrong direction → correct silently, note correction.
+   Apply before generating any Cypher — full rules in [references/schema-guardrail.md](references/schema-guardrail.md):
+   - **Label / rel-type / property existence** — all must exist in schema; no guessing
+   - **Property type** — enforce declared type (`STRING`, `INTEGER`, `LIST<STRING>`, etc.) on every filter value; mismatch → halt
+   - **Relationship direction** — use `direction` field; wrong direction → correct silently and note
+   - **Synonym mapping** — unambiguous → resolve silently; ambiguous → suggest and halt; no match → validation matrix and halt
 
-   Scripts (in `scripts/`): `generate_schema.py` (existing DB, requires APOC), `define_schema.py` (agent-driven from CSV, no DB needed), `import_neo4j_schema.py` (converts graphrag / Neo4j standard JSON formats).
+   Scripts: `generate_schema.py` (live DB, APOC), `define_schema.py` (no DB), `import_neo4j_schema.py` (convert graphrag/standard JSON).
 
 2. Schema in context → use it, skip inspection.
 
@@ -107,24 +108,6 @@ CALL db.schema.relTypeProperties() YIELD relType, propertyName, propertyTypes, m
 ```
 
 Validate before returning any query: label exists · rel type+direction correct · property on that label · index ONLINE.
-
-**Synonym mapping** — if a requested entity is not found in schema:
-- Unambiguous close match → resolve silently, note substitution, continue:
-  `ℹ️ Resolved 'Minifigure' → 'Minifig'. Proceeding.`
-- Ambiguous → suggest and halt:
-  `⚠️ 'Fig' not found. Did you mean: Minifig, figNum? Clarify before proceeding.`
-- No match → halt with validation matrix, do not guess:
-
-```
-Schema Validation Report
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Requested Entity    | Status
-─────────────────── | ──────
-Node: Character     | ❌ NOT FOUND
-Node: Movie         | ❌ NOT FOUND
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Halting. No Cypher generated.
-```
 
 ---
 

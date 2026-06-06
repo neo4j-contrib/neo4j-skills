@@ -40,6 +40,7 @@ Auto-detects: `neo4j-graphrag-python` SchemaBuilder, `graph-schema-introspector`
 
 ```json
 {
+  "schema_retrieved_at": "2026-06-06T10:00:00+00:00",
   "value": {
     "Theme": {
       "type": "node",
@@ -107,7 +108,7 @@ Node: Movie         | ❌ NOT FOUND
 Halting. No Cypher generated.
 ```
 
-**3. Property type enforcement** — check declared type for every filter value. Mismatch → halt:
+**3. Property type enforcement** — check declared type for every filter value. Mismatch → halt. Valid types: `STRING` `INTEGER` `FLOAT` `BOOLEAN` `DATE` `DATETIME` `LOCAL_DATETIME` `TIME` `LOCAL_TIME` `DURATION` `POINT` `LIST` `LIST<STRING>` `LIST<INTEGER>` etc.:
 ```
 Filter                  | Schema Type | Supplied | Status
 ────────────────────── | ─────────── | ──────── | ──────
@@ -166,3 +167,19 @@ User: "Find sets where pieces is 'unknown'"
 Set.pieces = 'unknown' | INTEGER | STRING | ❌ MISMATCH
 Halting. Set.pieces expects INTEGER.
 ```
+
+---
+
+## Commit or ignore?
+
+The schema file captures the DB structure at a point in time. Choose based on your project:
+
+**Commit** (`git add *-schema.json`) when:
+- Schema is stable and shared across the team
+- You want reproducible Cypher generation in CI or without a live DB
+
+**Ignore** (add `*-schema.json` to `.gitignore`) when:
+- Schema contains sensitive label/property names
+- DB is actively evolving and a stale committed file would cause confusion
+
+Either way, `schema_retrieved_at` tells any reader when the snapshot was taken.

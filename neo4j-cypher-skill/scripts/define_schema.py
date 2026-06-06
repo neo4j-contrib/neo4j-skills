@@ -1,6 +1,12 @@
 import json
+from datetime import datetime, timezone
 
-VALID_TYPES = ["STRING", "INTEGER", "FLOAT", "BOOLEAN", "DATE", "DATETIME", "LIST"]
+SCALAR_TYPES = [
+    "STRING", "INTEGER", "FLOAT", "BOOLEAN",
+    "DATE", "DATETIME", "LOCAL_DATETIME", "TIME", "LOCAL_TIME", "DURATION",
+    "POINT",
+]
+VALID_TYPES = SCALAR_TYPES + ["LIST"] + [f"LIST<{t}>" for t in SCALAR_TYPES]
 
 
 def prompt_type(prop_name):
@@ -104,6 +110,7 @@ def main():
 
     db_name = input("\nDatabase name for schema file (e.g. 'movies', 'supply-chain'): ").strip() or "neo4j"
     output_path = f"{db_name}-schema.json"
+    schema["schema_retrieved_at"] = datetime.now(timezone.utc).isoformat()
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(schema, f, indent=2)
 

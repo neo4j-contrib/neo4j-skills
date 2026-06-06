@@ -13,6 +13,7 @@ Usage:
 import json
 import os
 import sys
+from datetime import datetime, timezone
 
 
 def neo4j_type_to_apoc(type_def):
@@ -25,7 +26,13 @@ def neo4j_type_to_apoc(type_def):
         "boolean": "BOOLEAN",
         "date": "DATE",
         "datetime": "DATETIME",
+        "local_datetime": "LOCAL_DATETIME",
+        "time": "TIME",
+        "local_time": "LOCAL_TIME",
+        "duration": "DURATION",
+        "point": "POINT",
         "array": "LIST",
+        "list": "LIST",
     }
     return mapping.get(type_def.get("type", "string").lower(), "STRING")
 
@@ -203,9 +210,8 @@ def main():
         schema = json.load(f)
 
     apoc = detect_and_convert(schema)
+    apoc["schema_retrieved_at"] = datetime.now(timezone.utc).isoformat()
 
-    # Output named after input file: movies-schema.json → movies-schema.json (passthrough)
-    # or derive from input: my-schema.json → my-schema.json
     base = os.path.splitext(os.path.basename(input_path))[0]
     output_path = f"{base}.json" if base.endswith("-schema") else f"{base}-schema.json"
     with open(output_path, "w", encoding="utf-8") as f:
