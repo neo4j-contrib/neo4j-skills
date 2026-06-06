@@ -86,42 +86,32 @@ Auto-detects: `neo4j-graphrag-python` SchemaBuilder, `graph-schema-introspector`
 
 ## Validation Rules
 
-Apply in order before generating any Cypher when schema file is present:
+Apply in order before generating any Cypher when schema file is present.
 
-**1. Entity verification** — all node labels, relationship types, and properties must exist in schema. No guessing.
+**Guiding principle**: reason about the most likely intent before asking the user. Ask only when genuinely unable to resolve — never silently generate wrong Cypher, but avoid stopping when a safe interpretation exists.
+
+**1. Entity verification** — all node labels, relationship types, and properties must exist in schema. If not found: attempt synonym resolution (rule 2) and look for structurally similar entities before asking.
 
 **2. Synonym mapping**
 - Unambiguous close match → resolve silently, note, continue:
   `ℹ️ Resolved 'Minifigure' → 'Minifig'. Proceeding.`
-- Ambiguous → suggest and halt:
-  `⚠️ 'Fig' not found. Did you mean: Minifig, figNum?`
-- No match → halt with validation matrix:
+- Ambiguous → pick the most likely match given query context, note the choice, continue:
+  `ℹ️ 'Fig' is ambiguous (Minifig, figNum). Interpreted as 'Minifig' based on context. Correct if wrong.`
+- No match after reasoning → surface candidates and ask; only if no candidates exist, report and ask:
+  `⚠️ 'Character' not found in schema and no close match. Did you mean one of: [list schema nodes]?`
 
-```
-Schema Validation Report
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Requested Entity    | Status
-─────────────────── | ──────
-Node: Character     | ❌ NOT FOUND
-Node: Movie         | ❌ NOT FOUND
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Halting. No Cypher generated.
-```
+**3. Property type enforcement** — check declared type for every filter value. Valid types: `STRING` `INTEGER` `FLOAT` `BOOLEAN` `DATE` `DATETIME` `LOCAL_DATETIME` `TIME` `LOCAL_TIME` `DURATION` `POINT` `LIST` `LIST<STRING>` `LIST<INTEGER>` etc.
 
-**3. Property type enforcement** — check declared type for every filter value. Mismatch → halt. Valid types: `STRING` `INTEGER` `FLOAT` `BOOLEAN` `DATE` `DATETIME` `LOCAL_DATETIME` `TIME` `LOCAL_TIME` `DURATION` `POINT` `LIST` `LIST<STRING>` `LIST<INTEGER>` etc.:
-```
-Filter                  | Schema Type | Supplied | Status
-────────────────────── | ─────────── | ──────── | ──────
-Set.pieces = 'unknown' | INTEGER     | STRING   | ❌ MISMATCH
-Halting. Set.pieces expects INTEGER.
-```
+On mismatch: reason about intent first.
+- String against INTEGER with value like `'unknown'` / `'n/a'` → likely a null/existence check; rewrite as `WHERE n.prop IS NULL` and note.
+- Clearly wrong literal (e.g. string UUID passed as INTEGER) → propose correction and ask to confirm before proceeding.
 
 **4. Relationship direction** — read `direction` field. `out` = `(a)-[:REL]->(b)`. `in` = `(b)-[:REL]->(a)`. Wrong direction → correct silently, note:
 ```
 HAS_SET | Schema: Theme──→Set | Prompt: Set──→Theme | ↩ Corrected
 ```
 
-**5. Generate** — all checks pass → Cypher 25 with `$param` syntax, returned fields restricted to schema-declared properties only.
+**5. Generate** — Cypher 25 with `$param` syntax; returned fields restricted to schema-declared properties only.
 
 ---
 
@@ -140,12 +130,16 @@ ORDER BY m.name
 // Parameters: { setId: "10123-1" }
 ```
 
-### Blocked query
+### Entity not found — agent reasons and asks
 ```
 User: "Find all Character nodes linked to a Movie"
 
 ❌ Character NOT FOUND | ❌ Movie NOT FOUND
-Halting. No Cypher generated.
+Schema nodes: Theme, Set, Minifig
+
+⚠️ Neither 'Character' nor 'Movie' exists in this schema.
+Closest nodes are: Theme, Set, Minifig.
+Did you mean something like Set linked to Minifig, or are you querying a different database?
 ```
 
 ### Synonym resolved
@@ -160,12 +154,17 @@ RETURN m.name AS minifigName, m.fig_num AS figNum
 // Parameters: { setId: $setId }
 ```
 
-### Type mismatch
+### Type mismatch — agent reasons about intent
 ```
 User: "Find sets where pieces is 'unknown'"
 
-Set.pieces = 'unknown' | INTEGER | STRING | ❌ MISMATCH
-Halting. Set.pieces expects INTEGER.
+Set.pieces declared INTEGER, value 'unknown' is a STRING.
+Interpreting as null/missing-value check.
+
+ℹ️ Rewritten: WHERE s.pieces IS NULL. Correct if you meant something else.
+
+CYPHER 25
+MATCH (s:Set) WHERE s.pieces IS NULL RETURN s.name, s.id
 ```
 
 ---

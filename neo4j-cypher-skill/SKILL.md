@@ -80,10 +80,10 @@ Never fill guessed names — realistic guesses get copied blindly.
 1. `<db-name>-schema.json` found anywhere in project → read it directly, skip live inspection. State the file name and its `schema_retrieved_at` timestamp when using it. Format: APOC meta.schema — see [references/schema-guardrail.md](references/schema-guardrail.md). If the schema looks significantly outdated and the DB is reachable, offer to re-fetch.
 
    Apply before generating any Cypher — full rules in [references/schema-guardrail.md](references/schema-guardrail.md):
-   - **Label / rel-type / property existence** — all must exist in schema; no guessing
-   - **Property type** — enforce declared type (`STRING`, `INTEGER`, `LIST<STRING>`, etc.) on every filter value; mismatch → halt
-   - **Relationship direction** — use `direction` field; wrong direction → correct silently and note
-   - **Synonym mapping** — unambiguous → resolve silently; ambiguous → suggest and halt; no match → validation matrix and halt
+   - **Label / rel-type / property existence** — must exist in schema; attempt synonym resolution and structural match before asking
+   - **Property type** — reason about intent before flagging (e.g. string against INTEGER may be a null check); propose correct interpretation and note; ask only if intent is genuinely unclear
+   - **Relationship direction** — wrong direction → correct silently and note
+   - **Synonym mapping** — unambiguous → resolve silently; ambiguous → pick most likely given query context and note; ask user only if truly unresolvable
 
    Scripts: `generate_schema.py` (live DB, APOC), `define_schema.py` (no DB), `import_neo4j_schema.py` (convert graphrag/standard JSON).
 
