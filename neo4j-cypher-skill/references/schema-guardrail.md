@@ -1,34 +1,27 @@
 # Schema Guardrail Reference
 
-File-based schema validation for Cypher generation. Prevents hallucinated labels, properties, and relationship types when no live database connection is available.
-
----
-
 ## Schema File
 
-Name the file after your database: `<db-name>-schema.json` (e.g. `movies-schema.json`, `supply-chain-schema.json`). Place anywhere in the project — root, `config/`, `data/`, etc.
+`<db-name>-schema.json` — name after your database (e.g. `movies-schema.json`). Place anywhere in the project.
 
 ### Generate from existing database (requires APOC)
 ```bash
 pip install neo4j python-dotenv
+python scripts/generate_schema.py <db-name>
 ```
-Store credentials in `.env` (verify `.env` is in `.gitignore`):
+`.env` (add to `.gitignore`):
 ```
 NEO4J_URI=neo4j+s://<instance>.databases.neo4j.io
 NEO4J_USERNAME=neo4j
 NEO4J_PASSWORD=your-password
 ```
-```bash
-python scripts/generate_schema.py <db-name>
-```
 
-### Build from CSV or description (agent-driven, no DB needed)
-Tell the agent what data you have. Agent runs the script and fills in labels, properties, relationships automatically:
+### Build interactively (no DB needed)
 ```bash
 python scripts/define_schema.py
 ```
 
-### Convert from Neo4j standard JSON / graphrag format
+### Convert from existing JSON schema
 ```bash
 python scripts/import_neo4j_schema.py path/to/input-schema.json
 ```
@@ -86,32 +79,25 @@ Auto-detects: `neo4j-graphrag-python` SchemaBuilder, `graph-schema-introspector`
 
 ## Validation Rules
 
-Apply in order before generating any Cypher when schema file is present.
+Reason about intent before asking. Ask only when unable to resolve — never generate wrong Cypher silently, but don't stop when a safe interpretation exists.
 
-**Guiding principle**: reason about the most likely intent before asking the user. Ask only when genuinely unable to resolve — never silently generate wrong Cypher, but avoid stopping when a safe interpretation exists.
-
-**1. Entity verification** — all node labels, relationship types, and properties must exist in schema. If not found: attempt synonym resolution (rule 2) and look for structurally similar entities before asking.
+**1. Existence** — labels, rel-types, properties must be in schema. On miss: try synonym resolution → structural match → ask.
 
 **2. Synonym mapping**
-- Unambiguous close match → resolve silently, note, continue:
-  `ℹ️ Resolved 'Minifigure' → 'Minifig'. Proceeding.`
-- Ambiguous → pick the most likely match given query context, note the choice, continue:
-  `ℹ️ 'Fig' is ambiguous (Minifig, figNum). Interpreted as 'Minifig' based on context. Correct if wrong.`
-- No match after reasoning → surface candidates and ask; only if no candidates exist, report and ask:
-  `⚠️ 'Character' not found in schema and no close match. Did you mean one of: [list schema nodes]?`
+- Unambiguous → resolve silently: `ℹ️ Resolved 'Minifigure' → 'Minifig'.`
+- Ambiguous → pick most likely from context, note: `ℹ️ 'Fig' → 'Minifig' (context). Correct if wrong.`
+- No match → surface candidates: `⚠️ 'Character' not found. Did you mean: Theme, Set, Minifig?`
 
-**3. Property type enforcement** — check declared type for every filter value. Valid types: `STRING` `INTEGER` `FLOAT` `BOOLEAN` `DATE` `DATETIME` `LOCAL_DATETIME` `TIME` `LOCAL_TIME` `DURATION` `POINT` `LIST` `LIST<STRING>` `LIST<INTEGER>` etc.
+**3. Property type** — valid types: `STRING` `INTEGER` `FLOAT` `BOOLEAN` `DATE` `DATETIME` `LOCAL_DATETIME` `TIME` `LOCAL_TIME` `DURATION` `POINT` `LIST<TYPE>`. On mismatch:
+- String against INTEGER (`'unknown'`, `'n/a'`) → rewrite as `IS NULL` and note
+- Clearly wrong literal → propose correction and ask
 
-On mismatch: reason about intent first.
-- String against INTEGER with value like `'unknown'` / `'n/a'` → likely a null/existence check; rewrite as `WHERE n.prop IS NULL` and note.
-- Clearly wrong literal (e.g. string UUID passed as INTEGER) → propose correction and ask to confirm before proceeding.
-
-**4. Relationship direction** — read `direction` field. `out` = `(a)-[:REL]->(b)`. `in` = `(b)-[:REL]->(a)`. Wrong direction → correct silently, note:
+**4. Relationship direction** — `out` = `(a)-[:R]->(b)`, `in` = `(b)-[:R]->(a)`. Wrong direction → correct silently, note:
 ```
 HAS_SET | Schema: Theme──→Set | Prompt: Set──→Theme | ↩ Corrected
 ```
 
-**5. Generate** — Cypher 25 with `$param` syntax; returned fields restricted to schema-declared properties only.
+**5. Generate** — Cypher 25, `$param` syntax, return only schema-declared properties.
 
 ---
 
@@ -130,7 +116,7 @@ ORDER BY m.name
 // Parameters: { setId: "10123-1" }
 ```
 
-### Entity not found — agent reasons and asks
+### Entity not found
 ```
 User: "Find all Character nodes linked to a Movie"
 
@@ -138,8 +124,7 @@ User: "Find all Character nodes linked to a Movie"
 Schema nodes: Theme, Set, Minifig
 
 ⚠️ Neither 'Character' nor 'Movie' exists in this schema.
-Closest nodes are: Theme, Set, Minifig.
-Did you mean something like Set linked to Minifig, or are you querying a different database?
+Did you mean Set linked to Minifig, or are you querying a different database?
 ```
 
 ### Synonym resolved
@@ -154,7 +139,7 @@ RETURN m.name AS minifigName, m.fig_num AS figNum
 // Parameters: { setId: $setId }
 ```
 
-### Type mismatch — agent reasons about intent
+### Type mismatch
 ```
 User: "Find sets where pieces is 'unknown'"
 
@@ -171,14 +156,7 @@ MATCH (s:Set) WHERE s.pieces IS NULL RETURN s.name, s.id
 
 ## Commit or ignore?
 
-The schema file captures the DB structure at a point in time. Choose based on your project:
+**Commit** when schema is stable and shared, or needed for CI without a live DB.
+**Ignore** (`*-schema.json` → `.gitignore`) when schema contains sensitive names or evolves rapidly.
 
-**Commit** (`git add *-schema.json`) when:
-- Schema is stable and shared across the team
-- You want reproducible Cypher generation in CI or without a live DB
-
-**Ignore** (add `*-schema.json` to `.gitignore`) when:
-- Schema contains sensitive label/property names
-- DB is actively evolving and a stale committed file would cause confusion
-
-Either way, `schema_retrieved_at` tells any reader when the snapshot was taken.
+`schema_retrieved_at` in the file records when the snapshot was taken.

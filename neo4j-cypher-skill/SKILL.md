@@ -77,15 +77,13 @@ Never fill guessed names — realistic guesses get copied blindly.
 
 **Priority order:**
 
-1. `<db-name>-schema.json` found anywhere in project → read it directly, skip live inspection. State the file name and its `schema_retrieved_at` timestamp when using it. Format: APOC meta.schema — see [references/schema-guardrail.md](references/schema-guardrail.md). If the schema looks significantly outdated and the DB is reachable, offer to re-fetch.
-
-   Apply before generating any Cypher — full rules in [references/schema-guardrail.md](references/schema-guardrail.md):
-   - **Label / rel-type / property existence** — must exist in schema; attempt synonym resolution and structural match before asking
-   - **Property type** — reason about intent before flagging (e.g. string against INTEGER may be a null check); propose correct interpretation and note; ask only if intent is genuinely unclear
+1. `<db-name>-schema.json` anywhere in project → read directly, state file name + `schema_retrieved_at`, skip live inspection. If significantly outdated and DB reachable, offer re-fetch. Full rules: [references/schema-guardrail.md](references/schema-guardrail.md).
+   - **Existence** — labels/rel-types/properties must be in schema; try synonym resolution before asking
+   - **Property type** — reason about intent first (e.g. string vs INTEGER may be null check); ask only if unclear
    - **Relationship direction** — wrong direction → correct silently and note
-   - **Synonym mapping** — unambiguous → resolve silently; ambiguous → pick most likely given query context and note; ask user only if truly unresolvable
+   - **Synonym mapping** — unambiguous → resolve silently; ambiguous → pick most likely, note; ask if unresolvable
 
-   Scripts: `generate_schema.py` (live DB, APOC), `define_schema.py` (no DB), `import_neo4j_schema.py` (convert graphrag/standard JSON).
+   Scripts: `generate_schema.py` (live DB + APOC), `define_schema.py` (no DB), `import_neo4j_schema.py` (convert).
 
 2. Schema in context → use it, skip inspection.
 
