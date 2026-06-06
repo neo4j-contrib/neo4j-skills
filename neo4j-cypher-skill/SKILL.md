@@ -83,7 +83,7 @@ Never fill guessed names — realistic guesses get copied blindly.
    - **Relationship direction** — wrong direction → correct silently and note
    - **Synonym mapping** — unambiguous → resolve silently; ambiguous → pick most likely, note; ask if unresolvable
 
-   Scripts: `generate_schema.py` (live DB + APOC), `define_schema.py` (no DB), `import_neo4j_schema.py` (convert).
+   Scripts: `generate_schema.py` (live DB + APOC), `define_schema.py` (no DB), `import_neo4j_schema.py` (converts `neo4j-graphrag-python`, `graph-schema-introspector`, `graph-schema-json-js-utils`, `mcp-neo4j-data-modeling`).
 
 2. Schema in context → use it, skip inspection.
 

@@ -98,7 +98,7 @@ Reason about intent before asking. Ask only when unable to resolve — never gen
 HAS_SET | Schema: Theme──→Set | Prompt: Set──→Theme | ↩ Corrected
 ```
 
-**5. Generate** — Cypher 25, `$param` syntax, return only schema-declared properties.
+**5. Generate** — Cypher 25; use literals for interactive execution, `$param` for code generation; return only schema-declared properties.
 
 ---
 
@@ -155,7 +155,7 @@ MATCH (s:Set) WHERE s.pieces IS NULL RETURN s.name, s.id
 
 ---
 
-## Commit or ignore?
+## Commit or ignore schema.json file?
 
 **Commit** when schema is stable and shared, or needed for CI without a live DB.
 **Ignore** (`*-schema.json` → `.gitignore`) when schema contains sensitive names or evolves rapidly.
