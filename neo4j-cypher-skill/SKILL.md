@@ -50,7 +50,7 @@ Never fill guessed names — realistic guesses get copied blindly.
 5. `LIMIT 25` default on all exploratory reads; push `WITH n LIMIT` before high-cardinality operations (variable-length traversals, fan-out MATCH, Cartesian products)
 6. Comments: `//` only — `--` is SQL, invalid
 7. `REPEATABLE ELEMENTS` / `DIFFERENT RELATIONSHIPS` go after `MATCH`, not end of pattern
-8. `SHOW` commands: `YIELD` before `WHERE`; no `UNION`
+8. `SHOW` commands: `YIELD` before `WHERE`; combinable with general Cypher clauses incl. `UNION`/`RETURN` [2026.05] — `SHOW DATABASES` still requires system db (use `USE system`)
 9. Inline node predicates `(:Label WHERE p=x)` — valid in `MATCH` only
 10. `WHERE` cannot follow bare `UNWIND` — use `WITH x WHERE`
 11. `(a)-[:R]-(b)` — undirected matches both directions, double-counts; use directed unless unknown

@@ -290,6 +290,13 @@ if hasattr(job, "status"):
 
 Large graphs: check `.status()` before reading results.
 
+Non-blocking API [graphdatascience 1.22]: `_async` projection variants return immediately; `compute` methods return a `JobHandle`, write-back returns a `WriteJobHandle`. List/retrieve running jobs:
+
+```python
+gds.v2.jobs.list()          # all jobs in session
+job = gds.v2.jobs.get(job_id)
+```
+
 ### Step 7 — Retrieve Results
 
 ```python

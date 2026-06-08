@@ -551,6 +551,8 @@ Path selectors (immediately after `MATCH`, before the pattern):
 | `ANY` | Any single path (no length guarantee) |
 | `SHORTEST k GROUPS` | All paths grouped by length up to k distinct lengths |
 
+Path modes combine with shortest selectors [2026.05]: `MATCH ANY SHORTEST ACYCLIC (a)-[:R]-+(b)` — `ACYCLIC` valid with `ANY SHORTEST`, `SHORTEST k`, `ALL SHORTEST`, `SHORTEST k GROUPS`.
+
 ```cypher
 CYPHER 25 MATCH SHORTEST 1 (a:Person {name:'Alice'})(()-[:KNOWS]->()){1,}(b:Person {name:'Bob'})
 RETURN b.name
