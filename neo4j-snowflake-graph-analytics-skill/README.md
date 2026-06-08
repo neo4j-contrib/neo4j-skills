@@ -45,8 +45,6 @@ Once added, Cortex Code invokes the skill automatically when your prompt matches
 
 Use the [`/skill add`](https://docs.snowflake.com/en/user-guide/cortex-code/extensibility) command (or the `cortex skill add` equivalent) — from a Git repo, a local folder, or a Snowflake stage:
 
-```
-
 Alternatively, drop the skill folder into a skills directory the CLI scans — project scope `.cortex/skills/` (or `.claude/skills/`) or user scope `~/.snowflake/cortex/skills/`.
 
 Verify with `/skill list`. Invoke automatically by matching prompt, or explicitly with `$neo4j-snowflake-graph-analytics-skill` in the conversation.

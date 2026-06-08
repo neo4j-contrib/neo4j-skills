@@ -382,3 +382,13 @@ Full guide: https://neo4j.com/docs/snowflake-graph-analytics/current/troubleshoo
 - [Administration](https://neo4j.com/docs/snowflake-graph-analytics/current/administration/)
 - [Integration with Cortex Agent](https://neo4j.com/docs/snowflake-graph-analytics/current/agents/)
 - [Basket Analysis Example on TPC-H Data](https://github.com/neo4j-product-examples/snowflake-graph-analytics/tree/main/basket-analysis)
+
+---
+
+## Checklist
+
+- [ ] App installed; privileges granted on the database/schema
+- [ ] Views expose `NODEID` / `SOURCENODEID` / `TARGETNODEID`, every property explicitly cast
+- [ ] `orientation` matches the algorithm
+- [ ] Single `CALL` ran without error; output table populated
+- [ ] Results joined back to source table for readable labels
