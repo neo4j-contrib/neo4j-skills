@@ -42,12 +42,12 @@ $client = ClientBuilder::create()
 
 | Option | Method | Description |
 |---|---|---|
-| Database | `withDatabase(string)` | Target database name (default: `neo4j`) |
+| Database | `withDatabase(string)` | Target database name |
 | Access mode | `withAccessMode(AccessMode)` | `READ()` or `WRITE()` |
 | Fetch size | `withFetchSize(int)` | Rows fetched at a time |
 | Bookmarks | `withBookmarks(...)` | Causal consistency bookmarks (experimental) |
 
-Always set `database` explicitly — omitting causes a round-trip to resolve the home database.
+Do NOT set `database` explicitly unless deviating from the server-configured default.
 
 ## TransactionConfiguration
 
@@ -103,15 +103,20 @@ $tsx->run('SOME LONG MANAGEMENT QUERY');
 $tsx->commit();
 ```
 
-## Result Formatters
+## Result Shape
 
-The default formatter is `SummarizedResultFormatter`, which wraps results with a summary
-(counters, server info, timing, profiled plan).
+Queries return a `SummarizedResult` object, which contains both the result rows and execution summary.
 
 ```php
-// Access the summary from the wrapped result
-$summarized = $client->run('MATCH (x) RETURN x LIMIT 10');
-$summary    = $summarized->getSummary();
+$result = $client->run('MATCH (x) RETURN x LIMIT 10');
+
+// Iterate through result rows
+foreach ($result as $row) {
+    // $row is a CypherMap
+}
+
+// Access the execution summary
+$summary = $result->getSummary();
 
 // Counters for writes
 $summary->getUpdateStatistics()->getNodesCreated();
@@ -144,18 +149,23 @@ Authenticate::disabled()
 
 ## Multiple Drivers (Multi-database / Failover)
 
+To configure failover, multiple drivers must share the **same alias**. You can then configure their priority as the fourth argument.
+
 ```php
 $client = ClientBuilder::create()
-    ->withDriver('primary',  'neo4j+s://primary.example.com',  Authenticate::basic($u, $p))
-    ->withDriver('replica',  'neo4j+s://replica.example.com',  Authenticate::basic($u, $p))
-    ->withDriver('local',    'bolt://localhost:7687',           Authenticate::basic('neo4j', 'dev'))
+    // Failover group sharing the 'primary' alias
+    ->withDriver('primary', 'neo4j+s://primary.example.com', Authenticate::basic($u, $p), 2)
+    ->withDriver('primary', 'neo4j+s://replica.example.com', Authenticate::basic($u, $p), 1)
+    
+    // Separate database alias
+    ->withDriver('local',   'bolt://localhost:7687',         Authenticate::basic('neo4j', 'dev'))
+    
     ->withDefaultDriver('primary')
     ->build();
 
-// Use default
+// Uses the 'primary' group (will attempt primary.example.com first due to higher priority)
 $client->run('MATCH (n) RETURN n LIMIT 1');
 
-// Override to use a specific driver
-$client->run('MATCH (n) RETURN n LIMIT 1', [], 'replica');
+// Override to use a specific driver by its alias
 $client->writeTransaction(fn ($tsx) => $tsx->run('MERGE (n:Node)'), 'local');
 ```

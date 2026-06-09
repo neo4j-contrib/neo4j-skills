@@ -57,7 +57,7 @@ NEO4J_PASSWORD=secret
 NEO4J_DATABASE=neo4j
 ```
 
-Add `.env` to `.gitignore`. Use [vlucas/phpdotenv](https://github.com/vlucas/phpdotenv) to load it:
+Add `.env` to `.gitignore`. Use [vlucas/phpdotenv](https://github.com/vlucas/phpdotenv) only if no built-in mechanism exists (Laravel and Symfony load `.env` automatically):
 
 ```bash
 composer require vlucas/phpdotenv
@@ -103,7 +103,7 @@ URI schemes:
 
 Default if no scheme given: `bolt://localhost:7687?database=neo4j`.
 
-❌ Never create a new client per HTTP request — create once at startup; share the instance.
+❌ Never create a new client per query — create one instance per script execution and share it.
 
 ---
 
@@ -312,7 +312,7 @@ $client->writeTransaction(static function (TransactionInterface $tsx) use ($peop
 
 | Mistake | Fix |
 |---|---|
-| New client per request | Create once at startup; share the instance |
+| Multiple clients per script | Create one client instance and share it |
 | String interpolation in Cypher | Always use `$param` placeholders |
 | Side effects inside `writeTransaction` callback | Move outside — callback may retry |
 | Non-idempotent callback (random ID inside) | Generate ID before the callback; pass via `use` |
@@ -331,7 +331,7 @@ Load on demand:
 - [references/type-mapping.md](references/type-mapping.md) — complete Cypher-to-PHP type table,
   `DateTimeInterface` behavior, Point subtypes, Vector
 - [references/configuration.md](references/configuration.md) — DriverConfiguration, SessionConfiguration,
-  TransactionConfiguration, access modes, custom formatters, `SummarizedResultFormatter`
+  TransactionConfiguration, access modes, Result Shape
 
 Docs:
 - https://github.com/neo4j-php/neo4j-php-client
