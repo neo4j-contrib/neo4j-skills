@@ -74,10 +74,11 @@ $dotenv->load();
 Create **one client per application**. Expensive to create; reuse across requests.
 
 ```php
+use Laudis\Neo4j\Authentication\Authenticate;
 use Laudis\Neo4j\ClientBuilder;
 
 $client = ClientBuilder::create()
-    ->withDriver('default', 'bolt+s://user:password@localhost')
+    ->withDriver('default', $uri, Authenticate::basic($user, $password))
     ->withDefaultDriver('default')
     ->build();
 ```
@@ -253,7 +254,7 @@ $results = $client->run('MATCH (p:Person)-[r:KNOWS]->(f) RETURN p, r, f');
 foreach ($results as $row) {
     $node = $row->get('p');           // Laudis\Neo4j\Types\Node
     $name = $node->getProperty('name');
-    $id   = $node->getId();           // internal element ID
+    $id   = $node->getId();           // internal integer ID (element ID on newer Neo4j/driver versions)
 
     $rel  = $row->get('r');           // Laudis\Neo4j\Types\Relationship
     $type = $rel->getType();          // 'KNOWS'

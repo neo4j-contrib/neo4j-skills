@@ -86,7 +86,7 @@ Optional — auto-run after `composer update`:
 ## Step 3 — Configure .env
 
 ```env
-NEO4J_TRANSPORT_MODE=stdio
+NEO4J_MCP_TRANSPORT=stdio
 NEO4J_URI=bolt://localhost:7687
 NEO4J_USERNAME=neo4j
 NEO4J_PASSWORD=your-password
@@ -106,7 +106,7 @@ Starts Docker container on:
 - `bolt://localhost:7687`
 - `http://localhost:7474`
 
-APOC enabled by default (required for `get-schema`).
+APOC enabled by default — `get-schema` uses `apoc.meta.schema` when available, falls back to `db.labels`/`db.relationshipTypes` without it.
 
 Recreate with fresh data:
 ```bash
@@ -186,8 +186,10 @@ Start MCP server separately:
 ```bash
 docker run --rm -p 8080:8080 \
   -e NEO4J_URI=bolt://host.docker.internal:7687 \
+  -e NEO4J_USERNAME=neo4j \
+  -e NEO4J_PASSWORD=your-password \
   -e NEO4J_TRANSPORT_MODE=http \
-  docker.io/mcp/neo4j:latest
+  neo4j/mcp:latest
 ```
 
 ### Driver (in-process Bolt)
