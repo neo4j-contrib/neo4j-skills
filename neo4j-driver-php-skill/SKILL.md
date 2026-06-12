@@ -10,7 +10,7 @@ description: Neo4j PHP Driver (laudis/neo4j-php-client ^3.x) — ClientBuilder, 
   Does NOT cover Laravel MCP integration — use neo4j-laravel-boost-skill.
   Does NOT cover driver version migration — use neo4j-migration-skill.
 version: 1.0.0
-allowed-tools: Bash WebFetch
+allowed-tools: Bash
 ---
 
 ## When to Use
@@ -32,7 +32,7 @@ allowed-tools: Bash WebFetch
 composer require laudis/neo4j-php-client
 ```
 
-**PHP >= 8.0 required** for v3.x. Required extensions: `ext-bcmath`, `ext-json`, `ext-sockets`.
+If `composer require` fails → verify PHP >= 8.0 and extensions `ext-bcmath`, `ext-json`, `ext-sockets` are installed. **Stop and report.**
 
 > HTTP/HTTPS drivers removed in v3.3.0. Use only `bolt://`, `bolt+s://`, `neo4j://`, or `neo4j+s://` URIs.
 
@@ -119,10 +119,7 @@ Default if no scheme given: `bolt://localhost:7687?database=neo4j`.
 
 ## Transaction Functions (Default)
 
-Transaction functions are the **de facto standard**. The driver:
-- Re-executes the callback on transient errors
-- Commits on success; rolls back on timeout
-- Routes to the correct server (leader for writes, followers for reads)
+Default for all production code. Driver re-executes callback on transient errors, commits on success, rolls back on timeout, and routes to the correct server (leader for writes, followers for reads).
 
 ```php
 use Laudis\Neo4j\Contracts\TransactionInterface;
@@ -196,7 +193,7 @@ $client->runStatements([
 
 ## Unmanaged Transactions
 
-Use when you need full control over commit/rollback timing.
+Use for explicit commit/rollback control (see decision table above).
 
 ```php
 use Laudis\Neo4j\Databags\Statement;
@@ -220,6 +217,8 @@ $tsx->rollback();
 ```
 
 > `beginTransaction()` returns only the transaction object — results of initial statements are discarded.
+
+Always pair `beginTransaction()` with `commit()` or `rollback()`. If an exception occurs before `commit()` → call `rollback()` in a `catch` block to prevent transaction leaks.
 
 ---
 
@@ -267,8 +266,7 @@ Full type mapping table → [references/type-mapping.md](references/type-mapping
 
 ## ParameterHelper — List vs Map Disambiguation
 
-PHP arrays serve as both lists and maps. Use `ParameterHelper` when passing empty collections
-to avoid ambiguity:
+Use `ParameterHelper` for empty array params — PHP arrays are ambiguous (list vs map):
 
 ```php
 use Laudis\Neo4j\ParameterHelper;
@@ -326,8 +324,6 @@ $client->writeTransaction(static function (TransactionInterface $tsx) use ($peop
 ---
 
 ## References
-
-Load on demand:
 - [references/type-mapping.md](references/type-mapping.md) — complete Cypher-to-PHP type table,
   `DateTimeInterface` behavior, Point subtypes, Vector
 - [references/configuration.md](references/configuration.md) — DriverConfiguration, SessionConfiguration,

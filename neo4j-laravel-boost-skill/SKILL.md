@@ -11,7 +11,7 @@ description: Install and configure neo4j/laravel-boost — Laravel integration f
   Does NOT handle Cypher query authoring — use neo4j-cypher-skill.
   Does NOT handle standalone MCP server setup (without Laravel) — use neo4j-mcp-skill.
 version: 1.0.0
-allowed-tools: Bash WebFetch
+allowed-tools: Bash
 ---
 
 ## When to Use
@@ -140,6 +140,8 @@ Merges with existing servers in `.cursor/mcp.json`. Result:
 
 > `APP_ENV=local` required — Laravel Boost only registers commands when `APP_ENV=local` or `APP_DEBUG=true`. Without it: `"There are no commands defined in the 'boost' namespace"`.
 
+If `neo4j-boost:cursor-config` fails → manually create `.cursor/mcp.json` using the template above. Ensure the `env` block includes `APP_ENV=local`.
+
 **After config change**: reload Cursor or open MCP settings for pickup.
 
 ---
@@ -151,6 +153,8 @@ php artisan neo4j-boost:doctor
 ```
 
 Diagnoses transport, binary, password, and readiness. If doctor passes → MCP ready.
+
+If doctor fails → check reported transport, re-run `php artisan neo4j-boost:setup`, verify `.env` values, then re-run doctor. **Stop and report** if it still fails after setup re-run.
 
 End-to-end STDIO test:
 ```bash
@@ -188,7 +192,7 @@ docker run --rm -p 8080:8080 \
 
 ### Driver (in-process Bolt)
 
-No binary, no separate server. Uses `laudis/neo4j-php-client` directly:
+No binary, no separate server — uses `laudis/neo4j-php-client` directly:
 
 ```env
 NEO4J_MCP_TRANSPORT=driver
