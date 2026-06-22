@@ -156,7 +156,9 @@ Embed question → vector search → graph traverse → LLM completion — all i
 ```cypher
 CYPHER 25
 WITH ai.text.embed($question, 'openai', { token: $openaiKey, model: 'text-embedding-3-small' }) AS qEmbedding
-CALL db.index.vector.queryNodes('chunk_embedding', 10, qEmbedding) YIELD node AS chunk, score
+MATCH (chunk:Chunk)
+  SEARCH chunk IN (VECTOR INDEX chunk_embedding FOR qEmbedding LIMIT 10) SCORE AS score
+// SEARCH preferred on 2026.x; db.index.vector.queryNodes() deprecated 2026.04 — SEARCH syntax → neo4j-vector-index-skill
 MATCH (chunk)<-[:HAS_CHUNK]-(article:Article)
 OPTIONAL MATCH path = shortestPath((article)-[*..3]-(other:Article))
 WITH chunk, article, collect(DISTINCT other.title) AS related, score
