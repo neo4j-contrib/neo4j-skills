@@ -187,6 +187,18 @@ print(f"Projected {G.node_count()} nodes, {G.relationship_count()} relationships
 Remote query uses `gds.graph.project.remote(...)`; pass graph name to `gds.v2.graph.project(...)`, not query.
 V1 fallback: `gds.graph.project(graph_name="my-graph", query=query, undirected_relationship_types=["KNOWS"])`.
 
+**Native remote projection (no Cypher query) [graphdatascience 1.22]** — `gds.v2.graph.project_native(...)` projects from the attached DB by label/type filter:
+```python
+G, result = gds.v2.graph.project_native(
+    "my-graph",
+    ["Person"],                              # node_label_filter
+    ["KNOWS"],                               # relationship_type_filter
+    node_properties=["age", "score"],
+    undirected_relationship_types=["KNOWS"],
+)
+```
+Attached sessions only. Use `project_native` for label/type-filtered projections; use `project(query=...)` for transformations, computed properties, or `UNION` heterogeneous patterns.
+
 **AuraDB Cypher API projection:**
 ```cypher
 CYPHER runtime=parallel
@@ -270,6 +282,8 @@ gds.v2.louvain.write(G, write_property="community")
 
 V1 fallback: `gds.pageRank.mutate(..., mutateProperty="pagerank")`. Plugin algorithm reference → `neo4j-gds-skill`; AGA limitations differ.
 
+ML pipelines in sessions [graphdatascience 1.22]: use `gds.v2.pipeline.node_classification`, `gds.v2.pipeline.link_prediction`, `gds.v2.pipeline.node_regression`. `gds.pipeline.*` emits a deprecation warning inside a GDS Session — use `gds.v2.pipeline.*`.
+
 ### Step 6 — Async Job Polling
 
 Long-running algorithms may return job handle. Poll until done:
@@ -290,11 +304,11 @@ if hasattr(job, "status"):
 
 Large graphs: check `.status()` before reading results.
 
-Non-blocking API [graphdatascience 1.22]: `_async` projection variants return immediately; `compute` methods return a `JobHandle`, write-back returns a `WriteJobHandle`. List/retrieve running jobs:
+Non-blocking API [graphdatascience 1.22]: `*_async` projection variants (e.g. `gds.v2.graph.project_native_async`) return a `ProjectionJobHandle`; `compute()` returns a `JobHandle`, write-back returns a `WriteJobHandle`. Handle methods: `.job_id()`, `.status()`, `.done()`, `.wait()`, `.result(wait=False)`. List/recover jobs:
 
 ```python
-gds.v2.jobs.list()          # all jobs in session
-job = gds.v2.jobs.get(job_id)
+gds.v2.jobs.list()              # JobInfo per job: job_id, name
+handle = gds.v2.jobs.get(G, job_id)   # concrete handle type for the job
 ```
 
 ### Step 7 — Retrieve Results
