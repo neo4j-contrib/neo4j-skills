@@ -248,8 +248,6 @@ neo4j-admin database import full \
   neo4j
 ```
 
-For SSDs: always set `--high-parallel-io=on`. For large graphs (>34B nodes/rels): `--format=block`.
-
 **Dry run** (2026.02+) — validate without writing:
 ```bash
 neo4j-admin database import full --dry-run ...
@@ -276,7 +274,7 @@ p002,Bob,1990,7.1,false,Person
 | `prop:int` | Typed property; types: `int long float double boolean byte short string` |
 | `prop:date` | Temporal: `date localtime time localdatetime datetime duration` |
 | `prop:int[]` | Array — semicolon-separated values in cell: `1;2;3` |
-| `prop:vector` | Float vector (2025.10+) — semicolon-separated coordinates |
+| `prop:vector` | Float vector (2025.10+) — semicolon-separated coordinates in CSV; imports directly from native Parquet list types [2026.06+] |
 
 ### Relationship header file format
 
@@ -298,6 +296,7 @@ p002,tt0133093,Morpheus,ACTED_IN
 | Flag | Default | Notes |
 |---|---|---|
 | `--delimiter` | `,` | Single char or `TAB` |
+| `--vector-delimiter` | `;` | Separates `prop:vector` coordinates; must differ from `--delimiter` and `--quote` [enforced 2026.06+] |
 | `--id-type` | `STRING` | `STRING \| INTEGER \| ACTUAL` |
 | `--bad-tolerance` | `-1` (unlimited, changed 2025.12) | Set `0` for strict prod imports |
 | `--threads` | CPU count | Set explicitly on shared hosts |
@@ -327,7 +326,7 @@ CREATE RANGE INDEX person_email IF NOT EXISTS FOR (n:Person) ON (n.email);
 CREATE TEXT  INDEX movie_title  IF NOT EXISTS FOR (n:Movie)  ON (n.title);
 ```
 
-For incremental import, `DROP CONSTRAINT` / `DROP INDEX` are also supported [2025.02+] — used to remove indexes before the merge phase and recreate them after for faster writes.
+For incremental import, `DROP CONSTRAINT` / `DROP INDEX` are also supported [2025.02+] — used to remove indexes before the merge phase and recreate them after for faster writes. `--schema` also accepts graph-type DDL: `ALTER CURRENT GRAPH TYPE SET {…}` for `full` [2026.05+], `ALTER CURRENT GRAPH TYPE ADD/DROP/ALTER {…}` for `incremental` [2026.06+] — see `neo4j-cypher-skill/references/graph-type.md`.
 
 ---
 

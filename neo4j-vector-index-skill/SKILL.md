@@ -59,7 +59,7 @@ OPTIONS {
   indexConfig: {
     `vector.dimensions`: 1536,
     `vector.similarity_function`: 'cosine',
-    `vector.quantization.enabled`: true,
+    `vector.quantization.type`: 'SCALAR',
     `vector.hnsw.m`: 16,
     `vector.hnsw.ef_construction`: 100
   }
@@ -100,7 +100,9 @@ OPTIONS { indexConfig: { `vector.dimensions`: 768, `vector.similarity_function`:
 |---|---|---|---|
 | `vector.dimensions` | INTEGER 1–4096 | none | Required; must match embedding model exactly |
 | `vector.similarity_function` | STRING | `'cosine'` | `'cosine'` or `'euclidean'` |
-| `vector.quantization.enabled` | BOOLEAN | `true` | Reduces storage; slight accuracy tradeoff; needs vector-2.0+ (5.18+) |
+| `vector.quantization.type` | STRING | `'SCALAR'` | `NONE`, `SCALAR`, or `BINARY` [2026.06+]; reduces storage; BINARY smallest, most aggressive; needs vector-2.0+ (5.18+) |
+| `vector.quantization.enabled` | BOOLEAN | `true` | **Deprecated 2026.06** — use `vector.quantization.type` |
+| `vector.default_search_expansion_factor` | FLOAT | `1.0` NONE / `1.5` SCALAR / `2.0` BINARY | [2026.06+]; value >1.0 on quantized vectors enables automatic rescoring with full-precision vectors; not settable at query time |
 | `vector.hnsw.m` | INTEGER 1–512 | `16` | HNSW graph connections; higher = better recall, more memory |
 | `vector.hnsw.ef_construction` | INTEGER 1–3200 | `100` | Build-time candidates; higher = better recall, slower build |
 
@@ -210,7 +212,7 @@ ORDER BY score DESC
 
 **In-index `WHERE` hard limits [2026.01+]:**
 - Property must be listed in `WITH [...]` at index creation — undeclared properties silently fall back to post-filtering
-- AND predicates only — no OR, NOT, list ops, string ops
+- AND predicates only — no OR, NOT, string ops. `IN` list membership allowed [2026.06+]
 - Scalar types only: `INTEGER`, `FLOAT`, `STRING`, `BOOLEAN`, temporal types — not VECTOR/LIST/POINT
 
 ### Post-filter pattern (2025.x or arbitrary predicates)
@@ -353,7 +355,7 @@ DROP INDEX chunk_embedding IF EXISTS;
 | `OR/NOT not allowed in SEARCH WHERE` | SEARCH in-index filter restriction | Move complex predicates to outer WHERE after SEARCH |
 | Zero results from correct query | Wrong similarity function or all-zeros embedding | Verify with `vector.similarity.cosine()`; check embed call succeeded |
 | Score always 1.0 | All-zeros or identical vectors | Embedding generation failed; add dimension assertion before ingest |
-| `vector.quantization.enabled` option rejected | provider vector-1.0 (Neo4j < 5.18) | Omit quantization option or upgrade to 5.18+ |
+| `vector.quantization.enabled` / `.type` option rejected | provider vector-1.0 (Neo4j < 5.18) | Omit quantization option or upgrade to 5.18+ |
 
 ---
 

@@ -253,10 +253,18 @@ DROP AUTH RULE salesDeptRule;
 REVOKE ROLE analyst FROM AUTH RULE salesRule;
 ```
 
+Native users [2026.06+]: tag native DB users and match tags in rules via `abac.native.user_tags()` — no OIDC required:
+```cypher
+CREATE AUTH RULE nativeSalesRule
+  SET CONDITION 'sales' IN abac.native.user_tags();
+GRANT ROLE analyst TO AUTH RULE nativeSalesRule;
+```
+
 **Notes:**
 - Missing claims evaluate to NULL → rule condition false → role not granted
 - Rules apply immediately to existing sessions when claims are already loaded
-- ABAC works only with OIDC providers (not native or LDAP)
+- OIDC claims via `abac.oidc.user_attribute()`; native user tags via `abac.native.user_tags()` [2026.06+]; LDAP not supported
+- User-defined functions rejected in PBAC property-rule predicates [2026.06+]
 
 ---
 
