@@ -142,7 +142,7 @@ Or with source-id tracking (stores elementId as property):
 
 ### Exactly-Once Semantics (EOS)
 
-Requires: connector ≥ 5.3.0, Kafka broker EOS support, and a NODE KEY constraint.
+Requires: connector ≥ 5.3.0 (Cypher/Pattern/CDC strategies), connector ≥ 5.3.1 (CUD strategy), Kafka broker EOS support, and a NODE KEY constraint.
 
 Step 1 — Create constraint:
 ```cypher

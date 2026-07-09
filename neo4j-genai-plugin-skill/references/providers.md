@@ -59,14 +59,15 @@ RETURN ai.text.embed('Hello', 'azure-openai', {
 
 ### Override Azure base URL [2026.04]
 
-Server-side env var `GENAI_AZURE_OPENAI_BASE_URL` overrides the default `https://<resource>.openai.azure.com` for all `azure-openai` `ai.text.*` calls. Set on the Neo4j server (not the driver/client). Use for private endpoints, custom hostnames, or proxy gateways.
+Self-managed only — set `genai.azure.openai.baseurl` in `<NEO4J_HOME>/conf/genai.conf` (create file manually; not auto-created). Default: `https://%s.openai.azure.com/openai/v1` where `%s` is replaced by `resource`. Use for private endpoints, custom hostnames, or proxy gateways.
 
-```bash
-# neo4j.conf or systemd Environment=
-GENAI_AZURE_OPENAI_BASE_URL=https://my-private-endpoint.example.com
+```ini
+# genai.conf — single %s placeholder substituted with provider `resource`
+genai.azure.openai.baseurl=https://my-azure-openai-proxy.example.com
+genai.openai.baseurl=https://my-openai-proxy.example.com
 ```
 
-When set, `resource` in the provider config is appended to this URL.
+Sibling setting `genai.openai.baseurl` overrides the OpenAI provider base URL (default `https://api.openai.com/v1`). Both settings support command expansion (`$(...)`) when Neo4j is started with `--expand-commands`.
 
 ---
 

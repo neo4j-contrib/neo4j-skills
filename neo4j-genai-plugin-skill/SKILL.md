@@ -276,8 +276,10 @@ RETURN name, requiredConfigType
 ```
 
 Signatures:
-- `ai.text.tokenCount(input, provider, configuration = {}) :: INTEGER` — provider-driven tokenizer; uses provider config (token/model).
-- `ai.text.chunkByTokenLimit(input, limit, model = 'gpt-4', overlap = 0) :: LIST<STRING>` — local tokenizer keyed off `model`; no provider call, no `token` required.
+- `ai.text.tokenCount(input, provider, configuration = {}) :: INTEGER` — provider-driven tokenizer; uses provider config (token/model). Local tokenizer for `'openai'` (no API call); free API call for `'Bedrock'` and `'VertexAI'`.
+- `ai.text.chunkByTokenLimit(input, limit, model = 'gpt-4', overlap = 0) :: LIST<STRING>` — local OpenAI tokenizer keyed off `model`; no provider call, no `token` required. Chunks by newlines, then spaces, then token count. Set `limit` below provider max to leave room for prompt overhead.
+
+`ai.text.embedBatch` [2026.04] supports `maxBatchSize` (config key) to cap data per API request — defaults to `8192` for `'openai'` and `'azure-openai'`; no default for `'vertexai'` (set if hitting token-limit errors).
 
 ---
 

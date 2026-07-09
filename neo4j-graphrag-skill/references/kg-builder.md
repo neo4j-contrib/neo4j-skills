@@ -58,6 +58,16 @@ schema={
 - `FREE` — unguided extraction; no schema constraint
 - Custom — pass explicit `schema` dict
 
+**Schema constraints** (validated during extraction; `GraphSchema` model):
+
+| Kind | Scope | Notes |
+|---|---|---|
+| `EXISTENCE` | node label OR relationship type | property must be present on every entity of that type |
+| `UNIQUENESS` | node label OR relationship type [v1.16.1+] | property values must be unique per type; before v1.16.1 silently dropped on relationships |
+| `KEY` | node label OR relationship type | composite identity; cannot coexist with `UNIQUENESS` on same property set |
+
+Set exactly one of `node_label` or `relationship_type` per constraint. `UNIQUENESS` + `KEY` on the same relationship type and property set is rejected by schema validation.
+
 ## Chunking Options
 
 ```python
