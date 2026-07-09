@@ -51,26 +51,21 @@ Use `/plugin list` to verify, or `/reload-plugins` after installation.
 ### Codex
 
 ```bash
-git clone https://github.com/neo4j-contrib/neo4j-skills.git
-mkdir -p ~/.codex/plugins
-cp -R neo4j-skills ~/.codex/plugins/neo4j-skills
+codex plugin marketplace add neo4j-contrib/neo4j-skills
+codex plugin add neo4j-skills@neo4j-skills-marketplace
 ```
 
-Add to `~/.agents/plugins/marketplace.json`:
+Verify marketplace and plugin availability:
 
-```json
-{
-  "name": "neo4j-marketplace",
-  "interface": { "displayName": "Neo4j Skills" },
-  "plugins": [
-    {
-      "name": "neo4j-skills",
-      "source": { "source": "local", "path": "./plugins/neo4j-skills" },
-      "policy": { "installation": "AVAILABLE" },
-      "category": "Database"
-    }
-  ]
-}
+```bash
+codex plugin marketplace list
+codex plugin list
+```
+
+Start a new Codex thread after installation so Codex loads the plugin. To refresh later:
+
+```bash
+codex plugin marketplace upgrade neo4j-skills-marketplace
 ```
 
 ## Available Skills
