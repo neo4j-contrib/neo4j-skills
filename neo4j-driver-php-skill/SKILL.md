@@ -89,8 +89,7 @@ For Aura or cluster with routing:
 use Laudis\Neo4j\Authentication\Authenticate;
 
 $client = ClientBuilder::create()
-    ->withDriver('aura', 'neo4j+s://xxxx.databases.neo4j.io',
-        Authenticate::basic($user, $password))
+    ->withDriver('aura', $uri, Authenticate::basic($user, $password))
     ->withDefaultDriver('aura')
     ->build();
 ```
