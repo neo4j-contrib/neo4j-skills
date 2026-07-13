@@ -1,6 +1,6 @@
 ---
 name: neo4j-spring-data-skill
-description: Use when building Spring Boot applications with Neo4j using Spring Data Neo4j (SDN 7.x/8.x):
+description: Use when building Spring Boot applications with Neo4j using Spring Data Neo4j (SDN 7.x/8.x) —
   @Node entity mapping, @Relationship, @RelationshipProperties, Neo4jRepository, ReactiveNeo4jRepository,
   @Query annotations, application.yml configuration, projections, Neo4jClient, Neo4jTemplate,
   transactions, auditing, or Spring AI Neo4jVectorStore vector search.

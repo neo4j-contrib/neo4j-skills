@@ -3,7 +3,7 @@ name: neo4j-migration-skill
 description: Migrates Neo4j driver code and Cypher queries from older versions (4.x, 5.x)
   to current (2025.x/2026.x, Cypher 25). Covers Python, JavaScript/Node.js, Java, .NET,
   and Go drivers — package renames, removed APIs, version requirements, diff-ready fixes.
-  Also handles Cypher syntax migration: QPE paths, CALL subqueries, id() → elementId(),
+  Also handles Cypher syntax migration — QPE paths, CALL subqueries, id() → elementId(),
   PERIODIC COMMIT → CALL IN TRANSACTIONS, and all Cypher 25 removals.
   Does NOT write new Cypher queries — use neo4j-cypher-skill.
   Does NOT cover DB administration or server ops — use neo4j-cli-tools-skill.
