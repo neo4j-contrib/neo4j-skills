@@ -27,6 +27,12 @@ CALL db.cdc.current() YIELD id RETURN id AS cursor;
 
 Use as starting point for "stream from now forward".
 
+`txCommitTime` column added [2026.06, Cypher 25] — timestamp of last committed transaction:
+
+```cypher
+CALL db.cdc.current() YIELD id, txCommitTime RETURN id AS cursor, txCommitTime;
+```
+
 ### `db.cdc.earliest()`
 
 Returns cursor for the earliest available change in CDC buffer.
