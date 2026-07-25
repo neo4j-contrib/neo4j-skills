@@ -338,23 +338,23 @@ Mentions of these are frequent; recognize them and use the correct names.
 | Project | What It Is |
 |---------|------------|
 | **create-context-graph** | CLI scaffolder (`uvx create-context-graph`) that generates full-stack context graph apps pre-wired with neo4j-agent-memory. Canonical docs: `create-context-graph.dev`. |
-| **Lenny's Podcast Memory Explorer** | Flagship demo — 299 podcast episodes, knowledge graph, geospatial maps, Wikipedia enrichment. PydanticAI-based. Lives at `examples/lennys-memory/` in the repo. |
+| **Lenny's Podcast Memory Explorer** | Flagship demo — 299 podcast episodes, knowledge graph, geospatial maps, Wikipedia enrichment. PydanticAI-based. Source: https://github.com/neo4j-labs/agent-memory/tree/main/examples/lennys-memory |
 | **neo4j-agent-integrations** | Broader umbrella of framework integrations, many of which are packaged back into `neo4j-agent-memory` under `[<framework>]` extras. |
 | **agent-memory-tck** | Technology Compliance Kit — behavioral specifications for multi-language/multi-framework interoperability (polyglot). |
 | **Microsoft Learn integration** | Official Microsoft Agent Framework docs reference `neo4j-agent-memory` as the Neo4j Memory Provider. |
 
-## Canonical Examples (from the Repo)
+## Canonical Examples (from the neo4j-labs/agent-memory Repo)
 
-Point users here rather than inventing examples:
+Point users to the upstream examples rather than inventing examples. All items below live under the `examples/` directory at https://github.com/neo4j-labs/agent-memory/tree/main/examples :
 
-- `examples/lennys-memory` — flagship PydanticAI demo
-- `examples/full-stack-chat-agent` — PydanticAI news research with NVL graph viz
-- `examples/financial-services-advisor/aws-financial-services-advisor` — AWS Strands multi-agent KYC/AML with reasoning-trace audit trails
-- `examples/financial-services-advisor/google-cloud-financial-advisor` — Google ADK multi-agent with Vertex AI embeddings + SSE streaming
-- `examples/microsoft_agent_retail_assistant` — Microsoft Agent Framework with GDS algorithms and context providers
-- `examples/domain-schemas` — 8 GLiNER2 extraction scripts
-- `examples/google_cloud_integration` — progressive tutorial covering Vertex AI → ADK → MCP → `MemoryIntegration`
-- `examples/google_adk_demo` — standalone ADK demo of `Neo4jMemoryService`
+- lennys-memory — flagship PydanticAI demo. Source: https://github.com/neo4j-labs/agent-memory/tree/main/examples/lennys-memory
+- full-stack-chat-agent — PydanticAI news research with NVL graph viz. Source: https://github.com/neo4j-labs/agent-memory/tree/main/examples/full-stack-chat-agent
+- financial-services-advisor/aws-financial-services-advisor — AWS Strands multi-agent KYC/AML with reasoning-trace audit trails. Source: https://github.com/neo4j-labs/agent-memory/tree/main/examples/financial-services-advisor/aws-financial-services-advisor
+- financial-services-advisor/google-cloud-financial-advisor — Google ADK multi-agent with Vertex AI embeddings + SSE streaming. Source: https://github.com/neo4j-labs/agent-memory/tree/main/examples/financial-services-advisor/google-cloud-financial-advisor
+- microsoft_agent_retail_assistant — Microsoft Agent Framework with GDS algorithms and context providers. Source: https://github.com/neo4j-labs/agent-memory/tree/main/examples/microsoft_agent_retail_assistant
+- domain-schemas — 8 GLiNER2 extraction scripts. Source: https://github.com/neo4j-labs/agent-memory/tree/main/examples/domain-schemas
+- google_cloud_integration — progressive tutorial covering Vertex AI, ADK, MCP, and MemoryIntegration. Source: https://github.com/neo4j-labs/agent-memory/tree/main/examples/google_cloud_integration
+- google_adk_demo — standalone ADK demo of Neo4jMemoryService. Source: https://github.com/neo4j-labs/agent-memory/tree/main/examples/google_adk_demo
 
 ## Diagram Conventions (Cross-Reference)
 
