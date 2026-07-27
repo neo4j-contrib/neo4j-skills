@@ -8,7 +8,7 @@ description: Programmatic security management in Neo4j — RBAC/ABAC, user lifec
   — use neo4j-cypher-skill. Does NOT handle cluster ops or backups — use neo4j-cli-tools-skill.
   Property-level security and ABAC require Enterprise Edition.
 allowed-tools: Bash WebFetch
-version: 1.0.5
+version: 1.0.6
 ---
 
 ## When to Use
@@ -17,7 +17,7 @@ version: 1.0.5
 - Granting/denying/revoking graph, database, or DBMS privileges
 - Inspecting current privileges (`SHOW PRIVILEGES`)
 - Implementing property-level access control (read/write per property)
-- Setting up ABAC rules against OIDC claims
+- Setting up ABAC rules against OIDC claims or native user tags
 - Referencing LDAP/SSO auth provider configuration
 
 ## When NOT to Use
@@ -74,11 +74,30 @@ ALTER USER alice SET HOME DATABASE mydb;        // default db on connect
 ALTER USER alice IF EXISTS SET PASSWORD $pw;    // safe if missing
 ```
 
+### User tags [2026.06+, Enterprise]
+Tags are arbitrary strings on the native user object, readable in ABAC rules via `abac.native.user_tags()`.
+```cypher
+CREATE USER jake SET PASSWORD $pw SET TAGS 'finance', 'auditor';
+ALTER USER jake REMOVE TAG 'auditor' ADD TAG 'on-call';   // REMOVE before ADD before SET
+ALTER USER jake SET TAGS 'finance', 'auditor';            // replaces all existing tags
+ALTER USER jake REMOVE ALL TAGS;
+ALTER USERS jake, alice ADD TAGS 'pii-access';            // bulk tag edit
+```
+`SET/ADD/REMOVE TAG[S]` requires `SET USER METADATA`; reading tag values requires `SHOW USER METADATA`:
+```cypher
+GRANT SET USER METADATA ON DBMS TO userAdmin;
+GRANT SHOW USER METADATA ON DBMS TO auditor;
+GRANT USER METADATA MANAGEMENT ON DBMS TO userManager;   // both of the above
+```
+
 ### Show users
 ```cypher
-SHOW USERS YIELD username, roles, passwordChangeRequired, suspended, homeDatabase
+SHOW USERS YIELD user, roles, passwordChangeRequired, suspended, home
 WHERE suspended = false
-RETURN username, roles ORDER BY username;
+RETURN user, roles ORDER BY user;
+
+// tags column returns null without SHOW USER METADATA [2026.06+]
+SHOW USERS YIELD user, roles, tags;
 ```
 
 ### Drop user
@@ -217,15 +236,16 @@ DENY MATCH {*} ON GRAPH mydb
 
 ---
 
-## 6. ABAC — Attribute-Based Access Control (Enterprise + OIDC)
+## 6. ABAC — Attribute-Based Access Control (Enterprise)
 
-ABAC grants roles dynamically from JWT/OIDC claims rather than explicit `GRANT ROLE ... TO user`.
+ABAC grants roles dynamically from OIDC claims or native user tags rather than explicit `GRANT ROLE ... TO user`.
 
 ### Prerequisites
 ```
-# neo4j.conf
-dbms.security.abac.authorization_providers=<oidc-provider-alias>
+# neo4j.conf — every provider listed here must also appear in dbms.security.authorization_providers
+dbms.security.abac.authorization_providers=<oidc-provider-alias>,native   # `native` requires 2026.06+
 ```
+Rule referencing an accessor function whose provider is not listed fails outright (no silent default).
 
 ### Create auth rule
 ```cypher
@@ -253,17 +273,30 @@ DROP AUTH RULE salesDeptRule;
 REVOKE ROLE analyst FROM AUTH RULE salesRule;
 ```
 
-Native users [2026.06+]: tag native DB users and match tags in rules via `abac.native.user_tags()` — no OIDC required:
+Native users [2026.06+]: tag native DB users (see [User tags](#user-tags-202606-enterprise)) and match tags in rules via `abac.native.user_tags()` — no OIDC required:
 ```cypher
 CREATE AUTH RULE nativeSalesRule
   SET CONDITION 'sales' IN abac.native.user_tags();
 GRANT ROLE analyst TO AUTH RULE nativeSalesRule;
+
+// require several tags at once
+CREATE AUTH RULE financeAuditRule
+  SET CONDITION all(tag IN ['finance', 'auditor'] WHERE tag IN abac.native.user_tags());
+
+// combine tags with OIDC claims and temporal conditions
+CREATE AUTH RULE onCallRule
+  SET CONDITION 'on-call' IN abac.native.user_tags()
+    AND abac.oidc.user_attribute('department') = 'engineering'
+    AND time.transaction('UTC').hour >= 9;
 ```
+
+❌ Never condition on tag absence: `NOT ('restricted' IN abac.native.user_tags())` — any user created without tags satisfies it, escalating privileges.
+✅ Require presence of a tag: `'unrestricted' IN abac.native.user_tags()`.
 
 **Notes:**
 - Missing claims evaluate to NULL → rule condition false → role not granted
 - Rules apply immediately to existing sessions when claims are already loaded
-- OIDC claims via `abac.oidc.user_attribute()`; native user tags via `abac.native.user_tags()` [2026.06+]; LDAP not supported
+- OIDC claims via `abac.oidc.user_attribute()`; native user tags via `abac.native.user_tags()` [2026.06+]. LDAP has no accessor function — tag the LDAP user's native user object instead
 - User-defined functions rejected in PBAC property-rule predicates [2026.06+]
 
 ---
@@ -331,7 +364,7 @@ dbms.security.ldap.authorization.group_to_role_mapping=\
 ### OIDC / SSO (Okta, Auth0, Entra ID)
 ```
 dbms.security.oidc.<alias>.display_name=Okta
-dbms.security.oidc.<alias>.auth_flow=pkce
+dbms.security.oidc.<alias>.auth_flow=pkce      # `implicit` deprecated 2026.06, removal planned — keep pkce
 dbms.security.oidc.<alias>.well_known_discovery_uri=https://example.okta.com/.well-known/openid-configuration
 dbms.security.oidc.<alias>.audience=neo4j
 dbms.security.oidc.<alias>.claims.username=email
