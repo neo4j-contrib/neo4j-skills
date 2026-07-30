@@ -555,7 +555,7 @@ Full guide: https://neo4j.com/docs/snowflake-graph-analytics/current/troubleshoo
 - [Getting Started](https://neo4j.com/docs/snowflake-graph-analytics/current/getting-started/)
 - [Running Jobs](https://neo4j.com/docs/snowflake-graph-analytics/current/jobs/) · [Scaling Out](https://neo4j.com/docs/snowflake-graph-analytics/current/jobs/scale-out/) · [Estimating Jobs](https://neo4j.com/docs/snowflake-graph-analytics/current/jobs/estimation/)
 - [All Algorithms](https://neo4j.com/docs/snowflake-graph-analytics/current/algorithms/)
-- [Administration](https://neo4j.com/docs/snowflake-graph-analytics/current/administration/) · [Execute-as-user (per-user PAT) authentication](https://neo4j.com/docs/snowflake-graph-analytics/current/administration/#administration-per-user-pat-auth)
+- [Administration](https://neo4j.com/docs/snowflake-graph-analytics/current/administration/) · [Execute-as-user authentication](https://neo4j.com/docs/snowflake-graph-analytics/current/administration/#administration-execute-as-user)
 - [Integration with Cortex Agent](https://neo4j.com/docs/snowflake-graph-analytics/current/agents/)
 - [Basket Analysis Example on TPC-H Data](https://github.com/neo4j-product-examples/snowflake-graph-analytics/tree/main/basket-analysis)
 
