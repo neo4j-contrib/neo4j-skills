@@ -368,61 +368,44 @@ USE ROLE MY_CONSUMER_ROLE;   -- run algorithms as the consumer role
 
 ### Part B, option 2 — Execute-as-user (preview)
 
-Each user's job authenticates as **that user** with a Programmatic Access Token (PAT), under a role they hold, bounded by caller grants the account admin has delegated to the application on their behalf. Query history attributes the work to the user, not the app.
+Jobs authenticate as the calling user with a Programmatic Access Token (PAT), under a role that user holds, bounded by caller grants. Procedures live in `<APP>.preview.*` and may change before GA.
 
-Procedures live in the `preview` schema (`<APP>.preview.*`) and may still change before GA.
-
-**Before starting, collect:** the user name, the role to bind the PAT to (must be a role the user holds and that has `app_user`), the DB/schema to hold the SECRET, and the DB/schema the jobs will read and write.
-
-#### Onboarding is a two-part flow — you cannot script it end-to-end
-
-`ALTER USER ... ADD PROGRAMMATIC ACCESS TOKEN` returns the token secret **once**. Run Part 1, stop, have the user copy the `token_secret` value out of the result set, then run Part 2 with it pasted in. When driving this for a user, hand them Part 1, wait for the token, and only then produce Part 2.
-
-#### Part 1 — enable execute-as-user and mint the token
+Onboarding can't be scripted end-to-end: `ADD PROGRAMMATIC ACCESS TOKEN` reveals the token secret **once**. Run Part 1, collect the token from the user, then run Part 2.
 
 ```sql
+-- PART 1 — enable execute-as-user and mint the token
 USE ROLE ACCOUNTADMIN;
 
--- Prerequisite: let this user mint and use a PAT without a network policy.
--- Snowflake requires a network policy for PATs by default; without this the job
--- fails with "Fail : Network policy is required".
--- Users who already have a network policy keep it enforced, so this is not a downgrade.
--- An authentication policy is a schema-level object — set a context or qualify the name.
+-- Prerequisite: PATs require a network policy by default, else jobs fail with
+-- "Fail : Network policy is required". This waives it; a user who already has a
+-- network policy keeps it enforced. Authentication policies are schema-level objects.
 USE SCHEMA MY_DATABASE.MY_SCHEMA;
 CREATE AUTHENTICATION POLICY IF NOT EXISTS pat_no_network_required
     PAT_POLICY = (NETWORK_POLICY_EVALUATION = ENFORCED_NOT_REQUIRED);
 ALTER USER <user_name> SET AUTHENTICATION POLICY pat_no_network_required;
 
--- Step 1: enable execute-as-user on the install (once per account, NOT per user).
--- Needs the app_admin application role, which ACCOUNTADMIN does not hold implicitly.
+-- Step 1: enable on the install — once per account, not per user. Needs app_admin,
+-- which ACCOUNTADMIN does not hold implicitly.
 USE ROLE MY_ADMIN_ROLE;
 CALL Neo4j_Graph_Analytics.preview.set_enable_custom_credentials(TRUE);
 
--- Step 2a: mint a PAT bound to the role
+-- Step 2a: mint a PAT bound to the role. ROLE_RESTRICTION is load-bearing — it pins
+-- the PAT to this role whatever the app's registry says, and must match Step 2d.
 USE ROLE ACCOUNTADMIN;
 ALTER USER <user_name> ADD PROGRAMMATIC ACCESS TOKEN app_pat
     DAYS_TO_EXPIRY = 365
     ROLE_RESTRICTION = 'MY_CONSUMER_ROLE';
 ```
 
-> **STOP here.** The result of the `ADD PROGRAMMATIC ACCESS TOKEN` statement has a `token_secret` column — copy that value now, Snowflake will not show it again, and paste it into `SECRET_STRING` in Part 2.
-
-`ROLE_RESTRICTION` is load-bearing: the PAT can only ever authenticate under that role, so the role boundary holds even if the app's user-role registry is tampered with. It must match the role registered in Step 2d exactly.
-
-Once the flag is on but before any user is registered, job calls fail with `no role registered for <user>` — expected; continue with Part 2.
-
-#### Part 2 — store the token and register the user
+> **STOP.** Copy the `token_secret` column from that last result set now — Snowflake will not show it again — and paste it into `SECRET_STRING` below.
 
 ```sql
+-- PART 2, steps 2b + 2c — store the token, let the app read it. These are direct
+-- grants, not caller grants: the app reads the secret as itself at job-start time.
 USE ROLE ACCOUNTADMIN;
-
--- Step 2b: stash the token in a secret you own (any DB/schema you control)
 CREATE OR REPLACE SECRET MY_DATABASE.MY_SCHEMA.pat_secret_<user_name>
-    TYPE = GENERIC_STRING
-    SECRET_STRING = '<paste_token_secret_from_part_1_here>';
-
--- Step 2c: let the application read the secret (direct grants, not caller grants —
--- the app reads the secret in its own right at job-start time)
+    TYPE = GENERIC_STRING                    -- GENERIC_STRING only; PASSWORD won't work
+    SECRET_STRING = '<paste_token_secret_here>';
 GRANT USAGE ON DATABASE MY_DATABASE TO APPLICATION Neo4j_Graph_Analytics;
 GRANT USAGE ON SCHEMA MY_DATABASE.MY_SCHEMA TO APPLICATION Neo4j_Graph_Analytics;
 GRANT READ ON SECRET MY_DATABASE.MY_SCHEMA.pat_secret_<user_name>
@@ -430,20 +413,19 @@ GRANT READ ON SECRET MY_DATABASE.MY_SCHEMA.pat_secret_<user_name>
 ```
 
 ```sql
--- Step 2d: register the user with the application.
--- Run in a session opened AS <user_name> (not ACCOUNTADMIN) under a role holding
--- app_user, so CURRENT_USER() resolves to the user being registered.
+-- Step 2d: register the user. Run in a session opened AS <user_name> so
+-- CURRENT_USER() resolves to them, under a role holding app_user.
 USE ROLE MY_CONSUMER_ROLE;
 CALL Neo4j_Graph_Analytics.preview.register_user_role(
-    'MY_CONSUMER_ROLE',                                   -- must match ROLE_RESTRICTION on the PAT
-    'MY_DATABASE.MY_SCHEMA.pat_secret_<user_name>'        -- fully-qualified name of the SECRET
+    'MY_CONSUMER_ROLE',                              -- = ROLE_RESTRICTION on the PAT
+    'MY_DATABASE.MY_SCHEMA.pat_secret_<user_name>'   -- FQN of the SECRET
 );
 ```
 
 ```sql
--- Step 2e: caller grants for the data the jobs read and write.
--- Repeat per schema the user's jobs touch — this is the only widening mechanism
--- in execute-as-user mode; without it the app can reach nothing outside its own database.
+-- Step 2e: caller grants for the data the jobs read and write. Repeat per schema —
+-- this is the only widening mechanism, and there is no FUTURE equivalent, so re-run
+-- it after creating views or tables a later job needs to read.
 USE ROLE ACCOUNTADMIN;
 GRANT CALLER USAGE ON DATABASE MY_DATABASE TO APPLICATION Neo4j_Graph_Analytics;
 GRANT CALLER USAGE ON SCHEMA MY_DATABASE.MY_SCHEMA TO APPLICATION Neo4j_Graph_Analytics;
@@ -453,42 +435,21 @@ GRANT INHERITED CALLER SELECT ON ALL TABLES IN SCHEMA MY_DATABASE.MY_SCHEMA TO A
 GRANT INHERITED CALLER SELECT ON ALL VIEWS  IN SCHEMA MY_DATABASE.MY_SCHEMA TO APPLICATION Neo4j_Graph_Analytics;
 ```
 
-`ON ALL TABLES` / `ON ALL VIEWS` covers only objects that exist **right now**, and there is no `FUTURE` equivalent for caller grants. Re-run these grants after creating new projection views, or any table you later want a job to read.
-
-#### Step 3 — verify
-
-Have the user run any algorithm, then check whose identity the job used:
-
-```sql
-USE ROLE ACCOUNTADMIN;
-SELECT user_name, role_name, LEFT(query_text, 120) AS sql, start_time
-FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY
-WHERE start_time > DATEADD(minute, -30, CURRENT_TIMESTAMP())
-  AND role_name = 'MY_CONSUMER_ROLE'
-ORDER BY start_time DESC LIMIT 20;
-```
-
-`user_name` should be the calling user and `role_name` the registered role. `ACCOUNT_USAGE` lags up to ~45 min — for live debugging query `MY_DATABASE.INFORMATION_SCHEMA.QUERY_HISTORY` instead.
-
 To check what an admin registered for a user:
-
 ```sql
-CALL Neo4j_Graph_Analytics.preview.get_user_role_registration('<user_name>');  -- app_admin
+CALL Neo4j_Graph_Analytics.preview.get_user_role_registration('<user_name>');
 ```
 
-#### Rotating a PAT
-
-1. Mint a new PAT for the user, capturing the new `token_secret`.
-2. `CREATE OR REPLACE SECRET MY_DATABASE.MY_SCHEMA.pat_secret_<user_name> TYPE = GENERIC_STRING SECRET_STRING = '<new_token_secret>';` — the existing grant to the application survives.
-3. `ALTER USER <user_name> REMOVE PROGRAMMATIC ACCESS TOKEN <old_pat_name>;`
-
-The registry needs no update: the SECRET name did not change, only its value.
-
-#### Rolling back
+Rotating and rolling back:
 
 ```sql
--- Turn execute-as-user off account-wide; restores app-identity behaviour for everyone.
--- Registrations stay in the registry, just unused until the flag is flipped back on.
+-- Rotate: mint a new PAT, re-point the secret (its grants survive), drop the old PAT.
+-- The registry needs no update — the SECRET name didn't change, only its value.
+CREATE OR REPLACE SECRET MY_DATABASE.MY_SCHEMA.pat_secret_<user_name>
+    TYPE = GENERIC_STRING SECRET_STRING = '<new_token_secret>';
+ALTER USER <user_name> REMOVE PROGRAMMATIC ACCESS TOKEN <old_pat_name>;
+
+-- Disable account-wide: app identity returns for everyone, registrations sit unused.
 CALL Neo4j_Graph_Analytics.preview.set_enable_custom_credentials(FALSE);
 
 -- Revoke a single user, leaving registry and SECRET intact:
@@ -498,16 +459,6 @@ REVOKE READ ON SECRET MY_DATABASE.MY_SCHEMA.pat_secret_<user_name>
 -- ...or invalidate the credential outright:
 ALTER USER <user_name> REMOVE PROGRAMMATIC ACCESS TOKEN app_pat;
 ```
-
-There is deliberately **no** fallback to app identity for a revoked user — their calls error instead, so revocation is unambiguous.
-
-#### Execute-as-user pitfalls
-
-- **Role mismatch.** The role in `register_user_role` must equal the PAT's `ROLE_RESTRICTION`, or authentication fails.
-- **Forgetting caller grants.** The job authenticates fine, then everything outside the app's own database fails with "does not exist or not authorized".
-- **`USE ROLE` inside a job.** A role-restricted PAT session refuses any role switching — everything the job needs must be reachable from the registered primary role.
-- **Wrong secret type.** Must be `TYPE = GENERIC_STRING` with `SECRET_STRING`; `PASSWORD` and other types don't work with the secret mount the runtime uses.
-- **New objects after the grants.** Views and tables created later aren't covered by `ON ALL ...` — re-grant.
 
 ---
 
@@ -540,6 +491,7 @@ The graph engine can't use VARCHAR as a property. Map categories to numbers in t
 | `does not exist or not authorized` in execute-as-user mode | Missing caller grants on the data schema, or objects created after the `ON ALL ...` grants — re-run Step 2e |
 | `Insufficient privileges to operate on table` on write in execute-as-user mode | The write schema is missing `CALLER CREATE TABLE` / `INHERITED CALLER INSERT ON ALL TABLES` — re-run Step 2e |
 | `USE ROLE not allowed` / `Current session is restricted` | Expected under a role-restricted PAT — everything must be reachable from the registered primary role |
+| Job errors at authentication in execute-as-user mode | PAT's `ROLE_RESTRICTION` doesn't match the registered role, or the SECRET isn't `TYPE = GENERIC_STRING` |
 | `Column nodeId not found` | View is missing/mis-cast the key — expose `NODEID` (and `SOURCENODEID`/`TARGETNODEID`) with explicit casts |
 | Type / projection error on a property | A property column wasn't cast to a supported type — apply the casting rules; relationship props must be `BIGINT`/`DOUBLE`/`INT` |
 | GraphSAGE fails on features | Remove `ARRAY` feature columns (use `VECTOR`), and ensure features are non-NULL/finite |
