@@ -5,11 +5,13 @@ description: Run Neo4j Graph Analytics algorithms (PageRank, Louvain, WCC, Dijks
   running graph algorithms against Snowflake tables via the Neo4j Snowflake Native App
   ("GDS Snowflake", "graph algorithms in Snowflake", "Neo4j Graph Analytics").
   Covers the explore → prepare projection views → project-compute-write flow,
-  the strict view/column type rules the graph engine requires, and exact SQL CALL syntax.
+  the strict view/column type rules the graph engine requires, exact SQL CALL syntax, and
+  privilege setup in both modes — app-identity grants and execute-as-user / per-user PAT auth
+  (programmatic access token, set_enable_custom_credentials, register_user_role, caller grants).
   Does NOT cover Cypher or Neo4j DBMS queries — use neo4j-cypher-skill.
   Does NOT cover Aura Graph Analytics — use neo4j-aura-graph-analytics-skill.
   Does NOT cover self-managed GDS — use neo4j-gds-skill.
-version: 1.1.0
+version: 1.2.0
 allowed-tools: Bash WebFetch
 ---
 
@@ -127,7 +129,7 @@ FROM MY_DATABASE.MY_SCHEMA.TRANSFERS;
 
 Every run is a single `CALL` whose first argument is the compute pool and second is a JSON config with three parts. Note JSON uses **single quotes** in Snowflake SQL.
 
-> **App name:** `Neo4j_Graph_Analytics` is only the *default* installation name. If the app was installed under a different name, replace it everywhere — in the procedure call (`<APP>.graph.<algo>`), the `USE DATABASE <APP>` statement, and the privilege grants below. Check with `SHOW APPLICATIONS;`.
+> **App name:** `Neo4j_Graph_Analytics` is only the *default* installation name. If the app was installed under a different name, replace it everywhere — in the procedure call (`<APP>.graph.<algo>`), the `preview.*` / `admin.*` calls, the `USE DATABASE <APP>` statement, and the privilege grants below. Check with `SHOW APPLICATIONS;`.
 
 ```sql
 USE ROLE MY_CONSUMER_ROLE;
@@ -306,7 +308,18 @@ Provide one of:
 
 ---
 
-## Privilege Setup (run once per database/schema)
+## Privilege Setup
+
+Two parts. **Part A** (consumer roles) is always required. **Part B** is a choice of **exactly one** data-access mode — don't mix them.
+
+| Mode | Job runs as | Grant style | Use when |
+|---|---|---|---|
+| **App identity** (OAuth) — *default* | the application | direct grants + a database role granted to the app | Default. Simplest, one set of grants covers every user. |
+| **Execute-as-user** — *preview* | the calling user, under a registered role | `GRANT CALLER` / `GRANT INHERITED CALLER` to the app | You need per-user attribution in `QUERY_HISTORY` and per-user authorization on jobs. |
+
+Execute-as-user is a **granularity** upgrade, not a security upgrade, and it adds real operational surface (a PAT, a SECRET, and caller grants per user, plus token rotation). Default to app identity; only set up execute-as-user when the user explicitly asks for per-user identity or per-user authorization.
+
+### Part A — Consumer roles (both modes)
 
 ```sql
 USE ROLE ACCOUNTADMIN;
@@ -316,6 +329,24 @@ CREATE ROLE IF NOT EXISTS MY_CONSUMER_ROLE;
 GRANT APPLICATION ROLE Neo4j_Graph_Analytics.app_user TO ROLE MY_CONSUMER_ROLE;
 SET MY_USER = (SELECT CURRENT_USER());
 GRANT ROLE MY_CONSUMER_ROLE TO USER IDENTIFIER($MY_USER);
+
+-- Optional: admin role, needed for the app_admin procedures (compute pools, execute-as-user flag)
+CREATE ROLE IF NOT EXISTS MY_ADMIN_ROLE;
+GRANT APPLICATION ROLE Neo4j_Graph_Analytics.app_admin TO ROLE MY_ADMIN_ROLE;
+GRANT ROLE MY_ADMIN_ROLE TO USER IDENTIFIER($MY_USER);
+
+-- Let the consumer role read output tables
+GRANT USAGE ON DATABASE MY_DATABASE TO ROLE MY_CONSUMER_ROLE;
+GRANT USAGE ON SCHEMA MY_DATABASE.MY_SCHEMA TO ROLE MY_CONSUMER_ROLE;
+GRANT SELECT ON FUTURE TABLES IN SCHEMA MY_DATABASE.MY_SCHEMA TO ROLE MY_CONSUMER_ROLE;
+```
+
+> `ACCOUNTADMIN` does **not** implicitly hold the application roles. The `preview.*` and `admin.*` procedures require a role that was granted `Neo4j_Graph_Analytics.app_admin`; algorithm procedures and `preview.register_user_role` require `app_user`.
+
+### Part B, option 1 — App-identity grants (default, run once per database/schema)
+
+```sql
+USE ROLE ACCOUNTADMIN;
 
 -- Database role granting the app access to your data
 USE DATABASE MY_DATABASE;
@@ -330,15 +361,153 @@ GRANT SELECT ON FUTURE VIEWS  IN SCHEMA MY_DATABASE.MY_SCHEMA TO DATABASE ROLE M
 GRANT CREATE TABLE ON SCHEMA MY_DATABASE.MY_SCHEMA TO DATABASE ROLE MY_DB_ROLE;
 GRANT DATABASE ROLE MY_DB_ROLE TO APPLICATION Neo4j_Graph_Analytics;
 
--- Let the consumer role read output tables
-GRANT USAGE ON DATABASE MY_DATABASE TO ROLE MY_CONSUMER_ROLE;
-GRANT USAGE ON SCHEMA MY_DATABASE.MY_SCHEMA TO ROLE MY_CONSUMER_ROLE;
-GRANT SELECT ON FUTURE TABLES IN SCHEMA MY_DATABASE.MY_SCHEMA TO ROLE MY_CONSUMER_ROLE;
-
 USE ROLE MY_CONSUMER_ROLE;   -- run algorithms as the consumer role
 ```
 
 > Replace `MY_DATABASE`, `MY_SCHEMA`, `MY_CONSUMER_ROLE`, `MY_DB_ROLE` with your names throughout.
+
+### Part B, option 2 — Execute-as-user (preview)
+
+Each user's job authenticates as **that user** with a Programmatic Access Token (PAT), under a role they hold, bounded by caller grants the account admin has delegated to the application on their behalf. Query history attributes the work to the user, not the app.
+
+Procedures live in the `preview` schema (`<APP>.preview.*`) and may still change before GA.
+
+**Before starting, collect:** the user name, the role to bind the PAT to (must be a role the user holds and that has `app_user`), the DB/schema to hold the SECRET, and the DB/schema the jobs will read and write.
+
+#### Onboarding is a two-part flow — you cannot script it end-to-end
+
+`ALTER USER ... ADD PROGRAMMATIC ACCESS TOKEN` returns the token secret **once**. Run Part 1, stop, have the user copy the `token_secret` value out of the result set, then run Part 2 with it pasted in. When driving this for a user, hand them Part 1, wait for the token, and only then produce Part 2.
+
+#### Part 1 — enable execute-as-user and mint the token
+
+```sql
+USE ROLE ACCOUNTADMIN;
+
+-- Prerequisite: let this user mint and use a PAT without a network policy.
+-- Snowflake requires a network policy for PATs by default; without this the job
+-- fails with "Fail : Network policy is required".
+-- Users who already have a network policy keep it enforced, so this is not a downgrade.
+-- An authentication policy is a schema-level object — set a context or qualify the name.
+USE SCHEMA MY_DATABASE.MY_SCHEMA;
+CREATE AUTHENTICATION POLICY IF NOT EXISTS pat_no_network_required
+    PAT_POLICY = (NETWORK_POLICY_EVALUATION = ENFORCED_NOT_REQUIRED);
+ALTER USER <user_name> SET AUTHENTICATION POLICY pat_no_network_required;
+
+-- Step 1: enable execute-as-user on the install (once per account, NOT per user).
+-- Needs the app_admin application role, which ACCOUNTADMIN does not hold implicitly.
+USE ROLE MY_ADMIN_ROLE;
+CALL Neo4j_Graph_Analytics.preview.set_enable_custom_credentials(TRUE);
+
+-- Step 2a: mint a PAT bound to the role
+USE ROLE ACCOUNTADMIN;
+ALTER USER <user_name> ADD PROGRAMMATIC ACCESS TOKEN app_pat
+    DAYS_TO_EXPIRY = 365
+    ROLE_RESTRICTION = 'MY_CONSUMER_ROLE';
+```
+
+> **STOP here.** The result of the `ADD PROGRAMMATIC ACCESS TOKEN` statement has a `token_secret` column — copy that value now, Snowflake will not show it again, and paste it into `SECRET_STRING` in Part 2.
+
+`ROLE_RESTRICTION` is load-bearing: the PAT can only ever authenticate under that role, so the role boundary holds even if the app's user-role registry is tampered with. It must match the role registered in Step 2d exactly.
+
+Once the flag is on but before any user is registered, job calls fail with `no role registered for <user>` — expected; continue with Part 2.
+
+#### Part 2 — store the token and register the user
+
+```sql
+USE ROLE ACCOUNTADMIN;
+
+-- Step 2b: stash the token in a secret you own (any DB/schema you control)
+CREATE OR REPLACE SECRET MY_DATABASE.MY_SCHEMA.pat_secret_<user_name>
+    TYPE = GENERIC_STRING
+    SECRET_STRING = '<paste_token_secret_from_part_1_here>';
+
+-- Step 2c: let the application read the secret (direct grants, not caller grants —
+-- the app reads the secret in its own right at job-start time)
+GRANT USAGE ON DATABASE MY_DATABASE TO APPLICATION Neo4j_Graph_Analytics;
+GRANT USAGE ON SCHEMA MY_DATABASE.MY_SCHEMA TO APPLICATION Neo4j_Graph_Analytics;
+GRANT READ ON SECRET MY_DATABASE.MY_SCHEMA.pat_secret_<user_name>
+    TO APPLICATION Neo4j_Graph_Analytics;
+```
+
+```sql
+-- Step 2d: register the user with the application.
+-- Run in a session opened AS <user_name> (not ACCOUNTADMIN) under a role holding
+-- app_user, so CURRENT_USER() resolves to the user being registered.
+USE ROLE MY_CONSUMER_ROLE;
+CALL Neo4j_Graph_Analytics.preview.register_user_role(
+    'MY_CONSUMER_ROLE',                                   -- must match ROLE_RESTRICTION on the PAT
+    'MY_DATABASE.MY_SCHEMA.pat_secret_<user_name>'        -- fully-qualified name of the SECRET
+);
+```
+
+```sql
+-- Step 2e: caller grants for the data the jobs read and write.
+-- Repeat per schema the user's jobs touch — this is the only widening mechanism
+-- in execute-as-user mode; without it the app can reach nothing outside its own database.
+USE ROLE ACCOUNTADMIN;
+GRANT CALLER USAGE ON DATABASE MY_DATABASE TO APPLICATION Neo4j_Graph_Analytics;
+GRANT CALLER USAGE ON SCHEMA MY_DATABASE.MY_SCHEMA TO APPLICATION Neo4j_Graph_Analytics;
+GRANT CALLER CREATE TABLE ON SCHEMA MY_DATABASE.MY_SCHEMA TO APPLICATION Neo4j_Graph_Analytics;
+GRANT INHERITED CALLER INSERT ON ALL TABLES IN SCHEMA MY_DATABASE.MY_SCHEMA TO APPLICATION Neo4j_Graph_Analytics;
+GRANT INHERITED CALLER SELECT ON ALL TABLES IN SCHEMA MY_DATABASE.MY_SCHEMA TO APPLICATION Neo4j_Graph_Analytics;
+GRANT INHERITED CALLER SELECT ON ALL VIEWS  IN SCHEMA MY_DATABASE.MY_SCHEMA TO APPLICATION Neo4j_Graph_Analytics;
+```
+
+`ON ALL TABLES` / `ON ALL VIEWS` covers only objects that exist **right now**, and there is no `FUTURE` equivalent for caller grants. Re-run these grants after creating new projection views, or any table you later want a job to read.
+
+#### Step 3 — verify
+
+Have the user run any algorithm, then check whose identity the job used:
+
+```sql
+USE ROLE ACCOUNTADMIN;
+SELECT user_name, role_name, LEFT(query_text, 120) AS sql, start_time
+FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY
+WHERE start_time > DATEADD(minute, -30, CURRENT_TIMESTAMP())
+  AND role_name = 'MY_CONSUMER_ROLE'
+ORDER BY start_time DESC LIMIT 20;
+```
+
+`user_name` should be the calling user and `role_name` the registered role. `ACCOUNT_USAGE` lags up to ~45 min — for live debugging query `MY_DATABASE.INFORMATION_SCHEMA.QUERY_HISTORY` instead.
+
+To check what an admin registered for a user:
+
+```sql
+CALL Neo4j_Graph_Analytics.preview.get_user_role_registration('<user_name>');  -- app_admin
+```
+
+#### Rotating a PAT
+
+1. Mint a new PAT for the user, capturing the new `token_secret`.
+2. `CREATE OR REPLACE SECRET MY_DATABASE.MY_SCHEMA.pat_secret_<user_name> TYPE = GENERIC_STRING SECRET_STRING = '<new_token_secret>';` — the existing grant to the application survives.
+3. `ALTER USER <user_name> REMOVE PROGRAMMATIC ACCESS TOKEN <old_pat_name>;`
+
+The registry needs no update: the SECRET name did not change, only its value.
+
+#### Rolling back
+
+```sql
+-- Turn execute-as-user off account-wide; restores app-identity behaviour for everyone.
+-- Registrations stay in the registry, just unused until the flag is flipped back on.
+CALL Neo4j_Graph_Analytics.preview.set_enable_custom_credentials(FALSE);
+
+-- Revoke a single user, leaving registry and SECRET intact:
+REVOKE READ ON SECRET MY_DATABASE.MY_SCHEMA.pat_secret_<user_name>
+    FROM APPLICATION Neo4j_Graph_Analytics;
+
+-- ...or invalidate the credential outright:
+ALTER USER <user_name> REMOVE PROGRAMMATIC ACCESS TOKEN app_pat;
+```
+
+There is deliberately **no** fallback to app identity for a revoked user — their calls error instead, so revocation is unambiguous.
+
+#### Execute-as-user pitfalls
+
+- **Role mismatch.** The role in `register_user_role` must equal the PAT's `ROLE_RESTRICTION`, or authentication fails.
+- **Forgetting caller grants.** The job authenticates fine, then everything outside the app's own database fails with "does not exist or not authorized".
+- **`USE ROLE` inside a job.** A role-restricted PAT session refuses any role switching — everything the job needs must be reachable from the registered primary role.
+- **Wrong secret type.** Must be `TYPE = GENERIC_STRING` with `SECRET_STRING`; `PASSWORD` and other types don't work with the secret mount the runtime uses.
+- **New objects after the grants.** Views and tables created later aren't covered by `ON ALL ...` — re-grant.
 
 ---
 
@@ -354,6 +523,8 @@ CALL Neo4j_Graph_Analytics.graph.fast_rp('CPU_X64_XS', { ... });
 CALL Neo4j_Graph_Analytics.graph.knn('CPU_X64_XS', { ... });
 ```
 
+In execute-as-user mode there are no `FUTURE` caller grants — re-run the Step 2e caller grants after creating the projection views over an intermediate result table, so the next algorithm can read them.
+
 ### Convert categorical data to numeric
 The graph engine can't use VARCHAR as a property. Map categories to numbers in the view (e.g. `CASE` / a lookup join). To read results by their original label, join the output table back to the source table on the key.
 
@@ -364,6 +535,11 @@ The graph engine can't use VARCHAR as a property. Map categories to numbers in t
 | Problem | Solution |
 |---|---|
 | `Insufficient privileges` | App needs `SELECT` on your tables/views and `CREATE TABLE` on the schema (see Privilege Setup) |
+| `no role registered for <user>` | Execute-as-user is enabled but this user isn't onboarded — run `preview.register_user_role` as that user (Part B option 2, Step 2d) |
+| `Network policy is required` | The PAT user has no authentication policy allowing PATs without a network policy — attach one with `PAT_POLICY = (NETWORK_POLICY_EVALUATION = ENFORCED_NOT_REQUIRED)` |
+| `does not exist or not authorized` in execute-as-user mode | Missing caller grants on the data schema, or objects created after the `ON ALL ...` grants — re-run Step 2e |
+| `Insufficient privileges to operate on table` on write in execute-as-user mode | The write schema is missing `CALLER CREATE TABLE` / `INHERITED CALLER INSERT ON ALL TABLES` — re-run Step 2e |
+| `USE ROLE not allowed` / `Current session is restricted` | Expected under a role-restricted PAT — everything must be reachable from the registered primary role |
 | `Column nodeId not found` | View is missing/mis-cast the key — expose `NODEID` (and `SOURCENODEID`/`TARGETNODEID`) with explicit casts |
 | Type / projection error on a property | A property column wasn't cast to a supported type — apply the casting rules; relationship props must be `BIGINT`/`DOUBLE`/`INT` |
 | GraphSAGE fails on features | Remove `ARRAY` feature columns (use `VECTOR`), and ensure features are non-NULL/finite |
@@ -379,7 +555,7 @@ Full guide: https://neo4j.com/docs/snowflake-graph-analytics/current/troubleshoo
 - [Getting Started](https://neo4j.com/docs/snowflake-graph-analytics/current/getting-started/)
 - [Running Jobs](https://neo4j.com/docs/snowflake-graph-analytics/current/jobs/) · [Scaling Out](https://neo4j.com/docs/snowflake-graph-analytics/current/jobs/scale-out/) · [Estimating Jobs](https://neo4j.com/docs/snowflake-graph-analytics/current/jobs/estimation/)
 - [All Algorithms](https://neo4j.com/docs/snowflake-graph-analytics/current/algorithms/)
-- [Administration](https://neo4j.com/docs/snowflake-graph-analytics/current/administration/)
+- [Administration](https://neo4j.com/docs/snowflake-graph-analytics/current/administration/) · [Execute-as-user (per-user PAT) authentication](https://neo4j.com/docs/snowflake-graph-analytics/current/administration/#administration-per-user-pat-auth)
 - [Integration with Cortex Agent](https://neo4j.com/docs/snowflake-graph-analytics/current/agents/)
 - [Basket Analysis Example on TPC-H Data](https://github.com/neo4j-product-examples/snowflake-graph-analytics/tree/main/basket-analysis)
 
@@ -387,7 +563,8 @@ Full guide: https://neo4j.com/docs/snowflake-graph-analytics/current/troubleshoo
 
 ## Checklist
 
-- [ ] App installed; privileges granted on the database/schema
+- [ ] App installed; consumer role created; **one** data-access mode set up (app identity *or* execute-as-user)
+- [ ] If execute-as-user: install flag on, PAT minted with matching `ROLE_RESTRICTION`, SECRET readable by the app, user registered, caller grants issued
 - [ ] Views expose `NODEID` / `SOURCENODEID` / `TARGETNODEID`, every property explicitly cast
 - [ ] `orientation` matches the algorithm
 - [ ] Single `CALL` ran without error; output table populated

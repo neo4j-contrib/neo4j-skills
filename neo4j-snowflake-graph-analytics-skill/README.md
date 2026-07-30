@@ -5,7 +5,7 @@ An [Agent Skill](https://agentskills.io/specification) that helps AI agents work
 ## What this skill covers
 
 - Installing Neo4j Graph Analytics from the Snowflake Marketplace
-- Setting up the required privileges and roles
+- Setting up the required privileges and roles, in either mode — app-identity grants (default) or execute-as-user (preview): programmatic access tokens, secrets, `register_user_role`, and caller grants
 - The end-to-end flow: **explore → prepare projection views → project-compute-write → inspect**
 - The strict view/column type rules the graph engine requires (key columns, supported property types, casting)
 - Exact SQL `CALL` syntax for all available graph algorithms
@@ -21,6 +21,7 @@ An [Agent Skill](https://agentskills.io/specification) that helps AI agents work
 - Setting up Neo4j Graph Analytics for the first time
 - Choosing the right algorithm for a business problem (fraud detection, recommendations, entity resolution, etc.)
 - Configuring compute pool sizes for jobs
+- Onboarding individual users onto execute-as-user so their jobs run under their own Snowflake identity
 - Troubleshooting privilege, projection, or column-type errors
 
 ## Installation
