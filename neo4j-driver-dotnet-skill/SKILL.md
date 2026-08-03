@@ -10,7 +10,7 @@ description: Neo4j .NET Driver v6 — IDriver lifecycle, DI registration (single
   Does NOT cover driver version upgrades — use neo4j-migration-skill.
 compatibility: .NET 8, 9, 10; Neo4j.Driver v6
 allowed-tools: Bash WebFetch
-version: 1.0.5
+version: 1.0.6
 ---
 
 ## When to Use
@@ -282,6 +282,8 @@ Cursor consumption methods:
 | `ToListAsync(mapper)` | ✅ mapped | ❌ | Need mapped records |
 | `FetchAsync()` loop | ✅ one/time | ❌ until ConsumeAsync | Large/lazy |
 | `ConsumeAsync()` | ❌ discards | ✅ | Need counters |
+
+`IResultSummary` profiling [v6.3.0+]: `summary.Profile` is `[Obsolete]` → use `summary.QueryProfile` (`IQueryProfile`), whose `DbHits`, `Rows`, `Time`, `PageCacheHits`, `PageCacheMisses` are `long?` — `null` means not recorded, distinct from `0`. Gate on `summary.HasProfile`.
 | `SingleAsync()` | ✅ exactly 1 | ❌ | Expect one row |
 
 ---
