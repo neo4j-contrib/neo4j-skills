@@ -10,7 +10,7 @@ description: Create and manage Neo4j vector indexes, run vector similarity searc
   Does NOT handle GraphRAG retrieval_query graph traversal — use neo4j-graphrag-skill.
   Does NOT handle fulltext-only/keyword-only search — use neo4j-cypher-skill.
   Does NOT compute GDS graph embeddings (FastRP, Node2Vec) — use neo4j-gds-skill.
-version: 1.0.14
+version: 1.0.15
 compatibility: Neo4j >= 2025.01; SEARCH clause requires 2026.01+
 allowed-tools: Bash WebFetch
 ---
@@ -101,8 +101,8 @@ OPTIONS { indexConfig: { `vector.dimensions`: 768, `vector.similarity_function`:
 | `vector.dimensions` | INTEGER 1–4096 | none | Required; must match embedding model exactly |
 | `vector.similarity_function` | STRING | `'cosine'` | `'cosine'` or `'euclidean'` |
 | `vector.quantization.type` | STRING | `'scalar'` | `'none'`, `'scalar'`, `'binary'` [2026.06+, GA 2026.07]; reduces storage; binary smallest (1 bit per dimension), most aggressive; needs vector-2.0+ (5.18+) |
-| `vector.quantization.enabled` | BOOLEAN | `true` | **Deprecated 2026.06** — use `vector.quantization.type` |
-| `vector.default_search_expansion_factor` | FLOAT 1.0–10000.0 | `1.0` none / `1.5` scalar / `3.0` binary (was `2.0` before 2026.07) | [2026.06+, GA 2026.07]; value >1.0 on quantized vectors enables automatic rescoring with full-precision vectors (High-Fidelity Quantized search, HFQ); not settable at query time |
+| `vector.quantization.enabled` | BOOLEAN | `true` | **Deprecated 2026.06** — use `vector.quantization.type`; `false` without `vector.quantization.type: 'none'` fails index creation before 2026.07 |
+| `vector.default_search_expansion_factor` | FLOAT 1.0–10000.0 | `1.0` none / `1.5` scalar / `3.0` binary (was `2.0` before 2026.07) | [2026.06+, GA 2026.07]; value >1.0 on quantized vectors enables automatic rescoring with full-precision vectors (High-Fidelity Quantized search, HFQ); not settable at query time; existing indexes keep their stored value until rebuilt |
 | `vector.hnsw.m` | INTEGER 1–512 | `16` | HNSW graph connections; higher = better recall, more memory |
 | `vector.hnsw.ef_construction` | INTEGER 1–3200 | `100` | Build-time candidates; higher = better recall, slower build |
 
@@ -370,6 +370,7 @@ DROP INDEX chunk_embedding IF EXISTS;
 | Zero results from correct query | Wrong similarity function or all-zeros embedding | Verify with `vector.similarity.cosine()`; check embed call succeeded |
 | Score always 1.0 | All-zeros or identical vectors | Embedding generation failed; add dimension assertion before ingest |
 | `vector.quantization.enabled` / `.type` option rejected | provider vector-1.0 (Neo4j < 5.18) | Omit quantization option or upgrade to 5.18+ |
+| `BINARY` quantization rejected | provider older than vector-2026.06 | Upgrade to 2026.06+; `SHOW VECTOR INDEXES YIELD name, indexProvider` to check (`vector-2026.07` adds High-Fidelity Quantized search) |
 
 ---
 
