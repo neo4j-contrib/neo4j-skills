@@ -102,7 +102,7 @@ OPTIONS { indexConfig: { `vector.dimensions`: 768, `vector.similarity_function`:
 | `vector.similarity_function` | STRING | `'cosine'` | `'cosine'` or `'euclidean'` |
 | `vector.quantization.type` | STRING | `'SCALAR'` | `NONE`, `SCALAR`, or `BINARY` [2026.06+]; reduces storage; BINARY smallest, most aggressive; needs vector-2.0+ (5.18+) |
 | `vector.quantization.enabled` | BOOLEAN | `true` | **Deprecated 2026.06** — use `vector.quantization.type` |
-| `vector.default_search_expansion_factor` | FLOAT | `1.0` NONE / `1.5` SCALAR / `2.0` BINARY | [2026.06+]; value >1.0 on quantized vectors enables automatic rescoring with full-precision vectors; not settable at query time |
+| `vector.default_search_expansion_factor` | FLOAT | `1.0` NONE / `1.5` SCALAR / `2.0` BINARY (`3.0` BINARY [2026.07+]) | [2026.06+]; value >1.0 on quantized vectors enables automatic rescoring with full-precision vectors; not settable at query time |
 | `vector.hnsw.m` | INTEGER 1–512 | `16` | HNSW graph connections; higher = better recall, more memory |
 | `vector.hnsw.ef_construction` | INTEGER 1–3200 | `100` | Build-time candidates; higher = better recall, slower build |
 
