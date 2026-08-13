@@ -9,7 +9,7 @@ description: Serverless Aura Graph Analytics (AGA) GDS Sessions — covers GdsSe
   Does NOT cover the embedded GDS plugin on Aura Pro or self-managed Neo4j — use neo4j-gds-skill.
   Does NOT handle Cypher authoring — use neo4j-cypher-skill.
   Does NOT cover Snowflake Graph Analytics — use neo4j-snowflake-graph-analytics-skill.
-version: 1.0.1
+version: 1.0.6
 allowed-tools: Bash WebFetch
 ---
 

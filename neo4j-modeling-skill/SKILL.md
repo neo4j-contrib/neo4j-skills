@@ -9,7 +9,7 @@ description: Design, review, and refactor Neo4j graph data models. Use when choo
   Does NOT handle Spring Data Neo4j entity mapping — use neo4j-spring-data-skill.
   Does NOT handle GraphQL type definitions — use neo4j-graphql-skill.
   Does NOT handle data import — use neo4j-import-skill.
-version: 1.0.1
+version: 1.0.5
 allowed-tools: WebFetch Bash
 ---
 

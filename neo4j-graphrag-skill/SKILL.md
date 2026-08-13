@@ -11,7 +11,7 @@ description: Build GraphRAG retrieval pipelines on Neo4j using the neo4j-graphra
   neo4j-document-import-skill. Does NOT handle plain vector search — use
   neo4j-vector-index-skill. Does NOT handle GDS analytics — use neo4j-gds-skill.
   Does NOT handle agent memory — use neo4j-agent-memory-skill.
-version: 1.0.1
+version: 1.0.11
 status: active
 allowed-tools: Bash WebFetch
 ---

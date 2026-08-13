@@ -7,7 +7,7 @@ description: Generates, optimizes, and validates Cypher 25 queries for Neo4j 202
   Does NOT handle driver migration or API changes — use neo4j-migration-skill.
   Does NOT cover DB administration or server ops — use neo4j-cli-tools-skill.
 compatibility: Neo4j >= 2025.01 (safe baseline); Cypher 25
-version: 1.0.1
+version: 1.0.19
 ---
 
 ## When to Use

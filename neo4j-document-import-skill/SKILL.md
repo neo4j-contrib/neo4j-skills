@@ -9,7 +9,7 @@ description: Ingests unstructured and semi-structured documents into Neo4j as a 
   Does NOT handle structured CSV/relational import — use neo4j-import-skill.
   Does NOT handle GraphRAG retrieval after ingestion — use neo4j-graphrag-skill.
   Does NOT handle vector index creation — use neo4j-vector-search-skill.
-version: 1.0.1
+version: 1.0.5
 status: stable
 allowed-tools: Bash WebFetch
 ---

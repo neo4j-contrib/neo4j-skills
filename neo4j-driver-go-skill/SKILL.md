@@ -7,7 +7,7 @@ description: Covers the Neo4j Go Driver v6 — driver lifecycle, ExecuteQuery, m
   Triggers on NewDriver, ExecuteQuery, SessionConfig, ManagedTransaction, neo4j-go-driver.
   Does NOT handle Cypher query authoring — use neo4j-cypher-skill.
   Does NOT cover driver version migration steps — use neo4j-migration-skill.
-version: 1.0.1
+version: 1.0.5
 allowed-tools: Bash WebFetch
 ---
 

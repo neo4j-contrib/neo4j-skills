@@ -9,7 +9,7 @@ description: Neo4j Graph Data Science (GDS) embedded plugin via Python client or
   gds.graph.project.remote, or AuraDB Cypher API projection/session management — use neo4j-aura-graph-analytics-skill.
   Does NOT handle Cypher authoring — use neo4j-cypher-skill.
   Does NOT cover driver setup — use neo4j-driver-python-skill or other driver skill.
-version: 1.0.1
+version: 1.0.12
 allowed-tools: Bash WebFetch
 ---
 

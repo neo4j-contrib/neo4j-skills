@@ -8,7 +8,7 @@ description: Orchestrates zero-to-running-app in 8 stages — prerequisites → 
   Does NOT cover Cypher query authoring — use neo4j-cypher-skill.
   Does NOT cover driver upgrades or Cypher migration — use neo4j-migration-skill.
   Does NOT cover CLI/admin tasks on an existing DB — use neo4j-cli-tools-skill.
-version: 1.0.1
+version: 1.0.5
 allowed-tools: Bash, WebFetch, Read, Write, Edit,
   mcp__neo4j__read-cypher, mcp__neo4j__write-cypher, mcp__neo4j__get-schema,
   mcp__neo4j__list-gds-procedures,

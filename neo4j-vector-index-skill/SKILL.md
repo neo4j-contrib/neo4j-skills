@@ -10,7 +10,7 @@ description: Create and manage Neo4j vector indexes, run vector similarity searc
   Does NOT handle GraphRAG retrieval_query graph traversal — use neo4j-graphrag-skill.
   Does NOT handle fulltext-only/keyword-only search — use neo4j-cypher-skill.
   Does NOT compute GDS graph embeddings (FastRP, Node2Vec) — use neo4j-gds-skill.
-version: 1.0.1
+version: 1.0.12
 compatibility: Neo4j >= 2025.01; SEARCH clause requires 2026.01+
 allowed-tools: Bash WebFetch
 ---

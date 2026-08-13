@@ -9,7 +9,7 @@ description: Import structured data into Neo4j — LOAD CSV, CALL IN TRANSACTION
   pipelines — use neo4j-document-import-skill. Does NOT handle live app write patterns
   (MERGE/CREATE) — use neo4j-cypher-skill. Does NOT handle neo4j-admin backup/restore/config
   — use neo4j-cli-tools-skill.
-version: 1.0.1
+version: 1.0.8
 allowed-tools: Bash WebFetch
 ---
 

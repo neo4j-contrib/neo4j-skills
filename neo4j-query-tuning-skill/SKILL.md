@@ -11,7 +11,7 @@ description: Diagnoses and fixes slow Neo4j Cypher queries by reading execution 
   Does NOT cover GDS algorithm tuning — use neo4j-gds-skill.
   Does NOT cover index/constraint creation syntax details — use neo4j-cypher-skill references/indexes.md.
 allowed-tools: Bash WebFetch
-version: 1.0.1
+version: 1.0.4
 ---
 
 ## When to Use

@@ -7,7 +7,7 @@ description: Use when reading from or writing to Neo4j with Apache Spark or Data
   examples, Databricks cluster config, Databricks secrets for credentials, Delta Lake to Neo4j
   pipelines. Does NOT handle Cypher authoring — use neo4j-cypher-skill. Does NOT handle the Python
   bolt driver — use neo4j-driver-python-skill. Does NOT handle GDS algorithms — use neo4j-gds-skill.
-version: 1.0.1
+version: 1.0.2
 allowed-tools: Bash WebFetch
 ---
 

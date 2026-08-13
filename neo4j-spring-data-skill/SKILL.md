@@ -7,7 +7,7 @@ description: Use when building Spring Boot applications with Neo4j using Spring 
   Does NOT handle raw Java driver code without Spring — use neo4j-driver-java-skill.
   Does NOT handle Cypher query authoring — use neo4j-cypher-skill.
   Does NOT handle driver version upgrades — use neo4j-migration-skill.
-version: 1.0.1
+version: 1.0.5
 allowed-tools: Bash WebFetch
 ---
 

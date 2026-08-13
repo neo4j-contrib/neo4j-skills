@@ -11,7 +11,7 @@ description: Use Neo4j GenAI Plugin ai.text.* functions and procedures for in-Cy
   Cypher queries. Does NOT handle neo4j-graphrag Python library pipelines — use
   neo4j-graphrag-skill. Does NOT handle vector index creation/search — use
   neo4j-vector-index-skill.
-version: 1.0.1
+version: 1.0.7
 status: active
 allowed-tools: Bash WebFetch
 ---

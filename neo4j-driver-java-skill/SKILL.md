@@ -8,7 +8,7 @@ description: Neo4j Java Driver v6 — driver lifecycle, Maven/Gradle setup, exec
   Does NOT handle Cypher authoring — use neo4j-cypher-skill.
   Does NOT cover driver version upgrades — use neo4j-migration-skill.
   Does NOT cover Spring Data Neo4j (@Node, Neo4jRepository) — use neo4j-spring-data-skill.
-version: 1.0.1
+version: 1.0.9
 allowed-tools: Bash WebFetch
 ---
 
