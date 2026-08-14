@@ -9,7 +9,7 @@ description: Configure and operate the Neo4j Connector for Kafka (sink + source)
   query authoring — use neo4j-cypher-skill. Does NOT handle bulk CSV/file import — use
   neo4j-import-skill. Does NOT handle GDS algorithms — use neo4j-gds-skill.
 allowed-tools: Bash WebFetch
-version: 1.0.2
+version: 1.0.3
 ---
 
 # Neo4j Kafka Skill

@@ -10,7 +10,7 @@ description: Create and manage Neo4j vector indexes, run vector similarity searc
   Does NOT handle GraphRAG retrieval_query graph traversal — use neo4j-graphrag-skill.
   Does NOT handle fulltext-only/keyword-only search — use neo4j-cypher-skill.
   Does NOT compute GDS graph embeddings (FastRP, Node2Vec) — use neo4j-gds-skill.
-version: 1.0.12
+version: 1.0.13
 compatibility: Neo4j >= 2025.01; SEARCH clause requires 2026.01+
 allowed-tools: Bash WebFetch
 ---
@@ -100,11 +100,15 @@ OPTIONS { indexConfig: { `vector.dimensions`: 768, `vector.similarity_function`:
 |---|---|---|---|
 | `vector.dimensions` | INTEGER 1–4096 | none | Required; must match embedding model exactly |
 | `vector.similarity_function` | STRING | `'cosine'` | `'cosine'` or `'euclidean'` |
-| `vector.quantization.type` | STRING | `'SCALAR'` | `NONE`, `SCALAR`, or `BINARY` [2026.06+]; reduces storage; BINARY smallest, most aggressive; needs vector-2.0+ (5.18+) |
+| `vector.quantization.type` | STRING | `'scalar'` | `'none'`, `'scalar'`, `'binary'` [2026.06+]; reduces storage; binary smallest, most aggressive; binary preview in 2026.06, GA 2026.07 |
 | `vector.quantization.enabled` | BOOLEAN | `true` | **Deprecated 2026.06** — use `vector.quantization.type` |
-| `vector.default_search_expansion_factor` | FLOAT | `1.0` NONE / `1.5` SCALAR / `2.0` BINARY (`3.0` BINARY [2026.07+]) | [2026.06+]; value >1.0 on quantized vectors enables automatic rescoring with full-precision vectors; not settable at query time |
+| `vector.default_search_expansion_factor` | FLOAT 1.0–10000.0 | `1.0` none / `1.5` scalar / `2.0` binary (`3.0` binary for indexes created on 2026.07+) | [2026.06+]; value >1.0 on quantized vectors enables automatic rescoring with full-precision vectors (HFQ); not settable at query time |
 | `vector.hnsw.m` | INTEGER 1–512 | `16` | HNSW graph connections; higher = better recall, more memory |
 | `vector.hnsw.ef_construction` | INTEGER 1–3200 | `100` | Build-time candidates; higher = better recall, slower build |
+
+Provider is not settable in Cypher 25 — Neo4j picks the most feature-rich one (`vector-2026.06` on 2026.06+, required for binary quantization + rescoring). Check with `SHOW VECTOR INDEXES YIELD name, indexProvider`. Changing quantization requires dropping and recreating the index.
+
+Unquantized vectors: set `vector.quantization.type: 'none'` alone — on 2026.06, `vector.quantization.enabled: false` without it errors (fixed 2026.07).
 
 **Similarity function choice:**
 

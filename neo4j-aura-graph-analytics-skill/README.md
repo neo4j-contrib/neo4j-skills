@@ -20,7 +20,7 @@ Guides agents through **Aura Graph Analytics (AGA)** — Neo4j's serverless, on-
 
 ## Compatibility
 
-`graphdatascience >= 1.15` · Aura Business Critical and VDC tiers · Python >= 3.8
+`graphdatascience >= 1.15` · AuraDB Free, Professional, Business Critical, VDC · Python >= 3.8
 
 ## Not covered
 

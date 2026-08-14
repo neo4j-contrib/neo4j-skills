@@ -8,6 +8,7 @@
 | Non-Neo4j data sources | ✅ Pandas, Spark, Arrow | ❌ |
 | Aura BC / VDC | ✅ | ❌ |
 | Aura Pro | ❌ | ✅ |
+| AuraDB Free | ✅ max `m_2GB`, 1 concurrent session, unbilled | ❌ |
 | Billing | Per session-minute | Included in AuraDB |
 | DB performance isolation | ✅ Full isolation | ❌ Shares DB resources |
 
