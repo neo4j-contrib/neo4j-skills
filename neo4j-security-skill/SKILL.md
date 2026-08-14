@@ -8,7 +8,7 @@ description: Programmatic security management in Neo4j — RBAC/ABAC, user lifec
   — use neo4j-cypher-skill. Does NOT handle cluster ops or backups — use neo4j-cli-tools-skill.
   Property-level security and ABAC require Enterprise Edition.
 allowed-tools: Bash WebFetch
-version: 1.0.6
+version: 1.0.7
 ---
 
 ## When to Use
@@ -150,6 +150,7 @@ SHOW POPULATED ROLES YIELD role;            // only roles with members
 | All on one db | `GRANT ALL ON DATABASE mydb TO dba` |
 | Full DBMS admin | `GRANT ALL ON DBMS TO dba` |
 | Manage users | `GRANT USER MANAGEMENT ON DBMS TO secadmin` |
+| Manage user tags [2026.06] | `GRANT USER METADATA MANAGEMENT ON DBMS TO secadmin` |
 | Manage roles | `GRANT ROLE MANAGEMENT ON DBMS TO secadmin` |
 | Schema changes | `GRANT CREATE ELEMENT TYPES ON DATABASE mydb TO schemaadmin` |
 
@@ -238,14 +239,14 @@ DENY MATCH {*} ON GRAPH mydb
 
 ## 6. ABAC — Attribute-Based Access Control (Enterprise)
 
-ABAC grants roles dynamically from OIDC claims or native user tags rather than explicit `GRANT ROLE ... TO user`.
+ABAC grants roles dynamically from OIDC/JWT claims or native user tags rather than explicit `GRANT ROLE ... TO user`.
 
 ### Prerequisites
 ```
-# neo4j.conf — every provider listed here must also appear in dbms.security.authorization_providers
-dbms.security.abac.authorization_providers=<oidc-provider-alias>,native   # `native` requires 2026.06+
+# neo4j.conf — providers must also appear in dbms.security.authorization_providers
+dbms.security.abac.authorization_providers=<oidc-provider-alias>,native   # native [2026.06+]
 ```
-Rule referencing an accessor function whose provider is not listed fails outright (no silent default).
+Unlisted provider → its accessor function (`abac.oidc.user_attribute()`, `abac.native.user_tags()`) unavailable and rules referencing it fail (no silent default).
 
 ### Create auth rule
 ```cypher

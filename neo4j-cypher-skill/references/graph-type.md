@@ -1,6 +1,6 @@
 # GRAPH TYPE — Schema Enforcement DDL
 
-Introduced 2026.02 (preview) · **GA 2026.06** · Enterprise Edition + Aura · Cypher 25 only.
+Introduced 2026.02 (preview) · **GA 2026.06** · Enterprise Edition, Infinigraph Edition, all Aura tiers · Cypher 25 only.
 
 GRAPH TYPE consolidates what previously required dozens of individual `CREATE CONSTRAINT` / `CREATE INDEX` statements into a single declarative schema definition. It operates on an **open model**: validation applies only to defined elements; extra labels and properties on nodes/relationships are still allowed.
 

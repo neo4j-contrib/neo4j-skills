@@ -7,7 +7,7 @@ description: Generates, optimizes, and validates Cypher 25 queries for Neo4j 202
   Does NOT handle driver migration or API changes — use neo4j-migration-skill.
   Does NOT cover DB administration or server ops — use neo4j-cli-tools-skill.
 compatibility: Neo4j >= 2025.01 (safe baseline); Cypher 25
-version: 1.0.20
+version: 1.0.21
 ---
 
 ## When to Use
@@ -248,6 +248,10 @@ Subclause expressions (`ORDER BY`/`WHERE`) referencing projection items more com
 `count(n)` counts non-null; `count(*)` counts rows including nulls. `collect(DISTINCT expr)` deduplicates.
 `GROUP BY` subclause [2026.07] states grouping keys explicitly on `WITH`/`RETURN`; implicit grouping stays valid.
 `count()` is faster than `size(collect())` — count() reads the internal store; collect() builds a list first.
+
+`GROUP BY` subclause on `WITH`/`RETURN` [2026.07, Cypher 25] states grouping keys explicitly (GQL alignment); implicit grouping still valid.
+
+`ORDER BY`/`WHERE` subclause expressions referencing a projection item more complex than a variable or `var.prop` are deprecated [2026.07] — alias the expression in the projection and order by the alias. Same for names that shadow an incoming variable. `ORDER BY`/`WHERE` may now call aggregation functions absent from the projection list when the projection clause already aggregates.
 
 ---
 
