@@ -160,6 +160,33 @@ RETURN p.name, f.name
 
 **Aggregation grouping keys**: every non-aggregating expression in `RETURN`/`WITH` is implicitly a grouping key.
 
+### GROUP BY subclause [2026.07, Cypher 25]
+
+```cypher
+RETURN <projection items>
+  GROUP BY { <grouping key> [, <grouping key>]... | () | ALL }
+  [ORDER BY ...] [SKIP/LIMIT]
+
+WITH <projection items>
+  GROUP BY { <grouping key> [, <grouping key>]... | () | ALL }
+  [ORDER BY ...] [SKIP/LIMIT] [WHERE ...]
+```
+
+```cypher
+CYPHER 25
+MATCH (p:Person)-[:ACTED_IN]->(m:Movie)
+RETURN p.name AS actor, m.genre AS genre, avg(m.rating) AS avgRating
+GROUP BY actor, genre
+```
+
+| Form | Effect |
+|---|---|
+| `GROUP BY k1, k2` | Explicit keys; each projection item must be an aggregation, constant, parameter, local variable, grouping-key expression, or sub-expression built from those |
+| `GROUP BY ()` | No grouping keys — one row; no entity/variable projections, aggregations still work |
+| `GROUP BY ALL` | Every non-aggregating projection item becomes a key (matches implicit grouping) |
+
+Grouping keys that are not projection items are not returned.
+
 ---
 
 ## ORDER BY
@@ -167,6 +194,21 @@ RETURN p.name, f.name
 - No `AS alias` in ORDER BY items — `ORDER BY n.prop DESC` not `ORDER BY n.prop AS p DESC`
 - No `NULLS LAST` / `NULLS FIRST` — SQL syntax; nulls sort last ascending / first descending by default
 - After aggregation, sort by the RETURN alias, not the pre-aggregation variable
+- `ORDER BY` / `WHERE` accept aggregation functions absent from the projection when the projection clause already aggregates [2026.07]
+
+```cypher
+// Deprecated 2026.07 — subclause rebuilds a complex projection expression
+MATCH (a:Movie)
+RETURN a.rating + 0 AS score, count(*) AS c ORDER BY a.rating + 0 + 1
+// Reference the alias
+MATCH (a:Movie)
+RETURN a.rating + 0 AS score, count(*) AS c ORDER BY score + 1
+
+// Deprecated 2026.07 — 'a' ambiguous between incoming variable and new alias
+MATCH (a:Movie)-->(b:Person) RETURN a.title AS a, count(*) AS c ORDER BY a.title
+// Alias to a distinct name
+MATCH (a:Movie)-->(b:Person) RETURN a.title AS title, count(*) AS c ORDER BY title
+```
 
 ```cypher
 // DO:

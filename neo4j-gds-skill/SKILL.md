@@ -9,7 +9,7 @@ description: Neo4j Graph Data Science (GDS) embedded plugin via Python client or
   gds.graph.project.remote, or AuraDB Cypher API projection/session management — use neo4j-aura-graph-analytics-skill.
   Does NOT handle Cypher authoring — use neo4j-cypher-skill.
   Does NOT cover driver setup — use neo4j-driver-python-skill or other driver skill.
-version: 1.0.13
+version: 1.0.14
 allowed-tools: Bash WebFetch
 ---
 
@@ -59,12 +59,14 @@ RETURN gds.version() AS gds_version
 If `Unknown function 'gds.version'` → GDS plugin unavailable. AuraDB serverless analytics → `neo4j-aura-graph-analytics-skill`. Self-managed/local → install or enable GDS plugin.
 
 ```bash
-pip install graphdatascience              # Python client
-pip install graphdatascience[rust_ext]    # 3–10× faster serialization
+pip install "graphdatascience<2"          # Python client
+pip install "graphdatascience[rust_ext]<2"  # 3–10× faster serialization
 ```
 
 Compatibility: graphdatascience v1.22 — GDS >= 2.6 and < 2.28 / < 2026.6, Python >= 3.10 and < 3.15, Neo4j Driver >= 4.4.12 and < 7.0.
-graphdatascience 2.0 is alpha (`pip install --pre graphdatascience`): `gds.v2` endpoints become default, minimum Neo4j Python driver 5.26 (4.4 dropped), FastPath preview. Pin `graphdatascience<2` for production.
+graphdatascience 2.0 (alpha since 2026-08, `pip install --pre graphdatascience`) removes every untyped 1.x endpoint and the `gds.v2.` prefix — v2 becomes the only API under `gds.*`; requires GDS >= 2.13, Neo4j Python driver >= 5.26 (4.4 dropped), pandas >= 2.0. Pin `graphdatascience<2` for production until 2.0 is GA.
+
+GDS plugin 2026.07 removed `gds.userLog` — track running jobs with `CALL gds.listProgress()`.
 
 V2 rules:
 - Prefer `gds.v2.*` when endpoint exists.
