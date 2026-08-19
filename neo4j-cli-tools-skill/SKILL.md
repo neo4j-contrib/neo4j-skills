@@ -1,6 +1,7 @@
 ---
 name: neo4j-cli-tools-skill
-description: Use when working with Neo4j command-line tools — neo4j-cli (modern unified
+description: > 
+  Use when working with Neo4j command-line tools — neo4j-cli (modern unified
   CLI: Cypher via Bolt, schema inspection, Aura management, Docker containers, credential
   management, agent skill catalog install; install with curl -sSfL https://neo4j.sh/install.sh | bash),
   neo4j-admin (backup, restore, import, memory sizing), cypher-shell (ad-hoc queries,
