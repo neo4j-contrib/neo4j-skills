@@ -59,8 +59,8 @@ RETURN gds.version() AS gds_version
 If `Unknown function 'gds.version'` → GDS plugin unavailable. AuraDB serverless analytics → `neo4j-aura-graph-analytics-skill`. Self-managed/local → install or enable GDS plugin.
 
 ```bash
-pip install graphdatascience              # Python client
-pip install graphdatascience[rust_ext]    # 3–10× faster serialization
+pip install "graphdatascience<2"          # Python client
+pip install "graphdatascience[rust_ext]<2"  # 3–10× faster serialization
 ```
 
 Compatibility: graphdatascience v1.22 — GDS >= 2.6 and < 2.28 / < 2026.6, Python >= 3.10 and < 3.15, Neo4j Driver >= 4.4.12 and < 7.0. GDS server 2026.06+ falls outside that range — call GDS from Cypher, or use the 2.0 pre-release client.

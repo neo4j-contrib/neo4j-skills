@@ -34,7 +34,7 @@ allowed-tools: Bash WebFetch
 
 | Deployment | Use |
 |---|---|
-| AuraDB Free | **this skill** — max 2 GB session memory, 1 concurrent session, unbilled |
+| AuraDB Free | **this skill** — max `m_2GB`, 1 concurrent session, unbilled |
 | Aura Pro + Graph Analytics plugin enabled (lightweight exploration, shared resources) | `neo4j-gds-skill` |
 | Aura Pro / Pro Trial + session (isolated compute) | **this skill** — up to 128 GB (Pro) / 8 GB (Pro Trial), 100 / 3 concurrent sessions |
 | AuraDB + Python client sessions | **this skill** |
@@ -118,7 +118,7 @@ memory = sessions.estimate(
     ],
 )
 # Returns SessionMemory tier, e.g. SessionMemory.m_8GB
-# Fixed tiers: m_2GB … m_256GB — see references/limitations.md
+# Fixed tiers: m_2GB … m_512GB — see references/limitations.md
 ```
 
 ### Step 3 — Create Session

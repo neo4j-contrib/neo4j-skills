@@ -9,7 +9,7 @@ description: Import structured data into Neo4j — LOAD CSV, CALL IN TRANSACTION
   pipelines — use neo4j-document-import-skill. Does NOT handle live app write patterns
   (MERGE/CREATE) — use neo4j-cypher-skill. Does NOT handle neo4j-admin backup/restore/config
   — use neo4j-cli-tools-skill.
-version: 1.0.10
+version: 1.0.11
 allowed-tools: Bash WebFetch
 ---
 
@@ -295,7 +295,7 @@ p002,tt0133093,Morpheus,ACTED_IN
 
 | Flag | Default | Notes |
 |---|---|---|
-| `--delimiter` | `,` | Single char or `TAB`; newline chars rejected [2026.07+] |
+| `--delimiter` | `,` | Single-byte UTF-8 char, `TAB`, `\ID`, or `U+XXXX`; newline chars rejected [2026.07+] |
 | `--vector-delimiter` | `;` | Separates `prop:vector` coordinates; must differ from `--delimiter` and `--quote` [enforced 2026.06+] |
 | `--id-type` | `STRING` | `STRING \| INTEGER \| ACTUAL` |
 | `--bad-tolerance` | `-1` (unlimited, changed 2025.12) | Set `0` for strict prod imports |

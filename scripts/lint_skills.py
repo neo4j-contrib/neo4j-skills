@@ -42,12 +42,24 @@ def parse_frontmatter(text: str) -> dict:
             m = re.match(r'^([\w-]+):\s*(.*)', line)
             if m:
                 current_key = m.group(1)
-                current_lines = [m.group(2)]
+                value = m.group(2)
+                stripped_value = value.strip()
+                quoted = (
+                    len(stripped_value) >= 2
+                    and stripped_value[0] in {'"', "'"}
+                    and stripped_value[-1] == stripped_value[0]
+                )
+                if not quoted and re.search(r':(?:[ \t]|$)', value):
+                    return None
+                current_lines = [value]
             else:
                 current_key = None
                 current_lines = []
         elif current_key is not None:
-            current_lines.append(line.strip())
+            value = line.strip()
+            if re.search(r':(?:[ \t]|$)', value):
+                return None
+            current_lines.append(value)
 
     if current_key is not None:
         result[current_key] = '\n'.join(current_lines).strip()
