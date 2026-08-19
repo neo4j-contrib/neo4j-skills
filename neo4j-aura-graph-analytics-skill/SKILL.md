@@ -9,7 +9,7 @@ description: Serverless Aura Graph Analytics (AGA) GDS Sessions — covers GdsSe
   Does NOT cover the embedded GDS plugin on Aura Pro or self-managed Neo4j — use neo4j-gds-skill.
   Does NOT handle Cypher authoring — use neo4j-cypher-skill.
   Does NOT cover Snowflake Graph Analytics — use neo4j-snowflake-graph-analytics-skill.
-version: 1.0.1
+version: 1.0.8
 allowed-tools: Bash WebFetch
 ---
 
@@ -34,8 +34,9 @@ allowed-tools: Bash WebFetch
 
 | Deployment | Use |
 |---|---|
-| Aura Free | ❌ AGA not available |
-| Aura Pro | `neo4j-gds-skill` (embedded plugin) |
+| AuraDB Free | **this skill** — max `m_2GB`, 1 concurrent session, unbilled |
+| Aura Pro + Graph Analytics plugin enabled (lightweight exploration, shared resources) | `neo4j-gds-skill` |
+| Aura Pro / Pro Trial + session (isolated compute) | **this skill** — up to 128 GB (Pro) / 8 GB (Pro Trial), 100 / 3 concurrent sessions |
 | AuraDB + Python client sessions | **this skill** |
 | AuraDB + Cypher API | **this skill** for AGA-specific projection/session notes; `neo4j-cypher-skill` for query authoring |
 | Self-managed Neo4j + AGA session | **this skill** |
@@ -62,8 +63,28 @@ allowed-tools: Bash WebFetch
 ## Installation
 
 ```bash
-pip install "graphdatascience>=1.15"
+pip install "graphdatascience>=1.15,<2"    # 1.22 is the current stable release
 ```
+
+### graphdatascience 2.0 (alpha)
+
+`2.0aN` is pre-release — pin `<2` for production. Rename map for when 2.0 ships:
+
+| 1.x | 2.0 |
+|---|---|
+| `gds.v2.<endpoint>` | `gds.<endpoint>` — `gds.v2` prefix gone; untyped 1.x endpoints removed |
+| `gds.graph.project(...)` (AGA) | `gds.graph.project.cypher(...)` |
+| `gds.graph.project_native(...)` (AGA) | `gds.graph.project.native(...)` |
+| `GraphV2` / `ModelV2` | `Graph` / `Model` — `from graphdatascience import Graph` |
+| `Graph.drop(failIfMissing=)` / `Model.drop(failIfMissing=)` | `fail_if_missing=` |
+| `run_cypher(..., retryable=)` | removed — always retries |
+| `ArrowEndpointVersion.from_arrow_info` | `check_version_compatibility` |
+| `ServerVersion`, `SemanticVersion` from top level | `graphdatascience.versions` |
+| `gds.graph.node_labels.mutate(write_concurrency=, job_id=)` | parameters removed |
+
+2.0 minimums: GDS server 2.13, `neo4j` driver 5.26, pandas 2.x–3.x, pyarrow 21–25, numpy <3.
+
+2.0 additions: `GdsSessions.estimate(algorithms=[...])` for per-algorithm memory; `GdsSessions.get_or_create(show_progress=...)`; `gds.pipeline.get`; `overwrite=True` on `gds.graph.project` / `generate` / `construct` / `filter` / `sample` to drop a same-named graph first; `GdsSessions.delete(session_id=...)` returns `False` when nothing was deleted.
 
 ---
 
@@ -97,7 +118,7 @@ memory = sessions.estimate(
     ],
 )
 # Returns SessionMemory tier, e.g. SessionMemory.m_8GB
-# Fixed tiers: m_2GB … m_256GB — see references/limitations.md
+# Fixed tiers: m_2GB … m_512GB — see references/limitations.md
 ```
 
 ### Step 3 — Create Session

@@ -23,9 +23,18 @@ Returns cursor for the last committed transaction. Cursor is **exclusive** — d
 
 ```cypher
 CALL db.cdc.current() YIELD id RETURN id AS cursor;
+
+// txCommitTime (ZONED DATETIME) — commit time of that transaction [2026.06+, Cypher 25]
+CALL db.cdc.current() YIELD id, txCommitTime RETURN id AS cursor, txCommitTime;
 ```
 
 Use as starting point for "stream from now forward".
+
+`txCommitTime` column added [2026.06, Cypher 25] — timestamp of last committed transaction:
+
+```cypher
+CALL db.cdc.current() YIELD id, txCommitTime RETURN id AS cursor, txCommitTime;
+```
 
 ### `db.cdc.earliest()`
 

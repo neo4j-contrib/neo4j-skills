@@ -1,13 +1,14 @@
 ---
 name: neo4j-spark-skill
 description: Use when reading from or writing to Neo4j with Apache Spark or Databricks using the
-  Neo4j Connector for Apache Spark (org.neo4j:neo4j-connector-apache-spark). Covers SparkSession
+  Neo4j Connector for Apache Spark 6.0 (org.neo4j.connectors:spark) or 5.x
+  (org.neo4j:neo4j-connector-apache-spark). Covers SparkSession
   setup, DataFrame reads via labels/Cypher/relationship scan, DataFrame writes with SaveMode,
   node.keys for MERGE, relationship write mapping, partition and batch tuning, PySpark and Scala
   examples, Databricks cluster config, Databricks secrets for credentials, Delta Lake to Neo4j
   pipelines. Does NOT handle Cypher authoring — use neo4j-cypher-skill. Does NOT handle the Python
   bolt driver — use neo4j-driver-python-skill. Does NOT handle GDS algorithms — use neo4j-gds-skill.
-version: 1.0.1
+version: 1.0.3
 allowed-tools: Bash WebFetch
 ---
 
@@ -32,19 +33,24 @@ allowed-tools: Bash WebFetch
 
 ## Version Matrix
 
-| Connector | Spark | Scala | Databricks Runtime | Neo4j |
-|-----------|-------|-------|--------------------|-------|
-| 5.4.x | 3.3, 3.4, 3.5 | 2.12, 2.13 | 12.2, 13.3, 14.3 LTS | 4.4, 5.x, 2025.x |
+| Connector | Spark | Scala | Java | Databricks Runtime | Neo4j | Maven coordinate |
+|-----------|-------|-------|------|--------------------|-------|------------------|
+| 6.0.x | 4.0, 4.1 | 2.13 | 17+ | 17.3 LTS | 5.x, 2025.x, 2026.x | `org.neo4j.connectors:spark:6.0.0-s_2.13` |
+| 5.5.x / 5.4.x | 3.4, 3.5 | 2.12, 2.13 | 8+ | 14.3–16.4 LTS | 4.4, 5.x, 2025.x, 2026.x | `org.neo4j:neo4j-connector-apache-spark_2.13:5.5.0_for_spark_3` |
 
-Maven artifact (Scala 2.12, Spark 3):
-```
-org.neo4j:neo4j-connector-apache-spark_2.12:5.4.2_for_spark_3
-```
+Group ID changed in 6.0 — `org.neo4j:neo4j-connector-apache-spark_<scala>` is now a relocation POM pointing at `org.neo4j.connectors:spark`. On Spark 3.x stay on 5.5.x.
 
-Scala 2.13 variant:
-```
-org.neo4j:neo4j-connector-apache-spark_2.13:5.4.2_for_spark_3
-```
+### 6.0 breaking changes
+
+| Change | Migration |
+|---|---|
+| Spark baseline 3.5 → 4.0/4.1; Scala 2.12 and Java 8–11 dropped | Upgrade to 5.5.0 first, then Spark 4.x + Scala 2.13 + Java 17 |
+| Maven coordinate `org.neo4j.connectors:spark:<version>-s_2.13` | Replace old `_for_spark_3` coordinate |
+| `schema.optimization.type` removed | `schema.optimization.node.keys`, `schema.optimization.relationship.keys`, `schema.optimization` |
+| `$stream.offset` in partitioned reads removed | Use `partitions` + `query.count` |
+| `;`-separated multi-statement `script` removed | `script.1`, `script.2`, … `script.N` — executed in numbered order |
+| `relationship.save.strategy` default `native` → `keys` | Set `.option("relationship.save.strategy", "native")` explicitly to keep old behaviour |
+| `query` option rewritten for Data Source V2 predicate push-down | No action; verify plans on upgrade |
 
 ---
 
@@ -58,7 +64,7 @@ from pyspark.sql import SparkSession
 spark = (SparkSession.builder
     .appName("neo4j-app")
     .config("spark.jars.packages",
-            "org.neo4j:neo4j-connector-apache-spark_2.12:5.4.2_for_spark_3")
+            "org.neo4j.connectors:spark:6.0.0-s_2.13")   # Spark 3.x: org.neo4j:neo4j-connector-apache-spark_2.13:5.5.0_for_spark_3
     .config("neo4j.url", "neo4j+s://xxxx.databases.neo4j.io")
     .config("neo4j.authentication.type", "basic")
     .config("neo4j.authentication.basic.username", "neo4j")
@@ -72,7 +78,7 @@ spark = (SparkSession.builder
 val spark = SparkSession.builder
   .appName("neo4j-app")
   .config("spark.jars.packages",
-    "org.neo4j:neo4j-connector-apache-spark_2.12:5.4.2_for_spark_3")
+    "org.neo4j.connectors:spark:6.0.0-s_2.13")
   .config("neo4j.url", "neo4j+s://xxxx.databases.neo4j.io")
   .config("neo4j.authentication.type", "basic")
   .config("neo4j.authentication.basic.username", "neo4j")
@@ -83,7 +89,7 @@ val spark = SparkSession.builder
 ### Databricks — Cluster Installation
 
 1. Cluster → **Libraries** → **Install New** → **Maven**
-2. Search: `org.neo4j:neo4j-connector-apache-spark_2.12` — match Scala version to runtime
+2. Coordinate `org.neo4j.connectors:spark:6.0.0-s_2.13` on DBR 17.3 LTS; `org.neo4j:neo4j-connector-apache-spark_2.13:5.5.0_for_spark_3` on DBR 14.3–16.4 LTS
 3. Cluster → **Advanced Options** → **Spark** tab — add config:
    ```
    neo4j.url neo4j+s://xxxx.databases.neo4j.io
@@ -126,6 +132,27 @@ spark.conf.set("neo4j.authentication.basic.password", neo4j_pass)
 | `neo4j.database` | Target database | driver default |
 | `neo4j.access.mode` | `read` or `write` | `read` |
 | `neo4j.encryption.enabled` | TLS (ignored with `+s`/`+ssc` URI) | `false` |
+| `neo4j.db.transaction.timeout` | Transaction timeout (ms) | driver default |
+| `neo4j.db.transaction.metadata.<key>` | Custom transaction metadata surfaced in query log [6.0] | empty |
+| `neo4j.authentication.type` = supplier name | Custom `AuthenticationTokenSupplierFactory` (e.g. `keycloak` via `org.neo4j.connectors:commons-authn-keycloak`) for expiring OAuth/OIDC tokens | — |
+
+### Cypher version and query tuning [6.0]
+
+| Option | Effect |
+|---|---|
+| `cypher.version` | Cypher language version — `5` (default) or `25` |
+| `cypher.tuning.<param>` | Emits `CYPHER <param>=<value>` preamble on every generated query |
+
+Valid with `labels`, `relationship`, `query` on reads and writes; rejected with `gds`.
+
+```python
+df = (spark.read.format("org.neo4j.spark.DataSource")
+    .option("query", "MATCH (o:Object) RETURN o.id AS id, o.name AS name")
+    .option("cypher.version", "25")
+    .option("cypher.tuning.runtime", "parallel")           # CYPHER 25 runtime=parallel
+    .option("db.transaction.metadata.app", "spark-etl")    # tags transactions in query.log
+    .load())
+```
 
 ---
 
@@ -276,6 +303,22 @@ rel_df = spark.createDataFrame([
 - `Append` — always CREATE new nodes
 - `Overwrite` — MERGE nodes
 
+### Pre-write scripts [6.0]
+
+`script.N` runs Cypher once before write operations, in numbered order. Required for index/constraint setup when using `query` mode (`schema.optimization.*` rejected there).
+
+```python
+(df.write.format("org.neo4j.spark.DataSource")
+    .mode("Overwrite")
+    .option("query", "MERGE (p:Person {email: event.email}) SET p.name = event.name")
+    .option("script.1", "CREATE CONSTRAINT person_email IF NOT EXISTS FOR (p:Person) REQUIRE p.email IS UNIQUE")
+    .option("script.2", "CREATE INDEX person_name IF NOT EXISTS FOR (p:Person) ON (p.name)")
+    .option("index.await.timeout", "300")   # db.awaitIndexes seconds; 0 disables
+    .save())
+```
+
+`script` (single statement) and `script.N` are mutually exclusive. Semicolon-separated statements inside one `script` fail on 6.0.
+
 Full write options reference: [references/write-patterns.md](references/write-patterns.md)
 
 ---
@@ -356,13 +399,16 @@ orders_df.coalesce(1).write.format("org.neo4j.spark.DataSource").mode("Append") 
 | Schema all `string` columns | No APOC, schema not sampled | Set `schema.flatten.limit` higher; or use `query` mode with explicit types |
 | `Access mode is read` error on write | Session opened in read mode | Remove `neo4j.access.mode` or set to `write` |
 | Databricks Shared cluster fails | Unity Catalog shared mode unsupported | Switch to Single User access mode |
+| `NoSuchMethodError` / `IncompatibleClassChangeError` on Spark 4 | 5.x connector on a Spark 4 runtime | Use `org.neo4j.connectors:spark:6.0.0-s_2.13` |
+| Relationship write ignores `rel.*` / `source.*` columns after upgrade | 6.0 default strategy is `keys`, not `native` | `.option("relationship.save.strategy", "native")` |
+| `script` option rejected with multiple statements | 6.0 removed `;`-separated scripts | Split into `script.1`, `script.2`, … |
 
 ---
 
 ## Checklist
 
-- [ ] Connector JAR version matches Spark version suffix (`_for_spark_3`)
-- [ ] Scala version in artifact matches cluster runtime (2.12 vs 2.13)
+- [ ] Connector coordinate matches Spark line — `org.neo4j.connectors:spark:*-s_2.13` for Spark 4.x, `org.neo4j:neo4j-connector-apache-spark_<scala>:*_for_spark_3` for Spark 3.x
+- [ ] Scala version in artifact matches cluster runtime (2.13 only on 6.x)
 - [ ] Credentials in Databricks secrets or env vars — not hardcoded
 - [ ] `node.keys` set when using `Overwrite` mode
 - [ ] Uniqueness constraint created on `node.keys` properties before MERGE writes

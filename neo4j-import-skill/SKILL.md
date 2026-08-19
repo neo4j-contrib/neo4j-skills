@@ -9,7 +9,7 @@ description: Import structured data into Neo4j — LOAD CSV, CALL IN TRANSACTION
   pipelines — use neo4j-document-import-skill. Does NOT handle live app write patterns
   (MERGE/CREATE) — use neo4j-cypher-skill. Does NOT handle neo4j-admin backup/restore/config
   — use neo4j-cli-tools-skill.
-version: 1.0.1
+version: 1.0.11
 allowed-tools: Bash WebFetch
 ---
 
@@ -62,7 +62,7 @@ Run in this exact order — skipping causes hard-to-debug duplicates or missed i
    CREATE CONSTRAINT IF NOT EXISTS FOR (n:Person) REQUIRE n.id IS UNIQUE;
    CREATE CONSTRAINT IF NOT EXISTS FOR (n:Movie)  REQUIRE n.movieId IS UNIQUE;
    ```
-   > **Neo4j 2026.02+ (Enterprise/Aura) — PREVIEW:** `ALTER CURRENT GRAPH TYPE SET { … }` can replace all individual constraint statements with a single declarative block. See `neo4j-cypher-skill/references/graph-type.md`. Use individual `CREATE CONSTRAINT` on older versions or Community Edition.
+   > **Neo4j 2026.06+ (Enterprise/Aura, GA):** `ALTER CURRENT GRAPH TYPE SET { … }` replaces all individual constraint statements with a single declarative block. See `neo4j-cypher-skill/references/graph-type.md`. Use individual `CREATE CONSTRAINT` on Community Edition or pre-2026.02.
 
 2. **Verify APOC if using apoc.* procedures**:
    ```cypher
@@ -272,7 +272,7 @@ p002,Bob,1990,7.1,false,Person
 | `:ID(Group)` | Scoped ID space — use when node types share IDs |
 | `:LABEL` | One or more labels; semicolon-separated: `Person;Employee` |
 | `prop:int` | Typed property; types: `int long float double boolean byte short string` |
-| `prop:date` | Temporal: `date localtime time localdatetime datetime duration` |
+| `prop:date` | Temporal: `date localtime time localdatetime datetime duration`; Parquet `INTERVAL` columns import as `DURATION` [2026.07+] |
 | `prop:int[]` | Array — semicolon-separated values in cell: `1;2;3` |
 | `prop:vector` | Float vector (2025.10+) — semicolon-separated coordinates in CSV; imports directly from native Parquet list types [2026.06+] |
 
@@ -295,7 +295,7 @@ p002,tt0133093,Morpheus,ACTED_IN
 
 | Flag | Default | Notes |
 |---|---|---|
-| `--delimiter` | `,` | Single char or `TAB` |
+| `--delimiter` | `,` | Single-byte UTF-8 char, `TAB`, `\ID`, or `U+XXXX`; newline chars rejected [2026.07+] |
 | `--vector-delimiter` | `;` | Separates `prop:vector` coordinates; must differ from `--delimiter` and `--quote` [enforced 2026.06+] |
 | `--id-type` | `STRING` | `STRING \| INTEGER \| ACTUAL` |
 | `--bad-tolerance` | `-1` (unlimited, changed 2025.12) | Set `0` for strict prod imports |

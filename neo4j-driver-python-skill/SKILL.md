@@ -9,7 +9,7 @@ description: Neo4j Python Driver v6 — driver lifecycle, execute_query, managed
   Does NOT handle Cypher query authoring — use neo4j-cypher-skill.
   Does NOT cover driver upgrades or breaking changes — use neo4j-migration-skill.
   Does NOT cover GraphRAG pipelines (neo4j-graphrag package) — use neo4j-graphrag-skill.
-version: 1.0.1
+version: 1.0.7
 allowed-tools: Bash WebFetch
 ---
 

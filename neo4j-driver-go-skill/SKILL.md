@@ -7,7 +7,7 @@ description: Covers the Neo4j Go Driver v6 — driver lifecycle, ExecuteQuery, m
   Triggers on NewDriver, ExecuteQuery, SessionConfig, ManagedTransaction, neo4j-go-driver.
   Does NOT handle Cypher query authoring — use neo4j-cypher-skill.
   Does NOT cover driver version migration steps — use neo4j-migration-skill.
-version: 1.0.1
+version: 1.0.6
 allowed-tools: Bash WebFetch
 ---
 
@@ -137,6 +137,21 @@ neo4j.ExecuteQueryWithoutBookmarkManager()       // opt out of causal consistenc
 
 ❌ Never concatenate user input into query strings. Always use `map[string]any` parameters.
 
+Struct parameters [v6.2.0+, Object Mapping preview] — a struct (or pointer) in `params` is sent as a Cypher map; same rules in `Session.Run`, `ManagedTransaction.Run`, `ExplicitTransaction.Run`:
+```go
+type Person struct {
+    Name     string `neo4j:"name"`
+    Age      int    `neo4j:"age,omitempty"`  // zero value dropped
+    Internal string `neo4j:"-"`              // never sent
+}
+_, err := neo4j.ExecuteQuery(ctx, driver,
+    "MERGE (p:Person {name: $person.name}) SET p += $person",
+    map[string]any{"person": Person{Name: "Alice", Age: 30}},
+    neo4j.EagerResultTransformer,
+    neo4j.ExecuteQueryWithDatabase("neo4j"),
+)
+```
+
 ---
 
 ## Managed Transactions (Session-Based)
@@ -245,6 +260,7 @@ In managed tx callback: return error → driver retries if transient.
 | `Date` | `neo4j.Date` |
 | `DateTime` | `neo4j.Time` |
 | `Duration` | `neo4j.Duration` |
+| `UUID` | `neo4j.UUID` (= `dbtype.UUID`, `[16]byte` RFC 9562) — v6.2.0+, Bolt 6.1; parse with `dbtype.ParseUUID(s)`, render with `.String()` |
 | `null` | `nil` |
 
 ```go
@@ -395,8 +411,7 @@ Cross-session (parallel workers): combine bookmarks explicitly — see [referenc
 ## References
 
 Load on demand:
-Load on demand:
-- [references/advanced-config.md](references/advanced-config.md) — connection pool tuning, custom address resolver, notification config, Bolt logging, auth options, URI scheme table
+- [references/advanced-config.md](references/advanced-config.md) — connection pool tuning, custom address resolver, notification config, Bolt logging, auth options, URI scheme table, deprecated result-summary accessors (`Profile()` → `QueryProfile()`)
 - [references/repository-pattern.md](references/repository-pattern.md) — repository wrapper pattern, cross-session causal consistency with bookmarks
 
 ## WebFetch

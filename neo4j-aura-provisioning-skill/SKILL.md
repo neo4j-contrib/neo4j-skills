@@ -8,7 +8,7 @@ description: Provisions and manages Neo4j Aura instances via CLI (aura-cli v1.7+
   provisioning scripts. Does NOT handle Cypher queries — use neo4j-cypher-skill.
   Does NOT cover Graph Data Science algorithms — use neo4j-gds-skill or neo4j-aura-graph-analytics-skill.
   Does NOT cover neo4j-admin/cypher-shell — use neo4j-cli-tools-skill.
-version: 1.0.1
+version: 1.0.4
 allowed-tools: Bash WebFetch
 ---
 

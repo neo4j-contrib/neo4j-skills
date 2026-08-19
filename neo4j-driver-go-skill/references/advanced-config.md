@@ -60,3 +60,22 @@ neo4j.NoAuth()                                 // unauthenticated (dev only)
 | `neo4j+s://` | Encrypted (TLS), cluster-routing — use for Aura |
 | `bolt://` | Unencrypted, single instance |
 | `bolt+s://` | Encrypted, single instance |
+
+## Result Summary — deprecated accessors [v6.2.0]
+
+| Deprecated | Replacement |
+|---|---|
+| `summary.Profile()` / `ProfiledPlan` | `summary.QueryProfile()` / `QueryProfile` |
+| `summary.Notifications()` | `summary.GqlStatusObjects()` |
+| `summary.StatementType()` | `summary.QueryType()` |
+
+`QueryProfile` metrics return `(value, recorded bool)` — check the bool instead of treating absent stats as `0`:
+```go
+profile := summary.QueryProfile()
+if hits, ok := profile.DbHits(); ok {
+    fmt.Printf("%s dbHits=%d\n", profile.Operator(), hits)
+}
+for _, child := range profile.Children() { /* recurse */ }
+```
+
+`neo4j/db` summary types (`Plan`, `ProfiledPlan`, `StreamSummary`, `GqlStatusObject`, `InputPosition`, `Summary`, `QueryType` alias) are internal as of v6.2.0 — depend on the `neo4j` package types only.

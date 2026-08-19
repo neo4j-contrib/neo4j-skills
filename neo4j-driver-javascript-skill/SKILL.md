@@ -4,12 +4,12 @@ description: Neo4j JavaScript/TypeScript Driver v6 — driver lifecycle, execute
   managed transactions (executeRead/executeWrite), session.run, Integer handling, JSON
   serialization, record access, async/await patterns, TypeScript types, error handling,
   and connection setup for Node.js and browser. Use when writing JS/TS code that connects
-  to Neo4j: neo4j.driver(), executeQuery, executeRead, executeWrite, session.run,
+  to Neo4j — neo4j.driver(), executeQuery, executeRead, executeWrite, session.run,
   neo4j.int, record.get, Integer, BookmarkManager, bolt://, neo4j+s://.
   Does NOT handle Cypher query authoring — use neo4j-cypher-skill.
   Does NOT cover driver version migration — use neo4j-migration-skill.
 compatibility: neo4j-driver v6; Node.js >=18; TypeScript supported via bundled types
-version: 1.0.1
+version: 1.0.5
 allowed-tools: Bash WebFetch
 ---
 

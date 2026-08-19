@@ -9,7 +9,7 @@ description: Design, review, and refactor Neo4j graph data models. Use when choo
   Does NOT handle Spring Data Neo4j entity mapping — use neo4j-spring-data-skill.
   Does NOT handle GraphQL type definitions — use neo4j-graphql-skill.
   Does NOT handle data import — use neo4j-import-skill.
-version: 1.0.1
+version: 1.0.6
 allowed-tools: WebFetch Bash
 ---
 
@@ -69,7 +69,7 @@ MCP tool map:
 8. Rel direction encodes semantic meaning — not arbitrary
 9. Inspect schema before proposing any change on an existing database
 10. All constraint/index DDL uses `IF NOT EXISTS` — safe to rerun
-11. **On Neo4j 2026.02+ (Enterprise/Aura):** consider `ALTER CURRENT GRAPH TYPE SET { … }` or `EXTEND GRAPH TYPE WITH { … }` to declare the full model in one block instead of individual `CREATE CONSTRAINT` statements — see `neo4j-cypher-skill/references/graph-type.md`. **PREVIEW** — syntax may change before GA.
+11. **On Neo4j 2026.06+ (Enterprise/Aura, GA):** declare the full model in one block with `ALTER CURRENT GRAPH TYPE SET { … }`, extend it with `ALTER CURRENT GRAPH TYPE ADD { … }`, instead of individual `CREATE CONSTRAINT` statements — see `neo4j-cypher-skill/references/graph-type.md`. On 2026.02–2026.05 the same syntax is preview.
 
 ---
 

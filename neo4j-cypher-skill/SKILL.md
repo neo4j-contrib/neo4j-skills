@@ -7,7 +7,7 @@ description: Generates, optimizes, and validates Cypher 25 queries for Neo4j 202
   Does NOT handle driver migration or API changes — use neo4j-migration-skill.
   Does NOT cover DB administration or server ops — use neo4j-cli-tools-skill.
 compatibility: Neo4j >= 2025.01 (safe baseline); Cypher 25
-version: 1.0.1
+version: 1.0.22
 ---
 
 ## When to Use
@@ -50,7 +50,7 @@ Never fill guessed names — realistic guesses get copied blindly.
 5. `LIMIT 25` default on all exploratory reads; push `WITH n LIMIT` before high-cardinality operations (variable-length traversals, fan-out MATCH, Cartesian products)
 6. Comments: `//` only — `--` is SQL, invalid
 7. `REPEATABLE ELEMENTS` / `DIFFERENT RELATIONSHIPS` go after `MATCH`, not end of pattern
-8. `SHOW` commands: `YIELD` before `WHERE`; combinable with general Cypher clauses incl. `UNION`/`RETURN` [2026.05] — `SHOW DATABASES` still requires system db (use `USE system`)
+8. `SHOW` commands: `YIELD` before `WHERE`; combinable with general Cypher clauses incl. `UNION`/`RETURN` [2026.05] — `SHOW DATABASES` still requires system db (use `USE system`). `CALL` on `system` db: `YIELD` then `WHERE` [2026.07]
 9. Inline node predicates `(:Label WHERE p=x)` — valid in `MATCH` only
 10. `WHERE` cannot follow bare `UNWIND` — use `WITH x WHERE`
 11. `(a)-[:R]-(b)` — undirected matches both directions, double-counts; use directed unless unknown
@@ -230,15 +230,30 @@ RETURN b.name, point.distance(b.coords, $origin) AS distM
 Create POINT index: `CREATE POINT INDEX name IF NOT EXISTS FOR (n:Place) ON (n.coords)`
 
 ### Aggregation grouping keys
-Non-aggregating expressions in `RETURN`/`WITH` are implicit grouping keys — no `GROUP BY` needed:
+Non-aggregating expressions in `RETURN`/`WITH` are implicit grouping keys — `GROUP BY` optional:
 ```cypher
 // actor + director are grouping keys; count(*) is the aggregate
 MATCH (a:Person)-[:ACTED_IN]->(m:Movie)<-[:DIRECTED]-(d:Person)
 RETURN a.name, d.name, count(*) AS collaborations
 ORDER BY collaborations DESC
+
+// GROUP BY states keys explicitly [2026.07, Cypher 25]
+MATCH (p:Person)-[:ACTED_IN]->(m:Movie)
+RETURN p.name AS actor, m.genre AS genre, avg(m.rating) AS avgRating
+GROUP BY actor, genre
 ```
+Explicit `GROUP BY` subclause on `WITH`/`RETURN` [2026.07, Cypher 25] states grouping keys explicitly — GQL-aligned alternative to implicit grouping; implicit grouping stays valid:
+```cypher
+MATCH (a:Person)-[:ACTED_IN]->(m:Movie)<-[:DIRECTED]-(d:Person)
+RETURN a.name, d.name, count(*) AS collaborations GROUP BY a.name, d.name
+ORDER BY collaborations DESC
+```
+`GROUP BY ()` = no grouping keys (one row); `GROUP BY ALL` = every non-aggregating return item is a key. Grouping keys absent from the projection are not returned. Rules → [references/cypher-syntax.md](references/cypher-syntax.md).
+
 `count(n)` counts non-null; `count(*)` counts rows including nulls. `collect(DISTINCT expr)` deduplicates.
 `count()` is faster than `size(collect())` — count() reads the internal store; collect() builds a list first.
+
+`ORDER BY`/`WHERE` subclause expressions referencing a projection item more complex than a variable or `var.prop` are deprecated [2026.07] — alias the expression in the projection and order by the alias. Same for names that shadow an incoming variable. `ORDER BY`/`WHERE` may now call aggregation functions absent from the projection list when the projection clause already aggregates.
 
 ---
 
@@ -317,8 +332,14 @@ Default to 2025.01-safe features when version unknown.
 | `SEARCH` clause (vector/fulltext) | 2026.01 | `CALL db.index.vector.queryNodes(...)` (deprecated 2026.04) |
 | `ACYCLIC` path mode (no repeated nodes in path) | 2026.03 | post-filter with `size(nodes(p)) = size(apoc.coll.toSet(nodes(p)))` |
 | `string.indexOf()`, `string.join()`, `string.regexReplace()` | 2026.05 | `apoc.text.*` or app-side |
+| `GROUP BY` subclause on `WITH`/`RETURN`, `cardinality()` | 2026.07 | implicit grouping keys; `size()` / `size(keys(map))` |
+| `WHERE` on procedure calls run against the `system` database | 2026.07 | filter rows client-side |
 | GQL aliases: `FOR`=`UNWIND`, `PROPERTY_EXISTS`=`IS NOT NULL`, `IS [NOT] LABELED`=`n:Label`; function aliases (`local_time`, `zoned_datetime`, `duration_between`, `collect_list`, etc.) | 2026.02–04 | GQL compliance only — use Cypher equivalents; full list → [references/cypher-syntax.md](references/cypher-syntax.md) |
-| **GRAPH TYPE** schema DDL (`ALTER CURRENT GRAPH TYPE SET`, `EXTEND GRAPH TYPE WITH`, `DROP GRAPH TYPE ELEMENTS`, `SHOW CURRENT GRAPH TYPE`) | **2026.02 — PREVIEW** | Use individual `CREATE CONSTRAINT` / `CREATE INDEX` |
+| **GRAPH TYPE** schema DDL (`ALTER CURRENT GRAPH TYPE SET/ADD/ALTER/DROP`, `SHOW CURRENT GRAPH TYPE`) | 2026.02 (preview), **GA 2026.06** | Use individual `CREATE CONSTRAINT` / `CREATE INDEX` |
+| `GROUP BY` subclause on `WITH`/`RETURN` (explicit grouping keys, GQL alignment) | 2026.07 | Implicit grouping — list non-aggregating expressions in the projection |
+| `cardinality()` — keys in a MAP, elements in a LIST, nodes+rels in a PATH | 2026.07 | `size()` for LIST/MAP keys, `length()` for PATH |
+| Aggregation functions in `ORDER BY`/`WHERE` that are not projection items (aggregating projection only) | 2026.07 | Project the aggregate as an alias, then order/filter on the alias |
+| `WHERE` after `YIELD` in procedure calls on the `system` database | 2026.07 | `YIELD` + `RETURN`, filter client-side |
 
 ---
 
@@ -372,7 +393,7 @@ Load on demand:
 - [references/performance.md](references/performance.md) — anti-patterns, text vs fulltext indexes, Eager (3 fix strategies), label inference, batching best practices, parallel runtime
 - [references/advanced-patterns.md](references/advanced-patterns.md) — REPEATABLE ELEMENTS patterns, allReduce stateful traversal, multi-stop QPE, route planning simulation, DAG critical path, temporal fraud detection component graph, cycle detection, OPTIONAL CALL
 - [references/apoc.md](references/apoc.md) — APOC Core: refactoring, virtual graph, merge helpers, path expanders, triggers, collections, conditional execution
-- [references/graph-type.md](references/graph-type.md) — **PREVIEW (2026.02+)** GRAPH TYPE DDL: `ALTER CURRENT GRAPH TYPE SET`, `EXTEND GRAPH TYPE WITH`, `DROP GRAPH TYPE ELEMENTS`, property types, constraints, label implications, relationship type enforcement
+- [references/graph-type.md](references/graph-type.md) — GRAPH TYPE DDL (GA 2026.06): `ALTER CURRENT GRAPH TYPE SET/ADD/ALTER/DROP`, `SHOW CURRENT GRAPH TYPE [AS GRAPH]`, element type syntax, property types, constraints, label implications, relationship type enforcement, required privileges
 
 ## WebFetch
 
