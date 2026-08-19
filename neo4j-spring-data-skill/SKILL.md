@@ -1,13 +1,13 @@
 ---
 name: neo4j-spring-data-skill
-description: Use when building Spring Boot applications with Neo4j using Spring Data Neo4j (SDN 7.x/8.x):
+description: Use when building Spring Boot applications with Neo4j using Spring Data Neo4j (SDN 7.x/8.x) —
   @Node entity mapping, @Relationship, @RelationshipProperties, Neo4jRepository, ReactiveNeo4jRepository,
   @Query annotations, application.yml configuration, projections, Neo4jClient, Neo4jTemplate,
   transactions, auditing, or Spring AI Neo4jVectorStore vector search.
   Does NOT handle raw Java driver code without Spring — use neo4j-driver-java-skill.
   Does NOT handle Cypher query authoring — use neo4j-cypher-skill.
   Does NOT handle driver version upgrades — use neo4j-migration-skill.
-version: 1.0.1
+version: 1.0.5
 allowed-tools: Bash WebFetch
 ---
 

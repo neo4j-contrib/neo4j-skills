@@ -60,7 +60,7 @@ description: What it does and when to use it. Include keywords and negative trig
   Does NOT handle X — use neo4j-other-skill.
 compatibility: Claude Code    # Optional. Max 500 chars. Only if env requirements exist.
 allowed-tools: Bash WebFetch  # Optional. Space-separated pre-approved tools.
-version: 1.0.0                # Optional.
+version: 1.0.0                # Required. Semver X.Y.Z. Bump patch on every content change.
 ---
 ```
 
@@ -70,6 +70,7 @@ version: 1.0.0                # Optional.
 - `name`: lowercase letters, numbers, and hyphens only; no consecutive hyphens; no leading/trailing hyphen; max 64 chars
 - `description`: **80–1024 characters** — linter hard-fails outside this range
 - `compatibility`: max 500 characters if present
+- `version`: required, semver `X.Y.Z` — linter hard-fails if missing or malformed. Bump the patch number every time the skill's `SKILL.md` or `references/` content changes; new skills start at `1.0.0`
 - No unknown top-level frontmatter fields — linter rejects them
 - **Never use `description: >` (YAML block scalar)**. Parsers read the raw `>` character as the description value → 1-char string → linter fail. Use inline continuation instead:
 
@@ -404,6 +405,7 @@ The linter uses `git ls-files` to find tracked `SKILL.md` files and checks:
 | `description` not block scalar | Detected via `>` prefix in parsed value |
 | No unknown frontmatter fields | `status`, `version` are allowed extensions; anything else fails |
 | `compatibility` length | Hard fail if > 500 chars |
+| `version` present and semver | Hard fail if missing or not `X.Y.Z` |
 
 Stage new skills with `git add` before running — the linter only sees tracked files.
 
@@ -412,6 +414,7 @@ Stage new skills with `git add` before running — the linter only sees tracked 
 ## New Skill Checklist
 
 - [ ] Directory name matches `name` frontmatter exactly
+- [ ] `version: 1.0.0` present (semver) — bump the patch on every later content change
 - [ ] Description 80–1024 chars, inline YAML, no `>`
 - [ ] Description has positive triggers (product name, symbols, task phrases)
 - [ ] Description ends with `Does NOT handle X — use Y-skill`

@@ -7,7 +7,7 @@ description: Manages Neo4j Aura Agents via the v2beta1 REST API — create, list
   organization/project scoping, tool parameter schemas, and InvokeAgentResponse format.
   Does NOT cover AuraDB instance provisioning — use neo4j-aura-provisioning-skill.
   Does NOT cover vector index creation — use neo4j-vector-index-skill.
-version: 1.0.1
+version: 1.0.3
 allowed-tools: Bash WebFetch  
 ---
 

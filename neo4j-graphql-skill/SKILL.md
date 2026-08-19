@@ -7,7 +7,7 @@ description: Build and configure a GraphQL API backed by Neo4j using @neo4j/grap
   Federation. Use when writing typeDefs, securing fields, or wiring Neo4j to Apollo Server.
   Does NOT handle raw Cypher outside resolvers — use neo4j-cypher-skill.
   Does NOT cover Spring Data Neo4j entity mapping — use neo4j-spring-data-skill.
-version: 1.0.1
+version: 1.0.3
 allowed-tools: Bash WebFetch
 ---
 

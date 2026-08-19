@@ -81,6 +81,7 @@ Apply changes. Read each file fully before editing.
 - Removed APIs — remove examples and add migration pointer
 - New features worth knowing — add to relevant section or references/ file
 - Broken `Does NOT handle X — use Y-skill` pointers (if a skill was renamed or added)
+- **Version bump**: any actual content change to a skill's `SKILL.md` or `references/` files must bump that skill's `version:` frontmatter field (patch +1, e.g. `1.0.5` → `1.0.6`). If `version:` is missing, add it as `1.0.0`. Skills with no content changes keep their current version.
 
 **What NOT to change:**
 - Content you are not confident is outdated — leave it and note it in the summary
@@ -141,7 +142,7 @@ Print a summary in this exact format (used by the workflow to populate the PR bo
 - <URL> — <date or version range covered>
 
 ### Changes made
-- `<skill-dir>/<file>`: <one-line reason> [<Neo4j version>]
+- `<skill-dir>/<file>`: <one-line reason> [<Neo4j version>] (version → <new skill version>)
 
 ### Findings not acted on (uncertain or low confidence)
 - <finding>: <reason not acted on>
