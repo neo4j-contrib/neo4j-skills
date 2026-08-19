@@ -1,7 +1,7 @@
 ---
 name: neo4j-mcp-skill
 description: Use when installing, configuring, or troubleshooting the official Neo4j MCP server
-  (neo4j/mcp): connecting Claude Code, Claude Desktop, Cursor, Windsurf, VS Code,
+  (neo4j/mcp) — connecting Claude Code, Claude Desktop, Cursor, Windsurf, VS Code,
   Kiro, or other MCP-compatible editors to a Neo4j database via stdio or HTTP
   transport. Covers the four MCP tools (get-schema, read-cypher, write-cypher,
   list-gds-procedures), read-only mode, and multi-database configuration.
