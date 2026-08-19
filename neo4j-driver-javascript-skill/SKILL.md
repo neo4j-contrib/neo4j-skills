@@ -1,6 +1,7 @@
 ---
 name: neo4j-driver-javascript-skill
-description: Neo4j JavaScript/TypeScript Driver v6 — driver lifecycle, executeQuery,
+description: >
+  Neo4j JavaScript/TypeScript Driver v6 — driver lifecycle, executeQuery,
   managed transactions (executeRead/executeWrite), session.run, Integer handling, JSON
   serialization, record access, async/await patterns, TypeScript types, error handling,
   and connection setup for Node.js and browser. Use when writing JS/TS code that connects
