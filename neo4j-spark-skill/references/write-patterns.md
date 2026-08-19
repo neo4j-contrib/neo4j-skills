@@ -25,15 +25,23 @@ Full option reference for `.write.format("org.neo4j.spark.DataSource")`.
 | `labels` | — | Colon-prefixed label(s): `:Person` or `:Person:Employee` |
 | `node.keys` | — | Required for Overwrite. Comma-separated `df_col` or `df_col:node_prop` pairs used in MERGE ON. |
 | `node.properties` | all columns | Subset of DataFrame columns to write as node properties. |
-| `batch.size` | `5000` | Rows per UNWIND batch. Aggressive: 20000. |
-| `schema.optimization.node.keys` | `NONE` | `UNIQUE` — adds uniqueness constraint; `NODE_KEY` — adds node key constraint. |
+| `node.keys.skip.nulls` | `false` | Skip rows with null in any `node.keys` column. |
+| `batch.size` | `5000` | Rows per UNWIND batch; each batch commits in its own transaction. Aggressive: 20000. |
+| `transaction.retries` | `3` | Retry budget per task (not per batch). |
+| `transaction.retry.timeout` | `0` | Wait in ms before retry. |
+| `schema.optimization.node.keys` | `NONE` | `UNIQUE` — uniqueness constraint; `KEY` — node key constraint. Rejected with `query` mode — use `script.N`. |
+| `schema.optimization.relationship.keys` | `NONE` | `UNIQUE` / `KEY` constraints on `relationship.keys` properties. |
+| `schema.optimization` | — | Comma-separated `TYPE`, `EXISTS` — property type and existence constraints from the DataFrame schema. |
+| `type.conversion` | `default` | `legacy` — pre-5.4.0 handling of timestamps, intervals, byte arrays. |
 
 ## Relationship Write Options
 
 | Option | Default | Description |
 |--------|---------|-------------|
 | `relationship` | — | Relationship type (no colon): `BOUGHT`, `ACTED_IN` |
-| `relationship.save.strategy` | `native` | `native`: expects `rel.*`, `source.*`, `target.*` column prefixes. `keys`: explicit mapping via sub-options. |
+| `relationship.save.strategy` | `keys` (6.0; `native` on 5.x) | `native`: expects `rel.*`, `source.*`, `target.*` column prefixes. `keys`: explicit mapping via sub-options. |
+| `relationship.keys` | — | Properties treated as relationship keys. |
+| `relationship.keys.skip.nulls` | `false` | Skip rows with null in any `relationship.keys` column. |
 | `relationship.properties` | — | Comma-separated `df_col` or `df_col:rel_prop` pairs for relationship properties. |
 | `relationship.source.labels` | — | Source node label(s): `:Customer` |
 | `relationship.source.save.mode` | `Match` | `Match`, `Append`, `Overwrite` |
@@ -43,6 +51,19 @@ Full option reference for `.write.format("org.neo4j.spark.DataSource")`.
 | `relationship.target.save.mode` | `Match` | `Match`, `Append`, `Overwrite` |
 | `relationship.target.node.keys` | — | Required when save.mode=Match or Overwrite. `df_col:node_prop` mapping. |
 | `relationship.target.node.properties` | — | Additional target node properties to write. |
+| `relationship.source.node.keys.skip.nulls` / `relationship.target.node.keys.skip.nulls` | `false` | Skip rows with null in the matching key columns. |
+
+## Setup and Cypher Options [6.0]
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `script` | — | Single Cypher statement run once before writes. Mutually exclusive with `script.N`. |
+| `script.N` | — | `script.1`, `script.2`, … run in numbered order before writes. Replaces `;`-separated statements. |
+| `index.await.timeout` | `300` | Seconds passed to `db.awaitIndexes` after scripts, before writes. `0` disables. |
+| `cypher.version` | `5` | Cypher language version — `5` or `25`. |
+| `cypher.tuning.<param>` | — | Adds `CYPHER <param>=<value>` preamble, e.g. `cypher.tuning.runtime=parallel`. |
+| `db.transaction.metadata.<key>` | — | Transaction metadata map entry; dot-separated keys nest. Visible in `query.log`. |
+| `db.transaction.timeout` | driver default | Transaction timeout in ms. |
 
 ## Node Keys Mapping Syntax
 

@@ -23,6 +23,10 @@ Read plans bottom-up: leaf operators at bottom, `ProduceResults` at top.
 | `DirectedRelationshipByIdSeek` | ✓ | Directed rel by ID. |
 | `UndirectedRelationshipByIdSeek` | ~ | Undirected rel scan — matches twice (both directions). |
 | `NodeByElementIdSeek` | ✓ | Lookup by `elementId()` string. Preferred over `id()`. |
+| `RemoteNodeIndexSeek` | ✓ | [2026.07, Infinigraph] Batches index seeks inside a loop (`Apply`) across property shards. |
+| `RemoteUniqueNodeIndexSeek` | ✓ | [2026.07, Infinigraph] Same batching for unique index seeks. |
+| `RemoteBatchProperties` | ✓ | [2026.01, Infinigraph] Fetches and caches shard properties per batch of rows; shows as `cache[n.prop]`. |
+| `RemoteBatchPropertiesWithFilter` | ✓ | [2026.01, Infinigraph] Same, with the predicate evaluated on the shard — fewer rows returned to the graph shard. |
 | `Argument` | — | Passes outer scope variables into subquery. |
 
 ---

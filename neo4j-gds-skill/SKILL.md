@@ -63,10 +63,8 @@ pip install "graphdatascience<2"          # Python client
 pip install "graphdatascience[rust_ext]<2"  # 3–10× faster serialization
 ```
 
-Compatibility: graphdatascience v1.22 — GDS >= 2.6 and < 2.28 / < 2026.6, Python >= 3.10 and < 3.15, Neo4j Driver >= 4.4.12 and < 7.0.
-graphdatascience 2.0 (alpha since 2026-08, `pip install --pre graphdatascience`) removes every untyped 1.x endpoint and the `gds.v2.` prefix — v2 becomes the only API under `gds.*`; requires GDS >= 2.13, Neo4j Python driver >= 5.26 (4.4 dropped), pandas >= 2.0. Pin `graphdatascience<2` for production until 2.0 is GA.
-
-GDS plugin 2026.07 removed `gds.userLog` — track running jobs with `CALL gds.listProgress()`.
+Compatibility: graphdatascience v1.22 — GDS >= 2.6 and < 2.28 / < 2026.6, Python >= 3.10 and < 3.15, Neo4j Driver >= 4.4.12 and < 7.0. GDS server 2026.06+ falls outside that range — call GDS from Cypher, or use the 2.0 pre-release client.
+graphdatascience 2.0 is alpha (`pip install --pre graphdatascience`, latest `2.0a4`): `gds.v2` prefix removed and those endpoints become the only API, untyped 1.x endpoints deleted, `GraphV2`/`ModelV2` renamed to `Graph`/`Model`, minimum GDS server 2.13 and Neo4j Python driver 5.26 (4.4 dropped), pandas >= 2.0, FastPath preview. Pin `graphdatascience<2` for production.
 
 V2 rules:
 - Prefer `gds.v2.*` when endpoint exists.

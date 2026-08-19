@@ -8,7 +8,7 @@ description: Neo4j Java Driver v6 — driver lifecycle, Maven/Gradle setup, exec
   Does NOT handle Cypher authoring — use neo4j-cypher-skill.
   Does NOT cover driver version upgrades — use neo4j-migration-skill.
   Does NOT cover Spring Data Neo4j (@Node, Neo4jRepository) — use neo4j-spring-data-skill.
-version: 1.0.9
+version: 1.0.10
 allowed-tools: Bash WebFetch
 ---
 
@@ -32,18 +32,19 @@ allowed-tools: Bash WebFetch
 <dependency>
     <groupId>org.neo4j.driver</groupId>
     <artifactId>neo4j-java-driver</artifactId>
-    <version>6.2.0</version>
+    <version>6.2.1</version>
 </dependency>
 ```
 
 ### Gradle
 ```groovy
-implementation 'org.neo4j.driver:neo4j-java-driver:6.2.0'
+implementation 'org.neo4j.driver:neo4j-java-driver:6.2.1'
 ```
 
 Check latest: https://central.sonatype.com/artifact/org.neo4j.driver/neo4j-java-driver
 
 6.2.0 [2026-06]: Neo4j `UUID` type + Bolt 6.1 support; `QueryProfile` in result summary.
+6.2.1 [2026-08]: fixes `Value#asObject()` on `UUID` values — required if reading UUID properties generically. Neo4j 2026.07 server bundles 6.2.0.
 
 ---
 

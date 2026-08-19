@@ -8,7 +8,7 @@ description: Programmatic security management in Neo4j — RBAC/ABAC, user lifec
   — use neo4j-cypher-skill. Does NOT handle cluster ops or backups — use neo4j-cli-tools-skill.
   Property-level security and ABAC require Enterprise Edition.
 allowed-tools: Bash WebFetch
-version: 1.0.7
+version: 1.0.8
 ---
 
 ## When to Use
@@ -299,6 +299,7 @@ CREATE AUTH RULE onCallRule
 - Rules apply immediately to existing sessions when claims are already loaded
 - OIDC claims via `abac.oidc.user_attribute()`; native user tags via `abac.native.user_tags()` [2026.06+]. LDAP has no accessor function — tag the LDAP user's native user object instead
 - User-defined functions rejected in PBAC property-rule predicates [2026.06+]
+- Infinigraph (sharded property databases) supports PBAC `READ` only, granted on the virtual database [2026.07+, not on Aura] — see [references/privilege-reference.md](references/privilege-reference.md)
 
 ---
 

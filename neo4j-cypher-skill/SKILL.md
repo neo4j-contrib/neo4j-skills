@@ -50,7 +50,7 @@ Never fill guessed names — realistic guesses get copied blindly.
 5. `LIMIT 25` default on all exploratory reads; push `WITH n LIMIT` before high-cardinality operations (variable-length traversals, fan-out MATCH, Cartesian products)
 6. Comments: `//` only — `--` is SQL, invalid
 7. `REPEATABLE ELEMENTS` / `DIFFERENT RELATIONSHIPS` go after `MATCH`, not end of pattern
-8. `SHOW` commands: `YIELD` before `WHERE`; combinable with general Cypher clauses incl. `UNION`/`RETURN` [2026.05] — `SHOW DATABASES` still requires system db (use `USE system`)
+8. `SHOW` commands: `YIELD` before `WHERE`; combinable with general Cypher clauses incl. `UNION`/`RETURN` [2026.05] — `SHOW DATABASES` still requires system db (use `USE system`). `CALL` on `system` db: `YIELD` then `WHERE` [2026.07]
 9. Inline node predicates `(:Label WHERE p=x)` — valid in `MATCH` only
 10. `WHERE` cannot follow bare `UNWIND` — use `WITH x WHERE`
 11. `(a)-[:R]-(b)` — undirected matches both directions, double-counts; use directed unless unknown
@@ -339,6 +339,7 @@ Default to 2025.01-safe features when version unknown.
 | `GROUP BY` subclause on `WITH`/`RETURN` (explicit grouping keys, GQL alignment) | 2026.07 | Implicit grouping — list non-aggregating expressions in the projection |
 | `cardinality()` — keys in a MAP, elements in a LIST, nodes+rels in a PATH | 2026.07 | `size()` for LIST/MAP keys, `length()` for PATH |
 | Aggregation functions in `ORDER BY`/`WHERE` that are not projection items (aggregating projection only) | 2026.07 | Project the aggregate as an alias, then order/filter on the alias |
+| `WHERE` after `YIELD` in procedure calls on the `system` database | 2026.07 | `YIELD` + `RETURN`, filter client-side |
 
 ---
 

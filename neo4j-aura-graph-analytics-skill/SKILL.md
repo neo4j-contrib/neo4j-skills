@@ -63,10 +63,28 @@ allowed-tools: Bash WebFetch
 ## Installation
 
 ```bash
-pip install "graphdatascience>=1.15,<2"
+pip install "graphdatascience>=1.15,<2"    # 1.22 is the current stable release
 ```
 
-graphdatascience 2.0 (alpha since 2026-08) drops the `gds.v2.` prefix — v2 becomes the only API under `gds.*`, `gds.v2.graph.project` → `gds.graph.project.cypher`, `gds.v2.graph.project_native` → `gds.graph.project.native`, `GraphV2`/`ModelV2` → `Graph`/`Model`, `failIfMissing` → `fail_if_missing`; requires GDS >= 2.13 and Neo4j Python driver >= 5.26. Pin `<2` until 2.0 is GA.
+### graphdatascience 2.0 (alpha)
+
+`2.0aN` is pre-release — pin `<2` for production. Rename map for when 2.0 ships:
+
+| 1.x | 2.0 |
+|---|---|
+| `gds.v2.<endpoint>` | `gds.<endpoint>` — `gds.v2` prefix gone; untyped 1.x endpoints removed |
+| `gds.graph.project(...)` (AGA) | `gds.graph.project.cypher(...)` |
+| `gds.graph.project_native(...)` (AGA) | `gds.graph.project.native(...)` |
+| `GraphV2` / `ModelV2` | `Graph` / `Model` — `from graphdatascience import Graph` |
+| `Graph.drop(failIfMissing=)` / `Model.drop(failIfMissing=)` | `fail_if_missing=` |
+| `run_cypher(..., retryable=)` | removed — always retries |
+| `ArrowEndpointVersion.from_arrow_info` | `check_version_compatibility` |
+| `ServerVersion`, `SemanticVersion` from top level | `graphdatascience.versions` |
+| `gds.graph.node_labels.mutate(write_concurrency=, job_id=)` | parameters removed |
+
+2.0 minimums: GDS server 2.13, `neo4j` driver 5.26, pandas 2.x–3.x, pyarrow 21–25, numpy <3.
+
+2.0 additions: `GdsSessions.estimate(algorithms=[...])` for per-algorithm memory; `GdsSessions.get_or_create(show_progress=...)`; `gds.pipeline.get`; `overwrite=True` on `gds.graph.project` / `generate` / `construct` / `filter` / `sample` to drop a same-named graph first; `GdsSessions.delete(session_id=...)` returns `False` when nothing was deleted.
 
 ---
 
