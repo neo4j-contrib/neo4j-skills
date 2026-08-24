@@ -7,7 +7,7 @@ description: Build and configure a GraphQL API backed by Neo4j using @neo4j/grap
   Federation. Use when writing typeDefs, securing fields, or wiring Neo4j to Apollo Server.
   Does NOT handle raw Cypher outside resolvers — use neo4j-cypher-skill.
   Does NOT cover Spring Data Neo4j entity mapping — use neo4j-spring-data-skill.
-version: 1.0.3
+version: 1.0.4
 allowed-tools: Bash WebFetch
 ---
 
@@ -32,10 +32,17 @@ allowed-tools: Bash WebFetch
 
 | Version | Status | Notes |
 |---|---|---|
-| v7 | Current | `@node` required; `options` removed; explicit `eq` syntax |
-| v5 | LTS | Older syntax; `options: {limit, offset, sort}` still valid |
+| v7 | Current — use ≥ 7.6.0 | `@node` required; `options` removed; explicit `eq` syntax |
+| v5 | LTS — use ≥ 5.12.15 | Older syntax; `options: {limit, offset, sort}` still valid |
 
 Default to v7 unless codebase is on v5.
+
+Security patches — upgrade before shipping auth:
+
+| Fix | Fixed in |
+|---|---|
+| Subscriptions accepted an unverified JWT from WebSocket `connectionParams` (auth/authz bypass) | 7.5.6 / 5.12.14 |
+| Field-level `@authentication` on a root custom-resolver field ignored when the operation type also had type-level `@authentication` (privilege escalation) | 7.6.0 / 5.12.15 |
 
 ---
 
@@ -92,15 +99,11 @@ const { url } = await startStandaloneServer(server, {
 });
 ```
 
-`assertIndexesAndConstraints` throws if constraints missing. Use `{ create: true }` to auto-create, or run `CREATE CONSTRAINT` manually and retry.
-
 ---
 
 ## Key Directives
 
 ### @node (v7 required)
-
-Every GraphQL type representing a Neo4j node must have `@node`. Without it, v7 ignores the type.
 
 ```graphql
 type Product @node {
@@ -136,8 +139,6 @@ interface ReviewedProps @relationshipProperties {
   date: Date
 }
 ```
-
-Direction rule: `OUT` = arrow leaves this node. `IN` = arrow enters this node. Both sides of a relationship must declare opposite directions.
 
 ### Querying Relationship Properties — Connection API
 
@@ -230,6 +231,10 @@ type User @node {
 }
 ```
 
+### @fulltext and @vector
+
+Index must exist in Cypher before use. Phrase-capable `@vector` indexes accept `maxPhraseLength` [7.6.0] to cap embedding cost. Full syntax, generated query shapes, provider config: [references/search-directives.md](references/search-directives.md).
+
 ---
 
 ## Security — @authentication and @authorization
@@ -307,15 +312,11 @@ type AdminReport @node
 }
 ```
 
-**filter vs validate**: `filter` silently removes unauthorized data. `validate` throws an error. Use `validate` when data existence should not be revealed to unauthorized users.
-
 **BEFORE vs AFTER**: `CREATE` supports only `AFTER`; `READ` supports only `BEFORE`.
 
 ---
 
 ## Auto-Generated Operations
-
-For each `@node` type, the library generates:
 
 | Operation | Generated Name | Example |
 |---|---|---|
@@ -359,8 +360,6 @@ mutation {
   }
 }
 ```
-
-`connectOrCreate` was removed in v7. Use `connect` + `create` separately.
 
 ---
 
@@ -413,7 +412,8 @@ const neoSchema = new Neo4jGraphQL({
 });
 ```
 
-Subscriptions auto-generate for each type:
+Authenticate subscriptions with a verified `token` in the WebSocket context; a pre-decoded `jwt` is trusted only when set server-side (7.5.6 / 5.12.14 stopped trusting client-supplied `connectionParams` JWTs).
+
 ```graphql
 subscription {
   movieCreated(where: { title: { eq: "The Matrix" } }) {
@@ -478,6 +478,7 @@ type Series @node @plural(value: "seriesList") { title: String! }  # irregular p
 - [GraphAcademy: GraphQL Basics](https://graphacademy.neo4j.com/courses/graphql-basics/) — hands-on course
 - [GitHub: @neo4j/graphql](https://github.com/neo4j/graphql) — changelog, issues
 - [CDC Setup](https://neo4j.com/docs/cdc/current/) — required for subscriptions
+- [references/search-directives.md](references/search-directives.md) — `@fulltext`, `@vector`, `maxPhraseLength`
 
 ---
 
@@ -495,4 +496,5 @@ type Series @node @plural(value: "seriesList") { title: String! }  # irregular p
 - [ ] v7: `limit`/`sort` passed as direct query args (not `options` wrapper)
 - [ ] OGM: `await ogm.init()` called before any `ogm.model()` usage
 - [ ] Subscriptions: CDC enabled in FULL mode before enabling `features.subscriptions`
+- [ ] `@neo4j/graphql` ≥ 7.6.0 (v7) or ≥ 5.12.15 (LTS) — earlier versions have auth bypasses
 - [ ] `.env` holds credentials; `.env` in `.gitignore`

@@ -9,7 +9,7 @@ description: Configure and operate the Neo4j Connector for Kafka (sink + source)
   query authoring — use neo4j-cypher-skill. Does NOT handle bulk CSV/file import — use
   neo4j-import-skill. Does NOT handle GDS algorithms — use neo4j-gds-skill.
 allowed-tools: Bash WebFetch
-version: 1.0.3
+version: 1.0.4
 ---
 
 # Neo4j Kafka Skill
@@ -48,7 +48,7 @@ version: 1.0.3
 
 ## Prerequisites
 
-- Neo4j Connector for Kafka ≥ 5.0 (download from [neo4j.com/labs/kafka](https://neo4j.com/labs/kafka/) or Confluent Hub)
+- Neo4j Connector for Kafka ≥ 5.5.2 (download from [neo4j.com/labs/kafka](https://neo4j.com/labs/kafka/) or Confluent Hub) — 5.5.2 processes incoming messages per partition instead of per topic; 5.5.1 forces static labels in generated queries
 - Kafka Connect ≥ 3.x or Confluent Platform ≥ 7.x
 - For CDC source/sink: Neo4j 5.13+ Enterprise Edition, AuraDB Business Critical, or AuraDB VDC
 - For query source: any Neo4j edition
