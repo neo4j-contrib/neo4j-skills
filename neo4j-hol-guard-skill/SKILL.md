@@ -26,13 +26,13 @@ version: 1.0.0
 
 ## Step 1 — Install and inspect HOL Guard
 
-Check for the runtime CLI:
+Probe the actual runtime CLI rather than relying on a platform-specific executable lookup:
 
 ```bash
-command -v hol-guard
+hol-guard --version
 ```
 
-If missing and `pipx` is available:
+If that command is unavailable and `pipx` is available:
 
 ```bash
 pipx install hol-guard
@@ -55,11 +55,12 @@ hol-guard install <harness>
 hol-guard run <harness> --dry-run
 hol-guard run <harness>
 hol-guard status
+hol-guard doctor <harness> --json
 ```
 
-Stop if detection, bootstrap, install, run, or status fails. Do not fall back to an unprotected agent session just to complete the mutation.
+Stop if detection, bootstrap, install, dry-run, run, status, or harness-specific doctor fails or cannot prove the expected protection state. Do not fall back to an unprotected agent session just to complete the mutation.
 
-Do not claim protection until `hol-guard status` confirms installed state.
+Do not claim protection until current Guard status and doctor output prove the detected harness is configured successfully.
 
 ## Step 3 — Handle Guard decisions
 
@@ -104,6 +105,7 @@ HOL Guard protects the supported local agent harness. It does not run inside Neo
 - [ ] `hol-guard detect --json` returned the harness used
 - [ ] `hol-guard run <harness> --dry-run` inspected before activation
 - [ ] `hol-guard status` confirms installed protection
+- [ ] `hol-guard doctor <harness> --json` confirms the detected harness is healthy
 - [ ] Guard deny/review/error state not bypassed
 - [ ] Neo4j native authentication and authorization remain authoritative
 - [ ] Destructive Neo4j operations received required explicit confirmation
