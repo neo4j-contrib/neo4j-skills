@@ -7,7 +7,7 @@ description: Generates, optimizes, and validates Cypher 25 queries for Neo4j 202
   Does NOT handle driver migration or API changes — use neo4j-migration-skill.
   Does NOT cover DB administration or server ops — use neo4j-cli-tools-skill.
 compatibility: Neo4j >= 2025.01 (safe baseline); Cypher 25
-version: 1.0.22
+version: 1.0.23
 ---
 
 ## When to Use
@@ -210,6 +210,25 @@ CYPHER 25 CREATE (a:Node)-[:$($relType)]->(b:Node)
 CYPHER 25 MATCH  (a:Node)-[:$($relType)]->(b:Node) RETURN a.name, b.name
 ```
 
+### String interpolation [2026.08, Cypher 25]
+```cypher
+CYPHER 25
+MATCH (p:Person {id: $id})
+RETURN s"Hello, {p.name}, age {p.age}" AS greeting   // S"..." and s'...' equivalent
+```
+Each `{expr}` converted with `toString()` — `MAP`, `LIST`, `NODE`, `PATH`, `RELATIONSHIP` rejected. Literal braces escape as `\{` `\}`. Interpolated strings nest. Never interpolate untrusted values into Cypher text passed to `apoc.cypher.run*()` — pass `$parameters` instead.
+
+### UUID type [2026.08, Cypher 25, Enterprise]
+```cypher
+CYPHER 25
+CREATE (sess:Session {sessionId: uuid()});            // random UUID value
+
+CYPHER 25
+MATCH (sess:Session {sessionId: uuid($uuidString)})   // STRING 8-4-4-4-12 → UUID
+RETURN toString(sess.sessionId) AS sessionId, uuid.mostSignificantBits(sess.sessionId) AS msb
+```
+Storing `UUID` properties requires block format (Aura default); Community Edition cannot store them. Drivers < 6.2 return a placeholder `MAP` plus warning `03N95 Neo.ClientNotification.UnknownType` — upgrade the driver or keep `randomUUID()` STRING ids.
+
 ### Spatial / Point
 ```cypher
 // WGS84 geographic point
@@ -340,6 +359,8 @@ Default to 2025.01-safe features when version unknown.
 | `cardinality()` — keys in a MAP, elements in a LIST, nodes+rels in a PATH | 2026.07 | `size()` for LIST/MAP keys, `length()` for PATH |
 | Aggregation functions in `ORDER BY`/`WHERE` that are not projection items (aggregating projection only) | 2026.07 | Project the aggregate as an alias, then order/filter on the alias |
 | `WHERE` after `YIELD` in procedure calls on the `system` database | 2026.07 | `YIELD` + `RETURN`, filter client-side |
+| String interpolation `s"...{expr}..."` | 2026.08 | `+` concatenation with `toString()` |
+| `UUID` type, `uuid()`, `uuid.mostSignificantBits()`, `uuid.leastSignificantBits()` | 2026.08, Enterprise + block format | `randomUUID()` STRING property |
 
 ---
 
@@ -388,7 +409,7 @@ Full anti-patterns → [references/performance.md](references/performance.md)
 
 Load on demand:
 - [references/indexes.md](references/indexes.md) — index types (RANGE/TEXT/FULLTEXT/POINT/COMPOSITE/LOOKUP), constraints, MERGE lock semantics, fulltext Lucene syntax, import pre-flight
-- [references/cypher-syntax.md](references/cypher-syntax.md) — full syntax reference: WITH, DELETE, ORDER BY, CASE, null, lists, strings, dates, spatial/point, LOAD CSV, subqueries, QPEs, dynamic labels, SEARCH; conditional CALL (WHEN/THEN/ELSE); label pattern expressions; allReduce; NEXT clause; compact CASE WHEN; normalize(); index/constraint types table; functions annotated with version introduced
+- [references/cypher-syntax.md](references/cypher-syntax.md) — full syntax reference: WITH, DELETE, ORDER BY, CASE, null, lists, strings, dates, spatial/point, LOAD CSV, subqueries, QPEs, dynamic labels, SEARCH; conditional CALL (WHEN/THEN/ELSE); label pattern expressions; allReduce; NEXT clause; compact CASE WHEN; normalize(); string interpolation; UUID type + `uuid()` functions; index/constraint types table; functions annotated with version introduced
 - [references/syntax-traps.md](references/syntax-traps.md) — 40+ syntax trap table
 - [references/performance.md](references/performance.md) — anti-patterns, text vs fulltext indexes, Eager (3 fix strategies), label inference, batching best practices, parallel runtime
 - [references/advanced-patterns.md](references/advanced-patterns.md) — REPEATABLE ELEMENTS patterns, allReduce stateful traversal, multi-stop QPE, route planning simulation, DAG critical path, temporal fraud detection component graph, cycle detection, OPTIONAL CALL
