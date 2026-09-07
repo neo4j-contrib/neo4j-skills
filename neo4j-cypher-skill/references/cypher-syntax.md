@@ -266,6 +266,8 @@ RETURN coalesce(n.nickname, n.name) AS displayName
 
 `collect()` and aggregation functions ignore null values. `null = null` is `null` (not `true`). `WHERE` treats `null` as `false`.
 
+`null / 0` returns `null` [fixed 2026.08; earlier releases raised division-by-zero]. Guard divisors before 2026.08: `CASE WHEN d = 0 THEN null ELSE n / d END`.
+
 ---
 
 ## Type Coercion
@@ -341,7 +343,7 @@ trim(s) / ltrim(s) / rtrim(s)             // strip whitespace; btrim(s, 'xy') st
 split(s, delimiter)                         // returns LIST<STRING>
 substring(s, start, length)                // 0-indexed; length optional
 left(s, n) / right(s, n)                   // first/last n characters
-replace(s, search, replacement)            // replace all occurrences
+replace(s, search, replacement[, limit])   // replace all occurrences; limit caps replacements [limit: Cypher 25]
 size(s)                                     // character count (same as char_length)
 reverse(s)                                  // reverse string
 toString(x) / toStringOrNull(x)            // convert any type to STRING
@@ -351,6 +353,32 @@ string.regexReplace(original, regex, repl)  // regex replace all matches [2026.0
 ```
 
 All string functions return `null` when any argument is `null`.
+
+### String interpolation [2026.08, Cypher 25]
+
+`s"…"` / `S"…"` STRING literal embeds expressions wrapped in `{}`:
+
+```cypher
+CYPHER 25
+MATCH (p:Person {id: $id})
+RETURN s"{p.firstName} {p.lastName} <{p.email}>" AS contactLine
+```
+
+Pre-2026.08: `p.firstName + ' ' + p.lastName`.
+
+---
+
+## UUID Type and Functions [2026.08, Cypher 25]
+
+```cypher
+uuid()                                                  // random UUID value
+uuid(name :: STRING)                                    // UUID from STRING
+uuid(mostSigBits :: INTEGER, leastSigBits :: INTEGER)   // UUID from two 64-bit halves
+uuid.mostSignificantBits(u :: UUID)                     // INTEGER high half
+uuid.leastSignificantBits(u :: UUID)                    // INTEGER low half
+```
+
+`UUID` is a distinct value type — not a `STRING`. `randomUUID()` still returns `STRING`; keep it for keys that must stay STRING-typed or must work on < 2026.08.
 
 ---
 

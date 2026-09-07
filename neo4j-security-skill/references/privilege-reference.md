@@ -73,6 +73,16 @@ DENY MATCH {*} ON GRAPH mydb
 GRANT READ { address } ON GRAPH *
   FOR (n:Email|Website) WHERE n.domain = 'example.com'
   TO regularUsers;
+
+// Value present in a LIST property [2026.08]
+GRANT MATCH {*} ON GRAPH mydb
+  FOR (n:Document) WHERE 'gold' IN n.clearanceLevels
+  TO goldTier;
+
+// Property on the right-hand side of the comparison [2026.08]
+GRANT MATCH {*} ON GRAPH mydb
+  FOR (n:Document) WHERE 1 > n.level
+  TO analyst;
 ```
 
 ### Property-based read on Infinigraph [2026.07, not on Aura]

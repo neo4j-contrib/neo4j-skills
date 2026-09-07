@@ -9,7 +9,7 @@ description: Serverless Aura Graph Analytics (AGA) GDS Sessions — covers GdsSe
   Does NOT cover the embedded GDS plugin on Aura Pro or self-managed Neo4j — use neo4j-gds-skill.
   Does NOT handle Cypher authoring — use neo4j-cypher-skill.
   Does NOT cover Snowflake Graph Analytics — use neo4j-snowflake-graph-analytics-skill.
-version: 1.0.8
+version: 1.0.9
 allowed-tools: Bash WebFetch
 ---
 
@@ -68,7 +68,7 @@ pip install "graphdatascience>=1.15,<2"    # 1.22 is the current stable release
 
 ### graphdatascience 2.0 (alpha)
 
-`2.0aN` is pre-release — pin `<2` for production. Rename map for when 2.0 ships:
+`2.0aN` is pre-release (`pip install --pre graphdatascience`, latest `2.0a5`) — pin `<2` for production. Rename map for when 2.0 ships:
 
 | 1.x | 2.0 |
 |---|---|
@@ -81,10 +81,13 @@ pip install "graphdatascience>=1.15,<2"    # 1.22 is the current stable release
 | `ArrowEndpointVersion.from_arrow_info` | `check_version_compatibility` |
 | `ServerVersion`, `SemanticVersion` from top level | `graphdatascience.versions` |
 | `gds.graph.node_labels.mutate(write_concurrency=, job_id=)` | parameters removed |
+| `gds.graph.project.cypher(database=...)` | parameter removed — `gds.set_database("mydb")` before projecting |
 
 2.0 minimums: GDS server 2.13, `neo4j` driver 5.26, pandas 2.x–3.x, pyarrow 21–25, numpy <3.
 
-2.0 additions: `GdsSessions.estimate(algorithms=[...])` for per-algorithm memory; `GdsSessions.get_or_create(show_progress=...)`; `gds.pipeline.get`; `overwrite=True` on `gds.graph.project` / `generate` / `construct` / `filter` / `sample` to drop a same-named graph first; `GdsSessions.delete(session_id=...)` returns `False` when nothing was deleted.
+2.0 additions: `GdsSessions.estimate(algorithms=[...])` for per-algorithm memory; `GdsSessions.get_or_create(show_progress=...)`; `gds.pipeline.get`; `overwrite=True` on `gds.graph.project` / `generate` / `construct` / `filter` / `sample` to drop a same-named graph first; `GdsSessions.delete(session_id=...)` returns `False` when nothing was deleted; `gds.fast_path` on sessions [2.0a5]; `aura_ds=` optional — client derives whether the DB is Aura-hosted.
+
+2.0 error surface [2.0a5]: unsupported Arrow endpoint version raises at `GraphDataScience(...)` construction — upgrade `graphdatascience`; expired session raises `RuntimeError` (warning only within 1h of expiry); session out-of-memory and other session failures report the session status, not a bare connection error; `GraphDataScience.close()` also closes the Arrow Flight client.
 
 ---
 

@@ -15,6 +15,7 @@
 | `datetime.datetime` | DateTime |
 | `datetime.time` | Time |
 | `datetime.timedelta` | Duration |
+| `uuid.UUID` | `UUID` [driver 6.3+, Neo4j 2026.08+; earlier: pass `str(uuid)`] |
 | `neo4j.time.*` types | Corresponding Cypher temporal |
 
 Custom classes, dataclasses, Pydantic models, and enums are **not** auto-serialized — convert to `dict` or primitives first.
