@@ -66,13 +66,32 @@ server.memory.pagecache.size=8g
 Generates a diagnostic archive for Neo4j support team.
 
 ```bash
-neo4j-admin server report
+neo4j-admin server report                                  # default classifiers
+neo4j-admin server report databases graphcounts indexes \
+  --database='ne*' --username=neo4j --obfuscate-query-log  # prompts for password
 ```
 
 **Options**:
-- `--to=<path>` - Output directory for the report archive
+- `[<classifier>...]` - Positional; default set: `logs config plugins tree metrics threads sysprop ps version`
+- `--to-path=<path>` - Destination directory for reports (default: system tmp)
 - `--list` - List available classifiers
-- `--filter=<classifier>` - Filter specific data to include
+- `--database=<database>` - Database(s) to report on; supports `*` and `?` globbing (default `*`)
+- `-u, --username=<username>` / `-p, --password=<password>` - [2026.08] Required for classifiers that connect to a live DBMS; also read from `NEO4J_USERNAME` / `NEO4J_PASSWORD`
+- `-a, --uri, --address=<address>` - [2026.08] DBMS address including scheme, e.g. `bolt://localhost:7687` (default: derived from config)
+- `--obfuscate-query-log[=true|false]` - [2026.08] Obfuscate query literals in the collected JSON query log (default `false`)
+- `--ignore-disk-space-check` - Skip the pessimistic free-space assertion
+
+**Classifiers**: `all ccstate config heap logs metrics plugins ps raft sysprop threads tree tx version`, plus [2026.08] `databases` (database metadata), `graphcounts` (labels, rel types, indexes, constraints), `indexes` (detailed index info), `servers` (cluster servers, Enterprise). The 2026.08 classifiers require a running DBMS and authentication.
+
+Minimum role for the authenticated classifiers:
+```cypher
+CREATE ROLE adminReport;
+GRANT EXECUTE ADMIN PROCEDURES ON DBMS TO adminReport;
+GRANT SHOW SERVERS ON DBMS TO adminReport;
+GRANT SHOW INDEXES ON DATABASE * TO adminReport;
+```
+
+`heap`, `tx`, `raft`, and `config` archives may contain data or credentials — check data-security rules before sharing.
 
 #### license
 
@@ -97,6 +116,9 @@ neo4j-admin database backup neo4j --to-path=/backups/$(date +%Y%m%d)
 - `--to-path=<path>` - Destination directory (required)
 - `--type=<type>` - Backup type: `full` or `differential`
 - `--keep-failed` - Keep failed backup attempts
+- `--include-metadata=none|all|users[=user1,user2]|roles` - Metadata written alongside the backup
+- `--skip-empty-diffs[=true|false]` - [2026.08] Differential backup with no new transactions produces no artifact; only valid with `--include-metadata=none` (default `false`)
+- `--skip-recovery[=true|false]` - [2025.11] Skip recovery during full backup; recovery then happens at restore time
 - `--verbose` - Print detailed progress
 
 #### restore

@@ -9,7 +9,7 @@ description: Use when working with Neo4j command-line tools — neo4j-cli (moder
   Does NOT cover driver upgrades — use neo4j-migration-skill.
   Does NOT cover full MCP editor configuration — use neo4j-mcp-skill.
 allowed-tools: WebFetch, Bash
-version: 1.0.12
+version: 1.0.13
 ---
 
 # Neo4j CLI Tools skill
@@ -206,6 +206,7 @@ neo4j-admin database load \
 | `--to-path` | Local path or `s3://`, `gs://`, `https://` |
 | `--overwrite-destination=true` | Required if target database already exists |
 | `--force-offline` | Allow backup/restore of a running database in some scenarios |
+| `--skip-empty-diffs` | [2026.08] Differential backup produces no artifact when there are no new transactions; requires `--include-metadata=none` |
 
 ### Point-in-time restore strategy
 

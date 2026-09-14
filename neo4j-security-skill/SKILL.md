@@ -8,7 +8,7 @@ description: Programmatic security management in Neo4j — RBAC/ABAC, user lifec
   — use neo4j-cypher-skill. Does NOT handle cluster ops or backups — use neo4j-cli-tools-skill.
   Property-level security and ABAC require Enterprise Edition.
 allowed-tools: Bash WebFetch
-version: 1.0.8
+version: 1.0.9
 ---
 
 ## When to Use
@@ -227,7 +227,16 @@ GRANT MATCH {*} ON GRAPH mydb
 DENY MATCH {*} ON GRAPH mydb
   FOR (n) WHERE n.classification <> 'UNCLASSIFIED'
   TO regularUsers;
+
+// Value contained in a list-valued property [2026.08, Cypher 25]
+GRANT READ {*} ON GRAPH * FOR (n) WHERE 'EU' IN n.regions TO regularUsers;
+GRANT MATCH {*} ON GRAPH * FOR (n) WHERE NOT 'EU' IN n.regions TO regularUsers;
+
+// Property on the right of a scalar comparison [2026.08, Cypher 25]
+GRANT READ {*} ON GRAPH * FOR (n) WHERE 3 < n.securityLevel TO regularUsers;
 ```
+
+`value IN n.listProp` matches only when the property is a list containing the value — a missing or scalar property never matches. Property-on-the-right is stored and listed in canonical property-on-the-left form (`SHOW PRIVILEGES AS COMMANDS` returns `n.securityLevel > 3`).
 
 **Constraints:**
 - `FOR` pattern applies to read privileges only — not write

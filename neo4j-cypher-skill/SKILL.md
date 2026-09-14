@@ -7,7 +7,7 @@ description: Generates, optimizes, and validates Cypher 25 queries for Neo4j 202
   Does NOT handle driver migration or API changes — use neo4j-migration-skill.
   Does NOT cover DB administration or server ops — use neo4j-cli-tools-skill.
 compatibility: Neo4j >= 2025.01 (safe baseline); Cypher 25
-version: 1.0.22
+version: 1.0.23
 ---
 
 ## When to Use
@@ -210,6 +210,26 @@ CYPHER 25 CREATE (a:Node)-[:$($relType)]->(b:Node)
 CYPHER 25 MATCH  (a:Node)-[:$($relType)]->(b:Node) RETURN a.name, b.name
 ```
 
+### UUID values [2026.08, Cypher 25]
+```cypher
+CYPHER 25
+CREATE (d:Doc {id: uuid()})          // random UUID value; not for cryptographic use
+RETURN toString(d.id) AS id
+
+CYPHER 25
+WITH uuid($uuidString) AS u          // 32 hex digits in 8-4-4-4-12 groups; uuid(msb, lsb) builds from two INTEGERs
+RETURN uuid.mostSignificantBits(u) AS msb, uuid.leastSignificantBits(u) AS lsb
+```
+Storing `UUID` properties requires Enterprise + block format (default on Aura); Community cannot store them. `randomUUID()` returns STRING, `uuid()` returns `UUID`. Drivers < 6.2 return a placeholder MAP plus `Neo.ClientNotification.UnknownType` (`03N95`) — upgrade the driver before returning `UUID` values.
+
+### String interpolation [2026.08, Cypher 25]
+```cypher
+CYPHER 25
+MATCH (p:Person {id: $id})
+RETURN s"Hello, {p.name} — age {p.age}" AS greeting   // every {expr} coerced with toString()
+```
+`s"…"` or `S'…'`; escape literal braces as `\{` `\}`; interpolated strings nest. MAP, LIST, NODE, PATH, RELATIONSHIP expressions rejected. Never interpolate untrusted values into Cypher strings passed to `apoc.cypher.run*` — use parameters.
+
 ### Spatial / Point
 ```cypher
 // WGS84 geographic point
@@ -340,6 +360,8 @@ Default to 2025.01-safe features when version unknown.
 | `cardinality()` — keys in a MAP, elements in a LIST, nodes+rels in a PATH | 2026.07 | `size()` for LIST/MAP keys, `length()` for PATH |
 | Aggregation functions in `ORDER BY`/`WHERE` that are not projection items (aggregating projection only) | 2026.07 | Project the aggregate as an alias, then order/filter on the alias |
 | `WHERE` after `YIELD` in procedure calls on the `system` database | 2026.07 | `YIELD` + `RETURN`, filter client-side |
+| `UUID` type + `uuid()`, `uuid.mostSignificantBits()`, `uuid.leastSignificantBits()` (storage: Enterprise + block format) | 2026.08 | `randomUUID()` STRING property |
+| String interpolation `s"…{expr}…"` | 2026.08 | `+` concatenation with `toString()` |
 
 ---
 

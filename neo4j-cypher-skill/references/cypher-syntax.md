@@ -264,7 +264,7 @@ WHERE n.email = null          // always null, never matches
 RETURN coalesce(n.nickname, n.name) AS displayName
 ```
 
-`collect()` and aggregation functions ignore null values. `null = null` is `null` (not `true`). `WHERE` treats `null` as `false`.
+`collect()` and aggregation functions ignore null values. `null = null` is `null` (not `true`). `WHERE` treats `null` as `false`. `null / 0` returns `null` [2026.08 fix; earlier versions raised a division-by-zero error].
 
 ---
 
@@ -351,6 +351,35 @@ string.regexReplace(original, regex, repl)  // regex replace all matches [2026.0
 ```
 
 All string functions return `null` when any argument is `null`.
+
+### String interpolation [2026.08, Cypher 25]
+
+```cypher
+WITH 'Keanu' AS firstName, 'Reeves' AS lastName, 42 AS age
+RETURN s"{firstName} {lastName}" AS fullName,      // s or S prefix, single or double quotes
+       s"Age: {age}" AS coerced,                   // every {expr} passed through toString()
+       s"Use \{curly\} braces" AS escaped,         // \{ and \} emit literal braces
+       s"Outer: {s'Inner, {firstName}!'}" AS nested
+```
+
+| Rule | Detail |
+|---|---|
+| Rejected expression types | `MAP`, `LIST`, `NODE`, `PATH`, `RELATIONSHIP` — `toString()` does not accept them |
+| Quoting | Same escape rules as normal string literals |
+| Injection | Do not interpolate unsanitized values into Cypher passed to `apoc.cypher.run*` — pass parameters instead |
+
+### UUID functions [2026.08, Cypher 25, Enterprise]
+
+```cypher
+uuid()                                      // random UUID; not for cryptographic use
+uuid(name)                                  // STRING of 32 hex digits in 8-4-4-4-12 groups → UUID
+uuid(mostSigBits, leastSigBits)             // two INTEGERs → UUID, e.g. uuid(42, 42)
+uuid.mostSignificantBits(u)                 // INTEGER
+uuid.leastSignificantBits(u)                // INTEGER
+toString(u)                                 // UUID → STRING
+```
+
+Any `null` argument returns `null`. Storing a `UUID` property requires block format (default on Aura); Community Edition cannot store them. Client libraries map `UUID` to a native type from 6.2 (Python driver 6.3); older drivers return `{originalType: ..., reason: "UNKNOWN_TYPE"}` with notification `03N95`.
 
 ---
 

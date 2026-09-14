@@ -19,7 +19,18 @@
 | `LocalTime` | `neo4j.types.LocalTime` | same |
 | `Duration` | `neo4j.types.Duration` | same |
 | `Point` | `neo4j.types.Point` | same |
+| `UUID` | `UUID` [driver 6.2+, Neo4j 2026.08 Enterprise] | same |
 | `null` | `null` | `null` |
+
+```javascript
+// Construct a UUID parameter; older drivers return UnsupportedType instead
+const { records } = await driver.executeQuery(
+  'MERGE (d:Doc {id: $uid}) RETURN d.id AS id',
+  { uid: neo4j.uuid('12345678-1234-1234-1234-123456789abc') },
+  { database: 'neo4j' }
+)
+const id = records[0].get('id')
+```
 
 ---
 

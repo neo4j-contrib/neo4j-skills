@@ -31,7 +31,7 @@ REVOKE [IMMUTABLE] [GRANT | DENY] <privilege>
 | `NODES Label` | Nodes with label (can list: `NODES Person, Company`) |
 | `RELATIONSHIPS Type` | Relationships of type |
 | `ELEMENTS Label` | Both nodes and relationships |
-| `FOR (n:Label) WHERE n.prop = val` | Pattern-matched nodes (read only) |
+| `FOR (n:Label) WHERE n.prop = val` | Pattern-matched nodes (read only) — see [Property-based (sub-graph) read](#property-based-sub-graph-read) for all predicate forms |
 | *(omit)* | Defaults to `ELEMENTS *` |
 
 ### Read privileges
@@ -73,6 +73,22 @@ DENY MATCH {*} ON GRAPH mydb
 GRANT READ { address } ON GRAPH *
   FOR (n:Email|Website) WHERE n.domain = 'example.com'
   TO regularUsers;
+```
+
+Supported predicate forms:
+
+| Form | Version |
+|---|---|
+| `n.prop {= \| <> \| > \| >= \| < \| <=} value` | all |
+| `n.prop IS [NOT] NULL` | all |
+| `n.prop IN [v1, v2]` / `n.prop IN $listParam` — scalar property against a list of values | all |
+| `value {= \| <> \| > \| >= \| < \| <=} n.prop` — property on the right; operator mirrored, stored canonically property-on-left | 2026.08, Cypher 25 |
+| `value IN n.listProp` — list-valued property contains value; negate with `NOT value IN n.listProp`; no match when the property is missing or scalar | 2026.08, Cypher 25 |
+
+```cypher
+GRANT READ {*} ON GRAPH * FOR (n) WHERE 3 < n.securityLevel TO regularUsers;
+GRANT READ {*} ON GRAPH * FOR (n) WHERE 'EU' IN n.regions TO regularUsers;
+DENY MATCH {*} ON GRAPH * FOR (n) WHERE NOT 'EU' IN n.regions TO regularUsers;
 ```
 
 ### Property-based read on Infinigraph [2026.07, not on Aura]

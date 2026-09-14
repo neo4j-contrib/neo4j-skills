@@ -16,6 +16,17 @@
 | `datetime.time` | Time |
 | `datetime.timedelta` | Duration |
 | `neo4j.time.*` types | Corresponding Cypher temporal |
+| `uuid.UUID` | UUID [driver 6.3+, Neo4j 2026.08 Enterprise] |
+
+```python
+import uuid
+
+record = driver.execute_query(
+    "CREATE (d:Doc {id: $id}) RETURN d.id AS id",
+    id=uuid.uuid4(), database_="neo4j",
+).records[0]
+doc_id: uuid.UUID = record["id"]      # round-trips as uuid.UUID; UUID.is_safe not preserved
+```
 
 Custom classes, dataclasses, Pydantic models, and enums are **not** auto-serialized — convert to `dict` or primitives first.
 

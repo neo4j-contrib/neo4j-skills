@@ -9,7 +9,7 @@ description: Neo4j Graph Data Science (GDS) embedded plugin via Python client or
   gds.graph.project.remote, or AuraDB Cypher API projection/session management — use neo4j-aura-graph-analytics-skill.
   Does NOT handle Cypher authoring — use neo4j-cypher-skill.
   Does NOT cover driver setup — use neo4j-driver-python-skill or other driver skill.
-version: 1.0.14
+version: 1.0.15
 allowed-tools: Bash WebFetch
 ---
 
@@ -64,7 +64,9 @@ pip install "graphdatascience[rust_ext]<2"  # 3–10× faster serialization
 ```
 
 Compatibility: graphdatascience v1.22 — GDS >= 2.6 and < 2.28 / < 2026.6, Python >= 3.10 and < 3.15, Neo4j Driver >= 4.4.12 and < 7.0. GDS server 2026.06+ falls outside that range — call GDS from Cypher, or use the 2.0 pre-release client.
-graphdatascience 2.0 is alpha (`pip install --pre graphdatascience`, latest `2.0a4`): `gds.v2` prefix removed and those endpoints become the only API, untyped 1.x endpoints deleted, `GraphV2`/`ModelV2` renamed to `Graph`/`Model`, minimum GDS server 2.13 and Neo4j Python driver 5.26 (4.4 dropped), pandas >= 2.0, FastPath preview. Pin `graphdatascience<2` for production.
+graphdatascience 2.0 is alpha (`pip install --pre graphdatascience`, latest `2.0a6`): `gds.v2` prefix removed and those endpoints become the only API, untyped 1.x endpoints deleted, `GraphV2`/`ModelV2` renamed to `Graph`/`Model`, minimum GDS server 2.13 and Neo4j Python driver 5.26 (4.4 dropped), pandas 2.x–3.x, pyarrow 21–25, `overwrite=True` on projection/construct/filter/sample endpoints, `gds.pipeline.get`, FastPath preview. Pin `graphdatascience<2` for production.
+
+`gds.userLog` removed [GDS 2026.07] — track running jobs with `CALL gds.listProgress(jobId, showCompleted)`; hints and warnings only reach the Neo4j debug log and query notifications.
 
 V2 rules:
 - Prefer `gds.v2.*` when endpoint exists.
@@ -386,6 +388,7 @@ Full algorithm catalog → [references/algorithms.md](references/algorithms.md)
 | `Graph 'myGraph' already exists` | Leftover projection from failed run | `CALL gds.graph.drop('myGraph')` or `gds.v2.graph.drop(G)` |
 | `mutate_property already exists` | Re-running algorithm on same projection | Drop and re-project, or use different `mutate_property` name |
 | `No algorithm results` | Source/target node not in projection | Verify node labels/rel types match projection; check `G.node_count()` |
+| `Procedure not found: gds.userLog` | Removed in GDS 2026.07 | `CALL gds.listProgress()` for job state; read hints/warnings from the Neo4j debug log |
 
 ---
 

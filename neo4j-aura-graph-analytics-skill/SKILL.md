@@ -9,7 +9,7 @@ description: Serverless Aura Graph Analytics (AGA) GDS Sessions — covers GdsSe
   Does NOT cover the embedded GDS plugin on Aura Pro or self-managed Neo4j — use neo4j-gds-skill.
   Does NOT handle Cypher authoring — use neo4j-cypher-skill.
   Does NOT cover Snowflake Graph Analytics — use neo4j-snowflake-graph-analytics-skill.
-version: 1.0.8
+version: 1.0.9
 allowed-tools: Bash WebFetch
 ---
 
@@ -81,10 +81,11 @@ pip install "graphdatascience>=1.15,<2"    # 1.22 is the current stable release
 | `ArrowEndpointVersion.from_arrow_info` | `check_version_compatibility` |
 | `ServerVersion`, `SemanticVersion` from top level | `graphdatascience.versions` |
 | `gds.graph.node_labels.mutate(write_concurrency=, job_id=)` | parameters removed |
+| `gds.graph.project.cypher(database=...)` / `..._async(database=...)` | parameter removed — set with `gds.set_database("neo4j")` |
 
 2.0 minimums: GDS server 2.13, `neo4j` driver 5.26, pandas 2.x–3.x, pyarrow 21–25, numpy <3.
 
-2.0 additions: `GdsSessions.estimate(algorithms=[...])` for per-algorithm memory; `GdsSessions.get_or_create(show_progress=...)`; `gds.pipeline.get`; `overwrite=True` on `gds.graph.project` / `generate` / `construct` / `filter` / `sample` to drop a same-named graph first; `GdsSessions.delete(session_id=...)` returns `False` when nothing was deleted.
+2.0 additions: `GdsSessions.estimate(algorithms=[...])` for per-algorithm memory; `GdsSessions.get_or_create(show_progress=...)`; `gds.pipeline.get`; `overwrite=True` on `gds.graph.project` / `generate` / `construct` / `filter` / `sample` to drop a same-named graph first; `GdsSessions.delete(session_id=...)` returns `False` when nothing was deleted; `gds.hits` (`stream`, `stats`, `mutate`, `write`) in sessions; `gds.fast_path` (FastPath path embeddings, preview, AGA only).
 
 ---
 
@@ -302,6 +303,21 @@ gds.v2.louvain.write(G, write_property="community")
 ```
 
 V1 fallback: `gds.pageRank.mutate(..., mutateProperty="pagerank")`. Plugin algorithm reference → `neo4j-gds-skill`; AGA limitations differ.
+
+FastPath — path embeddings for temporal event graphs, preview, AGA only (`CALL gds.fastPath.stream/mutate/write`, `gds.fast_path` from graphdatascience 2.0):
+```cypher
+CALL gds.fastPath.stream('patients', {
+  baseNodeLabel: 'Patient',
+  eventNodeLabel: 'Visit',
+  embeddingDimension: 64,
+  numTimeAnchors: 8,
+  lookbackHorizon: 365,
+  observationTime: 1767225600,          // or baseNodeObservationTimeProperty
+  eventNodeTimeProperty: 'timestamp'    // or firstRelationshipType + nextRelationshipType
+}) YIELD nodeId, embedding
+RETURN gds.util.asNode(nodeId).id AS patientId, embedding
+```
+Exactly one of `observationTime` / `baseNodeObservationTimeProperty`, and one of `eventNodeTimeProperty` / (`firstRelationshipType` + `nextRelationshipType`).
 
 ML pipelines in sessions [graphdatascience 1.22]: use `gds.v2.pipeline.node_classification`, `gds.v2.pipeline.link_prediction`, `gds.v2.pipeline.node_regression`. `gds.pipeline.*` emits a deprecation warning inside a GDS Session — use `gds.v2.pipeline.*`.
 
