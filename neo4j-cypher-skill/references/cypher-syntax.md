@@ -403,14 +403,14 @@ RETURN uuid.mostSignificantBits(id)  AS msb,                   // INTEGER, upper
        uuid.leastSignificantBits(id) AS lsb,                   // INTEGER, lower 64 bits
        toString(id) AS asString
 
-CREATE (n:Session {sessionId: uuid($uuidString)})              // store as property
+MERGE (n:Session {sessionId: uuid($uuidString)})               // UUID property storage requires Enterprise + block format
 ```
 
 `UUID` is a distinct value type — not a `STRING`. `randomUUID()` still returns a `STRING`; keep it for keys that must stay STRING-typed or must work on < 2026.08.
 
 | Constraint | Detail |
 |---|---|
-| Storage | `UUID` is a property type in Neo4j 2026.08+ |
+| Storage | `UUID` is a property type in Neo4j 2026.08+; storing `UUID` properties requires Enterprise + block format (Aura default) |
 | Null args | Any null argument yields `null`: `uuid(null)`, `uuid(null, 42)`, `uuid(42, null)`, `uuid.mostSignificantBits(null)` |
 | Drivers | Mapped to native client types from driver 6.2 (Python 6.3); older drivers return placeholder `MAP` + `03N95 Neo.ClientNotification.UnknownType` |
 | STRING ids | `randomUUID()` still returns a STRING — use it when the server version or driver cannot handle `UUID` |
