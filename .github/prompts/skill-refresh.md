@@ -3,6 +3,11 @@
 You are running inside a headless Claude Code session in the `neo4j-skills` repository.
 Goal: scan Neo4j release notes and deprecation pages, then update any SKILL.md and references/ files that are stale, outdated, or missing new features. Open no PRs or commits — output only file edits. The workflow will handle git and PR creation.
 
+**Working tree already includes any open, unmerged PRs from prior skill-refresh runs** that the workflow could merge cleanly (listed below, after the `---`, with any it could not merge due to conflicts). Unrelated open PRs are never merged in — only prior skill-refresh automation PRs. Treat that merged state as your baseline, not `origin/main`:
+- Don't re-propose changes those PRs already made — read the current file content, not what you might remember main looking like.
+- Compute every `version:` bump from the version currently in the file (which already reflects any merged PR's bump), so you never re-use or skip a version number a merged PR already claimed.
+- If a listed PR was skipped for conflicts, don't try to guess and duplicate its likely changes — just proceed with your own scan and note it exists in the summary.
+
 ---
 
 ## Step 1 — Fetch release signals
@@ -81,7 +86,7 @@ Apply changes. Read each file fully before editing.
 - Removed APIs — remove examples and add migration pointer
 - New features worth knowing — add to relevant section or references/ file
 - Broken `Does NOT handle X — use Y-skill` pointers (if a skill was renamed or added)
-- **Version bump**: any actual content change to a skill's `SKILL.md` or `references/` files must bump that skill's `version:` frontmatter field (patch +1, e.g. `1.0.5` → `1.0.6`). If `version:` is missing, add it as `1.0.0`. Skills with no content changes keep their current version.
+- **Version bump**: any actual content change to a skill's `SKILL.md` or `references/` files must bump that skill's `version:` frontmatter field (patch +1, e.g. `1.0.5` → `1.0.6`), starting from the version **currently in the working tree** (which already reflects any merged open PR's bump — not from what you'd expect on `origin/main`). If `version:` is missing, add it as `1.0.0`. Skills with no content changes keep their current version.
 
 **What NOT to change:**
 - Content you are not confident is outdated — leave it and note it in the summary
@@ -137,6 +142,9 @@ Print a summary in this exact format (used by the workflow to populate the PR bo
 ```
 <!-- SUMMARY_START -->
 ## Skills Refresh Summary
+
+### Built on prior skill-refresh PRs
+- <PR # and title, or "none">
 
 ### Sources scanned
 - <URL> — <date or version range covered>
