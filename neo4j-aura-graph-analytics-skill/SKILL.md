@@ -68,7 +68,7 @@ pip install "graphdatascience>=1.15,<2"    # 1.22 is the current stable release
 
 ### graphdatascience 2.0 (alpha)
 
-`2.0aN` is pre-release (`pip install --pre graphdatascience`, latest `2.0a5`) — pin `<2` for production. Rename map for when 2.0 ships:
+`2.0aN` is pre-release (`pip install --pre graphdatascience`, latest `2.0a6`) — pin `<2` for production. Rename map for when 2.0 ships:
 
 | 1.x | 2.0 |
 |---|---|

@@ -233,7 +233,7 @@ RETURN toString(sessionId) AS id,
        uuid.mostSignificantBits(sessionId) AS msb,
        uuid.leastSignificantBits(sessionId) AS lsb
 ```
-`UUID` is distinct from `STRING`. `randomUUID()` stays STRING; use it until server and driver support lines up. Check per-driver floors before reading `UUID` values generically: Java 6.2.1, JavaScript 6.2, .NET 6.2, Python 6.3. Older clients may return a placeholder `MAP` plus warning `03N95 Neo.ClientNotification.UnknownType`.
+`UUID` is distinct from `STRING`. `randomUUID()` stays STRING; use it until server and driver support lines up. Check the per-driver skills for exact read-path behavior: Java 6.2.1 for generic `asObject()` reads, JavaScript 6.2 for `neo4j.UUID`, .NET 6.2 for `System.Guid`, Python 6.3 for `uuid.UUID`. Unsupported combinations may return a placeholder `MAP` plus warning `03N95 Neo.ClientNotification.UnknownType`.
 
 ### Spatial / Point
 ```cypher
