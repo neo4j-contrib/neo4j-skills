@@ -9,7 +9,7 @@ description: Ingests unstructured and semi-structured documents into Neo4j as a 
   Does NOT handle structured CSV/relational import — use neo4j-import-skill.
   Does NOT handle GraphRAG retrieval after ingestion — use neo4j-graphrag-skill.
   Does NOT handle vector index creation — use neo4j-vector-search-skill.
-version: 1.0.5
+version: 1.0.6
 status: stable
 allowed-tools: Bash WebFetch
 ---
@@ -63,7 +63,9 @@ pip install neo4j-graphrag[fuzzy-matching]   # + FuzzyMatchResolver (rapidfuzz)
 pip install neo4j-graphrag[nlp]
 ```
 
-Requires: `neo4j>=5.17.0` (driver 6.x supported), Python>=3.10, Neo4j>=5.18.1 (Aura>=5.18.0).
+Requires: `neo4j>=5.28.4,<7.0.0` [neo4j-graphrag v1.19], Python>=3.10, Neo4j>=5.18.1 (Aura>=5.18.0).
+
+Import moves [v1.19] — old paths warn, removed in 2.0: `neo4j_graphrag.experimental.components.*` → `neo4j_graphrag.components.*`. `SimpleKGPipeline` stays at `neo4j_graphrag.experimental.pipeline.kg_builder`.
 
 ---
 
@@ -83,7 +85,7 @@ patterns = [
 ]
 
 # Option B — Rich GraphSchema (production; best extraction quality)
-from neo4j_graphrag.experimental.components.schema import (
+from neo4j_graphrag.components.schema import (
     GraphSchema, NodeType, RelationshipType, PropertyType, ConstraintType
 )
 schema = GraphSchema(
@@ -208,7 +210,7 @@ asyncio.run(ingest_all(list(pdf_dir.glob("*.pdf"))))
 Default splitter: `FixedSizeSplitter(chunk_size=300, chunk_overlap=50)`.
 
 ```python
-from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter import FixedSizeSplitter
+from neo4j_graphrag.components.text_splitters.fixed_size_splitter import FixedSizeSplitter
 
 splitter = FixedSizeSplitter(
     chunk_size=512,       # tokens; 300–512 typical for GPT-4o
@@ -238,7 +240,7 @@ Rule: chunk must fit within LLM context for extraction + within embedding model 
 Merge duplicate extracted entities after pipeline run.
 
 ```python
-from neo4j_graphrag.experimental.components.resolver import (
+from neo4j_graphrag.components.resolver import (
     SinglePropertyExactMatchResolver,   # identical name → merge
     FuzzyMatchResolver,                  # Levenshtein similarity; needs rapidfuzz
     SpaCySemanticMatchResolver,          # cosine similarity; needs neo4j-graphrag[nlp]
@@ -249,8 +251,8 @@ resolver = SinglePropertyExactMatchResolver(driver)
 asyncio.run(resolver.run())
 
 # Fuzzy match (handles typos / alternate spellings)
-from neo4j_graphrag.experimental.components.resolver import FuzzyMatchResolver
-resolver = FuzzyMatchResolver(driver, threshold=0.9)
+from neo4j_graphrag.components.resolver import FuzzyMatchResolver
+resolver = FuzzyMatchResolver(driver, similarity_threshold=0.9)
 asyncio.run(resolver.run())
 
 # Scope resolution to specific labels only:
@@ -465,7 +467,7 @@ If rows returned: wait, then re-run. ONLINE = safe to ingest.
 `entities`/`relations`/`potential_schema` are deprecated. Use `schema=GraphSchema(...)`.
 
 ```python
-from neo4j_graphrag.experimental.components.schema import (
+from neo4j_graphrag.components.schema import (
     GraphSchema, NodeType, RelationshipType, PropertyType,
     ConstraintType, GraphConstraintType,
 )
@@ -504,7 +506,7 @@ When no `schema` is passed to `SimpleKGPipeline`, `SchemaFromTextExtractor` runs
 To run it explicitly:
 
 ```python
-from neo4j_graphrag.experimental.components.graph_schema_extraction import (
+from neo4j_graphrag.components.schema import (
     SchemaFromTextExtractor,
     SchemaFromExistingGraphExtractor,
 )
@@ -521,11 +523,13 @@ schema = asyncio.run(extractor.run())
 ### Parquet Export (experimental, v1.14.0+)
 
 ```python
-from neo4j_graphrag.experimental.components.parquet_output import ParquetWriter
+from neo4j_graphrag.components.filename_collision_handler import FilenameCollisionHandler
+from neo4j_graphrag.components.kg_writer import ParquetWriter
 
-# Use ParquetWriter instead of KGWriter inside a Pipeline to export to Parquet files
-writer = ParquetWriter(output_dir="/data/kg_export/")
-# Produces one Parquet file per node label and per relationship type
+# nodes_dest / relationships_dest: your own ParquetOutputDestination (local, S3, GCS) — none shipped
+writer = ParquetWriter(nodes_dest=nodes_dest, relationships_dest=relationships_dest,
+                       collision_handler=FilenameCollisionHandler())
+# Replaces KGWriter in a Pipeline; one file per node label and per (head_label, rel_type, tail_label)
 # Metadata includes UNIQUENESS, EXISTENCE, and KEY constraints (v1.15.0/1.16.0)
 ```
 
@@ -535,7 +539,7 @@ writer = ParquetWriter(output_dir="/data/kg_export/")
 
 Override default lexical layer labels (keep defaults unless integrating with existing graph):
 ```python
-from neo4j_graphrag.experimental.components.types import LexicalGraphConfig
+from neo4j_graphrag.components.types import LexicalGraphConfig
 # All fields have sensible defaults — only override what differs from your graph's conventions
 config = LexicalGraphConfig(
     document_node_label="Article",             # default: "Document"
@@ -554,8 +558,8 @@ Default `file_loader` auto-dispatches by extension (`.pdf`→`PdfLoader`, `.md`�
 Supports fsspec URIs (`s3://`, `gcs://`). Subclass `DataLoader` for HTML/web/custom formats:
 
 ```python
-from neo4j_graphrag.experimental.components.data_loader import DataLoader
-from neo4j_graphrag.experimental.components.types import DocumentInfo, LoadedDocument
+from neo4j_graphrag.components.data_loader import DataLoader
+from neo4j_graphrag.components.types import DocumentInfo, LoadedDocument
 
 class WebPageLoader(DataLoader):
     async def run(self, filepath, metadata=None):

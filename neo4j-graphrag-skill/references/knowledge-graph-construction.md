@@ -9,7 +9,7 @@ Supplements [SKILL.md Step 11](../SKILL.md#step-11--kg-pipeline-customization). 
 ### FixedSizeSplitter
 
 ```python
-from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter import FixedSizeSplitter
+from neo4j_graphrag.components.text_splitters.fixed_size_splitter import FixedSizeSplitter
 
 splitter = FixedSizeSplitter(chunk_size=500, chunk_overlap=100)
 ```
@@ -19,7 +19,7 @@ splitter = FixedSizeSplitter(chunk_size=500, chunk_overlap=100)
 ### Custom TextSplitter (section-aware)
 
 ```python
-from neo4j_graphrag.experimental.components.text_splitters.base import TextSplitter, TextChunk, TextChunks
+from neo4j_graphrag.components.text_splitters.base import TextSplitter, TextChunk, TextChunks
 
 class SectionSplitter(TextSplitter):
     def run(self, text: str) -> TextChunks:
@@ -33,7 +33,7 @@ pipeline = SimpleKGPipeline(..., text_splitter=SectionSplitter())
 ### LangChain Adapter
 
 ```python
-from neo4j_graphrag.experimental.components.text_splitters.langchain import LangChainTextSplitterAdapter
+from neo4j_graphrag.components.text_splitters.langchain import LangChainTextSplitterAdapter
 from langchain_text_splitters import CharacterTextSplitter
 
 lc_splitter = CharacterTextSplitter(separator="\n\n", chunk_size=500, chunk_overlap=100)
@@ -52,7 +52,7 @@ Default graph model: `Document -[:FROM_DOCUMENT]-> Chunk -[:FROM_CHUNK]-> __Enti
 Override any label or relationship name:
 
 ```python
-from neo4j_graphrag.experimental.components.kg_writer import LexicalGraphConfig
+from neo4j_graphrag.components.types import LexicalGraphConfig
 
 config = LexicalGraphConfig(
     id_prefix="lesson",                              # prefix for generated IDs
@@ -96,7 +96,7 @@ Use during development for speed. Risk: duplicate entity nodes.
 Merges entities with same label + similar name using RapidFuzz edit distance:
 
 ```python
-from neo4j_graphrag.experimental.components.resolver import FuzzyMatchResolver
+from neo4j_graphrag.components.resolver import FuzzyMatchResolver
 
 resolver = FuzzyMatchResolver(
     driver=driver,
@@ -106,20 +106,20 @@ resolver = FuzzyMatchResolver(
 asyncio.run(resolver.run())
 ```
 
-Install: `pip install neo4j-graphrag[fuzzy]` (adds `rapidfuzz`)
+Install: `pip install neo4j-graphrag[fuzzy-matching]` (adds `rapidfuzz`)
 
-#### SpacySemanticMatchResolver
+#### SpaCySemanticMatchResolver
 
 Merges entities with same label + semantically similar textual properties via spaCy:
 
 ```python
-from neo4j_graphrag.experimental.components.resolver import SpacySemanticMatchResolver
+from neo4j_graphrag.components.resolver import SpaCySemanticMatchResolver
 
-resolver = SpacySemanticMatchResolver(driver=driver, neo4j_database="neo4j")
+resolver = SpaCySemanticMatchResolver(driver=driver, neo4j_database="neo4j")
 asyncio.run(resolver.run())
 ```
 
-Install: `pip install neo4j-graphrag[spacy]` + `python -m spacy download en_core_web_lg`
+Install: `pip install neo4j-graphrag[nlp]` + `python -m spacy download en_core_web_lg`
 
 Risk of over-merging ("Apple" company vs "Apple" fruit). Apply domain `filter_query` to restrict by label.
 
@@ -127,10 +127,12 @@ Risk of over-merging ("Apple" company vs "Apple" fruit). Apply domain `filter_qu
 
 ## Custom Document Loaders
 
+`neo4j_graphrag.components.data_loader` ships `PdfLoader` and `MarkdownLoader`; default `SimpleKGPipeline` loader picks by extension (`.pdf`, `.md`, `.markdown`).
+
 ### Extend PdfLoader (pre-process text)
 
 ```python
-from neo4j_graphrag.experimental.components.pdf_loader import PdfLoader
+from neo4j_graphrag.components.data_loader import PdfLoader
 import re
 
 class CustomPDFLoader(PdfLoader):
@@ -140,24 +142,25 @@ class CustomPDFLoader(PdfLoader):
         doc.text = re.sub(r"^:[\w-]+:.*$", "", doc.text, flags=re.MULTILINE)
         return doc
 
-pipeline = SimpleKGPipeline(..., pdf_loader=CustomPDFLoader())
+pipeline = SimpleKGPipeline(..., file_loader=CustomPDFLoader())   # pdf_loader= deprecated, removed in 2.0
 ```
 
 ### Custom DataLoader (load from any source)
 
 ```python
-from neo4j_graphrag.experimental.components.pdf_loader import DataLoader, PdfDocument, DocumentInfo
+from neo4j_graphrag.components.data_loader import DataLoader
+from neo4j_graphrag.components.types import DocumentInfo, LoadedDocument
 
 class TextFileLoader(DataLoader):
-    async def run(self, filepath: str) -> PdfDocument:
+    async def run(self, filepath: str) -> LoadedDocument:
         with open(filepath) as f:
             text = f.read()
-        return PdfDocument(
+        return LoadedDocument(
             text=text,
             document_info=DocumentInfo(path=filepath, metadata={"source": "text_file"}),
         )
 
-pipeline = SimpleKGPipeline(..., pdf_loader=TextFileLoader(), from_file=True)
+pipeline = SimpleKGPipeline(..., file_loader=TextFileLoader(), from_file=True)
 asyncio.run(pipeline.run_async(file_path="data/document.txt"))
 ```
 
@@ -168,7 +171,7 @@ asyncio.run(pipeline.run_async(file_path="data/document.txt"))
 ### Prepend domain instructions
 
 ```python
-from neo4j_graphrag.experimental.components.entity_relation_extractor import (
+from neo4j_graphrag.components.entity_relation_extractor import (
     LLMEntityRelationExtractor,
 )
 
@@ -186,7 +189,7 @@ pipeline = SimpleKGPipeline(
 ### Full custom extraction prompt
 
 ```python
-from neo4j_graphrag.experimental.components.entity_relation_extractor import (
+from neo4j_graphrag.components.entity_relation_extractor import (
     LLMEntityRelationExtractor,
     EntityExtractionPromptTemplate,
 )

@@ -53,7 +53,7 @@ EntityResolver (base)
 ### SinglePropertyExactMatchResolver
 
 ```python
-from neo4j_graphrag.experimental.components.resolver import SinglePropertyExactMatchResolver
+from neo4j_graphrag.components.resolver import SinglePropertyExactMatchResolver
 
 resolver = SinglePropertyExactMatchResolver(
     driver=driver,
@@ -68,12 +68,12 @@ stats = asyncio.run(resolver.run())
 ### FuzzyMatchResolver
 
 ```python
-from neo4j_graphrag.experimental.components.resolver import FuzzyMatchResolver
+from neo4j_graphrag.components.resolver import FuzzyMatchResolver
 
 resolver = FuzzyMatchResolver(
     driver=driver,
     resolve_properties=["name"],   # list of properties to concatenate + compare
-    threshold=0.9,    # Levenshtein similarity 0–1; lower = more aggressive merging
+    similarity_threshold=0.9,   # RapidFuzz similarity 0–1 (default 0.8); lower = more aggressive merging
     filter_query="WHERE n:Organization",
 )
 asyncio.run(resolver.run())
@@ -84,12 +84,12 @@ asyncio.run(resolver.run())
 Requires `pip install neo4j-graphrag[nlp]`. Python ≤3.13 only (spaCy not on 3.14+).
 
 ```python
-from neo4j_graphrag.experimental.components.resolver import SpaCySemanticMatchResolver
+from neo4j_graphrag.components.resolver import SpaCySemanticMatchResolver
 
 resolver = SpaCySemanticMatchResolver(
     driver=driver,
     resolve_properties=["name"],
-    threshold=0.85,   # cosine similarity 0–1; higher = stricter
+    similarity_threshold=0.85,   # cosine similarity 0–1 (default 0.8); higher = stricter
     filter_query="WHERE n:Person",
 )
 asyncio.run(resolver.run())
@@ -130,7 +130,7 @@ All fields have defaults — only override as needed:
 Descriptions and typed properties improve LLM extraction quality:
 
 ```python
-from neo4j_graphrag.experimental.components.schema import (
+from neo4j_graphrag.components.schema import (
     GraphSchema, NodeType, RelationshipType, PropertyType
 )
 
@@ -174,8 +174,8 @@ Labels starting or ending with `__` are reserved for internal neo4j-graphrag use
 ## Custom DataLoader — Full Pattern
 
 ```python
-from neo4j_graphrag.experimental.components.data_loader import DataLoader, PdfLoader
-from neo4j_graphrag.experimental.components.types import (
+from neo4j_graphrag.components.data_loader import DataLoader, PdfLoader
+from neo4j_graphrag.components.types import (
     DocumentInfo, DocumentType, LoadedDocument
 )
 

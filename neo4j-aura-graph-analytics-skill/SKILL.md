@@ -9,7 +9,7 @@ description: Serverless Aura Graph Analytics (AGA) GDS Sessions — covers GdsSe
   Does NOT cover the embedded GDS plugin on Aura Pro or self-managed Neo4j — use neo4j-gds-skill.
   Does NOT handle Cypher authoring — use neo4j-cypher-skill.
   Does NOT cover Snowflake Graph Analytics — use neo4j-snowflake-graph-analytics-skill.
-version: 1.0.9
+version: 1.0.10
 allowed-tools: Bash WebFetch
 ---
 
@@ -68,13 +68,14 @@ pip install "graphdatascience>=1.15,<2"    # 1.22 is the current stable release
 
 ### graphdatascience 2.0 (alpha)
 
-`2.0aN` is pre-release — pin `<2` for production. Rename map for when 2.0 ships:
+`2.0aN` is pre-release (latest `2.0a6`) — pin `<2` for production. Rename map for when 2.0 ships:
 
 | 1.x | 2.0 |
 |---|---|
 | `gds.v2.<endpoint>` | `gds.<endpoint>` — `gds.v2` prefix gone; untyped 1.x endpoints removed |
 | `gds.graph.project(...)` (AGA) | `gds.graph.project.cypher(...)` |
 | `gds.graph.project_native(...)` (AGA) | `gds.graph.project.native(...)` |
+| `gds.graph.project(database=...)` / `project_async(database=...)` | `database` removed — target DB comes from the client: `gds.set_database("neo4j")` [`2.0a6`] |
 | `GraphV2` / `ModelV2` | `Graph` / `Model` — `from graphdatascience import Graph` |
 | `Graph.drop(failIfMissing=)` / `Model.drop(failIfMissing=)` | `fail_if_missing=` |
 | `run_cypher(..., retryable=)` | removed — always retries |
@@ -84,7 +85,7 @@ pip install "graphdatascience>=1.15,<2"    # 1.22 is the current stable release
 
 2.0 minimums: GDS server 2.13, `neo4j` driver 5.26, pandas 2.x–3.x, pyarrow 21–25, numpy <3.
 
-2.0 additions: `GdsSessions.estimate(algorithms=[...])` for per-algorithm memory; `GdsSessions.get_or_create(show_progress=...)`; `gds.pipeline.get`; `overwrite=True` on `gds.graph.project` / `generate` / `construct` / `filter` / `sample` to drop a same-named graph first; `GdsSessions.delete(session_id=...)` returns `False` when nothing was deleted; `gds.fast_path` exposed for GDS Sessions [`2.0a5`]. Arrow endpoint version is checked at client creation — unsupported version raises an error asking to upgrade `graphdatascience`. Getting an already-expired session raises `RuntimeError`; sessions expiring within the hour warn.
+2.0 additions: `GdsSessions.estimate(algorithms=[...])` for per-algorithm memory; `GdsSessions.get_or_create(show_progress=...)`; `gds.pipeline.get`; `overwrite=True` on `gds.graph.project` / `generate` / `construct` / `filter` / `sample` to drop a same-named graph first; `GdsSessions.delete(session_id=...)` returns `False` when nothing was deleted; `gds.fast_path` exposed for GDS Sessions [`2.0a5`]; `gds.hits` with `stream` / `stats` / `mutate` / `write` modes in sessions [`2.0a6`]. Arrow endpoint version is checked at client creation — unsupported version raises an error asking to upgrade `graphdatascience`. Getting an already-expired session raises `RuntimeError`; sessions expiring within the hour warn.
 
 ---
 

@@ -4,10 +4,10 @@
 
 | Type | Procedure | When |
 |---|---|---|
-| Cypher | Python: `gds.graph.cypher.project(...)` with `RETURN gds.graph.project` clause inside | Current GDS-doc default; filtering, transformation, computed properties, heterogeneous |
-| Native | Python: `gds.v2.graph.project(...)` | Simple labels + relationship types; shortest Python-client path |
+| Cypher | Python 1.x: `gds.graph.cypher.project(...)` with `RETURN gds.graph.project` clause inside; 2.0: `gds.graph.project.cypher(...)` | Current GDS-doc default; filtering, transformation, computed properties, heterogeneous |
+| Native | Python 1.x: `gds.v2.graph.project(...)`; 2.0: `gds.graph.project.native(...)` | Simple labels + relationship types; shortest Python-client path |
 
-Prefer v2 native projection. Use v1 `gds.graph.cypher.project(...)` only for filtering, transformations, computed properties, or heterogeneous projections that v2 native projection cannot express. Avoid legacy `gds.graph.project.cypher(...)` for new work. For Aura Graph Analytics sessions, use `neo4j-aura-graph-analytics-skill`.
+Prefer v2 native projection. Use v1 `gds.graph.cypher.project(...)` only for filtering, transformations, computed properties, or heterogeneous projections that v2 native projection cannot express. Avoid the legacy 1.x `gds.graph.project.cypher(...)` wrapper for new work — in client 2.0 that name means the aggregation-based Cypher projection. For Aura Graph Analytics sessions, use `neo4j-aura-graph-analytics-skill`.
 
 ---
 
@@ -147,7 +147,7 @@ G, result = gds.graph.cypher.project(
 
 Use `gds.graph.project($graph_name, source, target, {...})` in `RETURN`; `$graph_name` parameter injected automatically.
 Query must end with exactly one `RETURN gds.graph.project(...)`. Else use `gds.run_cypher(...)`, then `gds.graph.get("filteredGraph")`.
-Never use `gds.graph.project.cypher(...)` for new Cypher projections; legacy deprecated projection procedure.
+Never call the legacy `CALL gds.graph.project.cypher(...)` procedure; use the aggregation form above (client 2.0 exposes it as `gds.graph.project.cypher(...)`).
 AGA Sessions → `neo4j-aura-graph-analytics-skill`.
 
 ---

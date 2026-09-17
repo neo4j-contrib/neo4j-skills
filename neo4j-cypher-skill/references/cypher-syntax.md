@@ -262,6 +262,9 @@ WHERE n.email = null          // always null, never matches
 
 // coalesce() -- returns first non-null argument
 RETURN coalesce(n.nickname, n.name) AS displayName
+
+RETURN null / 0 AS quotient      // null [2026.08]; earlier versions raised division by zero
+RETURN 1 / 0                     // still errors — guard with WHERE divisor <> 0
 ```
 
 `collect()` and aggregation functions ignore null values. `null = null` is `null` (not `true`). `WHERE` treats `null` as `false`.

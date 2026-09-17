@@ -11,7 +11,7 @@ description: Build GraphRAG retrieval pipelines on Neo4j using the neo4j-graphra
   neo4j-document-import-skill. Does NOT handle plain vector search — use
   neo4j-vector-index-skill. Does NOT handle GDS analytics — use neo4j-gds-skill.
   Does NOT handle agent memory — use neo4j-agent-memory-skill.
-version: 1.0.11
+version: 1.0.12
 status: active
 allowed-tools: Bash WebFetch
 ---
@@ -74,7 +74,8 @@ Vectors stored in external DB?      → WeaviateNeo4jRetriever / PineconeNeo4jRe
 ```bash
 pip install neo4j-graphrag[openai]        # OpenAI LLM + embeddings
 pip install neo4j-graphrag[anthropic]     # Anthropic Claude
-pip install neo4j-graphrag[google]        # Vertex AI / Gemini
+pip install neo4j-graphrag[google]        # Vertex AI (google-cloud-aiplatform)
+pip install neo4j-graphrag[google-genai]  # Gemini API (google-genai SDK)
 pip install neo4j-graphrag[bedrock]       # Amazon Bedrock (boto3)
 pip install neo4j-graphrag[cohere]        # Cohere
 pip install neo4j-graphrag[mistralai]     # MistralAI
@@ -84,7 +85,9 @@ pip install neo4j-graphrag[pinecone]      # Pinecone external retriever
 pip install neo4j-graphrag[qdrant]        # Qdrant external retriever
 ```
 
-Requires: Python >= 3.10, `neo4j >= 5.17.0` (driver 6.x supported).
+Requires: Python >= 3.10, `neo4j >= 5.28.4, < 7.0.0` [v1.19].
+
+Import moves [v1.19] — old paths warn, removed in 2.0: `neo4j_graphrag.experimental.components.*` → `neo4j_graphrag.components.*`; rate-limit helpers → `neo4j_graphrag.utils.rate_limit`. `Pipeline` and `SimpleKGPipeline` stay in `neo4j_graphrag.experimental.pipeline`.
 
 ---
 
@@ -425,8 +428,9 @@ All implement `LLMBase`. All support sync + async, tool calling, and automatic r
 |---|---|---|
 | `OpenAILLM` | `openai` | Structured output; tool calling |
 | `AzureOpenAILLM` | `openai` | Azure-hosted OpenAI |
-| `AnthropicLLM` | `anthropic` | Tool calling |
+| `AnthropicLLM` | `anthropic` | Tool calling; structured output via `response_format` [v1.19] |
 | `VertexAILLM` | `google` | Structured output; tool calling |
+| `GeminiLLM` | `google-genai` | Gemini API; structured output; multimodal `invoke(..., image_bytes=..., image_mime_type=...)` [v1.19] |
 | `MistralAILLM` | `mistralai` | Tool calling |
 | `CohereLLM` | `cohere` | |
 | `OllamaLLM` | `ollama` | Local; tool calling |
@@ -434,13 +438,14 @@ All implement `LLMBase`. All support sync + async, tool calling, and automatic r
 
 ```python
 from neo4j_graphrag.llm import (
-    OpenAILLM, AzureOpenAILLM, AnthropicLLM, VertexAILLM,
+    OpenAILLM, AzureOpenAILLM, AnthropicLLM, VertexAILLM, GeminiLLM,
     MistralAILLM, CohereLLM, OllamaLLM, BedrockLLM,
 )
 
 llm = OpenAILLM(model_name="gpt-4.1", model_params={"temperature": 0})
 llm = AnthropicLLM(model_name="claude-3-5-sonnet-20241022")
 llm = VertexAILLM(model_name="gemini-2.0-flash")
+llm = GeminiLLM(model_name="gemini-2.0-flash", base_url="https://gateway.internal/genai")  # base_url also on AnthropicLLM [v1.19]
 llm = OllamaLLM(model_name="llama3")           # no API key needed
 llm = BedrockLLM(model_id="anthropic.claude-3-5-sonnet-20241022-v2:0")
 
