@@ -333,6 +333,12 @@ RETURN [(n)-[:KNOWS]->(f:Person) | f.name] AS friends,
 
 Use pattern comprehensions for simple one-hop inline collections; for multi-step traversals use `COLLECT { MATCH ... RETURN ... }`.
 
+**Map comprehension** [2026.09, Cypher 25] — builds a `MAP` by iterating a `MAP` or `LIST`; form per 2026.09 changelog, reference docs pending:
+```cypher
+{k: v IN map | keyExpression: valueExpression}
+```
+Pre-2026.09: `apoc.map.fromPairs([k IN keys(m) | [k, m[k]]])`.
+
 ---
 
 ## String Functions
@@ -346,7 +352,8 @@ left(s, n) / right(s, n)                   // first/last n characters
 replace(s, search, replacement[, limit])   // replace all occurrences; limit caps replacements [limit: Cypher 25]
 size(s)                                     // character count (same as char_length)
 reverse(s)                                  // reverse string
-toString(x) / toStringOrNull(x)            // convert any type to STRING
+toString(x) / toStringOrNull(x)            // convert any type to STRING; LIST, MAP, NODE, RELATIONSHIP, PATH accepted [2026.09]
+toStringList(list)                          // element-wise STRING conversion; same extended types [2026.09]
 string.indexOf(input, value)                // index of first match, -1 if absent [2026.05, Cypher 25]
 string.join(list, delimiter)                // join LIST<STRING> with delimiter [2026.05, Cypher 25]
 string.regexReplace(original, regex, repl)  // regex replace all matches [2026.05, Cypher 25]

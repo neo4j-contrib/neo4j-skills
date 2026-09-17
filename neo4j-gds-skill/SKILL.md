@@ -9,7 +9,7 @@ description: Neo4j Graph Data Science (GDS) embedded plugin via Python client or
   gds.graph.project.remote, or AuraDB Cypher API projection/session management — use neo4j-aura-graph-analytics-skill.
   Does NOT handle Cypher authoring — use neo4j-cypher-skill.
   Does NOT cover driver setup — use neo4j-driver-python-skill or other driver skill.
-version: 1.0.15
+version: 1.0.16
 allowed-tools: Bash WebFetch
 ---
 
@@ -64,7 +64,7 @@ pip install "graphdatascience[rust_ext]<2"  # 3–10× faster serialization
 ```
 
 Compatibility: graphdatascience v1.22 — GDS >= 2.6 and < 2.28 / < 2026.6, Python >= 3.10 and < 3.15, Neo4j Driver >= 4.4.12 and < 7.0. GDS server 2026.06+ falls outside that range — call GDS from Cypher, or use the 2.0 pre-release client.
-graphdatascience 2.0 is alpha (`pip install --pre graphdatascience`, latest `2.0a5`).
+graphdatascience 2.0 is alpha (`pip install --pre graphdatascience`, latest `2.0a6`).
 - Pin `graphdatascience<2` for production
 - `gds.v2` prefix removed; those endpoints become the only API
 - Untyped 1.x endpoints deleted
@@ -74,6 +74,8 @@ graphdatascience 2.0 is alpha (`pip install --pre graphdatascience`, latest `2.0
 - Minimums: GDS server 2.13, Neo4j Python driver 5.26, pandas >= 2.0 (3.x supported), pyarrow 21–25
 - Additions: `overwrite=True` on projection endpoints, `gds.pipeline.get`, FastPath preview
 - Migration guide: [Neo4j GDS Python client 2.0 migration](https://neo4j.com/docs/graph-data-science-client/current/migration-from-1x/)
+
+GDS plugin releases track the server: `2026.08.1` requires Neo4j `2026.08` — check the [GDS compatibility table](https://neo4j.com/docs/graph-data-science/current/installation/supported-neo4j-versions/) before upgrading either side.
 
 GDS plugin `2026.07.0` removed `CALL gds.userLog()` — read hints and warnings from driver result summary notifications or the Neo4j debug log; track task progress with `CALL gds.listProgress()`.
 

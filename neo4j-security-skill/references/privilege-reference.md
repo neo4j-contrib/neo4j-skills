@@ -215,9 +215,14 @@ SHOW ROLE analyst PRIVILEGES AS COMMANDS;
 
 SHOW ROLE analyst PRIVILEGES YIELD privilege, action, resource, graph, segment
 WHERE action = 'read';
+
+// AUTH RULES filter — privileges of roles granted to the named auth rules [2026.09]
+SHOW AUTH RULES salesRule PRIVILEGES AS COMMANDS;   // AUTH RULE / AUTH RULES both accepted; names comma-separated
 ```
 
-Recreate users and roles from a running DBMS [2026.08]:
+`AS COMMANDS` output gains extra columns for filtering commands in `WHERE` [2026.09]; earlier releases return `command` and `immutable` only.
+
+Recreate users and roles from a running DBMS [2026.09]:
 
 ```cypher
 SHOW USERS AS COMMANDS;                    // CREATE USER statements
