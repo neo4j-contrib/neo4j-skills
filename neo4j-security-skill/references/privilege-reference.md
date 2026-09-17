@@ -215,8 +215,11 @@ SHOW ROLE analyst PRIVILEGES AS COMMANDS;
 
 SHOW ROLE analyst PRIVILEGES YIELD privilege, action, resource, graph, segment
 WHERE action = 'read';
+```
 
-// Recreate users and roles from a running DBMS [2026.08]
+Recreate users and roles from a running DBMS [2026.08]:
+
+```cypher
 SHOW USERS AS COMMANDS;                    // CREATE USER statements
 SHOW USERS WITH AUTH AS COMMANDS;          // + auth provider config and credentials
 SHOW ROLES AS COMMANDS;                    // CREATE ROLE statements
