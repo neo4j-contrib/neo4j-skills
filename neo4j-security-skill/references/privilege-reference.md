@@ -75,6 +75,24 @@ GRANT READ { address } ON GRAPH *
   TO regularUsers;
 ```
 
+Supported predicate forms:
+
+| Form | Version | Semantics |
+|---|---|---|
+| `n.prop = value`, `<>`, `>`, `>=`, `<`, `<=` | all | Scalar comparison, property on the left |
+| `value > n.prop` (property on the right) | 2026.08, Cypher 25 | Same comparison, operands reversed |
+| `n.prop IS NULL` / `IS NOT NULL` | all | Property presence |
+| `n.prop IN [v1, v2]` / `IN $listParam` | 5.26 | Scalar property matched against a list of values |
+| `value IN n.listProp` / `NOT value IN n.listProp` | 2026.08, Cypher 25 | List-valued property contains (or omits) the value |
+
+```cypher
+GRANT READ {*} ON GRAPH * FOR (n) WHERE 'EU' IN n.regions TO regularUsers;
+GRANT MATCH {*} ON GRAPH * FOR ()-[r]-() WHERE NOT 'EU' IN r.regions TO regularUsers;
+GRANT READ {*} ON GRAPH * FOR (n) WHERE 1 > n.level TO regularUsers;
+```
+
+`value IN n.listProp` does not match when the property is missing or holds a scalar; the left operand must be a single non-null, non-NaN value.
+
 ### Property-based read on Infinigraph [2026.07, not on Aura]
 
 `READ` is the only PBAC privilege supported on sharded property databases; grant it on the virtual database — granting on a shard is rejected.
@@ -187,6 +205,13 @@ SHOW ROLE analyst PRIVILEGES AS COMMANDS;
 
 SHOW ROLE analyst PRIVILEGES YIELD privilege, action, resource, graph, segment
 WHERE action = 'read';
+
+// Recreate users and roles from a running DBMS [2026.08]
+SHOW USERS AS COMMANDS;                    // CREATE USER statements
+SHOW USERS WITH AUTH AS COMMANDS;          // + auth provider config and credentials
+SHOW ROLES AS COMMANDS;                    // CREATE ROLE statements
+SHOW ROLES WITH USERS AS COMMANDS;         // + GRANT ROLE ... TO user
+SHOW ROLES WITH AUTH RULES AS COMMANDS;    // + GRANT ROLE ... TO AUTH RULE
 ```
 
 ---

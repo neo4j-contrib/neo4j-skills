@@ -7,7 +7,7 @@ description: Build and configure a GraphQL API backed by Neo4j using @neo4j/grap
   Federation. Use when writing typeDefs, securing fields, or wiring Neo4j to Apollo Server.
   Does NOT handle raw Cypher outside resolvers — use neo4j-cypher-skill.
   Does NOT cover Spring Data Neo4j entity mapping — use neo4j-spring-data-skill.
-version: 1.0.4
+version: 1.0.5
 allowed-tools: Bash WebFetch
 ---
 
@@ -32,17 +32,16 @@ allowed-tools: Bash WebFetch
 
 | Version | Status | Notes |
 |---|---|---|
-| v7 | Current — use ≥ 7.6.0 | `@node` required; `options` removed; explicit `eq` syntax |
+| v7 | Current — use ≥ 7.6.2 | `@node` required; `options` removed; explicit `eq` syntax |
 | v5 | LTS — use ≥ 5.12.15 | Older syntax; `options: {limit, offset, sort}` still valid |
 
-Default to v7 unless codebase is on v5.
-
-Security patches — upgrade before shipping auth:
+Default to v7 unless codebase is on v5. Upgrade past these security patches before shipping auth:
 
 | Fix | Fixed in |
 |---|---|
 | Subscriptions accepted an unverified JWT from WebSocket `connectionParams` (auth/authz bypass) | 7.5.6 / 5.12.14 |
 | Field-level `@authentication` on a root custom-resolver field ignored when the operation type also had type-level `@authentication` (privilege escalation) | 7.6.0 / 5.12.15 |
+| `@authorization` rules not applied on create-relationship operations | 7.6.2 |
 
 ---
 
@@ -233,7 +232,7 @@ type User @node {
 
 ### @fulltext and @vector
 
-Index must exist in Cypher before use. Phrase-capable `@vector` indexes accept `maxPhraseLength` [7.6.0] to cap embedding cost. Full syntax, generated query shapes, provider config: [references/search-directives.md](references/search-directives.md).
+Index must exist in Cypher before use. Phrase-capable `@vector` indexes accept `maxPhraseLength` [7.6.0] to cap embedding cost. A `provider` without matching `features.vector` config fails at schema build [7.6.1]. Full syntax, generated query shapes, provider config: [references/search-directives.md](references/search-directives.md).
 
 ---
 
@@ -496,5 +495,5 @@ type Series @node @plural(value: "seriesList") { title: String! }  # irregular p
 - [ ] v7: `limit`/`sort` passed as direct query args (not `options` wrapper)
 - [ ] OGM: `await ogm.init()` called before any `ogm.model()` usage
 - [ ] Subscriptions: CDC enabled in FULL mode before enabling `features.subscriptions`
-- [ ] `@neo4j/graphql` ≥ 7.6.0 (v7) or ≥ 5.12.15 (LTS) — earlier versions have auth bypasses
+- [ ] `@neo4j/graphql` ≥ 7.6.2 (v7) or ≥ 5.12.15 (LTS) — earlier versions have auth bypasses
 - [ ] `.env` holds credentials; `.env` in `.gitignore`

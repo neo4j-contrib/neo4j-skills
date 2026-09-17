@@ -16,6 +16,7 @@
 | `datetime.time` | Time |
 | `datetime.timedelta` | Duration |
 | `neo4j.time.*` types | Corresponding Cypher temporal |
+| `uuid.UUID` [driver 6.3+] | UUID [Neo4j 2026.08+, Bolt 6.1] |
 
 Custom classes, dataclasses, Pydantic models, and enums are **not** auto-serialized — convert to `dict` or primitives first.
 
@@ -125,6 +126,21 @@ distance = records[0]["distance"]   # float64
 ```
 
 Pass points as parameters — serialized automatically. Read back via destructuring or `.x`/`.y`/`.z`.
+
+## UUID Type [driver 6.3+, Neo4j 2026.08+]
+
+```python
+import uuid
+
+records, _, _ = driver.execute_query(
+    "CREATE (s:Session {sessionId: $sid}) RETURN s.sessionId AS sessionId",
+    sid=uuid.uuid4(), database_="neo4j",
+)
+session_id = records[0]["sessionId"]   # uuid.UUID
+str(session_id)                        # '550e8400-e29b-41d4-a716-446655440000'
+```
+
+`ValueError: Values of type <class 'uuid.UUID'> are not supported (requires Bolt protocol version 6.1 or newer)` — server older than 2026.08 or driver older than 6.3. Fall back to `str(uuid.uuid4())` with Cypher `randomUUID()` STRING ids.
 
 ## Null Safety
 

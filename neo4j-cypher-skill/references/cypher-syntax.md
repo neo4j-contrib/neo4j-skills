@@ -352,6 +352,55 @@ string.regexReplace(original, regex, repl)  // regex replace all matches [2026.0
 
 All string functions return `null` when any argument is `null`.
 
+### String interpolation [2026.08, Cypher 25]
+
+```cypher
+WITH 'Keanu' AS firstName, 'Reeves' AS lastName
+RETURN s"{firstName} {lastName}" AS fullName          // "Keanu Reeves"
+
+WITH 42 AS age
+RETURN s'Age: {age}' AS result                        // toString() applied automatically
+
+RETURN s"Use \{curly\} braces" AS escaped             // literal braces
+WITH 'World' AS name
+RETURN s"Outer: {s'Inner, {name}!'}" AS nested        // "Outer: Inner, World!"
+```
+
+| Rule | Detail |
+|---|---|
+| Prefix | `s` or `S` before a single- or double-quoted literal |
+| Placeholder | `{expression}`, any number per literal |
+| Conversion | `toString()` on every embedded expression |
+| Rejected types | `MAP`, `LIST`, `NODE`, `PATH`, `RELATIONSHIP` (no `toString()` support) |
+| Escaping | `\{` and `\}` for literal braces |
+
+Injection risk: interpolating unsanitized values into Cypher text passed to `apoc.cypher.run()` or similar dynamic-Cypher procedures — pass `$parameters` instead.
+
+---
+
+## UUID Type and Functions [2026.08, Cypher 25, Enterprise]
+
+```cypher
+RETURN uuid() AS randomUUID                                    // random UUID, not cryptographic
+RETURN uuid('550e8400-e29b-41d4-a716-446655440000') AS fromStr // 32 hex digits, 8-4-4-4-12
+RETURN uuid(42, 42) AS fromInts                                // (mostSigBits, leastSigBits)
+
+WITH uuid('550e8400-e29b-41d4-a716-446655440000') AS id
+RETURN uuid.mostSignificantBits(id)  AS msb,                   // INTEGER, upper 64 bits
+       uuid.leastSignificantBits(id) AS lsb,                   // INTEGER, lower 64 bits
+       toString(id) AS asString
+
+CREATE (n:Session {sessionId: uuid($uuidString)})              // store as property
+```
+
+| Constraint | Detail |
+|---|---|
+| Storage | Block format only; Community Edition cannot store `UUID` properties |
+| Null args | `uuid(null)`, `uuid(42, null)`, `uuid.mostSignificantBits(null)` → `null` |
+| Version | Cypher does not guarantee a UUID version (RFC 9562) |
+| Drivers | Mapped to native client types from driver 6.2 (Python 6.3); older drivers return placeholder `MAP` + `03N95 Neo.ClientNotification.UnknownType` |
+| STRING ids | `randomUUID()` still returns a STRING — use it when the driver or edition cannot handle `UUID` |
+
 ---
 
 ## Introspection Functions
