@@ -378,7 +378,7 @@ RETURN s"Outer: {s'Inner, {name}!'}" AS nested        // "Outer: Inner, World!"
 | Rejected types | `MAP`, `LIST`, `NODE`, `PATH`, `RELATIONSHIP` (no `toString()` support) |
 | Escaping | `\{` and `\}` for literal braces |
 
-Injection risk: interpolating unsanitized values into Cypher text passed to `apoc.cypher.run()` or similar dynamic-Cypher procedures — pass `$parameters` instead.
+Injection risk: if query text itself is built with interpolation and passed to `apoc.cypher.run()` or similar dynamic-Cypher procedures, `$parameters` only protect data values. Keep labels, relationship types, and clauses static or whitelist them before interpolation.
 
 Pre-2026.08: `p.firstName + ' ' + p.lastName`, `+ toString(expr)`, or `string.join(...)`.
 

@@ -104,6 +104,8 @@ SHOW USERS AS COMMANDS;
 SHOW USERS WITH AUTH AS COMMANDS;   // includes auth provider config + credentials
 ```
 
+`SHOW USERS WITH AUTH AS COMMANDS` exposes credentials. Use only for secured backup/restore handling. Prefer `SHOW USERS AS COMMANDS` when auth material is not required. Never paste auth-export output into plaintext docs, logs, tickets, or source control.
+
 ### Drop user
 ```cypher
 DROP USER alice IF EXISTS;

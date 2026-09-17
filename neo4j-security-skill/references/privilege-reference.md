@@ -224,6 +224,8 @@ SHOW ROLES WITH USERS AS COMMANDS;         // + GRANT ROLE ... TO user
 SHOW ROLES WITH AUTH RULES AS COMMANDS;    // + GRANT ROLE ... TO AUTH RULE
 ```
 
+`SHOW USERS WITH AUTH AS COMMANDS` exposes credentials. Use only for secured backup/restore handling. Prefer `SHOW USERS AS COMMANDS` when auth material is not required. Never paste auth-export output into shell history, docs, tickets, or source control.
+
 ---
 
 ## Access Decision Rules
