@@ -227,7 +227,7 @@ CYPHER 25
 MATCH (sess:Session {sessionId: uuid($uuidString)})   // STRING 8-4-4-4-12 → UUID
 RETURN toString(sess.sessionId) AS sessionId, uuid.mostSignificantBits(sess.sessionId) AS msb
 ```
-Storing `UUID` properties requires block format (Aura default); Community Edition cannot store them. Drivers < 6.2 return a placeholder `MAP` plus warning `03N95 Neo.ClientNotification.UnknownType` — upgrade the driver or keep `randomUUID()` STRING ids.
+Storing `UUID` properties requires block format (Aura default); Community Edition cannot store them. Older drivers return a placeholder `MAP` plus warning `03N95 Neo.ClientNotification.UnknownType` — use driver >= 6.2, except Python which needs >= 6.3, or keep `randomUUID()` STRING ids.
 
 ### Spatial / Point
 ```cypher

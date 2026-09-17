@@ -251,7 +251,7 @@ GRANT MATCH {*} ON GRAPH mydb
 GRANT READ {*} ON GRAPH mydb FOR (n) WHERE 3 < n.securityLevel TO regularUsers;
 ```
 
-`value IN n.listProp` matches only when the property is a list containing the value — missing or scalar properties do not match; the left value must be non-null and not NaN. `n.prop IN [v1, v2]` remains the scalar-against-list form. Cypher 5 requires the property on the left of a comparison.
+`value IN n.listProp` matches only when the property is a list containing the value — missing or scalar properties do not match; the left value must be non-null and not NaN. `n.prop IN [v1, v2]` remains the scalar-against-list form. Pre-Cypher-25 syntax requires the property on the left of a comparison.
 
 **Constraints:**
 - `FOR` pattern applies to read privileges only — not write
