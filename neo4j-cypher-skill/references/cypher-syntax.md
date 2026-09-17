@@ -410,7 +410,7 @@ CREATE (n:Session {sessionId: uuid($uuidString)})              // store as prope
 
 | Constraint | Detail |
 |---|---|
-| Storage | `UUID` is a property type in Neo4j 2026.08+; verify edition/format support in the target deployment before storing `UUID` properties |
+| Storage | `UUID` is a property type in Neo4j 2026.08+ |
 | Null args | Any null argument yields `null`: `uuid(null)`, `uuid(null, 42)`, `uuid(42, null)`, `uuid.mostSignificantBits(null)` |
 | Drivers | Mapped to native client types from driver 6.2 (Python 6.3); older drivers return placeholder `MAP` + `03N95 Neo.ClientNotification.UnknownType` |
 | STRING ids | `randomUUID()` still returns a STRING — use it when the server version or driver cannot handle `UUID` |
