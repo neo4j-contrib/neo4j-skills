@@ -413,7 +413,7 @@ CREATE (n:Session {sessionId: uuid($uuidString)})              // store as prope
 | Null args | `uuid(null)`, `uuid(42, null)`, `uuid.mostSignificantBits(null)` → `null` |
 | Version | Cypher does not guarantee a UUID version (RFC 9562) |
 | Drivers | Mapped to native client types from driver 6.2 (Python 6.3); older drivers return placeholder `MAP` + `03N95 Neo.ClientNotification.UnknownType` |
-| STRING ids | `randomUUID()` still returns a STRING — use it when the driver or edition cannot handle `UUID` |
+| STRING ids | `randomUUID()` still returns a STRING — use it when the server version or driver cannot handle `UUID` |
 
 ---
 
