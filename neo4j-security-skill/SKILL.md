@@ -98,6 +98,10 @@ RETURN user, roles ORDER BY user;
 
 // tags column returns null without SHOW USER METADATA [2026.06+]
 SHOW USERS YIELD user, roles, tags;
+
+// runnable CREATE USER commands for the whole DBMS [2026.08]
+SHOW USERS AS COMMANDS;
+SHOW USERS WITH AUTH AS COMMANDS;   // includes auth provider config + credentials
 ```
 
 ### Drop user
@@ -128,6 +132,11 @@ REVOKE ROLE analyst FROM alice;
 SHOW ROLES YIELD role, member ORDER BY role;
 SHOW ROLE analyst PRIVILEGES AS COMMANDS;   // returns runnable GRANT commands
 SHOW POPULATED ROLES YIELD role;            // only roles with members
+
+// runnable CREATE ROLE commands for the whole DBMS [2026.08]
+SHOW ROLES AS COMMANDS;
+SHOW ROLES WITH USERS AS COMMANDS;          // adds GRANT ROLE ... TO user
+SHOW ROLES WITH AUTH RULES AS COMMANDS;     // adds GRANT ROLE ... TO AUTH RULE
 ```
 
 ---
@@ -228,16 +237,21 @@ DENY MATCH {*} ON GRAPH mydb
   FOR (n) WHERE n.classification <> 'UNCLASSIFIED'
   TO regularUsers;
 
-// List-property membership [2026.08]
+// List-valued property contains a value [2026.08, Cypher 25]
 GRANT MATCH {*} ON GRAPH mydb
   FOR (n) WHERE 'gold' IN n.clearanceLevels
   TO goldTier;
+GRANT READ {*} ON GRAPH mydb FOR (n) WHERE 'EU' IN n.regions TO regularUsers;
+GRANT MATCH {*} ON GRAPH mydb FOR (n) WHERE NOT 'EU' IN n.regions TO regularUsers;
 
-// Property on the right-hand side [2026.08]
+// Property on the right-hand side of a comparison [2026.08, Cypher 25]
 GRANT MATCH {*} ON GRAPH mydb
   FOR (n) WHERE 1 > n.level
   TO analyst;
+GRANT READ {*} ON GRAPH mydb FOR (n) WHERE 3 < n.securityLevel TO regularUsers;
 ```
+
+`value IN n.listProp` matches only when the property is a list containing the value — missing or scalar properties do not match; the left value must be non-null and not NaN. `n.prop IN [v1, v2]` remains the scalar-against-list form. Cypher 5 requires the property on the left of a comparison.
 
 **Constraints:**
 - `FOR` pattern applies to read privileges only — not write

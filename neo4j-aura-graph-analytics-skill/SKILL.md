@@ -85,9 +85,9 @@ pip install "graphdatascience>=1.15,<2"    # 1.22 is the current stable release
 
 2.0 minimums: GDS server 2.13, `neo4j` driver 5.26, pandas 2.x–3.x, pyarrow 21–25, numpy <3.
 
-2.0 additions: `GdsSessions.estimate(algorithms=[...])` for per-algorithm memory; `GdsSessions.get_or_create(show_progress=...)`; `gds.pipeline.get`; `overwrite=True` on `gds.graph.project` / `generate` / `construct` / `filter` / `sample` to drop a same-named graph first; `GdsSessions.delete(session_id=...)` returns `False` when nothing was deleted; `gds.fast_path` on sessions [2.0a5]; `aura_ds=` optional — client derives whether the DB is Aura-hosted.
+2.0 additions: `GdsSessions.estimate(algorithms=[...])` for per-algorithm memory; `GdsSessions.get_or_create(show_progress=...)`; `gds.pipeline.get`; `overwrite=True` on `gds.graph.project` / `generate` / `construct` / `filter` / `sample` to drop a same-named graph first; `GdsSessions.delete(session_id=...)` returns `False` when nothing was deleted; `gds.fast_path` exposed for GDS Sessions [`2.0a5`]; `aura_ds=` optional — client derives whether the DB is Aura-hosted.
 
-2.0 error surface [2.0a5]: unsupported Arrow endpoint version raises at `GraphDataScience(...)` construction — upgrade `graphdatascience`; expired session raises `RuntimeError` (warning only within 1h of expiry); session out-of-memory and other session failures report the session status, not a bare connection error; `GraphDataScience.close()` also closes the Arrow Flight client.
+2.0 error surface [2.0a5]: Arrow endpoint version is checked at client creation — unsupported version raises an error asking to upgrade `graphdatascience`. Getting an already-expired session raises `RuntimeError`; sessions expiring within the hour warn. Session out-of-memory and other session failures report the session status, not a bare connection error; `GraphDataScience.close()` also closes the Arrow Flight client.
 
 ---
 

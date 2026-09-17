@@ -33,9 +33,9 @@ pip install neo4j                  # package name is `neo4j`, NOT `neo4j-driver`
 pip install neo4j-rust-ext         # optional: 3–10× faster serialization, same API
 ```
 
-**Python >=3.10 required** for v6.x. Python 3.14 supported [6.1+]. Pandas 3 and PyArrow 23/24 supported [6.2+]; PyArrow 25 [6.3+].
+**Python >=3.10 required** for v6.x. Python 3.14 supported [6.1+]. Pandas 3 and PyArrow 23/24 supported [6.2+]. PyArrow 25 and Bolt 6.1 `uuid.UUID` values supported [6.3+]; driver-created SSL contexts honour `SSLKEYLOGFILE` [6.3+].
 
-6.3.0 [2026-08]: Bolt 6.1 — `uuid.UUID` maps to the Neo4j `UUID` type (Neo4j 2026.08+); driver-created SSL contexts honour `SSLKEYLOGFILE`. Require `neo4j>=6.3` to read `UUID` properties.
+Neo4j 2026.08+ `UUID` properties require `neo4j>=6.3` to round-trip as `uuid.UUID`.
 
 ---
 

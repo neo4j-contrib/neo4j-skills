@@ -10,7 +10,7 @@ description: Neo4j .NET Driver v6 — IDriver lifecycle, DI registration (single
   Does NOT cover driver version upgrades — use neo4j-migration-skill.
 compatibility: .NET 8, 9, 10; Neo4j.Driver v6
 allowed-tools: Bash WebFetch
-version: 1.0.6
+version: 1.0.7
 ---
 
 ## When to Use
@@ -325,6 +325,7 @@ if (record.Keys.Contains("city"))
 | `DateTime` | `ZonedDateTime` | `.ToDateTimeOffset()` (ms precision) |
 | `LocalDateTime` | `LocalDateTime` | |
 | `Duration` | `Duration` | `.ToTimeSpan()` throws if has months/days |
+| `UUID` | `System.Guid` | [driver 6.2+, Bolt 6.1, Neo4j 2026.08+]; object mapping also converts to/from `string` |
 | `null` | `null` | use nullable types |
 
 `ElementId` stable within one transaction only — do not use to MATCH across separate transactions.
