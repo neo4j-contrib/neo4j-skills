@@ -140,7 +140,7 @@ session_id = records[0]["sessionId"]   # uuid.UUID
 str(session_id)                        # '550e8400-e29b-41d4-a716-446655440000'
 ```
 
-`ValueError: Values of type <class 'uuid.UUID'> are not supported (requires Bolt protocol version 6.1 or newer)` — server older than 2026.08 or driver older than 6.3. If server is Neo4j 2026.08+, pass `str(uuid.uuid4())` and convert in Cypher with `uuid($sid)`. On older servers, keep STRING-typed ids instead, for example `sid=str(uuid.uuid4())` or Cypher `randomUUID()`.
+`ValueError: Values of type <class 'uuid.UUID'> are not supported (requires Bolt protocol version 6.1 or newer)` — server older than 2026.08 or driver older than 6.3. Use native UUID round-tripping only with Neo4j 2026.08+ and Python driver 6.3+. Otherwise keep STRING ids end-to-end, for example `sid=str(uuid.uuid4())` or Cypher `randomUUID()`.
 
 ## Null Safety
 
