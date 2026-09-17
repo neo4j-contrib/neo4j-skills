@@ -17,7 +17,6 @@
 | `datetime.timedelta` | Duration |
 | `uuid.UUID` | `UUID` [driver 6.3+, Neo4j 2026.08+; earlier: pass `str(uuid)`] |
 | `neo4j.time.*` types | Corresponding Cypher temporal |
-| `uuid.UUID` | UUID [driver 6.3+, Neo4j 2026.08 Enterprise] |
 
 ```python
 import uuid
