@@ -92,7 +92,7 @@ Supported predicate forms:
 | `n.prop = value`, `<>`, `>`, `>=`, `<`, `<=` | all | Scalar comparison, property on the left |
 | `value > n.prop` (property on the right) | 2026.08, Cypher 25 | Same comparison, operands reversed; stored canonically as property-on-left |
 | `n.prop IS NULL` / `IS NOT NULL` | all | Property presence |
-| `n.prop IN [v1, v2]` / `IN $listParam` | 5.26 | Scalar property matched against a list of values |
+| `n.prop IN [v1, v2]` / `IN $listParam` | all | Scalar property matched against a list of values |
 | `value IN n.listProp` / `NOT value IN n.listProp` | 2026.08, Cypher 25 | List-valued property contains (or omits) the value; missing or scalar property never matches |
 
 ```cypher

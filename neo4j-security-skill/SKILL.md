@@ -253,12 +253,12 @@ GRANT MATCH {*} ON GRAPH mydb
 GRANT READ {*} ON GRAPH mydb FOR (n) WHERE 3 < n.securityLevel TO regularUsers;
 ```
 
-- `value IN n.listProp` — list property contains value
-- Missing or scalar property — no match
-- Left value — non-null, not NaN
-- `n.prop IN [v1, v2]` — scalar-against-list
-- `SHOW PRIVILEGES AS COMMANDS` normalizes property-right predicates to property-left form
-- Pre-Cypher-25 — keep property on left side of comparison
+- Use `value IN n.listProp` only when the stored property is list-valued.
+- Treat missing or scalar properties as non-matches for `value IN n.listProp`.
+- Keep the left operand of `value IN n.listProp` as one concrete non-`null`, non-`NaN` value.
+- Use `n.prop IN [v1, v2]` or `n.prop IN $listParam` for scalar-against-list checks.
+- Expect `SHOW PRIVILEGES AS COMMANDS` to normalize property-right predicates back to property-left form.
+- On pre-Cypher-25 servers, keep the property on the left side of scalar comparisons.
 
 PBAC edge cases and export patterns → [references/privilege-reference.md](references/privilege-reference.md)
 
