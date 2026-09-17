@@ -216,7 +216,11 @@ CYPHER 25
 MATCH (p:Person {id: $id})
 RETURN s"Hello, {p.name}, age {p.age}" AS greeting   // S"..." and s'...' equivalent
 ```
-Each `{expr}` converted with `toString()` — `MAP`, `LIST`, `NODE`, `PATH`, `RELATIONSHIP` rejected. Literal braces escape as `\{` `\}`. Interpolated strings nest. Never interpolate untrusted values into Cypher text passed to `apoc.cypher.run*()` — pass `$parameters` instead.
+- Each `{expr}` converts with `toString()`
+- `MAP`, `LIST`, `NODE`, `PATH`, `RELATIONSHIP` rejected
+- Escape literal braces with `\{` and `\}`
+- Interpolated strings can nest
+- Never interpolate untrusted values into Cypher text passed to `apoc.cypher.run*()`; pass `$parameters` instead
 
 ### UUID type [2026.08, Cypher 25, Enterprise]
 ```cypher
