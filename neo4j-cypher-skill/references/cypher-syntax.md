@@ -393,7 +393,7 @@ uuid(mostSigBits :: INTEGER, leastSigBits :: INTEGER)   // UUID from two 64-bit 
 uuid.mostSignificantBits(u :: UUID)                     // INTEGER high half
 uuid.leastSignificantBits(u :: UUID)                    // INTEGER low half
 
-RETURN uuid() AS randomUUID                                    // random UUID, not cryptographic
+RETURN uuid() AS randomUUID                                    // random UUID value
 RETURN uuid('550e8400-e29b-41d4-a716-446655440000') AS fromStr // STRING input
 RETURN uuid(42, 42) AS fromInts                                // (mostSigBits, leastSigBits)
 
