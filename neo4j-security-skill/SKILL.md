@@ -253,12 +253,13 @@ GRANT MATCH {*} ON GRAPH mydb
 GRANT READ {*} ON GRAPH mydb FOR (n) WHERE 3 < n.securityLevel TO regularUsers;
 ```
 
-- `value IN n.listProp` matches only when the property is a list containing the value
-- Missing or scalar properties do not match
-- Left value must be non-null and not NaN
-- `n.prop IN [v1, v2]` remains the scalar-against-list form
-- Pre-Cypher-25 syntax requires the property on the left of a comparison
-- Full edge cases and export patterns → [references/privilege-reference.md](references/privilege-reference.md)
+- `value IN n.listProp` — list property contains value
+- Missing or scalar property — no match
+- Left value — non-null, not NaN
+- `n.prop IN [v1, v2]` — scalar-against-list
+- Pre-Cypher-25 — keep property on left side of comparison
+
+PBAC edge cases and export patterns → [references/privilege-reference.md](references/privilege-reference.md)
 
 **Constraints:**
 - `FOR` pattern applies to read privileges only — not write
