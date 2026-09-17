@@ -177,6 +177,8 @@ Each log entry includes: `{elapsedMs} ms: {query}` with optional params, allocat
 
 `LIMIT`/`SKIP` integer literals and `LOAD CSV ... FIELDTERMINATOR` strings appear unobfuscated [2026.08]; earlier releases masked them as sensitive literals.
 
+Sensitive workloads: review query-log enablement, retention, and access controls before relying on these logs — unobfuscated delimiters and query shapes may expose operational details.
+
 ---
 
 ## Page Cache Sizing
