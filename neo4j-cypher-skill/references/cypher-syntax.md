@@ -384,7 +384,7 @@ Pre-2026.08: `p.firstName + ' ' + p.lastName`, `+ toString(expr)`, or `string.jo
 
 ---
 
-## UUID Type and Functions [2026.08, Cypher 25, Enterprise]
+## UUID Type and Functions [2026.08, Cypher 25]
 
 ```cypher
 uuid()                                                  // random UUID value
@@ -409,7 +409,7 @@ CREATE (n:Session {sessionId: uuid($uuidString)})              // store as prope
 
 | Constraint | Detail |
 |---|---|
-| Storage | Block format only; Community Edition cannot store `UUID` properties |
+| Storage | `UUID` is a property type in Neo4j 2026.08+; Community and Enterprise can store `UUID` properties |
 | Null args | `uuid(null)`, `uuid(42, null)`, `uuid.mostSignificantBits(null)` → `null` |
 | Version | Cypher does not guarantee a UUID version (RFC 9562) |
 | Drivers | Mapped to native client types from driver 6.2 (Python 6.3); older drivers return placeholder `MAP` + `03N95 Neo.ClientNotification.UnknownType` |

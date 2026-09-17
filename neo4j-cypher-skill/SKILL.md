@@ -222,7 +222,7 @@ RETURN s"Hello, {p.name}, age {p.age}" AS greeting   // S"..." and s'...' equiva
 - Interpolated strings can nest
 - Never interpolate untrusted values into Cypher text passed to `apoc.cypher.run*()`; pass `$parameters` instead
 
-### UUID type [2026.08, Cypher 25, Enterprise]
+### UUID type [2026.08, Cypher 25]
 ```cypher
 CYPHER 25
 CREATE (sess:Session {sessionId: uuid()});            // random UUID value
@@ -231,7 +231,7 @@ CYPHER 25
 MATCH (sess:Session {sessionId: uuid($uuidString)})   // STRING 8-4-4-4-12 → UUID
 RETURN toString(sess.sessionId) AS sessionId, uuid.mostSignificantBits(sess.sessionId) AS msb
 ```
-Storing `UUID` properties requires block format (Aura default); Community Edition cannot store them. Older drivers return a placeholder `MAP` plus warning `03N95 Neo.ClientNotification.UnknownType` — use driver >= 6.2, except Python which needs >= 6.3, or keep `randomUUID()` STRING ids.
+`UUID` properties require Neo4j 2026.08+. Older drivers return a placeholder `MAP` plus warning `03N95 Neo.ClientNotification.UnknownType` — use driver >= 6.2, except Python which needs >= 6.3, or keep `randomUUID()` STRING ids.
 
 ### Spatial / Point
 ```cypher
@@ -364,7 +364,7 @@ Default to 2025.01-safe features when version unknown.
 | Aggregation functions in `ORDER BY`/`WHERE` that are not projection items (aggregating projection only) | 2026.07 | Project the aggregate as an alias, then order/filter on the alias |
 | `WHERE` after `YIELD` in procedure calls on the `system` database | 2026.07 | `YIELD` + `RETURN`, filter client-side |
 | String interpolation `s"...{expr}..."` / `S"…"` | 2026.08 | `+` concatenation with `toString()` or `string.join()` |
-| `UUID` type; `uuid()`, `uuid(name)`, `uuid(mostSigBits, leastSigBits)`, `uuid.mostSignificantBits()`, `uuid.leastSignificantBits()` | 2026.08, Enterprise + block format | `randomUUID()` STRING property |
+| `UUID` type; `uuid()`, `uuid(name)`, `uuid(mostSigBits, leastSigBits)`, `uuid.mostSignificantBits()`, `uuid.leastSignificantBits()` | 2026.08 | `randomUUID()` STRING property |
 | `null / 0` returns `null` instead of raising division-by-zero | 2026.08 | `CASE WHEN d = 0 THEN null ELSE n / d END` |
 
 ---
