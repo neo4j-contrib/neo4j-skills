@@ -402,8 +402,6 @@ WITH uuid('550e8400-e29b-41d4-a716-446655440000') AS id
 RETURN uuid.mostSignificantBits(id)  AS msb,                   // INTEGER, upper 64 bits
        uuid.leastSignificantBits(id) AS lsb,                   // INTEGER, lower 64 bits
        toString(id) AS asString
-
-MERGE (n:Session {sessionId: uuid($uuidString)})               // UUID property storage requires Enterprise + block format
 ```
 
 `UUID` is a distinct value type — not a `STRING`. `randomUUID()` still returns a `STRING`; keep it for keys that must stay STRING-typed or must work on < 2026.08.
@@ -414,6 +412,13 @@ MERGE (n:Session {sessionId: uuid($uuidString)})               // UUID property 
 | Null args | Any null argument yields `null`: `uuid(null)`, `uuid(null, 42)`, `uuid(42, null)`, `uuid.mostSignificantBits(null)` |
 | Drivers | Mapped to native client types from driver 6.2 (Python 6.3); older drivers return placeholder `MAP` + `03N95 Neo.ClientNotification.UnknownType` |
 | STRING ids | `randomUUID()` still returns a STRING — use it when the server version or driver cannot handle `UUID` |
+
+Enterprise + block format property-storage example:
+
+```cypher
+MERGE (n:Session {sessionId: uuid($uuidString)})
+RETURN toString(n.sessionId) AS sessionId
+```
 
 ---
 
