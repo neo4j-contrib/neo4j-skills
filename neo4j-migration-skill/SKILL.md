@@ -317,7 +317,7 @@ Full migration guide: [references/go-driver.md](references/go-driver.md)
 | 2026.01+ | Cypher 25 | Yes | `SEARCH` clause available |
 | 2026.07.0 | Cypher 25 | Yes | **Skip this patch** — block-format UTF-8 regression makes `trim()` fail queries and corrupt stored strings; upgrade target is 2026.07.1 |
 | 2026.08.0 | Cypher 25 | Yes | **Skip this patch** — regression causes unexpected query failures; upgrade target is 2026.08.1 |
-| 2026.08.1 | Cypher 25 | Yes | `UUID` type needs driver 6.2+ (Python 6.3+); older drivers return a placeholder map with notification `03N95` |
+| 2026.08.1 | Cypher 25 | Yes | Upgrade target. `UUID` type + string interpolation added; `UUID` properties require driver >= 6.2 (Python >= 6.3) — older drivers return placeholder `MAP` and warn `03N95`; 2026.08 bundles Java driver 6.2.1 |
 
 Server JVM: Java SE 21 and 25 supported; Java 21 support ends with the 2026 LTS release [2026.08] — move servers to Java 25 before upgrading past LTS. Driver minimums are unchanged (Java driver 6.x requires Java 21).
 

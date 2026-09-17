@@ -325,7 +325,7 @@ if (record.Keys.Contains("city"))
 | `DateTime` | `ZonedDateTime` | `.ToDateTimeOffset()` (ms precision) |
 | `LocalDateTime` | `LocalDateTime` | |
 | `Duration` | `Duration` | `.ToTimeSpan()` throws if has months/days |
-| `UUID` | `System.Guid` | [driver 6.2+] requires Neo4j 2026.08+ Enterprise; older drivers yield an unsupported-type placeholder |
+| `UUID` | `System.Guid` | [driver 6.2+, Bolt 6.1, Neo4j 2026.08+]; object mapping also converts to/from `string`; older drivers yield an unsupported-type placeholder |
 | `null` | `null` | use nullable types |
 
 `ElementId` stable within one transaction only — do not use to MATCH across separate transactions.

@@ -210,25 +210,30 @@ CYPHER 25 CREATE (a:Node)-[:$($relType)]->(b:Node)
 CYPHER 25 MATCH  (a:Node)-[:$($relType)]->(b:Node) RETURN a.name, b.name
 ```
 
-### UUID values [2026.08, Cypher 25]
-```cypher
-CYPHER 25
-CREATE (d:Doc {id: uuid()})          // random UUID value; not for cryptographic use
-RETURN toString(d.id) AS id
-
-CYPHER 25
-WITH uuid($uuidString) AS u          // 32 hex digits in 8-4-4-4-12 groups; uuid(msb, lsb) builds from two INTEGERs
-RETURN uuid.mostSignificantBits(u) AS msb, uuid.leastSignificantBits(u) AS lsb
-```
-Storing `UUID` properties requires Enterprise + block format (default on Aura); Community cannot store them. `randomUUID()` returns STRING, `uuid()` returns `UUID`. Drivers < 6.2 return a placeholder MAP plus `Neo.ClientNotification.UnknownType` (`03N95`) — upgrade the driver before returning `UUID` values.
-
 ### String interpolation [2026.08, Cypher 25]
 ```cypher
 CYPHER 25
 MATCH (p:Person {id: $id})
-RETURN s"Hello, {p.name} — age {p.age}" AS greeting   // every {expr} coerced with toString()
+RETURN s"Hello, {p.name}, age {p.age}" AS greeting   // S"..." and s'...' equivalent
 ```
-`s"…"` or `S'…'`; escape literal braces as `\{` `\}`; interpolated strings nest. MAP, LIST, NODE, PATH, RELATIONSHIP expressions rejected. Never interpolate untrusted values into Cypher strings passed to `apoc.cypher.run*` — use parameters.
+- Each `{expr}` converts with `toString()`
+- `MAP`, `LIST`, `NODE`, `PATH`, `RELATIONSHIP` rejected
+- Escape literal braces with `\{` and `\}`
+- Interpolated strings can nest
+- Never interpolate untrusted values into Cypher text passed to `apoc.cypher.run*()`; pass `$parameters` instead
+
+### UUID type [2026.08, Cypher 25]
+```cypher
+CYPHER 25
+CREATE (sess:Session {sessionId: uuid()});            // random UUID value; not for cryptographic use
+
+CYPHER 25
+WITH uuid($uuidString) AS sessionId                   // STRING 8-4-4-4-12 → UUID
+RETURN toString(sessionId) AS id,
+       uuid.mostSignificantBits(sessionId) AS msb,
+       uuid.leastSignificantBits(sessionId) AS lsb
+```
+`UUID` is distinct from `STRING`. `randomUUID()` stays STRING; use it until server and driver support lines up. Drivers < 6.2 (Python < 6.3) may return a placeholder `MAP` plus warning `03N95 Neo.ClientNotification.UnknownType`.
 
 ### Spatial / Point
 ```cypher
@@ -360,8 +365,9 @@ Default to 2025.01-safe features when version unknown.
 | `cardinality()` — keys in a MAP, elements in a LIST, nodes+rels in a PATH | 2026.07 | `size()` for LIST/MAP keys, `length()` for PATH |
 | Aggregation functions in `ORDER BY`/`WHERE` that are not projection items (aggregating projection only) | 2026.07 | Project the aggregate as an alias, then order/filter on the alias |
 | `WHERE` after `YIELD` in procedure calls on the `system` database | 2026.07 | `YIELD` + `RETURN`, filter client-side |
-| `UUID` type + `uuid()`, `uuid.mostSignificantBits()`, `uuid.leastSignificantBits()` (storage: Enterprise + block format) | 2026.08 | `randomUUID()` STRING property |
-| String interpolation `s"…{expr}…"` | 2026.08 | `+` concatenation with `toString()` |
+| String interpolation `s"...{expr}..."` / `S'...'` | 2026.08 | `+` concatenation with `toString()` or `string.join()` |
+| `UUID` type; `uuid()`, `uuid(name)`, `uuid(mostSigBits, leastSigBits)`, `uuid.mostSignificantBits()`, `uuid.leastSignificantBits()` | 2026.08 | `randomUUID()` STRING property |
+| `null / 0` returns `null` instead of raising division-by-zero | 2026.08 | `CASE WHEN d = 0 THEN null ELSE n / d END` |
 
 ---
 
@@ -410,7 +416,7 @@ Full anti-patterns → [references/performance.md](references/performance.md)
 
 Load on demand:
 - [references/indexes.md](references/indexes.md) — index types (RANGE/TEXT/FULLTEXT/POINT/COMPOSITE/LOOKUP), constraints, MERGE lock semantics, fulltext Lucene syntax, import pre-flight
-- [references/cypher-syntax.md](references/cypher-syntax.md) — full syntax reference: WITH, DELETE, ORDER BY, CASE, null, lists, strings, dates, spatial/point, LOAD CSV, subqueries, QPEs, dynamic labels, SEARCH; conditional CALL (WHEN/THEN/ELSE); label pattern expressions; allReduce; NEXT clause; compact CASE WHEN; normalize(); index/constraint types table; functions annotated with version introduced
+- [references/cypher-syntax.md](references/cypher-syntax.md) — full syntax reference: WITH, DELETE, ORDER BY, CASE, null, lists, strings, dates, spatial/point, LOAD CSV, subqueries, QPEs, dynamic labels, SEARCH; conditional CALL (WHEN/THEN/ELSE); label pattern expressions; allReduce; NEXT clause; compact CASE WHEN; normalize(); string interpolation; UUID type + `uuid()` functions [2026.08]; index/constraint types table; functions annotated with version introduced
 - [references/syntax-traps.md](references/syntax-traps.md) — 40+ syntax trap table
 - [references/performance.md](references/performance.md) — anti-patterns, text vs fulltext indexes, Eager (3 fix strategies), label inference, batching best practices, parallel runtime
 - [references/advanced-patterns.md](references/advanced-patterns.md) — REPEATABLE ELEMENTS patterns, allReduce stateful traversal, multi-stop QPE, route planning simulation, DAG critical path, temporal fraud detection component graph, cycle detection, OPTIONAL CALL

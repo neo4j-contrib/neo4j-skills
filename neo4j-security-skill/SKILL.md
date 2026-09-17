@@ -98,7 +98,13 @@ RETURN user, roles ORDER BY user;
 
 // tags column returns null without SHOW USER METADATA [2026.06+]
 SHOW USERS YIELD user, roles, tags;
+
+// runnable CREATE USER commands for the whole DBMS [2026.08]
+SHOW USERS AS COMMANDS;
+SHOW USERS WITH AUTH AS COMMANDS;   // includes auth provider config + credentials
 ```
+
+`SHOW USERS WITH AUTH AS COMMANDS` exposes credentials. Use only for secured backup/restore handling. Prefer `SHOW USERS AS COMMANDS` when auth material is not required. Never paste auth-export output into plaintext docs, logs, tickets, or source control.
 
 ### Drop user
 ```cypher
@@ -128,6 +134,11 @@ REVOKE ROLE analyst FROM alice;
 SHOW ROLES YIELD role, member ORDER BY role;
 SHOW ROLE analyst PRIVILEGES AS COMMANDS;   // returns runnable GRANT commands
 SHOW POPULATED ROLES YIELD role;            // only roles with members
+
+// runnable CREATE ROLE commands for the whole DBMS [2026.08]
+SHOW ROLES AS COMMANDS;
+SHOW ROLES WITH USERS AS COMMANDS;          // adds GRANT ROLE ... TO user
+SHOW ROLES WITH AUTH RULES AS COMMANDS;     // adds GRANT ROLE ... TO AUTH RULE
 ```
 
 ---
@@ -228,19 +239,33 @@ DENY MATCH {*} ON GRAPH mydb
   FOR (n) WHERE n.classification <> 'UNCLASSIFIED'
   TO regularUsers;
 
-// Value contained in a list-valued property [2026.08, Cypher 25]
-GRANT READ {*} ON GRAPH * FOR (n) WHERE 'EU' IN n.regions TO regularUsers;
-GRANT MATCH {*} ON GRAPH * FOR (n) WHERE NOT 'EU' IN n.regions TO regularUsers;
+// List-valued property contains a value [2026.08, Cypher 25]
+GRANT MATCH {*} ON GRAPH mydb
+  FOR (n) WHERE 'gold' IN n.clearanceLevels
+  TO goldTier;
+GRANT READ {*} ON GRAPH mydb FOR (n) WHERE 'EU' IN n.regions TO regularUsers;
+GRANT MATCH {*} ON GRAPH mydb FOR (n) WHERE NOT 'EU' IN n.regions TO regularUsers;
 
-// Property on the right of a scalar comparison [2026.08, Cypher 25]
-GRANT READ {*} ON GRAPH * FOR (n) WHERE 3 < n.securityLevel TO regularUsers;
+// Property on the right-hand side of a comparison [2026.08, Cypher 25]
+GRANT MATCH {*} ON GRAPH mydb
+  FOR (n) WHERE 1 > n.level
+  TO analyst;
+GRANT READ {*} ON GRAPH mydb FOR (n) WHERE 3 < n.securityLevel TO regularUsers;
 ```
 
-`value IN n.listProp` matches only when the property is a list containing the value — a missing or scalar property never matches. Property-on-the-right is stored and listed in canonical property-on-the-left form (`SHOW PRIVILEGES AS COMMANDS` returns `n.securityLevel > 3`).
+- `value IN n.listProp` — list property contains value
+- Missing or scalar property — no match
+- Left value — non-null, not NaN
+- `n.prop IN [v1, v2]` — scalar-against-list
+- `SHOW PRIVILEGES AS COMMANDS` normalizes property-right predicates to property-left form
+- Pre-Cypher-25 — keep property on left side of comparison
+
+PBAC edge cases and export patterns → [references/privilege-reference.md](references/privilege-reference.md)
 
 **Constraints:**
 - `FOR` pattern applies to read privileges only — not write
 - Each property-based privilege restricted by a single property
+- Pre-2026.08: list membership and property-on-RHS predicates are rejected — invert to `n.prop <op> <literal>` or maintain a scalar flag property
 - Performance overhead scales with number of rules; `TRAVERSE` rules cost more than `READ`
 - Ensure the property used for rules cannot be modified by the restricted role
 

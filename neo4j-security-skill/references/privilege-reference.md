@@ -73,24 +73,36 @@ DENY MATCH {*} ON GRAPH mydb
 GRANT READ { address } ON GRAPH *
   FOR (n:Email|Website) WHERE n.domain = 'example.com'
   TO regularUsers;
+
+// Value present in a LIST property [2026.08]
+GRANT MATCH {*} ON GRAPH mydb
+  FOR (n:Document) WHERE 'gold' IN n.clearanceLevels
+  TO goldTier;
+
+// Property on the right-hand side of the comparison [2026.08]
+GRANT MATCH {*} ON GRAPH mydb
+  FOR (n:Document) WHERE 1 > n.level
+  TO analyst;
 ```
 
 Supported predicate forms:
 
-| Form | Version |
-|---|---|
-| `n.prop {= \| <> \| > \| >= \| < \| <=} value` | all |
-| `n.prop IS [NOT] NULL` | all |
-| `n.prop IN [v1, v2]` / `n.prop IN $listParam` — scalar property against a list of values | all |
-| `value {= \| <> \| > \| >= \| < \| <=} n.prop` — property on the right; operator mirrored, stored canonically property-on-left | 2026.08, Cypher 25 |
-| `value IN n.listProp` — list-valued property contains value; negate with `NOT value IN n.listProp`; no match when the property is missing or scalar | 2026.08, Cypher 25 |
+| Form | Version | Semantics |
+|---|---|---|
+| `n.prop = value`, `<>`, `>`, `>=`, `<`, `<=` | all | Scalar comparison, property on the left |
+| `value > n.prop` (property on the right) | 2026.08, Cypher 25 | Same comparison, operands reversed; stored canonically as property-on-left |
+| `n.prop IS NULL` / `IS NOT NULL` | all | Property presence |
+| `n.prop IN [v1, v2]` / `IN $listParam` | 5.26 | Scalar property matched against a list of values |
+| `value IN n.listProp` / `NOT value IN n.listProp` | 2026.08, Cypher 25 | List-valued property contains (or omits) the value; missing or scalar property never matches |
 
 ```cypher
-GRANT READ {*} ON GRAPH * FOR (n) WHERE 3 < n.securityLevel TO regularUsers;
 GRANT READ {*} ON GRAPH * FOR (n) WHERE 'EU' IN n.regions TO regularUsers;
+GRANT MATCH {*} ON GRAPH * FOR ()-[r]-() WHERE NOT 'EU' IN r.regions TO regularUsers;
+GRANT READ {*} ON GRAPH * FOR (n) WHERE 1 > n.level TO regularUsers;
 DENY MATCH {*} ON GRAPH * FOR (n) WHERE NOT 'EU' IN n.regions TO regularUsers;
 ```
 
+`value IN n.listProp` does not match when the property is missing or holds a scalar; the left operand must be a single non-null, non-NaN value. `SHOW PRIVILEGES AS COMMANDS` normalizes property-right predicates to property-left form.
 ### Property-based read on Infinigraph [2026.07, not on Aura]
 
 `READ` is the only PBAC privilege supported on sharded property databases; grant it on the virtual database — granting on a shard is rejected.
@@ -204,6 +216,18 @@ SHOW ROLE analyst PRIVILEGES AS COMMANDS;
 SHOW ROLE analyst PRIVILEGES YIELD privilege, action, resource, graph, segment
 WHERE action = 'read';
 ```
+
+Recreate users and roles from a running DBMS [2026.08]:
+
+```cypher
+SHOW USERS AS COMMANDS;                    // CREATE USER statements
+SHOW USERS WITH AUTH AS COMMANDS;          // + auth provider config and credentials
+SHOW ROLES AS COMMANDS;                    // CREATE ROLE statements
+SHOW ROLES WITH USERS AS COMMANDS;         // + GRANT ROLE ... TO user
+SHOW ROLES WITH AUTH RULES AS COMMANDS;    // + GRANT ROLE ... TO AUTH RULE
+```
+
+`SHOW USERS WITH AUTH AS COMMANDS` exposes credentials. Use only for secured backup/restore handling. Prefer `SHOW USERS AS COMMANDS` when auth material is not required. Never paste auth-export output into shell history, docs, tickets, or source control.
 
 ---
 

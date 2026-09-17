@@ -399,7 +399,7 @@ await driver.executeQuery(
 ## References
 
 Load on demand:
-- [references/data-types.md](references/data-types.md) — full type mapping table, temporal types, graph types (Node/Relationship/Path), spatial types (Point/WGS-84/Cartesian), `UUID` via `neo4j.uuid()` [6.2+], `toNative()` conversion helper
+- [references/data-types.md](references/data-types.md) — full type mapping table, temporal types, graph types (Node/Relationship/Path), spatial types (Point/WGS-84/Cartesian), `neo4j.UUID` values via `neo4j.uuid()` [6.2+], `toNative()` conversion helper
 - [references/advanced-patterns.md](references/advanced-patterns.md) — explicit transactions, causal consistency/bookmarks, connection pool tuning, result transformers, lazy streaming, repository pattern
 - [references/browser-usage.md](references/browser-usage.md) — WebSocket URIs, CORS, bundler config, security guidance
 - [references/rxjs-session.md](references/rxjs-session.md) — RxJS session API (`rxSession.run()`, observable patterns)

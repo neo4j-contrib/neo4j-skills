@@ -64,9 +64,18 @@ pip install "graphdatascience[rust_ext]<2"  # 3–10× faster serialization
 ```
 
 Compatibility: graphdatascience v1.22 — GDS >= 2.6 and < 2.28 / < 2026.6, Python >= 3.10 and < 3.15, Neo4j Driver >= 4.4.12 and < 7.0. GDS server 2026.06+ falls outside that range — call GDS from Cypher, or use the 2.0 pre-release client.
-graphdatascience 2.0 is alpha (`pip install --pre graphdatascience`, latest `2.0a6`): `gds.v2` prefix removed and those endpoints become the only API, untyped 1.x endpoints deleted, `GraphV2`/`ModelV2` renamed to `Graph`/`Model`, minimum GDS server 2.13 and Neo4j Python driver 5.26 (4.4 dropped), pandas 2.x–3.x, pyarrow 21–25, `overwrite=True` on projection/construct/filter/sample endpoints, `gds.pipeline.get`, FastPath preview. Pin `graphdatascience<2` for production.
+graphdatascience 2.0 is alpha (`pip install --pre graphdatascience`, latest `2.0a6`).
+- Pin `graphdatascience<2` for production
+- `gds.v2` prefix removed; those endpoints become the only API
+- Untyped 1.x endpoints deleted
+- `GraphV2` / `ModelV2` renamed to `Graph` / `Model`
+- `failIfMissing` → `fail_if_missing` on `Graph.drop` / `Model.drop`
+- `ServerVersion` / `SemanticVersion` moved to `graphdatascience.versions`
+- Minimums: GDS server 2.13, Neo4j Python driver 5.26, pandas >= 2.0 (3.x supported), pyarrow 21–25
+- Additions: `overwrite=True` on projection / construct / filter / sample endpoints, `gds.pipeline.get`, FastPath preview
+- Migration guide: [Neo4j GDS Python client 2.0 migration](https://neo4j.com/docs/graph-data-science-client/current/migration-from-1x/)
 
-`gds.userLog` removed [GDS 2026.07] — track running jobs with `CALL gds.listProgress(jobId, showCompleted)`; hints and warnings only reach the Neo4j debug log and query notifications.
+GDS plugin `2026.07.0` removed `CALL gds.userLog()` — read hints and warnings from driver result summary notifications or the Neo4j debug log; track task progress with `CALL gds.listProgress(jobId, showCompleted)`.
 
 V2 rules:
 - Prefer `gds.v2.*` when endpoint exists.
