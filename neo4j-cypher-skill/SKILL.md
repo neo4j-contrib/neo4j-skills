@@ -231,7 +231,7 @@ CYPHER 25
 MATCH (sess:Session {sessionId: uuid($uuidString)})   // STRING 8-4-4-4-12 → UUID
 RETURN toString(sess.sessionId) AS sessionId, uuid.mostSignificantBits(sess.sessionId) AS msb
 ```
-`UUID` properties require Neo4j 2026.08+. Older drivers return a placeholder `MAP` plus warning `03N95 Neo.ClientNotification.UnknownType` — use driver >= 6.2, except Python which needs >= 6.3, or keep `randomUUID()` STRING ids.
+`UUID` properties require Neo4j 2026.08+. Older drivers may return a placeholder `MAP` plus warning `03N95 Neo.ClientNotification.UnknownType` — check the per-driver skill for exact support (`neo4j-driver-python-skill` needs >= 6.3); otherwise keep `randomUUID()` STRING ids.
 
 ### Spatial / Point
 ```cypher
