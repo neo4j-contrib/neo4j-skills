@@ -140,7 +140,7 @@ session_id = records[0]["sessionId"]   # uuid.UUID
 str(session_id)                        # '550e8400-e29b-41d4-a716-446655440000'
 ```
 
-`ValueError: Values of type <class 'uuid.UUID'> are not supported (requires Bolt protocol version 6.1 or newer)` — server older than 2026.08 or driver older than 6.3. Fall back to `str(uuid.uuid4())` with Cypher `randomUUID()` STRING ids.
+`ValueError: Values of type <class 'uuid.UUID'> are not supported (requires Bolt protocol version 6.1 or newer)` — server older than 2026.08 or driver older than 6.3. If server is 2026.08+, pass `str(uuid.uuid4())` and convert in Cypher with `uuid($sid)`. Otherwise keep STRING-typed ids with Cypher `randomUUID()`.
 
 ## Null Safety
 
