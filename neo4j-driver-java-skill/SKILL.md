@@ -8,7 +8,7 @@ description: Neo4j Java Driver v6 — driver lifecycle, Maven/Gradle setup, exec
   Does NOT handle Cypher authoring — use neo4j-cypher-skill.
   Does NOT cover driver version upgrades — use neo4j-migration-skill.
   Does NOT cover Spring Data Neo4j (@Node, Neo4jRepository) — use neo4j-spring-data-skill.
-version: 1.0.10
+version: 1.0.11
 allowed-tools: Bash WebFetch
 ---
 
@@ -44,7 +44,9 @@ implementation 'org.neo4j.driver:neo4j-java-driver:6.2.1'
 Check latest: https://central.sonatype.com/artifact/org.neo4j.driver/neo4j-java-driver
 
 6.2.0 [2026-06]: Neo4j `UUID` type + Bolt 6.1 support; `QueryProfile` in result summary.
-6.2.1 [2026-08]: fixes `Value#asObject()` on `UUID` values — required if reading UUID properties generically. Neo4j 2026.07 server bundles 6.2.0.
+6.2.1 [2026-08]: fixes `Value#asObject()` on `UUID` values — required if reading UUID properties generically. Neo4j 2026.08 server bundles 6.2.1; 2026.07 bundles 6.2.0.
+
+Server-side `UUID` type and `uuid()` constructors ship in Neo4j 2026.08 — use driver >= 6.2.1 against those servers.
 
 ---
 
@@ -276,6 +278,7 @@ Managed transactions auto-retry `TransientException` — no catch needed.
 | `Relationship` | `value.asRelationship()` |
 | `Date` | `value.asLocalDate()` |
 | `DateTime` | `value.asZonedDateTime()` |
+| `UUID` | `value.asUUID()` → `java.util.UUID` [6.2+, Neo4j 2026.08+] |
 
 ```java
 var record = result.records().get(0);

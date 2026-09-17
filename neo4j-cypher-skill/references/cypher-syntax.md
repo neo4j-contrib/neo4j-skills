@@ -266,6 +266,8 @@ RETURN coalesce(n.nickname, n.name) AS displayName
 
 `collect()` and aggregation functions ignore null values. `null = null` is `null` (not `true`). `WHERE` treats `null` as `false`.
 
+`null / 0` returns `null` [fixed 2026.08; earlier releases raised division-by-zero]. Guard divisors before 2026.08: `CASE WHEN d = 0 THEN null ELSE n / d END`.
+
 ---
 
 ## Type Coercion
@@ -341,7 +343,7 @@ trim(s) / ltrim(s) / rtrim(s)             // strip whitespace; btrim(s, 'xy') st
 split(s, delimiter)                         // returns LIST<STRING>
 substring(s, start, length)                // 0-indexed; length optional
 left(s, n) / right(s, n)                   // first/last n characters
-replace(s, search, replacement)            // replace all occurrences
+replace(s, search, replacement[, limit])   // replace all occurrences; limit caps replacements [limit: Cypher 25]
 size(s)                                     // character count (same as char_length)
 reverse(s)                                  // reverse string
 toString(x) / toStringOrNull(x)            // convert any type to STRING
@@ -353,6 +355,8 @@ string.regexReplace(original, regex, repl)  // regex replace all matches [2026.0
 All string functions return `null` when any argument is `null`.
 
 ### String interpolation [2026.08, Cypher 25]
+
+`s"…"` / `S"…"` STRING literal embeds expressions wrapped in `{}`:
 
 ```cypher
 WITH 'Keanu' AS firstName, 'Reeves' AS lastName
@@ -374,15 +378,23 @@ RETURN s"Outer: {s'Inner, {name}!'}" AS nested        // "Outer: Inner, World!"
 | Rejected types | `MAP`, `LIST`, `NODE`, `PATH`, `RELATIONSHIP` (no `toString()` support) |
 | Escaping | `\{` and `\}` for literal braces |
 
-Injection risk: interpolating unsanitized values into Cypher text passed to `apoc.cypher.run()` or similar dynamic-Cypher procedures — pass `$parameters` instead.
+Injection risk: if query text itself is built with interpolation and passed to `apoc.cypher.run()` or similar dynamic-Cypher procedures, `$parameters` only protect data values. Keep labels, relationship types, and clauses static or whitelist them before interpolation.
+
+Pre-2026.08: `p.firstName + ' ' + p.lastName`, `+ toString(expr)`, or `string.join(...)`.
 
 ---
 
-## UUID Type and Functions [2026.08, Cypher 25, Enterprise]
+## UUID Type and Functions [2026.08, Cypher 25]
 
 ```cypher
-RETURN uuid() AS randomUUID                                    // random UUID, not cryptographic
-RETURN uuid('550e8400-e29b-41d4-a716-446655440000') AS fromStr // 32 hex digits, 8-4-4-4-12
+uuid()                                                  // random UUID value
+uuid(name :: STRING)                                    // UUID from STRING input
+uuid(mostSigBits :: INTEGER, leastSigBits :: INTEGER)   // UUID from two 64-bit halves
+uuid.mostSignificantBits(u :: UUID)                     // INTEGER high half
+uuid.leastSignificantBits(u :: UUID)                    // INTEGER low half
+
+RETURN uuid() AS randomUUID                                    // random UUID value
+RETURN uuid('550e8400-e29b-41d4-a716-446655440000') AS fromStr // STRING input
 RETURN uuid(42, 42) AS fromInts                                // (mostSigBits, leastSigBits)
 
 WITH uuid('550e8400-e29b-41d4-a716-446655440000') AS id
@@ -393,13 +405,14 @@ RETURN uuid.mostSignificantBits(id)  AS msb,                   // INTEGER, upper
 CREATE (n:Session {sessionId: uuid($uuidString)})              // store as property
 ```
 
+`UUID` is a distinct value type — not a `STRING`. `randomUUID()` still returns a `STRING`; keep it for keys that must stay STRING-typed or must work on < 2026.08.
+
 | Constraint | Detail |
 |---|---|
-| Storage | Block format only; Community Edition cannot store `UUID` properties |
-| Null args | `uuid(null)`, `uuid(42, null)`, `uuid.mostSignificantBits(null)` → `null` |
-| Version | Cypher does not guarantee a UUID version (RFC 9562) |
+| Storage | `UUID` is a property type in Neo4j 2026.08+; Community and Enterprise can store `UUID` properties |
+| Null args | Any null argument yields `null`: `uuid(null)`, `uuid(null, 42)`, `uuid(42, null)`, `uuid.mostSignificantBits(null)` |
 | Drivers | Mapped to native client types from driver 6.2 (Python 6.3); older drivers return placeholder `MAP` + `03N95 Neo.ClientNotification.UnknownType` |
-| STRING ids | `randomUUID()` still returns a STRING — use it when the driver or edition cannot handle `UUID` |
+| STRING ids | `randomUUID()` still returns a STRING — use it when the server version or driver cannot handle `UUID` |
 
 ---
 

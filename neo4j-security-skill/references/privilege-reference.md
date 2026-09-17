@@ -73,6 +73,16 @@ DENY MATCH {*} ON GRAPH mydb
 GRANT READ { address } ON GRAPH *
   FOR (n:Email|Website) WHERE n.domain = 'example.com'
   TO regularUsers;
+
+// Value present in a LIST property [2026.08]
+GRANT MATCH {*} ON GRAPH mydb
+  FOR (n:Document) WHERE 'gold' IN n.clearanceLevels
+  TO goldTier;
+
+// Property on the right-hand side of the comparison [2026.08]
+GRANT MATCH {*} ON GRAPH mydb
+  FOR (n:Document) WHERE 1 > n.level
+  TO analyst;
 ```
 
 Supported predicate forms:
@@ -205,14 +215,19 @@ SHOW ROLE analyst PRIVILEGES AS COMMANDS;
 
 SHOW ROLE analyst PRIVILEGES YIELD privilege, action, resource, graph, segment
 WHERE action = 'read';
+```
 
-// Recreate users and roles from a running DBMS [2026.08]
+Recreate users and roles from a running DBMS [2026.08]:
+
+```cypher
 SHOW USERS AS COMMANDS;                    // CREATE USER statements
 SHOW USERS WITH AUTH AS COMMANDS;          // + auth provider config and credentials
 SHOW ROLES AS COMMANDS;                    // CREATE ROLE statements
 SHOW ROLES WITH USERS AS COMMANDS;         // + GRANT ROLE ... TO user
 SHOW ROLES WITH AUTH RULES AS COMMANDS;    // + GRANT ROLE ... TO AUTH RULE
 ```
+
+`SHOW USERS WITH AUTH AS COMMANDS` exposes credentials. Use only for secured backup/restore handling. Prefer `SHOW USERS AS COMMANDS` when auth material is not required. Never paste auth-export output into shell history, docs, tickets, or source control.
 
 ---
 

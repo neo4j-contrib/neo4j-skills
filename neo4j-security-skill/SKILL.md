@@ -104,6 +104,8 @@ SHOW USERS AS COMMANDS;
 SHOW USERS WITH AUTH AS COMMANDS;   // includes auth provider config + credentials
 ```
 
+`SHOW USERS WITH AUTH AS COMMANDS` exposes credentials. Use only for secured backup/restore handling. Prefer `SHOW USERS AS COMMANDS` when auth material is not required. Never paste auth-export output into plaintext docs, logs, tickets, or source control.
+
 ### Drop user
 ```cypher
 DROP USER alice IF EXISTS;
@@ -238,18 +240,31 @@ DENY MATCH {*} ON GRAPH mydb
   TO regularUsers;
 
 // List-valued property contains a value [2026.08, Cypher 25]
+GRANT MATCH {*} ON GRAPH mydb
+  FOR (n) WHERE 'gold' IN n.clearanceLevels
+  TO goldTier;
 GRANT READ {*} ON GRAPH mydb FOR (n) WHERE 'EU' IN n.regions TO regularUsers;
 GRANT MATCH {*} ON GRAPH mydb FOR (n) WHERE NOT 'EU' IN n.regions TO regularUsers;
 
 // Property on the right-hand side of a comparison [2026.08, Cypher 25]
+GRANT MATCH {*} ON GRAPH mydb
+  FOR (n) WHERE 1 > n.level
+  TO analyst;
 GRANT READ {*} ON GRAPH mydb FOR (n) WHERE 3 < n.securityLevel TO regularUsers;
 ```
 
-`value IN n.listProp` matches only when the property is a list containing the value — missing or scalar properties do not match; the left value must be non-null and not NaN. `n.prop IN [v1, v2]` remains the scalar-against-list form. Cypher 5 requires the property on the left of a comparison.
+- `value IN n.listProp` — list property contains value
+- Missing or scalar property — no match
+- Left value — non-null, not NaN
+- `n.prop IN [v1, v2]` — scalar-against-list
+- Pre-Cypher-25 — keep property on left side of comparison
+
+PBAC edge cases and export patterns → [references/privilege-reference.md](references/privilege-reference.md)
 
 **Constraints:**
 - `FOR` pattern applies to read privileges only — not write
 - Each property-based privilege restricted by a single property
+- Pre-2026.08: list membership and property-on-RHS predicates are rejected — invert to `n.prop <op> <literal>` or maintain a scalar flag property
 - Performance overhead scales with number of rules; `TRAVERSE` rules cost more than `READ`
 - Ensure the property used for rules cannot be modified by the restricted role
 

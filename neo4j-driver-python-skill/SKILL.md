@@ -35,6 +35,8 @@ pip install neo4j-rust-ext         # optional: 3–10× faster serialization, sa
 
 **Python >=3.10 required** for v6.x. Python 3.14 supported [6.1+]. Pandas 3 and PyArrow 23/24 supported [6.2+]. PyArrow 25 and Bolt 6.1 `uuid.UUID` values supported [6.3+]; driver-created SSL contexts honour `SSLKEYLOGFILE` [6.3+].
 
+Neo4j 2026.08+ `UUID` properties require `neo4j>=6.3` to round-trip as `uuid.UUID`.
+
 ---
 
 ## Environment Variables

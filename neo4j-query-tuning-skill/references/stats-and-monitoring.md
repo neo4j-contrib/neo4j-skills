@@ -175,6 +175,8 @@ db.logs.query.page_logging_enabled=true
 
 Each log entry includes: `{elapsedMs} ms: {query}` with optional params, allocated bytes, page hits/misses.
 
+`LIMIT`/`SKIP` integer literals and `LOAD CSV ... FIELDTERMINATOR` strings appear unobfuscated [2026.08]; earlier releases masked them as sensitive literals.
+
 ---
 
 ## Page Cache Sizing

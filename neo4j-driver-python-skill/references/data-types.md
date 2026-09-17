@@ -15,8 +15,8 @@
 | `datetime.datetime` | DateTime |
 | `datetime.time` | Time |
 | `datetime.timedelta` | Duration |
+| `uuid.UUID` | `UUID` [driver 6.3+, Neo4j 2026.08+; earlier: pass `str(uuid)`] |
 | `neo4j.time.*` types | Corresponding Cypher temporal |
-| `uuid.UUID` [driver 6.3+] | UUID [Neo4j 2026.08+, Bolt 6.1] |
 
 Custom classes, dataclasses, Pydantic models, and enums are **not** auto-serialized — convert to `dict` or primitives first.
 
@@ -140,7 +140,7 @@ session_id = records[0]["sessionId"]   # uuid.UUID
 str(session_id)                        # '550e8400-e29b-41d4-a716-446655440000'
 ```
 
-`ValueError: Values of type <class 'uuid.UUID'> are not supported (requires Bolt protocol version 6.1 or newer)` — server older than 2026.08 or driver older than 6.3. Fall back to `str(uuid.uuid4())` with Cypher `randomUUID()` STRING ids.
+`ValueError: Values of type <class 'uuid.UUID'> are not supported (requires Bolt protocol version 6.1 or newer)` — server older than 2026.08 or driver older than 6.3. Use native UUID round-tripping only with Neo4j 2026.08+ and Python driver 6.3+. Otherwise keep STRING ids end-to-end, for example `sid=str(uuid.uuid4())` or Cypher `randomUUID()`.
 
 ## Null Safety
 
