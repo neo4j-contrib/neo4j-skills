@@ -40,7 +40,7 @@ Spider traps (closed groups, no outlinks) inflate scores — increase `dampingFa
 | K-Core Decomposition | `gds.kcore` | Dense subgraphs by degree threshold |
 | Triangle Count | `gds.triangleCount` | Counts triangles per node; prerequisite for LCC |
 | Local Clustering Coefficient | `gds.localClusteringCoefficient` | Ratio of closed triangles |
-| K-Means | `gds.kmeans` | Requires node embedding properties as input |
+| K-Means | `gds.kmeans` | Requires node embedding properties as input; `computeSilhouette` + `numberOfRestarts` together fail before GDS 2026.08.1 |
 | HDBSCAN | `gds.hdbscan` | Density-based; finds variable-density communities |
 
 ### WCC parameters
