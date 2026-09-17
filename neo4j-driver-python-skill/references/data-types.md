@@ -143,7 +143,7 @@ Pass points as parameters — serialized automatically. Read back via destructur
 import uuid
 
 records, _, _ = driver.execute_query(
-    "CREATE (s:Session {sessionId: $sid}) RETURN s.sessionId AS sessionId",
+    "MERGE (s:Session {sessionId: $sid}) RETURN s.sessionId AS sessionId",
     sid=uuid.uuid4(), database_="neo4j",
 )
 session_id = records[0]["sessionId"]   # uuid.UUID
