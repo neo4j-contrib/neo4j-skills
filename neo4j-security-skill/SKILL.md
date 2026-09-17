@@ -258,6 +258,7 @@ GRANT READ {*} ON GRAPH mydb FOR (n) WHERE 3 < n.securityLevel TO regularUsers;
 - Left value must be non-null and not NaN
 - `n.prop IN [v1, v2]` remains the scalar-against-list form
 - Pre-Cypher-25 syntax requires the property on the left of a comparison
+- Full edge cases and export patterns → [references/privilege-reference.md](references/privilege-reference.md)
 
 **Constraints:**
 - `FOR` pattern applies to read privileges only — not write

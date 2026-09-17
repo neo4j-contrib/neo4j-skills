@@ -73,7 +73,7 @@ graphdatascience 2.0 is alpha (`pip install --pre graphdatascience`, latest `2.0
 - `ServerVersion` / `SemanticVersion` moved to `graphdatascience.versions`
 - Minimums: GDS server 2.13, Neo4j Python driver 5.26, pandas >= 2.0 (3.x supported), pyarrow 21–25
 - Additions: `overwrite=True` on projection endpoints, `gds.pipeline.get`, FastPath preview
-- Migration guide: `https://neo4j.com/docs/graph-data-science-client/current/migration-from-1x/`
+- Migration guide: [Neo4j GDS Python client 2.0 migration](https://neo4j.com/docs/graph-data-science-client/current/migration-from-1x/)
 
 GDS plugin `2026.07.0` removed `CALL gds.userLog()` — read hints and warnings from driver result summary notifications or the Neo4j debug log; track task progress with `CALL gds.listProgress()`.
 
