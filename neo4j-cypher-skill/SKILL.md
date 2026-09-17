@@ -225,7 +225,7 @@ RETURN s"Hello, {p.name}, age {p.age}" AS greeting   // S"..." and s'...' equiva
 ### UUID type [2026.08, Cypher 25]
 ```cypher
 CYPHER 25
-CREATE (sess:Session {sessionId: uuid()});            // random UUID value; not for cryptographic use
+RETURN uuid() AS sessionId;                           // random UUID value; not for cryptographic use
 
 CYPHER 25
 WITH uuid($uuidString) AS sessionId                   // STRING 8-4-4-4-12 → UUID

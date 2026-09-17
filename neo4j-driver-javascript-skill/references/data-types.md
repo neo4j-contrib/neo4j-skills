@@ -26,7 +26,7 @@
 // UUID — driver 6.2+, Bolt 6.1, Neo4j 2026.08+
 const id = neo4j.uuid('550e8400-e29b-41d4-a716-446655440000')   // also accepts Uint8Array
 const { records } = await driver.executeQuery(
-  'CREATE (s:Session {sessionId: $id}) RETURN s.sessionId AS sessionId',
+  'MERGE (s:Session {sessionId: $id}) RETURN s.sessionId AS sessionId',
   { id }, { database: 'neo4j' }
 )
 const sessionId = records[0].get('sessionId')   // neo4j.UUID
