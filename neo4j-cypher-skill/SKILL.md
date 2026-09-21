@@ -7,7 +7,7 @@ description: Generates, optimizes, and validates Cypher 25 queries for Neo4j 202
   Does NOT handle driver migration or API changes — use neo4j-migration-skill.
   Does NOT cover DB administration or server ops — use neo4j-cli-tools-skill.
 compatibility: Neo4j >= 2025.01 (safe baseline); Cypher 25
-version: 1.0.24
+version: 1.0.25
 ---
 
 ## When to Use
@@ -352,7 +352,7 @@ Default to 2025.01-safe features when version unknown.
 | Match modes (`DIFFERENT RELATIONSHIPS`, `REPEATABLE ELEMENTS`) | 2025.01 | require 2025+ |
 | Dynamic labels `$($expr)`, `coll.sort()` | 2025.01 | APOC or app-side |
 | `CONCURRENT TRANSACTIONS`, `REPORT STATUS` | 2025.01 | drop / omit |
-| `SEARCH` clause (vector/fulltext) | 2026.01 | `CALL db.index.vector.queryNodes(...)` (deprecated 2026.04) |
+| `SEARCH` clause (vector index ANN) | 2026.01 | `CALL db.index.vector.queryNodes(...)` (deprecated 2026.04) |
 | `ACYCLIC` path mode (no repeated nodes in path) | 2026.03 | post-filter with `size(nodes(p)) = size(apoc.coll.toSet(nodes(p)))` |
 | `string.indexOf()`, `string.join()`, `string.regexReplace()` | 2026.05 | `apoc.text.*` or app-side |
 | `GROUP BY` subclause on `WITH`/`RETURN`, `cardinality()` | 2026.07 | implicit grouping keys; `size()` / `size(keys(map))` |
@@ -368,6 +368,7 @@ Default to 2025.01-safe features when version unknown.
 | `null / 0` returns `null` instead of raising division-by-zero | 2026.08 | `CASE WHEN d = 0 THEN null ELSE n / d END` |
 | Map comprehension `{k: v IN map \| keyExpr: valueExpr}` | 2026.09 | `apoc.map.fromPairs([k IN keys(m) \| [k, m[k]]])` |
 | `toString()`, `toStringList()`, `toStringOrNull()` on `LIST`, `MAP`, `NODE`, `RELATIONSHIP`, `PATH` | 2026.09 | convert scalar components individually, then `string.join()` |
+| Native full-text `SEARCH` on a single node or single relationship pattern | 2026.09 | `CALL db.index.fulltext.queryNodes(...)` / `queryRelationships(...)` |
 
 ---
 

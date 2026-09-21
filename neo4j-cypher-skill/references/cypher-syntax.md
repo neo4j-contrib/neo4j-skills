@@ -717,11 +717,14 @@ ORDER BY score DESC
 // Procedure fallback (pre-2026.01):
 CYPHER 25 CALL db.index.vector.queryNodes('news', 10, $embedding) YIELD node AS c, score RETURN c.text, score
 
-// Fulltext -- always use procedure regardless of version:
+// Fulltext, all versions -- procedure form:
 CYPHER 25 CALL db.index.fulltext.queryNodes('entity', $query) YIELD node, score RETURN node.name, score LIMIT 20
 ```
 
-SEARCH syntax: binding variable only (not `(c)`); `LIMIT` inside parens; `SCORE AS` after closing paren.
+SEARCH syntax: binding variable only (not `(c)`); `LIMIT` inside parens; `SCORE AS` after closing paren; optional `WHERE` inside parens filters the index (restricted predicate set).
+`binding_variable` must come from the enclosing `MATCH` / `OPTIONAL MATCH` pattern; node variable needs a node vector index, relationship variable a relationship vector index.
+`SCORE` values are index-specific — when mixing vector and full-text hits, rank each source separately instead of comparing raw scores.
+Native full-text `SEARCH` on a single node or single relationship pattern landed in 2026.09 (changelog); the clause reference still documents only `VECTOR INDEX`, so keep `db.index.fulltext.query*` until the index form is published.
 
 ---
 
