@@ -4,10 +4,10 @@
 
 | Type | Procedure | When |
 |---|---|---|
-| Cypher | Python: `gds.graph.cypher.project(...)` with `RETURN gds.graph.project` clause inside | Current GDS-doc default; filtering, transformation, computed properties, heterogeneous |
-| Native | Python: `gds.v2.graph.project(...)` | Simple labels + relationship types; shortest Python-client path |
+| Cypher | Python: `gds.graph.project.cypher(query)` with `RETURN gds.graph.project` clause inside | Current GDS-doc default; filtering, transformation, computed properties, heterogeneous |
+| Native | Python: `gds.graph.project.native(...)` | Simple labels + relationship types; shortest Python-client path |
 
-Prefer v2 native projection. Use v1 `gds.graph.cypher.project(...)` only for filtering, transformations, computed properties, or heterogeneous projections that v2 native projection cannot express. Avoid legacy `gds.graph.project.cypher(...)` for new work. For Aura Graph Analytics sessions, use `neo4j-aura-graph-analytics-skill`.
+Prefer native projection. Use Cypher projection for filtering, transformations, computed properties, or heterogeneous projections that native projection cannot express. 1.x client fallbacks: `gds.v2.graph.project(...)`, `gds.graph.cypher.project(query, database=...)`. For Aura Graph Analytics sessions, use `neo4j-aura-graph-analytics-skill`.
 
 ---
 
@@ -103,11 +103,11 @@ from graphdatascience import GraphDataScience
 gds = GraphDataScience("bolt://localhost:7687", auth=("neo4j", "pw"))
 
 # Simple native projection — plugin/simple client only
-G, result = gds.v2.graph.project("myGraph", "Person", "KNOWS")
+G, result = gds.graph.project.native("myGraph", "Person", "KNOWS")
 print(result.node_count, result.relationship_count)
 
 # Multi-label, multi-rel, properties
-G, result = gds.v2.graph.project(
+G, result = gds.graph.project.native(
     "myGraph",
     {"Person": {"properties": ["age", "score"]},
      "City":   {"properties": {"population": {"defaultValue": 0}}}},
@@ -115,7 +115,7 @@ G, result = gds.v2.graph.project(
      "LIVES_IN": {"properties": ["since"]}}
 )
 
-# V1 fallback:
+# 1.x fallback:
 G, result = gds.graph.project("myGraph", "Person", "KNOWS")
 ```
 
@@ -124,7 +124,7 @@ G, result = gds.graph.project("myGraph", "Person", "KNOWS")
 ## Cypher Projection — Full Pattern
 
 ```python
-G, result = gds.graph.cypher.project(
+G, result = gds.graph.project.cypher(
     """
     MATCH (source:Person)-[r:KNOWS]->(target:Person)
     WHERE source.active = true AND target.active = true
@@ -140,14 +140,14 @@ G, result = gds.graph.cypher.project(
         }
     )
     """,
-    database="neo4j",
     graph_name="filteredGraph"
 )
 ```
 
+No `database=` parameter — set `GraphDataScience(..., database=...)` at construction or call `gds.set_database(...)` before projecting.
 Use `gds.graph.project($graph_name, source, target, {...})` in `RETURN`; `$graph_name` parameter injected automatically.
 Query must end with exactly one `RETURN gds.graph.project(...)`. Else use `gds.run_cypher(...)`, then `gds.graph.get("filteredGraph")`.
-Never use `gds.graph.project.cypher(...)` for new Cypher projections; legacy deprecated projection procedure.
+1.x fallback: `gds.graph.cypher.project(query, database=...)`.
 AGA Sessions → `neo4j-aura-graph-analytics-skill`.
 
 ---
@@ -163,13 +163,13 @@ G.relationship_types()     # ["KNOWS", "LIVES_IN"]
 G.node_properties()        # projected + mutated properties by label
 G.relationship_properties()
 G.size_in_bytes()
-gds.v2.graph.drop(G)
+gds.graph.drop(G)
 
 # Re-attach to existing projection
-G = gds.v2.graph.get("myGraph")
+G = gds.graph.get("myGraph")
 
 # List all projected graphs
-gds.v2.graph.list()
+gds.graph.list()
 ```
 
 ---
@@ -178,16 +178,17 @@ gds.v2.graph.list()
 
 ```python
 # Project estimation
-G, project_result = gds.v2.graph.project("myGraph", "Person", "KNOWS")
+est = gds.graph.project.estimate(node_projection=["Person"], relationship_projection=["KNOWS"])
+print(est.required_memory)
+
+G, project_result = gds.graph.project.native("myGraph", "Person", "KNOWS")
 print(project_result.node_count)
 
 # Algorithm estimation (requires projected graph)
-est = gds.v2.page_rank.estimate(G, damping_factor=0.85)
-est = gds.v2.fast_rp.estimate(G, embedding_dimension=256)
+est = gds.page_rank.estimate(G, damping_factor=0.85)
+est = gds.fast_rp.estimate(G, embedding_dimension=256)
 print(est.required_memory)
 ```
-
-Projection estimate fallback: use v1 `gds.graph.project.estimate(...)` if v2 estimate endpoint unavailable.
 
 If `requiredMemory` exceeds JVM heap (`dbms.memory.heap.max_size`), reduce graph or increase heap. Treat 80% heap as review threshold, not hard guarantee.
 
@@ -207,10 +208,10 @@ CALL gds.graph.drop('myGraph', false) YIELD graphName
 ```
 
 ```python
-gds.v2.graph.list()           # list of typed graph metadata objects
-gds.v2.graph.get("myGraph")   # GraphV2
-gds.v2.graph.drop("myGraph")  # Drop by name
-gds.v2.graph.drop(G)          # Drop via object
+gds.graph.list()           # list of typed graph metadata objects
+gds.graph.get("myGraph")   # Graph
+gds.graph.drop("myGraph")  # Drop by name
+gds.graph.drop(G)          # Drop via object
 ```
 
 Drop graphs after use. Catalog graphs persist until dropped, source database stops/drops, or DBMS stops.
@@ -222,20 +223,20 @@ Drop graphs after use. Catalog graphs persist until dropped, source database sto
 Project multiple node labels/relationship types for algorithms that support them (e.g., `gds.metaPath`):
 
 ```python
-G, _ = gds.v2.graph.project(
+G, _ = gds.graph.project.native(
     "heteroGraph",
     ["Actor", "Movie", "Genre"],
     ["ACTED_IN", "HAS_GENRE"]
 )
 
 # Filter algorithms to specific labels/types
-gds.v2.page_rank.stream(G,
+gds.page_rank.stream(G,
     node_labels=["Actor"],
     relationship_types=["ACTED_IN"]
 )
 ```
 
-Most algorithms accept v2 `node_labels` and `relationship_types` to scope execution within heterogeneous projection.
+Most algorithms accept `node_labels` and `relationship_types` to scope execution within heterogeneous projection.
 
 ---
 
@@ -243,7 +244,7 @@ Most algorithms accept v2 `node_labels` and `relationship_types` to scope execut
 
 ```python
 # Create subgraph from existing named graph
-sub_G, result = gds.v2.graph.filter(
+sub_G, result = gds.graph.filter(
     G,                             # source graph
     "subGraph",                    # new graph name
     "n.score > 0.5",               # node filter (Cypher predicate)

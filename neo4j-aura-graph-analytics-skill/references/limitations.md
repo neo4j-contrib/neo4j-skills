@@ -2,7 +2,7 @@
 
 | Feature | AGA (serverless) | GDS plugin (embedded) |
 |---|---|---|
-| Topological link prediction | ❌ Not supported | ✅ |
+| Topological link prediction | ✅ Client 2.0+ (attached sessions) | ✅ |
 | ML model persistence across sessions | ❌ Session-local only | ✅ Persistent in model catalog |
 | Cypher API (`CALL gds.*`) | ✅ AuraDB attached sessions only; limited vs plugin | ✅ |
 | Non-Neo4j data sources | ✅ Pandas, Spark, Arrow | ❌ |

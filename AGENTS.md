@@ -95,7 +95,7 @@ The `description` is how the agent decides which skill to load. Get it wrong and
 
 ### Positive triggers — pack these in
 
-- Canonical product name and version: `Neo4j Go Driver v6`, `graphdatascience v1.21`
+- Canonical product name and version: `Neo4j Go Driver v6`, `graphdatascience 2.0`
 - Common entry-point symbols: `NewDriver`, `ExecuteQuery`, `GdsSessions`, `gds.pageRank`
 - Natural-language task phrases: `"Use when writing Go code that connects to Neo4j"`
 - Synonyms: both `GDS` and `Graph Data Science`; both `AGA` and `Aura Graph Analytics`

@@ -2,7 +2,7 @@
 
 Core catalog of commonly used GDS procedures. Mode availability varies by algorithm; check `CALL gds.list()` or the algorithm syntax page before assuming `stream` / `stats` / `mutate` / `write`.
 
-Python client: prefer `gds.v2.*` endpoints and snake_case parameters. Procedure tables show Cypher procedure names.
+Python client 2.0: plain endpoints (no `v2` prefix) and snake_case parameters. Procedure tables show Cypher procedure names. Client 1.x (GDS server < 2.13): prefix with `gds.v2.`.
 
 ## Centrality
 
@@ -17,7 +17,7 @@ Python client: prefer `gds.v2.*` endpoints and snake_case parameters. Procedure 
 | HITS | `gds.hits` | Authority/hub scores (web-like graphs) |
 
 ### PageRank — key parameters
-| V2 parameter | Cypher/v1 parameter | Default | Notes |
+| Client parameter | Cypher parameter | Default | Notes |
 |---|---|---|---|
 | `damping_factor` | `dampingFactor` | 0.85 | Probability of following a link; lower = more teleportation |
 | `max_iterations` | `maxIterations` | 20 | |
@@ -60,7 +60,7 @@ Spider traps (closed groups, no outlinks) inflate scores — increase `dampingFa
 | Filtered Node Similarity | `gds.nodeSimilarity` | Bipartite graph topology | With `sourceNodeFilter`/`targetNodeFilter` |
 
 ### KNN — key parameters
-| V2 parameter | Cypher/v1 parameter | Default | Notes |
+| Client parameter | Cypher parameter | Default | Notes |
 |---|---|---|---|
 | `node_properties` | `nodeProperties` | required | String, map, or list of strings/maps |
 | `top_k` | `topK` | 10 | Neighbors per node |
@@ -110,7 +110,7 @@ RETURN totalCost, [nodeId IN nodeIds | gds.util.asNode(nodeId).name] AS nodes
 | HashGNN | `gds.hashgnn` | Yes | GNN-style, limited compute, fast |
 
 ### FastRP — key parameters
-| V2 parameter | Cypher/v1 parameter | Default | Notes |
+| Client parameter | Cypher parameter | Default | Notes |
 |---|---|---|---|
 | `embedding_dimension` | `embeddingDimension` | required | 128–512 typical |
 | `iteration_weights` | `iterationWeights` | `[0.0, 1.0, 1.0]` | `[self, 1-hop, 2-hop]` neighborhood weights |
@@ -120,7 +120,7 @@ RETURN totalCost, [nodeId IN nodeIds | gds.util.asNode(nodeId).name] AS nodes
 | `random_seed` | `randomSeed` | — | Set for reproducibility |
 
 ### Node2Vec — key parameters
-| V2 parameter | Cypher/v1 parameter | Default | Notes |
+| Client parameter | Cypher parameter | Default | Notes |
 |---|---|---|---|
 | `embedding_dimension` | `embeddingDimension` | 128 | |
 | `walk_length` | `walkLength` | 80 | Steps per random walk |
@@ -132,32 +132,32 @@ RETURN totalCost, [nodeId IN nodeIds | gds.util.asNode(nodeId).name] AS nodes
 
 ## ML Pipelines
 
-Pipeline APIs may lag v2 coverage. Prefer v2 pipeline endpoints when available; otherwise use v1 fallback and keep camelCase parameters.
+Pipelines: `gds.pipeline.node_classification` / `link_prediction` / `node_regression` — the only API in client 2.0. Get pipelines: `gds.pipeline.node_classification.get(name)`; trained models: `gds.pipeline.node_classification.get_model(name)`.
 
 ### Node Classification
 
 ```python
-pipe, _ = gds.nc_pipe("myPipeline")
-pipe.addNodeProperty("fastRP", mutateProperty="emb", embeddingDimension=128, randomSeed=42)
-pipe.selectFeatures("emb")
-pipe.addLogisticRegression(maxEpochs=100)
+pipe, _ = gds.pipeline.node_classification.create("myPipeline")
+pipe.add_node_property("fastRP", mutate_property="emb", embedding_dimension=128, random_seed=42)
+pipe.select_features("emb")
+pipe.add_logistic_regression(max_epochs=100)
 
-model, train_result = pipe.train(G, targetProperty="label", metrics=["ACCURACY"])
+model, train_result = pipe.train(G, target_property="label", metrics=["ACCURACY"])
 predictions = model.predict_stream(G)
-model.predict_write(G, writeProperty="predicted_label")
+model.predict_write(G, write_property="predicted_label")
 ```
 
 ### Link Prediction
 
 ```python
-pipe, _ = gds.lp_pipe("lpPipeline")
-pipe.addNodeProperty("fastRP", mutateProperty="emb", embeddingDimension=128, randomSeed=42)
-pipe.addFeature("hadamard", nodeProperties=["emb"])
-pipe.addLogisticRegression(maxEpochs=100)
+pipe, _ = gds.pipeline.link_prediction.create("lpPipeline")
+pipe.add_node_property("fastRP", mutate_property="emb", embedding_dimension=128, random_seed=42)
+pipe.add_feature("hadamard", node_properties=["emb"])
+pipe.add_logistic_regression(max_epochs=100)
 
-model, result = pipe.train(G, sourceNodeLabel="Person", targetNodeLabel="Person",
-                            targetRelationshipType="KNOWS", metrics=["AUCPR"])
-model.predict_stream(G, topN=10, threshold=0.5)
+model, result = pipe.train(G, source_node_label="Person", target_node_label="Person",
+                           target_relationship_type="KNOWS", metrics=["AUCPR"])
+model.predict_stream(G, top_n=10, threshold=0.5)
 ```
 
 ---
@@ -165,10 +165,10 @@ model.predict_stream(G, topN=10, threshold=0.5)
 ## Built-in Test Datasets
 
 ```python
-G = gds.v2.graph.datasets.load_cora()         # 2,708 Paper nodes, 5,429 CITES edges
-G = gds.v2.graph.datasets.load_karate_club()  # 34 Person nodes, 78 KNOWS edges
-G = gds.v2.graph.datasets.load_imdb()         # 12,772 nodes, heterogeneous
-G = gds.v2.graph.datasets.load_lastfm()       # 19,914 nodes, user-artist graph
+G = gds.graph.datasets.load_cora()         # 2,708 Paper nodes, 5,429 CITES edges
+G = gds.graph.datasets.load_karate_club()  # 34 Person nodes, 78 KNOWS edges
+G = gds.graph.datasets.load_imdb()         # 12,772 nodes, heterogeneous
+G = gds.graph.datasets.load_lastfm()       # 19,914 nodes, user-artist graph
 ```
 
 ---
