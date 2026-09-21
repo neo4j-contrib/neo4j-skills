@@ -63,9 +63,9 @@ Most modern bundlers handle worker construction natively — try the default set
 | Renderer | Practical ceiling | Captions | Hit-test |
 |---|---|---|---|
 | Canvas (default) | ~1,000 nodes | Full styling | Pixel-perfect |
-| WebGL | 100,000+ nodes | Bound by GPU max texture size | Approximate |
+| WebGL | 100,000+ nodes | Not supported | Approximate |
 
-NVL's WebGL renderer targets **WebGL2**. WebGL1 still loads on the current release but support is on a deprecation path — assume WebGL2 in any new deployment.
+NVL 2.0's GPU renderer and physics engine require **WebGL2**. WebGL1 is not supported. WebGL rendering now supports node icons and relationship arrowheads, but not captions.
 
 ```javascript
 // At construction
@@ -75,15 +75,97 @@ new NVL(container, nodes, rels, { renderer: 'webgl' })
 nvl.setRenderer('webgl')   // or 'canvas'
 ```
 
-Pick based on node count and label fidelity needs. Switching at runtime triggers a re-render.
+Pick based on node count and whether captions are required. Switching at runtime triggers a re-render. Set `disableWebGL: true` to explicitly use non-WebGL rendering and layout implementations.
 
 ---
 
-## WebGL captions/labels disappear
+## WebGL captions/labels are missing
 
-**Cause:** GPU max texture size exceeded — common on mobile / integrated GPUs (often 4096 px).
+**Cause:** Expected NVL 2.0 behavior. The WebGL renderer does not support captions.
 
-**Fix:** Either fall back to Canvas (`setRenderer('canvas')`), shrink `captionSize` on affected nodes, or shorten caption strings. Inspect via `gl.getParameter(gl.MAX_TEXTURE_SIZE)` if uncertain.
+**Fix:** Use Canvas when captions are required:
+
+```javascript
+nvl.setRenderer('canvas')
+```
+
+---
+
+## React `layout` or `layoutOptions` has no effect
+
+**Cause:** NVL 2.0 removed the deprecated standalone React wrapper props.
+
+```tsx
+// ❌ removed in 2.0
+<InteractiveNvlWrapper layout="hierarchical" layoutOptions={{ direction: 'down' }} />
+
+// ✅ put both options in nvlOptions
+<InteractiveNvlWrapper
+  nvlOptions={{ layout: 'hierarchical', layoutOptions: { direction: 'down' } }}
+/>
+```
+
+---
+
+## `onZoom` callback no longer fires
+
+**Cause:** NVL 2.0 removed `onZoom`.
+
+**Fix:** Use `onZoomAndPan`, which includes the complete viewport state:
+
+```javascript
+zoom.updateCallback('onZoomAndPan', (zoomLevel, panX, panY, event) => {
+  console.log({ zoomLevel, panX, panY })
+})
+```
+
+For React, set `mouseEventCallbacks={{ onZoomAndPan: callback }}`.
+
+---
+
+## Force-directed clusters do not appear
+
+**Cause:** Force-directed clustering options must be nested under `layoutOptions.clustering`; hierarchical `clusterBy` is placed directly under `layoutOptions`.
+
+```javascript
+// Force-directed
+const options = {
+  layout: 'forceDirected',
+  layoutOptions: {
+    clustering: {
+      clusterBy: (nodeId) => categoryByNodeId[nodeId],
+      drawOutline: true,
+      drawHalo: true
+    }
+  }
+}
+
+// Hierarchical
+const hierarchicalOptions = {
+  layout: 'hierarchical',
+  layoutOptions: {
+    direction: 'down',
+    clusterBy: (nodeId) => categoryByNodeId[nodeId]
+  }
+}
+```
+
+The callback must return the same string or number for nodes in one cluster. Return `undefined` for independent nodes. In React, keep the callback stable with `useCallback`; otherwise changing its identity can cause repeated cluster evaluation.
+
+---
+
+## Cluster click callback misses clicks
+
+**Cause:** `onClusterClick`, `onClusterDoubleClick`, and `onClusterRightClick` apply to empty space inside a force-directed cluster hull. A node or relationship under the pointer takes priority.
+
+**Fix:** Use node/relationship callbacks for direct element hits and cluster callbacks for hull space. For hover, inspect `hitElements.clusters` from `onHover`:
+
+```javascript
+hover.updateCallback('onHover', (_element, hitElements) => {
+  const cluster = hitElements.clusters[0]?.data
+  if (cluster) console.log(cluster.id, cluster.nodeIds)
+})
+```
 
 ---
 
@@ -171,6 +253,12 @@ const { nvlTargets } = nvl.getHits(evt, ['node', 'relationship'], { hitNodeMargi
 ```
 
 For pan-on-relationship sensitivity, set `excludeNodeMargin: true` in `PanInteraction` options.
+
+To include cluster hulls when supplying an explicit target list, add `'cluster'`. Cluster hits are included by default when the target list is omitted:
+
+```javascript
+const { nvlTargets } = nvl.getHits(evt, ['node', 'relationship', 'cluster'])
+```
 
 ---
 

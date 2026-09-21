@@ -8,6 +8,7 @@ Skill for the Neo4j Visualization Library (NVL) — covering:
 - `nvlResultTransformer` for piping `driver.executeQuery` results straight into NVL
 - Canvas vs WebGL renderer selection (~1k vs 100k+ nodes)
 - Layout selection (`forceDirected`, `hierarchical`, `circular`, `grid`, `free`, `d3Force`)
+- force-directed and hierarchical `clusterBy`, cluster decorations, hit testing, and callbacks
 - Container setup, Web Worker fallback, telemetry opt-out
 
 **Not covered** (see sibling tools / skills):
@@ -17,7 +18,7 @@ Skill for the Neo4j Visualization Library (NVL) — covering:
 - Driver lifecycle, sessions, `executeQuery` setup → `neo4j-driver-javascript-skill`
 - GDS algorithms → `neo4j-gds-skill` / `neo4j-aura-graph-analytics-skill`
 
-**Compatibility:** `@neo4j-nvl/base` 1.1+; React 19 for `@neo4j-nvl/react`; modern browsers with Canvas2D + WebGL2.
+**Compatibility:** `@neo4j-nvl` packages 2.0.x; React 19 for `@neo4j-nvl/react`; modern browsers with Canvas2D and WebGL2.
 
 **Install:**
 

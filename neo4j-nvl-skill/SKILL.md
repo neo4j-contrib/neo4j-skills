@@ -11,8 +11,8 @@ description: Neo4j Visualization Library (NVL) — framework-agnostic graph rend
   Does NOT handle Cypher query authoring — use neo4j-cypher-skill.
   Does NOT handle driver lifecycle, sessions, or executeQuery setup — use neo4j-driver-javascript-skill.
   Does NOT handle GraphVisualization/Needle default embed — use @neo4j-ndl/react.
-compatibility: "@neo4j-nvl/base 1.1+; React 19 for @neo4j-nvl/react; modern browsers with Canvas2D + WebGL2"
-version: 1.0.1
+compatibility: "@neo4j-nvl packages 2.0.x; React 19 for @neo4j-nvl/react; modern browsers with Canvas2D + WebGL2"
+version: 2.0.0
 allowed-tools: Bash WebFetch
 ---
 
@@ -76,13 +76,15 @@ License: NVL ships under the **Neo4j Visualization Library License** — for use
 
 | Renderer | Max nodes | Detail | Use case |
 |---|---|---|---|
-| `'canvas'` (default) | ~1,000 | Full captions, icons, arrows, pixel-perfect hit-testing | Detail investigation, small graphs |
-| `'webgl'` | 100,000+ | Reduced label fidelity (bound by GPU max texture size) | Large-scale pattern exploration |
+| `'canvas'` (default) | ~1,000 | Captions, icons, arrows, pixel-perfect hit-testing | Detail investigation, small graphs |
+| `'webgl'` | 100,000+ | No captions; supports node icons and relationship arrowheads in 2.0 | Large-scale pattern exploration |
 
 ```javascript
 const nvl = new NVL(container, nodes, rels, { renderer: 'webgl' })
 nvl.setRenderer('canvas')   // swap at runtime
 ```
+
+NVL 2.0 requires **WebGL2** for the GPU renderer and force-directed physics engine. When GPU acceleration is unavailable, NVL can fall back to Canvas rendering and non-GPU layout implementations; use `disableWebGL: true` to explicitly avoid WebGL.
 
 ---
 
@@ -163,10 +165,11 @@ const hover = new HoverInteraction(nvl, { drawShadowOnHover: true })
 
 click.updateCallback('onNodeClick',         (node, hits, evt) => console.log('node',  node.id))
 click.updateCallback('onRelationshipClick', (rel,  hits, evt) => console.log('rel',   rel.id))
+click.updateCallback('onClusterClick',      (cluster, hits, evt) => console.log('cluster', cluster.id))
 click.updateCallback('onCanvasClick',       (evt)             => console.log('canvas'))
 hover.updateCallback('onHover',             (el, hits, evt)   => el && console.log('over', el.id))
 drag.updateCallback('onDragEnd',            (nodes, evt)      => savePositions(nodes))
-zoom.updateCallback('onZoom',               (level)           => console.log('zoom', level))
+zoom.updateCallback('onZoomAndPan',          (level, panX, panY) => console.log(level, panX, panY))
 
 // Teardown — destroy all handlers, then the NVL instance
 function teardown() {
@@ -185,9 +188,9 @@ Pre-wires every interaction handler. Toggle events with `mouseEventCallbacks` (f
 
 ```tsx
 import { InteractiveNvlWrapper } from '@neo4j-nvl/react'
-import type { MouseEventCallbacks, NvlOptions } from '@neo4j-nvl/react'
+import type { MouseEventCallbacks } from '@neo4j-nvl/react'
 import { useRef } from 'react'
-import type { NVL } from '@neo4j-nvl/base'
+import type { NVL, NvlOptions } from '@neo4j-nvl/base'
 
 export function GraphView({ nodes, rels }) {
   const nvlRef = useRef<NVL>(null)
@@ -197,10 +200,14 @@ export function GraphView({ nodes, rels }) {
   const mouseEventCallbacks: MouseEventCallbacks = {
     onNodeClick:         (node, hits, evt) => console.log('node',  node.id),
     onRelationshipClick: (rel,  hits, evt) => console.log('rel',   rel.id),
+    onClusterClick:      (cluster, hits, evt) => console.log('cluster', cluster.id),
     onCanvasClick:       (evt)             => console.log('canvas'),
-    onHover:             (el, hits, evt)   => el && console.log('hover', el.id),
+    onHover:             (el, hits, evt)   => {
+      if (el) console.log('hover', el.id)
+      if (hits.clusters[0]) console.log('cluster hover', hits.clusters[0].data.id)
+    },
     onDragEnd:           (nodes, evt)      => persist(nodes),
-    onZoom: true,                                       // enable, no callback
+    onZoomAndPan: true,                                 // enable, no callback
     onPan:  true
   }
 
@@ -221,6 +228,61 @@ export function GraphView({ nodes, rels }) {
 ```
 
 `ref` resolves to the underlying `NVL` instance — call any method on it: `nvlRef.current?.fit([])`, `nvlRef.current?.setRenderer('webgl')`, `nvlRef.current?.saveToFile()`.
+
+---
+
+## NVL 2.0 — Layout Clustering
+
+`clusterBy` groups nodes whose callback returns the same string or number. Return `undefined` for independent nodes. Keep the callback reference stable in React with `useCallback`.
+
+Force-directed clustering nests all clustering settings under `layoutOptions.clustering`:
+
+```javascript
+const clusterBy = (nodeId) => categoryByNodeId[nodeId]
+
+const nvl = new NVL(container, nodes, relationships, {
+  layout: 'forceDirected',
+  layoutOptions: {
+    seedingMethod: 'circle',
+    clustering: {
+      clusterBy,
+      drawOutline: true,
+      drawHalo: true,
+      crossClusterRelationshipMultiplier: 0.2
+    }
+  },
+  minFps: 3,
+  maxFps: 30
+})
+```
+
+`crossClusterRelationshipMultiplier` is experimental, capped to `0..1`, and can destabilize highly connected graphs near `1`. It affects cross-cluster spring pull only; intra-cluster edges remain full strength.
+
+Hierarchical clustering places `clusterBy` directly in `layoutOptions`:
+
+```javascript
+const nvl = new NVL(container, nodes, relationships, {
+  layout: 'hierarchical',
+  layoutOptions: {
+    direction: 'down',
+    clusterBy
+  }
+})
+```
+
+Cluster decorations and cluster hull interactions apply to force-directed `layoutOptions.clustering`. A `Cluster` is not a graph element; it has `{ id: string | number, nodeIds: string[] }`. Cluster callbacks fire only for empty space inside a cluster hull; node and relationship hits retain priority.
+
+---
+
+## Migrating from NVL 1.x to 2.0
+
+- Move React wrapper `layout` and `layoutOptions` props into `nvlOptions`:
+  `<InteractiveNvlWrapper nvlOptions={{ layout, layoutOptions }} />`.
+- Replace interaction callback `onZoom` with `onZoomAndPan(zoom, panX, panY, event)`.
+- Remove `intelWorkaround` and Cytoscape-related layout settings; they no longer exist.
+- Treat WebGL as WebGL2-only and do not expect captions in the WebGL renderer.
+- `getNodes()` and `onLayoutStep` return `NodeWithClientPosition[]`: `x`/`y` are layout coordinates and `clientPosition` is relative to the canvas element.
+- Use `styling.overlayLineColor`; `styling.minimapViewportBoxColor` is deprecated.
 
 ---
 
@@ -316,22 +378,24 @@ nvl.updateElementsInGraph(
 
 ## Hit Testing (Manual)
 
-Use when NOT using the interaction-handlers package. `getHits()` resolves which node/relationship is under a pointer event.
+Use when NOT using the interaction-handlers package. In 2.0, `getHits()` resolves nodes, relationships, and force-directed cluster hulls. Its default targets are `['node', 'relationship', 'cluster']`.
 
 ```javascript
 const nvl = new NVL(container, nodes, rels)
 
 container.addEventListener('click', (evt) => {
-  const { nvlTargets } = nvl.getHits(evt, ['node', 'relationship'], { hitNodeMarginWidth: 4 })
+  const { nvlTargets } = nvl.getHits(evt, ['node', 'relationship', 'cluster'], { hitNodeMarginWidth: 4 })
   const hitNode = nvlTargets.nodes[0]
   const hitRel  = nvlTargets.relationships[0]
+  const hitCluster = nvlTargets.clusters[0]
   if (hitNode) console.log('hit node', hitNode.data.id)
   else if (hitRel) console.log('hit rel', hitRel.data.id)
+  else if (hitCluster) console.log('hit cluster', hitCluster.data.id, hitCluster.data.nodeIds)
   else console.log('hit canvas')
 })
 ```
 
-`HitTargetNode` / `HitTargetRelationship` carry `data`, `pointerCoordinates`, `distance`, `insideNode` (nodes only). See [references/api-surface.md](references/api-surface.md).
+`HitTargetNode` / `HitTargetRelationship` carry element hit data. `HitTargetCluster` carries `data`, `pointerCoordinates`, and the fitted convex `hull`. See [references/api-surface.md](references/api-surface.md).
 
 ---
 
@@ -351,15 +415,18 @@ container.addEventListener('click', (evt) => {
 | Layout never settles | Pin anchor nodes with `pinNode(id)`; tune `layoutTimeLimit` |
 | `selectOnClick` fires double | Toggle once at mount; don't flip `interactionOptions` per render |
 | Hit test misses near node edge | Pass `{ hitNodeMarginWidth: N }` to `getHits` |
-| Captions missing on WebGL | GPU max texture size exceeded; fall back to Canvas or shrink captions |
+| Captions missing on WebGL | Expected in 2.0; captions are Canvas-only, so use `'canvas'` when labels matter |
+| React wrapper ignores `layout` / `layoutOptions` | In 2.0 these must be nested in `nvlOptions` |
+| `onZoom` never fires | It was removed in 2.0; use `onZoomAndPan` |
+| Cluster callback misses clicks on a node | Cluster callbacks target empty cluster-hull space; node hits take priority |
 
 ---
 
 ## References
 
 Load on demand:
-- [references/api-surface.md](references/api-surface.md) — complete `NVL` method table; `Node`, `Relationship`, `NvlOptions`, `LayoutOptions`, `ExternalCallbacks`, `HitTargets`, `NvlMouseEvent`, `StyledCaption`, `Point`; every interaction-handler class + its options + its callback signatures; React `<InteractiveNvlWrapper>` / `<BasicNvlWrapper>` / `<StaticPictureWrapper>` props; `MouseEventCallbacks` and `KeyboardEventCallbacks` shapes; named exports inventory; `nvlResultTransformer` signature
-- [references/troubleshooting.md](references/troubleshooting.md) — zero-height container, build-tool-agnostic `disableWebWorkers` fallback, Canvas/WebGL trade-offs + WebGL2 note, WebGL texture-size cap, `onWebGLContextLost` recovery, telemetry opt-out, memory leaks, stuck layouts, double selection, hit-margin tuning, license restriction
+- [references/api-surface.md](references/api-surface.md) — complete 2.0 `NVL` method table; clustering, FPS, seeding, `NodeWithClientPosition`, hit target and interaction callback types; React props; named exports; `nvlResultTransformer`
+- [references/troubleshooting.md](references/troubleshooting.md) — zero-height container, WebGL2 and Canvas trade-offs, clustering configuration, 1.x migration errors, worker fallback, context loss, telemetry, lifecycle, layout and hit-testing issues
 
 Canonical web documentation (use `WebFetch` when references above are insufficient):
 - https://neo4j.com/docs/nvl/current/ — user guide (installation, base library, interaction handlers, React wrappers)
@@ -374,6 +441,10 @@ Canonical web documentation (use `WebFetch` when references above are insufficie
 - [ ] Container has explicit `width` AND `height` CSS
 - [ ] Correct paradigm chosen from the decision table (vanilla / handlers / React)
 - [ ] Renderer matches expected node count (Canvas ≲1k / WebGL 100k+)
+- [ ] Canvas selected whenever captions are required
+- [ ] React `layout` and `layoutOptions` nested inside `nvlOptions`
+- [ ] Zoom handlers use `onZoomAndPan`, not removed `onZoom`
+- [ ] `clusterBy` is stable in React and placed correctly for the selected layout
 - [ ] Driver `executeQuery` results piped through `nvlResultTransformer`
 - [ ] `database` specified on every `executeQuery` call (delegate to `neo4j-driver-javascript-skill`)
 - [ ] All interaction handlers `.destroy()`-ed before `nvl.destroy()` on teardown
