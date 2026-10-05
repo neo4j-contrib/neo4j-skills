@@ -287,7 +287,7 @@ If `OPENAI_API_KEY` is missing: check `aura.env` and append to `.env`.
 Follow `${CLAUDE_SKILL_DIR}/references/capabilities/kg-from-documents.md` for the full pipeline template. Key points:
 
 ```python
-from neo4j_graphrag.pipeline.kg_builder import SimpleKGPipeline
+from neo4j_graphrag.experimental.pipeline.kg_builder import SimpleKGPipeline
 from neo4j_graphrag.indexes import create_vector_index
 
 pipeline = SimpleKGPipeline(

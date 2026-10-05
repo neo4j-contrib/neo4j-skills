@@ -8,7 +8,7 @@ description: Neo4j Java Driver v6 — driver lifecycle, Maven/Gradle setup, exec
   Does NOT handle Cypher authoring — use neo4j-cypher-skill.
   Does NOT cover driver version upgrades — use neo4j-migration-skill.
   Does NOT cover Spring Data Neo4j (@Node, Neo4jRepository) — use neo4j-spring-data-skill.
-version: 1.0.11
+version: 1.0.12
 allowed-tools: Bash WebFetch
 ---
 
@@ -32,19 +32,20 @@ allowed-tools: Bash WebFetch
 <dependency>
     <groupId>org.neo4j.driver</groupId>
     <artifactId>neo4j-java-driver</artifactId>
-    <version>6.2.1</version>
+    <version>6.3.0</version>
 </dependency>
 ```
 
 ### Gradle
 ```groovy
-implementation 'org.neo4j.driver:neo4j-java-driver:6.2.1'
+implementation 'org.neo4j.driver:neo4j-java-driver:6.3.0'
 ```
 
 Check latest: https://central.sonatype.com/artifact/org.neo4j.driver/neo4j-java-driver
 
 6.2.0 [2026-06]: Neo4j `UUID` type + Bolt 6.1 support; `QueryProfile` in result summary.
 6.2.1 [2026-08]: fixes `Value#asObject()` on `UUID` values — required if reading UUID properties generically. Neo4j 2026.08 server bundles 6.2.1; 2026.07 bundles 6.2.0.
+6.3.0 [2026-09]: Property Encryption preview — client-side envelope encryption of property values (`driver.propertyEncryption()`) → [references/property-encryption.md](references/property-encryption.md).
 
 Server-side `UUID` type and `uuid()` constructors ship in Neo4j 2026.08 — use driver >= 6.2.1 against those servers.
 
@@ -435,6 +436,7 @@ Config.builder()
 
 Load on demand:
 - [references/async-reactive.md](references/async-reactive.md) — full async `CompletableFuture` patterns, reactive `RxSession` with `Flux.usingWhen`, deadlock avoidance
+- [references/property-encryption.md](references/property-encryption.md) — Property Encryption preview [6.3.0+]: envelope profile, key encapsulation services (local, AWS KMS, Azure Key Vault, GCP KMS), key manager, encrypt/decrypt with AAD
 - [references/advanced-config.md](references/advanced-config.md) — full `Config.builder()` options, TLS, notification filtering, session-level auth, user impersonation, cross-session bookmarks, spatial types (Values.point/WGS-84/Cartesian)
 
 Docs:

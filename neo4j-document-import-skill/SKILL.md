@@ -9,7 +9,7 @@ description: Ingests unstructured and semi-structured documents into Neo4j as a 
   Does NOT handle structured CSV/relational import — use neo4j-import-skill.
   Does NOT handle GraphRAG retrieval after ingestion — use neo4j-graphrag-skill.
   Does NOT handle vector index creation — use neo4j-vector-search-skill.
-version: 1.0.5
+version: 1.0.6
 status: stable
 allowed-tools: Bash WebFetch
 ---
@@ -130,7 +130,7 @@ Use Option B for production; Option A for prototyping; `"EXTRACTED"` only for ex
 ```python
 import asyncio
 from neo4j import GraphDatabase
-from neo4j_graphrag.pipeline.kg_builder import SimpleKGPipeline
+from neo4j_graphrag.experimental.pipeline.kg_builder import SimpleKGPipeline
 from neo4j_graphrag.llm import OpenAILLM
 from neo4j_graphrag.embeddings import OpenAIEmbeddings
 
