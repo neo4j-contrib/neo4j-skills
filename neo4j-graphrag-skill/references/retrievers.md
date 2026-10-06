@@ -98,14 +98,50 @@ tool = convert_to_tool(retriever, name="vector_search", description="Searches by
 
 ## External Vector DB Retrievers
 
+Requires: `pip install neo4j-graphrag[weaviate|pinecone|qdrant]`. Each maps external vector store IDs to Neo4j node IDs.
+
 ```python
-from neo4j_graphrag.retrievers import (
-    WeaviateNeo4jRetriever,
-    PineconeNeo4jRetriever,
-    QdrantNeo4jRetriever,
+# --- Weaviate ---
+from neo4j_graphrag.retrievers import WeaviateNeo4jRetriever
+import weaviate
+
+weaviate_client = weaviate.connect_to_local()
+retriever = WeaviateNeo4jRetriever(
+    driver=driver,
+    client=weaviate_client,
+    collection="Chunk",
+    id_property_external="neo4j_id",
+    id_property_neo4j="id",
+    retrieval_query=retrieval_query,
+    node_label_neo4j="Chunk",       # optional: speeds up Neo4j lookup
 )
-# Each maps external vector store IDs to Neo4j node IDs
-# Requires: pip install neo4j-graphrag[weaviate|pinecone|qdrant]
+
+# --- Pinecone ---
+from neo4j_graphrag.retrievers import PineconeNeo4jRetriever
+from pinecone import Pinecone
+
+pc = Pinecone(api_key=os.environ["PINECONE_API_KEY"])
+retriever = PineconeNeo4jRetriever(
+    driver=driver,
+    client=pc,
+    index_name="my-index",
+    id_property_neo4j="id",
+    retrieval_query=retrieval_query,
+)
+
+# --- Qdrant ---
+from neo4j_graphrag.retrievers import QdrantNeo4jRetriever
+from qdrant_client import QdrantClient
+
+retriever = QdrantNeo4jRetriever(
+    driver=driver,
+    client=QdrantClient(url="http://localhost:6333"),
+    collection_name="Chunk",
+    id_property_external="neo4j_id",
+    id_property_neo4j="id",
+    id_property_getter=lambda hit: hit.payload["neo4j_id"],  # custom ID extraction
+    retrieval_query=retrieval_query,
+)
 ```
 
 ## result_formatter Pattern

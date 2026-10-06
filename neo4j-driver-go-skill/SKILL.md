@@ -7,7 +7,7 @@ description: Covers the Neo4j Go Driver v6 — driver lifecycle, ExecuteQuery, m
   Triggers on NewDriver, ExecuteQuery, SessionConfig, ManagedTransaction, neo4j-go-driver.
   Does NOT handle Cypher query authoring — use neo4j-cypher-skill.
   Does NOT cover driver version migration steps — use neo4j-migration-skill.
-version: 1.0.6
+version: 1.0.7
 allowed-tools: Bash WebFetch
 ---
 
@@ -341,6 +341,26 @@ person, err := neo4j.SingleTWithContext(ctx, result, func(record *neo4j.Record) 
 node, _, _ := neo4j.GetRecordValue[neo4j.Node](record, "p")
 nameVal, err := neo4j.GetProperty[string](node, "name")
 ```
+
+Result mapping [v6.3.0+, Object Mapping preview] — map records onto `neo4j`-tagged structs (same tags as struct parameters):
+```go
+type Person struct {
+    Name string `neo4j:"name"`
+    Age  int    `neo4j:"age"`   // INTEGER converted; lossy conversion → error, not truncation
+}
+
+// EagerResult from ExecuteQuery
+res, err := neo4j.ExecuteQuery(ctx, driver,
+    "MATCH (p:Person) RETURN p.name AS name, p.age AS age LIMIT 25",
+    nil, neo4j.EagerResultTransformer, neo4j.ExecuteQueryWithDatabase("neo4j"))
+people, err := neo4j.CollectRecordsAs[Person](res.Records)
+
+// Streaming Result inside a transaction
+all, err := neo4j.CollectAs[Person](ctx, result)      // all records
+person, err := neo4j.SingleAs[Person](ctx, result)    // exactly one record
+p, err := neo4j.As[Person](record)                    // single record
+```
+Mapping rules: one column holding a node, relationship, or map → its properties map to fields; otherwise columns map by name. Missing/null → zero value; extra columns ignored.
 
 ### Spatial Types
 

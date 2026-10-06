@@ -7,7 +7,7 @@ description: Generates, optimizes, and validates Cypher 25 queries for Neo4j 202
   Does NOT handle driver migration or API changes — use neo4j-migration-skill.
   Does NOT cover DB administration or server ops — use neo4j-cli-tools-skill.
 compatibility: Neo4j >= 2025.01 (safe baseline); Cypher 25
-version: 1.0.26
+version: 1.0.27
 ---
 
 ## When to Use
@@ -259,11 +259,6 @@ Non-aggregating expressions in `RETURN`/`WITH` are implicit grouping keys — `G
 MATCH (a:Person)-[:ACTED_IN]->(m:Movie)<-[:DIRECTED]-(d:Person)
 RETURN a.name, d.name, count(*) AS collaborations
 ORDER BY collaborations DESC
-
-// GROUP BY states keys explicitly [2026.07, Cypher 25]
-MATCH (p:Person)-[:ACTED_IN]->(m:Movie)
-RETURN p.name AS actor, m.genre AS genre, avg(m.rating) AS avgRating
-GROUP BY actor, genre
 ```
 Explicit `GROUP BY` subclause on `WITH`/`RETURN` [2026.07, Cypher 25] states grouping keys explicitly — GQL-aligned alternative to implicit grouping; implicit grouping stays valid:
 ```cypher
@@ -356,8 +351,6 @@ Default to 2025.01-safe features when version unknown.
 | `SEARCH` clause — `FULLTEXT INDEX` (`WITH ANALYZER`, `SKIP`/`OFFSET`) | 2026.09 | `CALL db.index.fulltext.queryNodes(...)` / `queryRelationships(...)` |
 | `ACYCLIC` path mode (no repeated nodes in path) | 2026.03 | post-filter with `size(nodes(p)) = size(apoc.coll.toSet(nodes(p)))` |
 | `string.indexOf()`, `string.join()`, `string.regexReplace()` | 2026.05 | `apoc.text.*` or app-side |
-| `GROUP BY` subclause on `WITH`/`RETURN`, `cardinality()` | 2026.07 | implicit grouping keys; `size()` / `size(keys(map))` |
-| `WHERE` on procedure calls run against the `system` database | 2026.07 | filter rows client-side |
 | GQL aliases: `FOR`=`UNWIND`, `PROPERTY_EXISTS`=`IS NOT NULL`, `IS [NOT] LABELED`=`n:Label`; function aliases (`local_time`, `zoned_datetime`, `duration_between`, `collect_list`, etc.) | 2026.02–04 | GQL compliance only — use Cypher equivalents; full list → [references/cypher-syntax.md](references/cypher-syntax.md) |
 | **GRAPH TYPE** schema DDL (`ALTER CURRENT GRAPH TYPE SET/ADD/ALTER/DROP`, `SHOW CURRENT GRAPH TYPE`) | 2026.02 (preview), **GA 2026.06** | Use individual `CREATE CONSTRAINT` / `CREATE INDEX` |
 | `GROUP BY` subclause on `WITH`/`RETURN` (explicit grouping keys, GQL alignment) | 2026.07 | Implicit grouping — list non-aggregating expressions in the projection |

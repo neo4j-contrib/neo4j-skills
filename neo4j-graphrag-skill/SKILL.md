@@ -1,7 +1,7 @@
 ---
 name: neo4j-graphrag-skill
 description: Build GraphRAG retrieval pipelines on Neo4j using the neo4j-graphrag Python
-  package (v1.21.0+). Covers retriever selection (VectorRetriever, HybridRetriever,
+  package (v1.22.0+). Covers retriever selection (VectorRetriever, HybridRetriever,
   VectorCypherRetriever, HybridCypherRetriever, Text2CypherRetriever, ToolsRetriever),
   external vector DB retrievers (Weaviate, Pinecone, Qdrant), retrieval_query Cypher
   fragments, query_params, filters, GraphRAG pipeline wiring (GraphRAG + LLM + prompt),
@@ -11,7 +11,7 @@ description: Build GraphRAG retrieval pipelines on Neo4j using the neo4j-graphra
   neo4j-document-import-skill. Does NOT handle plain vector search — use
   neo4j-vector-index-skill. Does NOT handle GDS analytics — use neo4j-gds-skill.
   Does NOT handle agent memory — use neo4j-agent-memory-skill.
-version: 1.1.0
+version: 1.1.1
 status: active
 allowed-tools: Bash WebFetch
 ---
@@ -90,26 +90,7 @@ Requires: Python >= 3.10, `neo4j >= 5.17.0` (driver 6.x supported).
 
 ## Step 2 — Choose Retriever
 
-```
-Has fulltext index? YES → Hybrid variants (better recall)
-                   NO  → Vector variants (baseline)
-
-Needs graph context after vector lookup? YES → Cypher variants
-                                         NO  → plain variants
-
-For natural-language-to-Cypher? → Text2CypherRetriever (no embedder needed)
-For multi-tool LLM routing?     → ToolsRetriever
-Using external vector DB?       → WeaviateNeo4jRetriever / PineconeNeo4jRetriever / QdrantNeo4jRetriever
-```
-
-| Retriever | Vector | Fulltext | Graph | When to use |
-|---|:---:|:---:|:---:|---|
-| `VectorRetriever` | ✓ | — | — | Baseline; quick start |
-| `HybridRetriever` | ✓ | ✓ | — | Better recall; no graph context |
-| `VectorCypherRetriever` | ✓ | — | ✓ | GraphRAG without fulltext |
-| `HybridCypherRetriever` | ✓ | ✓ | ✓ | **Production GraphRAG — default choice** |
-| `Text2CypherRetriever` | — | — | ✓ | LLM generates Cypher; no embedder |
-| `ToolsRetriever` | varies | varies | varies | Multi-retriever LLM routing |
+Pick from [Retriever Selection](#retriever-selection) table above.
 
 For custom Cypher hybrid search outside the `neo4j-graphrag` retriever APIs, use `neo4j-vector-index-skill`.
 
@@ -319,11 +300,15 @@ DeprecationWarning and will be removed in 2.0:
 ```python
 # v1.19+ — preferred
 from neo4j_graphrag.components.text_splitters.fixed_size_splitter import FixedSizeSplitter
-from neo4j_graphrag.pipeline.kg_builder import SimpleKGPipeline
 
 # deprecated (removed in 2.0)
-from neo4j_graphrag.components.text_splitters.fixed_size_splitter import FixedSizeSplitter
+from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter import FixedSizeSplitter
+
+# SimpleKGPipeline did NOT move — only valid path:
+from neo4j_graphrag.experimental.pipeline.kg_builder import SimpleKGPipeline
 ```
+
+`neo4j_graphrag.pipeline` (v1.21+) = new lazy dataflow DSL (`Pipeline`, `LocalInterpreter`, `Sink`), unrelated to the experimental task-graph `Pipeline` behind `SimpleKGPipeline`. `neo4j_graphrag.pipeline.kg_builder` does not exist → `ModuleNotFoundError`.
 
 Also since v1.19: `Component` / `RunContext` / `TaskProgressNotifierProtocol` live in
 `neo4j_graphrag.components.base`, and malformed components raise `ComponentDefinitionError`
@@ -331,20 +316,9 @@ Also since v1.19: `Component` / `RunContext` / `TaskProgressNotifierProtocol` li
 
 ---
 
-## Pipeline Observers (v1.20)
+## Dataflow Pipeline DSL + Observers (v1.21)
 
-`StageObserver` / `LoggingStageObserver` hook into pipeline item flow without touching the
-transformation functions:
-
-```python
-from neo4j_graphrag.pipeline import LocalInterpreter, LoggingStageObserver
-
-result = pipeline.run(
-    ...,
-    observers=[LoggingStageObserver()],  # wrapped via LocalInterpreter
-)
-# Operators accept a label= argument to name stages in observer output
-```
+Lazy `neo4j_graphrag.pipeline.Pipeline` + `LocalInterpreter(observers=[...])`; `TextSplitter.iter_chunks()`. Full API → [references/pipeline-dsl.md](references/pipeline-dsl.md).
 
 ---
 
@@ -410,131 +384,10 @@ r2 = rag.search(query_text="Where does she work?", message_history=history)
 
 ---
 
-## External Retrievers
+## External Retrievers, LLM + Embedder Providers
 
-```python
-# --- Weaviate ---
-from neo4j_graphrag.retrievers import WeaviateNeo4jRetriever
-import weaviate
-
-weaviate_client = weaviate.connect_to_local()
-retriever = WeaviateNeo4jRetriever(
-    driver=driver,
-    client=weaviate_client,
-    collection="Chunk",
-    id_property_external="neo4j_id",
-    id_property_neo4j="id",
-    retrieval_query=retrieval_query,
-    node_label_neo4j="Chunk",       # optional: speeds up Neo4j lookup
-)
-
-# --- Pinecone ---
-from neo4j_graphrag.retrievers import PineconeNeo4jRetriever
-from pinecone import Pinecone
-
-pc = Pinecone(api_key=os.environ["PINECONE_API_KEY"])
-retriever = PineconeNeo4jRetriever(
-    driver=driver,
-    client=pc,
-    index_name="my-index",
-    id_property_neo4j="id",
-    retrieval_query=retrieval_query,
-)
-
-# --- Qdrant ---
-from neo4j_graphrag.retrievers import QdrantNeo4jRetriever
-from qdrant_client import QdrantClient
-
-retriever = QdrantNeo4jRetriever(
-    driver=driver,
-    client=QdrantClient(url="http://localhost:6333"),
-    collection_name="Chunk",
-    id_property_external="neo4j_id",
-    id_property_neo4j="id",
-    id_property_getter=lambda hit: hit.payload["neo4j_id"],  # custom ID extraction
-    retrieval_query=retrieval_query,
-)
-```
-
----
-
-## LLM Providers
-
-All implement `LLMBase`. All support sync + async, tool calling, and automatic rate limiting.
-Since v1.19 provider classes are imported lazily — importing `neo4j_graphrag.llm` no longer pulls in every provider SDK.
-
-| Class | Extra | Notes |
-|---|---|---|
-| `OpenAILLM` | `openai` | Structured output; tool calling |
-| `AzureOpenAILLM` | `openai` | Azure-hosted OpenAI |
-| `AnthropicLLM` | `anthropic` | Structured output + tool calling (v1.19; needs Claude 4.5+) |
-| `GeminiLLM` | `google` | Google GenAI SDK; added v1.17 (replaces deprecated-to-be `VertexAILLM`) |
-| `VertexAILLM` | `google` | Structured output; tool calling; default model now `gemini-2.5-flash` (v1.19) |
-| `MistralAILLM` | `mistralai` | Tool calling; requires `mistralai>=2.7.1` (v1.19, breaking) |
-| `CohereLLM` | `cohere` | Constructible again since v1.19 |
-| `OllamaLLM` | `ollama` | Local; tool calling |
-| `BedrockLLM` | `bedrock` | Boto3 Converse API; default model now `us.anthropic.claude-haiku-4-5-...` (v1.19) |
-
-```python
-from neo4j_graphrag.llm import (
-    OpenAILLM, AzureOpenAILLM, AnthropicLLM, GeminiLLM, VertexAILLM,
-    MistralAILLM, CohereLLM, OllamaLLM, BedrockLLM,
-    BaseOpenAILLM, BaseAnthropicLLM, BaseGeminiLLM,  # subclass to reach custom endpoints (v1.19)
-)
-
-llm = OpenAILLM(model_name="gpt-4.1", model_params={"temperature": 0})
-llm = AnthropicLLM(model_name="claude-sonnet-4-5")
-llm = GeminiLLM(model_name="gemini-2.5-flash")
-llm = VertexAILLM(model_name="gemini-2.5-flash")
-llm = OllamaLLM(model_name="llama3")           # no API key needed
-llm = BedrockLLM(model_id="us.anthropic.claude-haiku-4-5-20251001-v1:0")
-
-# Custom / OpenAI-compatible endpoint (v1.19): explicit base_url on Anthropic, OpenAI, Azure, Gemini
-llm = OpenAILLM(model_name="...", base_url="https://my-gateway.example.com/v1")
-# Note: an http_client with its own base_url is ignored by the SDKs — pass base_url instead (warns)
-
-# Token usage tracking (v1.15.0+)
-response = llm.invoke("Hello")
-# response.usage → LLMUsage(request_tokens=N, response_tokens=M, total_tokens=T)
-
-# Graceful resource cleanup (v1.16.0+)
-llm.close()         # sync
-await llm.aclose()  # async
-```
-
----
-
-## Embedder Providers
-
-All include automatic rate limiting with tenacity exponential backoff.
-
-| Class | Extra | Dims |
-|---|---|---|
-| `OpenAIEmbeddings` | `openai` | 3072 / 1536 |
-| `AzureOpenAIEmbeddings` | `openai` | varies |
-| `GeminiEmbedder` | `google` | added v1.17 (replaces deprecated-to-be `VertexAIEmbeddings`) |
-| `VertexAIEmbeddings` | `google` | 768 |
-| `MistralAIEmbeddings` | `mistralai` | 1024 |
-| `CohereEmbeddings` | `cohere` | 1024 |
-| `OllamaEmbeddings` | `ollama` | varies |
-| `SentenceTransformerEmbeddings` | `sentence-transformers` | 384+ |
-| `BedrockEmbeddings` | `bedrock` | varies; added v1.15.0 |
-
-```python
-from neo4j_graphrag.embeddings import (
-    OpenAIEmbeddings, VertexAIEmbeddings, GeminiEmbedder, CohereEmbeddings,
-    OllamaEmbeddings, SentenceTransformerEmbeddings, BedrockEmbeddings,
-)
-
-# Cohere embeddings are asymmetric (v1.19): give the retrieval side its own instance
-indexer_embedder = CohereEmbeddings(input_type="search_document")  # default, for TextChunkEmbedder
-query_embedder = CohereEmbeddings(input_type="search_query")       # for the retriever
-
-embedder = OpenAIEmbeddings(model="text-embedding-3-large")   # 3072 dims
-embedder = OpenAIEmbeddings(model="text-embedding-3-small")   # 1536 dims
-embedder = SentenceTransformerEmbeddings(model="all-MiniLM-L6-v2")  # 384 dims, local
-embedder = BedrockEmbeddings(model_id="amazon.titan-embed-text-v2:0")
-```
+- Weaviate / Pinecone / Qdrant constructors → [references/retrievers.md](references/retrievers.md#external-vector-db-retrievers)
+- LLM classes (`OpenAILLM`, `AnthropicLLM`, `GeminiLLM`, `VertexAILLM`, `BedrockLLM`, …), `base_url`, token usage, `close()`; embedder classes + dims → [references/providers.md](references/providers.md)
 
 ---
 
@@ -603,6 +456,11 @@ schema_dict = get_structured_schema(driver, sample=1000)  # dict with labels/rel
 ## References
 
 Load on demand:
+- [references/retrievers.md](references/retrievers.md) — per-retriever constructor params, external vector DB retrievers, `result_formatter`, pre-filter operators
+- [references/providers.md](references/providers.md) — LLM + embedder provider classes, extras, defaults
+- [references/pipeline-dsl.md](references/pipeline-dsl.md) — dataflow `Pipeline` DSL, `Source`/`Sink`, stage observers [v1.21]
+- [references/kg-builder.md](references/kg-builder.md) — `SimpleKGPipeline` constructor, schema, splitters
+- [references/knowledge-graph-construction.md](references/knowledge-graph-construction.md) — advanced KG pipeline customization
 - [neo4j-graphrag package docs](https://neo4j.com/docs/neo4j-graphrag-python/current/)
 - [RAG & GraphRAG user guide](https://neo4j.com/docs/neo4j-graphrag-python/current/user_guide_rag.html)
 - [KG Builder user guide](https://neo4j.com/docs/neo4j-graphrag-python/current/user_guide_kg_builder.html)

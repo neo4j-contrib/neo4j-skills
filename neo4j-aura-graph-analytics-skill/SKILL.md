@@ -10,7 +10,7 @@ description: Serverless Aura Graph Analytics (AGA) GDS Sessions — covers GdsSe
   Does NOT cover the embedded GDS plugin on Aura Pro or self-managed Neo4j — use neo4j-gds-skill.
   Does NOT handle Cypher authoring — use neo4j-cypher-skill.
   Does NOT cover Snowflake Graph Analytics — use neo4j-snowflake-graph-analytics-skill.
-version: 1.0.10
+version: 1.0.11
 allowed-tools: Bash WebFetch
 ---
 
@@ -48,7 +48,7 @@ allowed-tools: Bash WebFetch
 
 ## Defaults
 
-- `graphdatascience >= 2.0` required
+- `graphdatascience >= 2.0` required; `>= 2.1` recommended
 - 2.0 endpoints: no `v2` prefix — `gds.page_rank.*`, `gds.graph.node_properties.*`, `gds.graph.construct(...)`
 - Use snake_case parameters end-to-end
 - Call `gds.verify_connectivity()` after session creation — verifies session and, if attached, the source DB
@@ -62,10 +62,10 @@ allowed-tools: Bash WebFetch
 ## Installation
 
 ```bash
-pip install "graphdatascience>=2.0"     # 2.0 is the current stable release
+pip install "graphdatascience>=2.1"     # 2.1 is the current stable release
 ```
 
-2.0 requires: Python >= 3.10, `neo4j` driver 5.26–7.0, pandas 2–3, pyarrow 21–25, numpy <3.
+2.0 / 2.1 require: Python >= 3.10, `neo4j` driver 5.26–7.0, pandas 2–3, pyarrow 21–25, numpy <3.
 
 ### Client 1.x (legacy)
 
@@ -86,7 +86,9 @@ pip install "graphdatascience>=2.0"     # 2.0 is the current stable release
 
 Migration guide: [Neo4j GDS Python client 2.0 migration](https://neo4j.com/docs/graph-data-science-client/current/migration-from-1x/)
 
-2.0 additions: `GdsSessions.estimate(algorithms=[...])` per-algorithm memory; `GdsSessions.get_or_create(show_progress=...)`; keyword-only `GdsSessions.delete(session_name=|session_id=)` returns `False` when nothing deleted; `overwrite=True` on `gds.graph.project` / `generate` / `construct` / `filter` / `sample` drops a same-named graph first; `gds.graph.drop(...)` accepts multiple graphs → `list[GraphInfo]`;
+2.0 additions: `GdsSessions.estimate(algorithms=[...])` per-algorithm memory; `GdsSessions.get_or_create(show_progress=...)`; keyword-only `GdsSessions.delete(session_name=|session_id=)` returns `False` when nothing deleted; `overwrite=True` on `gds.graph.project` / `generate` / `construct` / `filter` / `sample` drops a same-named graph first; `gds.graph.drop(...)` accepts multiple graphs → `list[GraphInfo]`.
+
+2.1 additions: `gds.run_cypher(query, auto_commit=True)` for `CALL { … } IN TRANSACTIONS` (2.0 default retryable transaction rejects it); `gds.db_driver()` → session client's managed `neo4j.Driver` (closed by `gds.close()`); `mode="READ"`/`"WRITE"` strings accepted for `QueryMode`.
 
 ---
 
@@ -102,7 +104,7 @@ sessions = GdsSessions(api_credentials=AuraAPICredentials.from_env())
 # Create API credentials in Aura Console → Account → API credentials
 ```
 
-If member of multiple projects: set `AURA_PROJECT_ID` or pass `project_id=`.
+Member of multiple projects or organizations: set `AURA_PROJECT_ID` or pass `project_id=` — 2.1 checks organizations first when deriving the default project.
 
 ### Step 2 — Estimate Memory
 

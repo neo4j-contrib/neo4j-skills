@@ -3,7 +3,7 @@
 ## Full Constructor
 
 ```python
-from neo4j_graphrag.pipeline.kg_builder import SimpleKGPipeline
+from neo4j_graphrag.experimental.pipeline.kg_builder import SimpleKGPipeline
 
 pipeline = SimpleKGPipeline(
     llm,                          # LLMInterface — used for entity/rel extraction

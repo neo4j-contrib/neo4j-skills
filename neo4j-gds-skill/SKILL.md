@@ -1,7 +1,7 @@
 ---
 name: neo4j-gds-skill
 description: Neo4j Graph Data Science (GDS) embedded plugin via Python client or Cypher —
-  covers graphdatascience client 2.0, GraphDataScience, gds.graph.project.native,
+  covers graphdatascience client 2.x, GraphDataScience, gds.graph.project.native,
   gds.graph.project.cypher, snake_case endpoints, graph catalog operations,
   stream/stats/mutate/write modes, memory estimation, PageRank, Louvain, WCC, FastRP, KNN,
   Node Similarity, ML pipelines, and cleanup. Use for Aura Pro, self-managed, local, or
@@ -10,7 +10,7 @@ description: Neo4j Graph Data Science (GDS) embedded plugin via Python client or
   Cypher API projection/session management — use neo4j-aura-graph-analytics-skill.
   Does NOT handle Cypher authoring — use neo4j-cypher-skill.
   Does NOT cover driver setup — use neo4j-driver-python-skill or other driver skill.
-version: 1.0.17
+version: 1.0.18
 allowed-tools: Bash WebFetch
 ---
 
@@ -60,11 +60,11 @@ RETURN gds.version() AS gds_version
 GDS plugin unavailable: client raises `GdsNotFound` at construction; Cypher raises `Unknown function 'gds.version'`. AuraDB serverless analytics → `neo4j-aura-graph-analytics-skill`. Self-managed/local → install or enable GDS plugin.
 
 ```bash
-pip install graphdatascience                 # Python client 2.0+
+pip install "graphdatascience>=2.1"          # 2.1 required for GDS 2026.09
 pip install "graphdatascience[rust-ext]"     # optional: faster serialization
 ```
 
-Compatibility: graphdatascience 2.0 — GDS >= 2.13 and < 2.28 / < 2026.9, Python >= 3.10 and < 3.15, Neo4j Python driver >= 5.26 and < 7.0, pandas 2–3, pyarrow 21–25. GDS server < 2.13 → `DeprecationWarning` at construction; pin `graphdatascience<2` (client 1.22) there.
+Compatibility: graphdatascience 2.1 — GDS >= 2.13 and < 2.28 / < 2026.10; 2.0 — GDS < 2026.9. Both: Python >= 3.10 and < 3.15, Neo4j Python driver >= 5.26 and < 7.0, pandas 2–3, pyarrow 21–25. GDS server < 2.13 → `DeprecationWarning` at construction; pin `graphdatascience<2` (client 1.22) there.
 
 ### Client 1.x fallback (GDS server < 2.13)
 
@@ -80,7 +80,7 @@ Compatibility: graphdatascience 2.0 — GDS >= 2.13 and < 2.28 / < 2026.9, Pytho
 
 Migration guide: [Neo4j GDS Python client 2.0 migration](https://neo4j.com/docs/graph-data-science-client/current/migration-from-1x/)
 
-GDS plugin releases track the server: `2026.08.1` requires Neo4j `2026.08` — check the [GDS compatibility table](https://neo4j.com/docs/graph-data-science/current/installation/supported-neo4j-versions/) before upgrading either side.
+GDS plugin releases track the server: `2026.09.0` requires Neo4j `2026.09` — check the [GDS compatibility table](https://neo4j.com/docs/graph-data-science/current/installation/supported-neo4j-versions/) before upgrading either side.
 
 GDS plugin `2026.07.0` removed `CALL gds.userLog()` — read hints and warnings from driver result summary notifications or the Neo4j debug log; track task progress with `CALL gds.listProgress()`.
 
@@ -91,6 +91,9 @@ GDS plugin `2026.07.0` removed `CALL gds.userLog()` — read hints and warnings 
 - Server version via `gds.server_version()` — no `gds.version()` client method (Cypher `RETURN gds.version()` still valid)
 - Procedure aliases: `gds.betweenness` ≡ `gds.betweenness_centrality`; also `gds.closeness`, `gds.degree`, `gds.eigenvector`, `gds.harmonic`, `gds.kcore`
 - Pipelines: `gds.pipeline.node_classification` / `link_prediction` / `node_regression` — the only API in 2.0
+- `gds.run_cypher(query, auto_commit=True)` [2.1] for `CALL { … } IN TRANSACTIONS` — 2.0 default retryable transaction rejects it; on 2.0 use the Neo4j driver directly
+- `gds.db_driver()` [2.1] → underlying `neo4j.Driver` for custom sessions/transactions; closed by `gds.close()` only if client created it
+- `mode="READ"` / `"WRITE"` strings accepted wherever `QueryMode` is [2.1]
 - No async/job-handle API on the plugin surface — `compute()`, `*_async`, `gds.jobs` are AGA Sessions only
 
 ---
@@ -414,6 +417,7 @@ Full algorithm catalog → [references/algorithms.md](references/algorithms.md)
 | `mutate_property already exists` | Re-running algorithm on same projection | Drop and re-project, or use different `mutate_property` name |
 | `No algorithm results` | Source/target node not in projection | Verify node labels/rel types match projection; check `G.node_count()` |
 | `AttributeError: 'list' object ...` after `gds.graph.drop(...)` | 2.0 returns `list[GraphInfo]` | Index the result; 1.x client returns a single `GraphInfo` |
+| `A query with 'CALL { ... } IN TRANSACTIONS' can only be executed in an implicit transaction` from `run_cypher` | 2.0 runs every query in a retryable managed transaction | `graphdatascience>=2.1` + `run_cypher(query, auto_commit=True)` |
 
 ---
 

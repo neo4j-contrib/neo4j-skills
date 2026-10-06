@@ -42,7 +42,7 @@ To discover entity/relationship types, pass `schema=None` (default) — LLM infe
 import asyncio, os
 from dotenv import load_dotenv
 from neo4j import GraphDatabase
-from neo4j_graphrag.pipeline.kg_builder import SimpleKGPipeline
+from neo4j_graphrag.experimental.pipeline.kg_builder import SimpleKGPipeline
 from neo4j_graphrag.embeddings import OpenAIEmbeddings
 from neo4j_graphrag.llm import OpenAILLM
 from pathlib import Path
@@ -159,7 +159,7 @@ PATTERNS = [
 ]
 
 # ── Pipeline setup ────────────────────────────────────────────────────────────
-from neo4j_graphrag.pipeline.kg_builder import SimpleKGPipeline
+from neo4j_graphrag.experimental.pipeline.kg_builder import SimpleKGPipeline
 from neo4j_graphrag.indexes import create_vector_index
 
 pipeline = SimpleKGPipeline(
