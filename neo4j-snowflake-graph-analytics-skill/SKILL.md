@@ -11,7 +11,7 @@ description: Run Neo4j Graph Analytics algorithms (PageRank, Louvain, WCC, Dijks
   Does NOT cover Cypher or Neo4j DBMS queries — use neo4j-cypher-skill.
   Does NOT cover Aura Graph Analytics — use neo4j-aura-graph-analytics-skill.
   Does NOT cover self-managed GDS — use neo4j-gds-skill.
-version: 1.2.0
+version: 1.2.1
 allowed-tools: Bash WebFetch
 ---
 
