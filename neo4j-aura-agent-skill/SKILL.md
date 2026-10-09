@@ -3,11 +3,12 @@ name: neo4j-aura-agent-skill
 description: Manages Neo4j Aura Agents via the v2beta1 REST API — create, list, get, update, delete,
   and invoke Aura agents backed by an AuraDB instance. Use when configuring Aura Agent tools
   (CypherTemplate, SimilaritySearch, Text2Cypher), setting system prompts, deploying agents to REST
-  or MCP endpoints, or invoking agents with natural language queries. Covers OAuth2 auth,
+  or MCP endpoints, invoking agents with natural language queries, or generating evaluation
+  datasets (max 50 questions) for the Aura Agent evaluation feature. Covers OAuth2 auth,
   organization/project scoping, tool parameter schemas, and InvokeAgentResponse format.
   Does NOT cover AuraDB instance provisioning — use neo4j-aura-provisioning-skill.
   Does NOT cover vector index creation — use neo4j-vector-index-skill.
-version: 1.0.4
+version: 1.1.0
 allowed-tools: Bash WebFetch  
 ---
 
@@ -17,6 +18,7 @@ allowed-tools: Bash WebFetch
 - Deploying an agent for external access (REST API endpoint or MCP server)
 - Invoking an agent with natural language queries via REST API
 - Listing, reading, or deleting existing agents in a project
+- Generating an evaluation dataset (JSON) to test an agent in the Aura console's Evaluation feature
 
 ## When NOT to Use
 - **Creating/managing AuraDB instances** → `neo4j-aura-provisioning-skill`
@@ -258,6 +260,30 @@ Returns 202 Accepted.
 
 ---
 
+## Step 10 — Generate Evaluation Dataset
+
+Creates an importable evaluation dataset (max 50 questions) for Aura's Agent Evaluation feature. Read [references/evaluation-dataset-guide.md](references/evaluation-dataset-guide.md) first — it defines format, tool_type mapping, question budget and category rules.
+
+1. Export the real agent definition (never draft from a description alone — LLMs invent plausible tool calls):
+   ```bash
+   uv run python3 scripts/manage_agent.py get --agent-id "$AURA_AGENT_ID" > agent.json
+   ```
+   Ensure `schema.json` exists (Step 4).
+2. List tools (name, type, parameters, descriptions) and propose the per-category plan (≤ 50 total). Categories:
+   1. Core Factual (counts, aggregates, filters, comparisons, AND/NOT)
+   2. Per-tool probing — per non-Text2Cypher tool: one it should nail, one edge case on a hypothesised limit, one exploiting a structural gap confirmed in its config
+   3. Semantic search — exact-match + paraphrased/conceptual (only if a `similaritySearch` tool exists)
+   4. Multi-tool composition — each chains 2–4 tools
+   5. Text2Cypher stress — 5.1 2–3 hop/aggregation, 5.2 WITH/OPTIONAL compound, 5.3 shortest path/variable-length, 5.4 zero-record (hallucination) questions, 5.5 schema questions
+3. **Derive every expected answer by running Cypher against the database** (driver with `.env` creds). No guessed answers. Keep Cypher + gap rationale in `eval_dataset.provenance.json`.
+4. Write `eval_dataset.json` and validate:
+   ```bash
+   uv run python3 scripts/validate_eval_dataset.py eval_dataset.json --agent agent.json
+   ```
+5. Show the user category counts and samples. Warn: questions are **read-only after saving** in the console and datasets have no version history, so confirm before they import (Agent → Evaluation).
+
+---
+
 ## Tool Configuration
 
 ### CypherTemplate
@@ -342,6 +368,7 @@ All scripts load credentials from `.env` automatically. Run with `uv run python3
 | `scripts/fetch_schema.py` | Fetch graph schema from AuraDB; save to `schema.json` |
 | `scripts/manage_agent.py` | CRUD: list, create, get, update, delete agents |
 | `scripts/invoke_agent.py` | Send a natural language query to an agent |
+| `scripts/validate_eval_dataset.py` | Validate an evaluation dataset JSON (optionally against `agent.json`) |
 
 **fetch_schema.py parameters:**
 
@@ -394,3 +421,4 @@ All scripts load credentials from `.env` automatically. Run with `uv run python3
 - [ ] `AURA_AGENT_ID` saved from create response
 - [ ] Agent invoked and response verified (Step 7)
 - [ ] Update/Delete confirmed by user before execution
+- [ ] Eval dataset: ≤ 50 questions, expected answers from DB queries, tool calls validated against `agent.json` (Step 10)
