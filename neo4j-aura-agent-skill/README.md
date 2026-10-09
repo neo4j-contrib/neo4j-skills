@@ -9,6 +9,7 @@ Create, configure, and invoke [Neo4j Aura Agents](https://neo4j.com/docs/aura/au
 - Creates and manages Aura Agents via the v2beta1 REST API
 - Sets system prompts and agent visibility (private/public, REST/MCP)
 - Invokes agents with natural language queries and parses responses
+- Generates evaluation datasets (≤ 50 questions, 5 categories) for the Aura Agent evaluation feature
 
 ## Requirements
 
@@ -48,4 +49,6 @@ uv run python3 scripts/invoke_agent.py --agent-id "$AURA_AGENT_ID" "What can you
 | `scripts/fetch_schema.py` | Fetch graph schema from AuraDB; save to `schema.json` |
 | `scripts/manage_agent.py` | CRUD operations (list/create/get/update/delete) |
 | `scripts/invoke_agent.py` | Send queries to a deployed agent |
+| `scripts/validate_eval_dataset.py` | Validate evaluation dataset JSON against the agent definition |
+| `references/evaluation-dataset-guide.md` | Evaluation dataset format, categories, and generation workflow |
 | `references/REFERENCE.md` | Full API schema, embedding providers, response formats |
