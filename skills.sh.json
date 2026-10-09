@@ -42,12 +42,10 @@
     },
     {
       "title": "Aura Cloud",
-      "description": "Provision and manage Neo4j Aura instances and graph analytics.",
+      "description": "Provision and manage Neo4j Aura instances and agents.",
       "skills": [
         "neo4j-aura-provisioning-skill",
-        "neo4j-aura-agent-skill",
-        "neo4j-aura-graph-analytics-skill",
-        "neo4j-snowflake-graph-analytics-skill"
+        "neo4j-aura-agent-skill"
       ]
     },
     {
@@ -61,16 +59,18 @@
       ]
     },
     {
-      "title": "Graph Analytics",
-      "description": "Run graph algorithms and analytical queries with GDS.",
+      "title": "Performance & Analytics",
+      "description": "Run graph algorithms with GDS, Aura Graph Analytics, and Snowflake; tune slow queries.",
       "skills": [
         "neo4j-gds-skill",
+        "neo4j-aura-graph-analytics-skill",
+        "neo4j-snowflake-graph-analytics-skill",
         "neo4j-query-tuning-skill"
       ]
     },
     {
       "title": "Integrations",
-      "description": "Use Neo4j with GraphQL, Spring Data, and Snowflake.",
+      "description": "Build Neo4j-backed APIs and apps with GraphQL and Spring Data.",
       "skills": [
         "neo4j-graphql-skill",
         "neo4j-spring-data-skill"
