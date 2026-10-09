@@ -544,14 +544,13 @@ GraphSAGE trains a model in one job, then uses it to predict in a later job. Tra
 |---|---|---|---|
 | `modelname` | String | *required* | Unique name of the model to train |
 | `numEpochs` | Integer | *required* | Number of epochs to train |
-| `numSamples` | List of Integer | *required* | Neighbors to sample per layer; list length = number of layers |
-| `hiddenChannels` | Integer | 256 | Node embedding dimension of the layer outputs |
-| `activation` | String | `"relu"` | Activation function: `"relu"` or `"sigmoid"` |
+| `numNeighbors` | List of Integer | `[20, 10]` | Neighbors to sample per layer; list length = number of layers |
+| `embeddingDimension` | Integer | 256 | Node embedding dimension of the layer outputs |
+| `activationFunction` | String | `"relu"` | Activation function: `"relu"` or `"sigmoid"` |
 | `aggregator` | String | `"mean"` | Neighborhood aggregator: `"mean"` or `"max"` |
 | `learningRate` | Float | 0.001 | Optimizer learning rate |
-| `dropout` | Float | 0.1 | Dropout probability per layer; `>= 0.0` and `< 1.0` |
+| `dropout` | Float | 0.1 | Dropout probability per layer; `>= 0.0` and `< 1.0`; `1.0` rejected |
 | `layerNormalization` | Boolean | true | Apply layer normalization between layers |
-| `epochsPerCheckpoint` | Integer | `max(numEpochs/10, 1)` | Epochs between saving checkpoints |
 | `randomSeed` | Integer | random | Seed for all randomness |
 
 ### Node Classification — train (`gs_nc_train`)
@@ -564,8 +563,7 @@ Shared parameters above, plus:
 | `targetProperty` | String | *required* | Node property (column) to predict; NULL values mark unlabeled nodes (semi-supervised) |
 | `splitRatios` | Map | `{'TRAIN':0.6,'TEST':0.2,'VALID':0.2}` | Train/test/validation split; keys `TRAIN`/`TEST`/`VALID`, values sum to 1.0 |
 | `epochsPerVal` | Integer | 0 | Epochs between validation-set evaluation; 0 = never |
-| `trainBatchSize` | Integer | auto-inferred | Target nodes per training batch |
-| `evalBatchSize` | Integer | = `trainBatchSize` | Batch size for evaluation |
+| `batchSize` | Integer | auto-inferred | Target nodes per batch; used for both training and evaluation |
 | `classWeights` | Boolean or Map | false | Balance training by class weights; `true` derives from label distribution, or supply a per-class map |
 
 ### Unsupervised embeddings — train (`gs_unsup_train`)
@@ -576,9 +574,10 @@ Shared parameters above, plus:
 |---|---|---|---|
 | `numWalks` | Integer | 10 | Random walks per node |
 | `walkDepth` | Integer | 3 | Steps per random walk |
-| `negSamplingRatio` | Float | 1.0 | Ratio of negative to positive samples |
+| `negativeSamplingRatio` | Float | 1.0 | Ratio of negative to positive samples |
 | `batchSize` | Integer | auto-inferred | Target nodes per training batch |
-| `lossReduction` | String | auto | Loss reduction: `"mean"` or `"sum"` (defaults to `"mean"` if `batchSize` set, else `"sum"`) |
+
+Removed in 1.0.37: `numSamples`, `hiddenChannels`, `activation`, `negSamplingRatio`, `trainBatchSize`, `evalBatchSize`, `epochsPerCheckpoint`, `lossReduction`. Renamed params above are breaking; no checkpointing; loss always mean-reduced.
 
 ### Predict (`gs_nc_predict`, `gs_unsup_predict`)
 
@@ -587,7 +586,7 @@ Apply a trained model to a projected graph. Most settings are inherited from tra
 | Parameter | Type | Default | Description |
 |---|---|---|---|
 | `modelname` | String | *required* | Name of the trained model to use |
-| `batchSize` | Integer | inherited | Target nodes per prediction batch (defaults to the training eval batch size) |
+| `batchSize` | Integer | inherited | Target nodes per prediction batch (defaults to the training batch size) |
 | `randomSeed` | Integer | random | Seed for all randomness |
 
 **Write:** `nodeLabel`, `outputTable`
