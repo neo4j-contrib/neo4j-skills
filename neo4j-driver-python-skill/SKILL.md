@@ -9,7 +9,7 @@ description: Neo4j Python Driver v6 — driver lifecycle, execute_query, managed
   Does NOT handle Cypher query authoring — use neo4j-cypher-skill.
   Does NOT cover driver upgrades or breaking changes — use neo4j-migration-skill.
   Does NOT cover GraphRAG pipelines (neo4j-graphrag package) — use neo4j-graphrag-skill.
-version: 1.0.9
+version: 1.0.10
 allowed-tools: Bash WebFetch
 ---
 
@@ -33,7 +33,7 @@ pip install neo4j                  # package name is `neo4j`, NOT `neo4j-driver`
 pip install neo4j-rust-ext         # optional: 3–10× faster serialization, same API
 ```
 
-**Python >=3.10 required** for v6.x. Python 3.14 supported [6.1+]. Pandas 3 and PyArrow 23/24 supported [6.2+]. PyArrow 25 and Bolt 6.1 `uuid.UUID` values supported [6.3+]; driver-created SSL contexts honour `SSLKEYLOGFILE` [6.3+].
+**Python >=3.10 required** for v6.x. Python 3.14 supported [6.1+]. Pandas 3 and PyArrow 23/24 supported [6.2+]. PyArrow 25 and Bolt 6.1 `uuid.UUID` values supported [6.3+]; driver-created SSL contexts honour `SSLKEYLOGFILE` [6.3+]. Python 3.15 supported [6.4+].
 
 Neo4j 2026.08+ `UUID` properties require `neo4j>=6.3` to round-trip as `uuid.UUID`. Storing UUID needs block store format (Enterprise); Community (aligned format) fails: `storing properties of type UUID is not supported in aligned store format` — store `str(uuid)`.
 
@@ -97,8 +97,11 @@ URI schemes:
 | `neo4j://` | Unencrypted + cluster routing |
 | `bolt+s://` | TLS, single instance |
 | `bolt://` | Unencrypted, single instance |
+| `https://` / `http://` (e.g. `https://host:7474/`) | HTTP Query API instead of Bolt [6.4+, preview] — `pip install "neo4j[http]"` |
 
 Auth options: `("user", "pass")` tuple, `basic_auth()`, `bearer_auth("jwt")`, `kerberos_auth("b64")`.
+
+HTTP Query API [6.4+, preview — no semver guarantee]: pass `database_=` / `database=` on every call (no home-database resolution); auth `basic` (no realm) or `bearer` only. Ignored/unsupported: tx metadata + timeouts, `fetch_size` (no backpressure), notification filters; `VECTOR`, `UUID`, `UnsupportedType` cannot be exchanged. Needs Bolt for any of these → use `neo4j+s://` / `bolt+s://`.
 
 ---
 

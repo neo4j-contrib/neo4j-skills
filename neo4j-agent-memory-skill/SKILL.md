@@ -1,7 +1,7 @@
 ---
 name: neo4j-agent-memory-skill
 description: Authoritative reference for the neo4j-agent-memory Python package — a graph-native memory system for AI agents built on Neo4j — and for the hosted service (NAMS) at memory.neo4jlabs.com. Use this skill whenever the user mentions neo4j-agent-memory, agent memory with Neo4j, context graphs, the POLE+O model, MemoryClient/MemorySettings, the memory MCP server, or any of the framework integrations (LangChain, PydanticAI, CrewAI, AWS Strands, Google ADK, Microsoft Agent Framework, OpenAI Agents, LlamaIndex). Also use when the user mentions the hosted service at memory.neo4jlabs.com, NAMS, the Neo4j Agent Memory Service, the `nams_` API key prefix, or the hosted MCP endpoint. Also use when writing documentation, blog posts, tutorials, PRDs, or code samples for the project, when comparing agent memory approaches, or when positioning graph-native memory against vector-only approaches — even if the user doesn't explicitly name the package.
-version: 1.0.7
+version: 1.0.8
 ---
 
 # neo4j-agent-memory
@@ -40,7 +40,7 @@ Authoritative reference for the `neo4j-agent-memory` Python package — a Neo4j 
 | Python | 3.10+ |
 | Neo4j | 5.20+ (required for vector indexes) |
 | Status | Experimental (Neo4j Labs, community-supported) |
-| Current version (at time of writing) | **0.6.0** — **always verify PyPI before citing** |
+| Current version (at time of writing) | **0.7.0** (2026-10-07) — **always verify PyPI before citing** |
 
 ## What It Is (One Sentence)
 

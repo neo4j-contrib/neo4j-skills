@@ -333,11 +333,29 @@ RETURN [(n)-[:KNOWS]->(f:Person) | f.name] AS friends,
 
 Use pattern comprehensions for simple one-hop inline collections; for multi-step traversals use `COLLECT { MATCH ... RETURN ... }`.
 
-**Map comprehension** [2026.09, Cypher 25] — builds a `MAP` by iterating a `MAP` or `LIST`; form per 2026.09 changelog, reference docs pending:
+**Map comprehension** [2026.09, Cypher 25] — builds a `MAP` from a `MAP` or `LIST`:
 ```cypher
-{k: v IN map | keyExpression: valueExpression}
+// Map variant: {key: value IN map [WHERE predicate] | keyExpression : valueExpression}
+WITH {a: 1, b: 2, c: null} AS m
+RETURN {k: v IN m WHERE v IS NOT NULL | k : v * 10} AS scaled          // {a: 10, b: 20}
+
+// List variant: {item IN list [WHERE predicate] | keyExpression : valueExpression}
+WITH range(0, 10) AS nums
+RETURN {i IN nums WHERE i % 2 = 0 | toString(i) : i * 10} AS evens     // {`0`: 0, `2`: 20, ...}
+
+// Drop sensitive keys before returning properties
+MATCH (u:User {id: $id})
+RETURN {k: v IN properties(u) WHERE NOT k IN ['passwordHash', 'ssn'] | k : v} AS publicProps
 ```
-Pre-2026.09: `apoc.map.fromPairs([k IN keys(m) | [k, m[k]]])`.
+
+| Rule | Detail |
+|---|---|
+| `\|`, keyExpression, valueExpression | All mandatory (unlike list comprehension) |
+| keyExpression type | Must be `STRING` — else error; wrap numbers in `toString()` |
+| Duplicate keys | Last write wins; processing order undefined — never rely on which value survives |
+| Scope | Iteration variables shadow outer names; not visible outside |
+
+Pre-2026.09 / Cypher 5: `apoc.map.fromPairs([k IN keys(m) | [k, m[k]]])`.
 
 ---
 
