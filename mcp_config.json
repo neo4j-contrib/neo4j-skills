@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "neo4j-mcp": {
+      "command": "python",
+      "args": ["-m", "neo4j_mcp_server"],
+      "env": {
+        "NEO4J_URI": "${NEO4J_URI}",
+        "NEO4J_USERNAME": "${NEO4J_USERNAME}",
+        "NEO4J_PASSWORD": "${NEO4J_PASSWORD}",
+        "NEO4J_DATABASE": "${NEO4J_DATABASE}",
+        "NEO4J_READ_ONLY": "${NEO4J_READ_ONLY}",
+        "NEO4J_TELEMETRY": "${NEO4J_TELEMETRY}",
+        "NEO4J_LOG_LEVEL": "${NEO4J_LOG_LEVEL}",
+        "NEO4J_LOG_FORMAT": "${NEO4J_LOG_FORMAT}",
+        "NEO4J_SCHEMA_SAMPLE_SIZE": "${NEO4J_SCHEMA_SAMPLE_SIZE}"
+      }
+    }
+  }
+}

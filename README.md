@@ -21,23 +21,23 @@ Set these before or during installation:
 
 ## Installation
 
-### Gemini CLI
+### Antigravity
+
+Install the plugin using the **Antigravity CLI** (`agy`):
 
 ```bash
-gemini extensions install https://github.com/neo4j-contrib/neo4j-skills
+agy plugin install https://github.com/neo4j-contrib/neo4j-skills
 ```
 
-Enter your env vars when prompted. Then run `gemini` and use `/extensions list` to verify.
+Verify installation with `agy plugin list` (or `/plugin list` inside an interactive `agy` session).
 
-### Antigravity CLI
+In the **Antigravity app** or **IDE**, open the **Customizations** tab in the sidebar and install **Neo4j** from the **Marketplace**, or clone this repository into `~/.gemini/config/plugins/neo4j-skills` (global) or `.agents/plugins/neo4j-skills` (workspace).
 
 If you are migrating from Gemini CLI, import existing Gemini extensions automatically:
 
 ```bash
 agy plugin import gemini
 ```
-
-This auto-converts the `gemini-extension.json` manifest and copies skills into `.agents/skills/`. Then run `agy` and use `/plugins list` to verify.
 
 ### Claude Code
 
@@ -127,6 +127,14 @@ codex plugin marketplace upgrade neo4j-skills-marketplace
 ## What are Agent Skills?
 
 Agent Skills are a standardized format for domain-specific AI agent knowledge. Each skill bundles step-by-step instructions, on-demand reference docs, and executable scripts — loaded progressively to keep context lean. See [agentskills.io/specification](https://agentskills.io/specification).
+
+## Gemini CLI
+
+```bash
+gemini extensions install https://github.com/neo4j-contrib/neo4j-skills
+```
+
+Enter your env vars when prompted. Then run `gemini` and use `/extensions list` to verify.
 
 ## Contributing
 
