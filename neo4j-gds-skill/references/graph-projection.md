@@ -190,7 +190,7 @@ est = gds.fast_rp.estimate(G, embedding_dimension=256)
 print(est.required_memory)
 ```
 
-If `requiredMemory` exceeds JVM heap (`dbms.memory.heap.max_size`), reduce graph or increase heap. Treat 80% heap as review threshold, not hard guarantee.
+If `requiredMemory` exceeds JVM heap (`server.memory.heap.max_size`), reduce graph or increase heap. Treat 80% heap as review threshold, not hard guarantee.
 
 ---
 
