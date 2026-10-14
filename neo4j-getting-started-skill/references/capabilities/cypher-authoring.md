@@ -83,9 +83,13 @@ RETURN node.text AS text, score ORDER BY score DESC;
 **Fulltext**:
 ```cypher
 CYPHER 25
-CALL db.index.fulltext.queryNodes('index_name', $searchTerm)
-YIELD node, score
-RETURN node.name AS name, score ORDER BY score DESC LIMIT 20;
+MATCH (node)
+  SEARCH node IN (
+    FULLTEXT INDEX index_name
+    FOR $searchTerm
+    LIMIT 20
+  ) SCORE AS score
+RETURN node.name AS name, score ORDER BY score DESC;
 ```
 
 ## Pattern anti-patterns — always apply these rewrites

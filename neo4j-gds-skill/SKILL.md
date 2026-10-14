@@ -10,7 +10,7 @@ description: Neo4j Graph Data Science (GDS) embedded plugin via Python client or
   Cypher API projection/session management — use neo4j-aura-graph-analytics-skill.
   Does NOT handle Cypher authoring — use neo4j-cypher-skill.
   Does NOT cover driver setup — use neo4j-driver-python-skill or other driver skill.
-version: 1.0.18
+version: 1.0.19
 allowed-tools: Bash WebFetch
 ---
 
@@ -410,7 +410,7 @@ Full algorithm catalog → [references/algorithms.md](references/algorithms.md)
 | `GdsNotFound` at client construction | GDS plugin not installed on target DB | Install/enable GDS plugin; AuraDS endpoint only with GDS |
 | `AttributeError: ... no attribute 'version'` | `gds.version()` does not exist in client 2.0 | Use `gds.server_version()` |
 | `DeprecationWarning` at client construction | GDS server < 2.13 | Upgrade GDS server, or pin `graphdatascience<2` and use the 1.x mapping table |
-| `Insufficient heap memory` / OOM | Graph too large for available JVM heap | Run `gds.graph.project.estimate`; increase `dbms.memory.heap.max_size` |
+| `Insufficient heap memory` / OOM | Graph too large for available JVM heap | Run `gds.graph.project.estimate`; increase `server.memory.heap.max_size` |
 | `Procedure not found: gds.leiden` | Older or incompatible GDS | Check `CALL gds.list()` for available procedures; upgrade GDS or use Louvain |
 | `Node property 'X' not found` after mutate | Property not projected or wrong graph name | Verify `G.node_properties()` includes the property; check `mutate_property` spelling |
 | `Graph 'myGraph' already exists` | Leftover projection from failed run | `overwrite=True`, `CALL gds.graph.drop('myGraph')`, or `gds.graph.drop(G)` |

@@ -48,13 +48,7 @@ CREATE FULLTEXT INDEX chunk_fulltext IF NOT EXISTS
 FOR (c:Chunk) ON EACH [c.text];
 ```
 
-If fulltext analyzer, multi-property, or Lucene query syntax details matter, load `neo4j-cypher-skill`.
-
-Fulltext branch below uses `db.index.fulltext.queryNodes` (works 2025.x+). On 2026.09+, swap for SEARCH clause:
-```cypher
-  MATCH (chunk:Chunk)
-    SEARCH chunk IN (FULLTEXT INDEX chunk_fulltext FOR query LIMIT $sourceK) SCORE AS score
-```
+If fulltext compatibility, analyzer, multi-property, or Lucene query syntax details matter, load `neo4j-cypher-skill`.
 
 ## Parameters
 
@@ -79,14 +73,17 @@ CYPHER 25
 LET
   query = $query,
   queryVector = $queryVector,
-  sourceK = $sourceK,
   finalK = $finalK,
   rrfConstant = $rrfConstant,
   sourceWeights = $sourceWeights
 
-CALL (query, queryVector, sourceK, rrfConstant, sourceWeights) {
-  CALL db.index.fulltext.queryNodes('chunk_fulltext', query, {limit: sourceK})
-  YIELD node AS chunk, score
+CALL (query, queryVector, rrfConstant, sourceWeights) {
+  MATCH (chunk:Chunk)
+    SEARCH chunk IN (
+      FULLTEXT INDEX chunk_fulltext
+      FOR query
+      LIMIT $sourceK
+    ) SCORE AS score
   ORDER BY score DESC, chunk.id ASC
   WITH collect(chunk) AS chunks, rrfConstant, sourceWeights
   LET weight = coalesce(sourceWeights['fulltext'], 1.0)

@@ -116,10 +116,14 @@ ORDER BY score DESC;
 // Q8: Fulltext search across <Label>
 // $searchTerm = user search input
 CYPHER 25
-CALL db.index.fulltext.queryNodes('<label>_search', $searchTerm)
-YIELD node, score
+MATCH (node)
+  SEARCH node IN (
+    FULLTEXT INDEX <label>_name
+    FOR $searchTerm
+    LIMIT 20
+  ) SCORE AS score
 RETURN node.name AS name, node.<prop> AS description, score
-ORDER BY score DESC LIMIT 20;
+ORDER BY score DESC;
 ```
 
 ## Step Q4 — Validate all queries in one batch call
