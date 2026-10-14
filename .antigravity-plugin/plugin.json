@@ -1,0 +1,9 @@
+{
+  "$schema": "https://antigravity.google/schemas/v1/plugin.json",
+  "name": "Neo4j",
+  "description": "Agent skills for Neo4j graph database — write Cypher queries, design graph models, use drivers, run imports, build GraphRAG pipelines, run GDS algorithms, and manage Aura instances.",
+  "logo": ".antigravity-plugin/logo-w-sq.png",
+  "skills": [
+    "."
+  ]
+}
