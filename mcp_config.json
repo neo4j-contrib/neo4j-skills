@@ -13,7 +13,54 @@
         "NEO4J_LOG_LEVEL": "${NEO4J_LOG_LEVEL}",
         "NEO4J_LOG_FORMAT": "${NEO4J_LOG_FORMAT}",
         "NEO4J_SCHEMA_SAMPLE_SIZE": "${NEO4J_SCHEMA_SAMPLE_SIZE}"
-      }
+      },
+      "variables": [
+        {
+          "name": "NEO4J_URI",
+          "title": "Neo4j URI",
+          "description": "Bolt URI for the Neo4j instance (e.g. neo4j+s://<dbid>.databases.neo4j.io or bolt://localhost:7687)."
+        },
+        {
+          "name": "NEO4J_USERNAME",
+          "title": "Neo4j Username",
+          "description": "Neo4j database username (default: neo4j)."
+        },
+        {
+          "name": "NEO4J_PASSWORD",
+          "title": "Neo4j Password",
+          "description": "Neo4j database password."
+        },
+        {
+          "name": "NEO4J_DATABASE",
+          "title": "Neo4j Database",
+          "description": "Target database name (default: neo4j)."
+        },
+        {
+          "name": "NEO4J_READ_ONLY",
+          "title": "Read-Only Mode",
+          "description": "Set to true to disable write operations (default: true)."
+        },
+        {
+          "name": "NEO4J_TELEMETRY",
+          "title": "Telemetry",
+          "description": "Enable or disable telemetry (default: false)."
+        },
+        {
+          "name": "NEO4J_LOG_LEVEL",
+          "title": "Log Level",
+          "description": "Logging level for the MCP server (e.g. info, debug, warn, error)."
+        },
+        {
+          "name": "NEO4J_LOG_FORMAT",
+          "title": "Log Format",
+          "description": "Output format for server logs (e.g. text, json)."
+        },
+        {
+          "name": "NEO4J_SCHEMA_SAMPLE_SIZE",
+          "title": "Schema Sample Size",
+          "description": "Number of nodes/relationships sampled during schema introspection (default: 100)."
+        }
+      ]
     }
   }
 }
