@@ -13,13 +13,14 @@
     },
     {
       "title": "Drivers",
-      "description": "Connect to Neo4j from Python, JavaScript, Java, Go, or .NET.",
+      "description": "Connect to Neo4j from Python, JavaScript, Java, Go, .NET, or PHP.",
       "skills": [
         "neo4j-driver-python-skill",
         "neo4j-driver-javascript-skill",
         "neo4j-driver-java-skill",
         "neo4j-driver-go-skill",
-        "neo4j-driver-dotnet-skill"
+        "neo4j-driver-dotnet-skill",
+        "neo4j-driver-php-skill"
       ]
     },
     {
@@ -37,6 +38,7 @@
       "description": "Connect AI agents to Neo4j via MCP, CLI, and agent skill management.",
       "skills": [
         "neo4j-mcp-skill",
+        "neo4j-laravel-boost-skill",
         "neo4j-cli-tools-skill"
       ]
     },
