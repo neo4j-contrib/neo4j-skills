@@ -71,7 +71,7 @@ Procedure = `Neo4j_Graph_Analytics.graph.<name>`.
 
 | Category | Algorithms (procedure name) |
 |---|---|
-| Community Detection | WCC (`wcc`), Louvain (`louvain`), Leiden (`leiden`), Label Propagation (`label_propagation`), K-Means (`kmeans`), Triangle Count (`triangle_count`) |
+| Community Detection | WCC (`wcc`), Louvain (`louvain`), Leiden (`leiden`), Label Propagation (`label_propagation`), K-Means (`kmeans`), Triangle Count (`triangle_count`), K-1 Coloring (`k1coloring`) |
 | Centrality | PageRank (`page_rank`), Article Rank (`article_rank`), Betweenness (`betweenness`), Degree (`degree`) |
 | Pathfinding | Dijkstra (`dijkstra`, `dijkstra_single_source`), Delta-Stepping (`delta_stepping`), BFS (`bfs`), Yen's (`yens`), Max Flow (`max_flow`, `max_flow_min_cost`), FastPath (`fastpath`) |
 | Similarity | Node Similarity (`node_similarity`, `node_similarity_filtered`), KNN (`knn`, `knn_filtered`) |
