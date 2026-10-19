@@ -1,18 +1,19 @@
 ---
 name: neo4j-ontology-skill
-description: Author and validate Neo4j Ontology Graph Specification v1 (ontology graph spec)
+description: Author and validate Neo4j Ontology Graph Specification (ontology graph spec)
   documents. Use when writing or editing an ontology, defining nodes and relationships with
-  properties, data types, constraints (key/unique/mustExist), labels, and endpoint cardinality,
-  in YAML or JSON, or validating an ontology document against the spec schema. Does NOT handle
-  Cypher or loading an ontology into a database — use neo4j-cypher-skill. Does NOT cover
-  generic graph data modeling advice — use neo4j-modeling-skill.
+  properties, Neo4jType data types, constraints (key/unique/must_exist), labels, and endpoint
+  cardinality, in YAML or JSON, or validating an ontology document against the live-resolved
+  spec schema. Does NOT handle Cypher or loading an ontology into a database — use
+  neo4j-cypher-skill. Does NOT cover generic graph data modeling advice — use
+  neo4j-modeling-skill.
 compatibility: uv required to run scripts/validate.py (PEP 723 inline deps)
-version: 1.0.0
+version: 1.1.0
 ---
 
 ## When to Use
 
-- Authoring an ontology document (Neo4j Ontology Graph Specification v1) from a domain description
+- Authoring an ontology document (Neo4j Ontology Graph Specification) from a domain description
 - Editing existing ontology YAML/JSON: nodes, relationships, properties, types, constraints, cardinality, extensions
 - Validating an ontology document against the spec schema
 
@@ -42,7 +43,9 @@ uv run scripts/validate.py <document.{yaml,yml,json}>
 uv run neo4j-ontology-skill/scripts/validate.py <document.{yaml,yml,json}>
 ```
 
-Exit 0 = valid · exit 1 = schema violations (one line per field path) · exit 2 = parse/read error. PEP 723 script — `uv` resolves deps (jsonschema, pyyaml) itself.
+Exit 0 = valid · exit 1 = schema violations (one line per field path) · exit 2 = parse/read/fetch error. PEP 723 script — `uv` resolves deps (jsonschema, pyyaml) itself.
+
+The validator fetches the schema live — nothing is vendored. Resolution order: `--schema <path-or-url>` (explicit, no fallback) → the document's own `schema` field when it is a URL → the published `current` alias → transitional repo raw fallback. The document's `schema` URL decides which version it validates against: set it to the published versioned URL of the version being authored (older versions validate against their published schema).
 
 ### Step 4 — Fix and re-validate
 
@@ -52,47 +55,45 @@ Fix every reported error; re-run Step 3. Repeat until exit 0. Validation is MAND
 
 ## Core Facts
 
-- Required root fields: `schema`, `id` (unique ontology id string), `version` (integer ≥ 0). Root rejects unknown fields (`additionalProperties: false`).
-- `schema` value exactly `https://neo4j.com/ontology-graph-spec/1.0.0/schema.json`. Root key is plain `schema`, NOT `$schema`.
-- `nodes` / `relationships` are maps keyed by LOCAL IDS, not labels/types. Label lives in `label` or `labels.identifier`; relationship type lives in `type`. Endpoints reference node ids — label renames never break references.
+- Required root fields: `schema`, `id` (unique ontology id string), `version` (STRING — user-defined revision label; quote it in YAML: `version: "1"`). Root rejects unknown fields (`additionalProperties: false`).
+- `schema` value: the published URL of the version being authored, e.g. `https://neo4j.com/docs/ontology-graph-spec/1.0.0/schema.json`. Root key is plain `schema`, NOT `$schema`.
+- `nodes` / `relationships` are maps keyed by LOCAL IDS, not labels/types. Label lives in `label` or `labels.identifier`; relationship type lives in `type`. Endpoints reference node ids (`from.node` / `to.node`) — label renames never break references.
 - `label: X` is shorthand for `labels: {identifier: X}`. Use the full `labels` object only when `implied` or `optional` labels exist.
-- Type tokens: `ANY`, `LIST<ANY>`, `SCALAR` (`STRING | INTEGER | FLOAT | BOOLEAN | DATE | TIME | LOCALTIME | DATETIME | LOCALDATETIME | DURATION | POINT | BYTES`), `LIST<SCALAR>`, `VECTOR<INTEGER>`, `VECTOR<FLOAT>`. VECTOR numeric only; `dimension` (integer ≥ 1) sits on the property. No unions, no nested lists, no lists of vectors.
+- Type tokens come from the Neo4jType enum exactly — case-sensitive. Tokens incl. `STRING`, `INTEGER`, `FLOAT`, `BOOLEAN`, `DATE`, `TIME`, `DURATION`, `POINT`, `UUID`; temporal tokens contain a space (`ZONED DATETIME`, `LOCAL TIME`); parameterized tokens use angle brackets (`LIST<STRING>`, `VECTOR<FLOAT32>`). `UUID` and `VECTOR<...>` have no LIST arm. No unions, no nested lists. `dimension` (integer|null) sits on the property, paired with VECTOR types.
 - Constraints — two forms:
-  - Flags on a property: `key: true`, `unique: true`, `mustExist: true`. `key` implies `unique` + `mustExist`.
-  - Object form in the element's `constraints` list: `{constraint_type: key|unique|mustExist, properties: [p1, ...], name: optional}` — required for composites (≥ 2 properties) and for nameable constraints. `properties` must name properties declared on the SAME element.
+  - Flags on a property: `key: true`, `unique: true`, `must_exist: true` (snake_case — NOT `mustExist`). Single-property shorthands; `key` = unique + exists per Neo4j key-constraint semantics.
+  - Object form: `constraints` is a MAP id → constraint object `{type: EXISTS|KEY|PROPERTY_TYPE|UNIQUE, properties: [p1, ...], name: optional}` — required for composites (≥ 2 properties) and nameable constraints. `properties` must name properties declared on the SAME element.
 - Endpoint cardinality: `count` exact, or `min_count`/`max_count` ranged; absent = unconstrained (0..*).
-- Extensions: named first-party keys (`neo4j:index`, `ui:display`, `importer:table`, `importer:mapping`) sit directly on an `extensions` map; custom extensions ride the fixed envelope as a list under `custom` (`{type, schema?, name?, definition?}`). Payloads never validated by the spec schema. An extension lives on the element it describes (root, node, relationship, property).
-- Absent means none — never write empty maps/lists (`properties: {}`, `aliases: []`, `constraints: []`, `custom: []`); omit them.
-- No `tools` field anywhere (removed from v1).
-- The file at `github.com/neo4j/graph-spec/blob/main/ontology-graph-spec.schema.json` is the OLD 4.0.0-era schema — never author against it. The v1 contract is the vendored [assets/ontology-graph-spec.schema.json](assets/ontology-graph-spec.schema.json).
+- Extensions: fixed `extensions` shape per element — node: `indexes`/`display`/`custom`; relationship: `indexes`/`custom`; root: `tables`/`mappings`/`custom`; labels/property/constraint/index: `custom` only. Unknown extension keys rejected. `custom` is free-form — arbitrary owner data, never validated by the spec schema.
+- Absent means none — never write empty maps/lists (`properties: {}`, `aliases: []`, `custom: {}`); omit them.
 
 ## Minimal Example
 
 `library.ontology.yaml` — 2 nodes, 1 relationship:
 
 ```yaml
-schema: "https://neo4j.com/ontology-graph-spec/1.0.0/schema.json"
-id: 9c2f1a4e-6b3d-4e8f-a1c5-7d2b9e4f6a08
-version: 1
-name: library
+schema: "https://neo4j.com/docs/ontology-graph-spec/1.0.0/schema.json"
+id: library
+version: "1"
+name: Library
 nodes:
-  Author:
+  author:
     label: Author
     properties:
       id: { type: STRING, key: true }
-      name: { type: STRING, mustExist: true }
-  Book:
+      name: { type: STRING, must_exist: true }
+  book:
     label: Book
     properties:
       isbn: { type: STRING, key: true }
 relationships:
-  WROTE:
+  wrote:
     type: WROTE
-    from: { node: Author, max_count: 1 }
-    to: { node: Book }
+    from: { node: author, max_count: 1 }
+    to: { node: book }
 ```
 
-Full worked examples: `assets/examples/` (`movies.ontology.json`, `foaf.ontology.json`, `org.ontology.json`).
+Validates exit 0 via `scripts/validate.py`. Full YAML+JSON worked examples in [references/format-reference.md](references/format-reference.md).
 
 ---
 
@@ -100,23 +101,23 @@ Full worked examples: `assets/examples/` (`movies.ontology.json`, `foaf.ontology
 
 Load on demand:
 
-- [references/format-reference.md](references/format-reference.md) — full field reference: every node/relationship/property/endpoint field, `labels` object, constraint objects, extension envelope, data-type grammar, gotchas, YAML+JSON examples
-- [assets/ontology-graph-spec.schema.json](assets/ontology-graph-spec.schema.json) — vendored JSON Schema contract (draft 2020-12)
-- `assets/examples/` — canonical spec examples
+- [references/format-reference.md](references/format-reference.md) — full field reference: every node/relationship/property/endpoint field, `labels` object, constraint objects, extension shapes, data-type grammar, gotchas, YAML+JSON examples
+- Published schema base: `https://neo4j.com/docs/ontology-graph-spec/` — immutable `/<version>/schema.json` per spec version, moving alias `/current/schema.json`
 
 ## Spec Status
 
-Pre-release: the spec lives on neo4j/graph-spec PR #118 (branch `ontology-graph-spec`), not yet merged. Assets vendored at a pinned commit — pinned SHA and refresh command in `assets/PROVENANCE.md`. Ontology Cypher procedures do not exist yet; applying an ontology to a database is out of scope here.
+Pre-publication: the ONT-31 URLs above are baked into `scripts/validate.py` but not live yet; until they are, the validator falls back to the raw schema from `neo4j/graph-spec` main (moving). Ontology Cypher procedures do not exist yet; applying an ontology to a database is out of scope here.
 
 ---
 
 ## Checklist
 
-- [ ] Root fields `schema`, `id`, `version` present; `schema` = exact v1 URL under plain `schema` key
-- [ ] No unknown root fields; no `$schema`; no `tools` field
+- [ ] Root fields `schema`, `id`, `version` present; `version` a quoted string; `schema` = the published versioned URL under plain `schema` key
+- [ ] No unknown root fields; no `$schema`
 - [ ] `nodes`/`relationships` keyed by local ids; relationship `from`/`to` reference node ids
 - [ ] Every node has `label` or `labels.identifier`
-- [ ] Type tokens from the grammar; VECTOR element types numeric only; `dimension` on the property
-- [ ] Flags only for single-property constraints; object form for composites/named; constraint `properties` exist on the same element
+- [ ] Type tokens exact from the Neo4jType enum (case-sensitive; spaced temporal tokens); `dimension` on the property with VECTOR types
+- [ ] Flags only for single-property constraints; object form (`type` ∈ EXISTS/KEY/PROPERTY_TYPE/UNIQUE) for composites/named; constraint `properties` exist on the same element
+- [ ] Extension keys match the element's fixed shape; arbitrary data only under `custom`
 - [ ] No empty maps/lists written
 - [ ] `uv run scripts/validate.py <file>` exits 0 (every reported error fixed and re-validated)
