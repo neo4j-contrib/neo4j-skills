@@ -122,6 +122,16 @@ Read plans bottom-up: leaf operators at bottom, `ProduceResults` at top.
 | `AssertSameNode` | Verifies MERGE did not create duplicate (unique constraint enforcement). |
 | `TransactionForeach` | CALL IN TRANSACTIONS outer loop. |
 | `TransactionApply` | CALL IN TRANSACTIONS inner execution. |
+
+`IN CONCURRENT TRANSACTIONS` [2026.10]: PROFILE `Concurrency` column on `TransactionApply` / `TransactionForeach` = peak + average batches running at once. Profiled plan returned to drivers also carries concurrency limit, queued batches, retries.
+
+| Symptom | Bottleneck |
+|---|---|
+| Peak/avg concurrency ≪ configured limit, few queued batches | Input too small or batches too large — lower `OF n ROWS` |
+| Many queued batches, low avg concurrency | Batch scheduling conflicts — check `DISJOINT BY` key partitions writes |
+| High retries | Transient errors (lock contention / deadlocks) between batches |
+
+Query log (`internal.dbms.logs.query.log_query_statistics=true`, JSON log) records per query: `concurrentTransactionsConcurrencyLimit`, `concurrentTransactionsPeakConcurrency`, `concurrentTransactionsAvgConcurrency`, `concurrentTransactionsPeakQueuedBatches`, `concurrentTransactionsAvgQueuedBatches`, `concurrentTransactionsRetries`.
 | `Union` | Combines UNION branches. |
 | `LoadCSV` | LOAD CSV row reader. |
 | `Foreach` | FOREACH loop (write only, no RETURN). |

@@ -10,7 +10,7 @@ description: Neo4j Graph Data Science (GDS) embedded plugin via Python client or
   Cypher API projection/session management — use neo4j-aura-graph-analytics-skill.
   Does NOT handle Cypher authoring — use neo4j-cypher-skill.
   Does NOT cover driver setup — use neo4j-driver-python-skill or other driver skill.
-version: 1.0.19
+version: 1.0.20
 allowed-tools: Bash WebFetch
 ---
 
@@ -64,7 +64,7 @@ pip install "graphdatascience>=2.1"          # 2.1 required for GDS 2026.09
 pip install "graphdatascience[rust-ext]"     # optional: faster serialization
 ```
 
-Compatibility: graphdatascience 2.1 — GDS >= 2.13 and < 2.28 / < 2026.10; 2.0 — GDS < 2026.9. Both: Python >= 3.10 and < 3.15, Neo4j Python driver >= 5.26 and < 7.0, pandas 2–3, pyarrow 21–25. GDS server < 2.13 → `DeprecationWarning` at construction; pin `graphdatascience<2` (client 1.22) there.
+Compatibility: graphdatascience 2.1 / 2.2 — GDS >= 2.13 and < 2.28 / < 2026.10; 2.0 — GDS < 2026.9. All: Python >= 3.10 and < 3.15, Neo4j Python driver >= 5.26 and < 7.0, pandas 2–3, pyarrow 21–25. GDS server < 2.13 → `DeprecationWarning` at construction; pin `graphdatascience<2` (client 1.22) there.
 
 ### Client 1.x fallback (GDS server < 2.13)
 

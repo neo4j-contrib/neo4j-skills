@@ -10,7 +10,7 @@ description: Create and manage Neo4j vector indexes, run vector similarity searc
   Does NOT handle GraphRAG retrieval_query graph traversal — use neo4j-graphrag-skill.
   Does NOT handle fulltext-only/keyword-only search — use neo4j-cypher-skill.
   Does NOT compute GDS graph embeddings (FastRP, Node2Vec) — use neo4j-gds-skill.
-version: 1.0.17
+version: 1.0.18
 compatibility: Neo4j >= 2025.01; vector SEARCH requires 2026.01+; fulltext SEARCH requires 2026.09+
 allowed-tools: Bash WebFetch
 ---
@@ -36,7 +36,6 @@ allowed-tools: Bash WebFetch
 
 ## Pre-flight — Determine Version
 
-Drives syntax choice:
 ```cypher
 CALL dbms.components() YIELD versions RETURN versions[0] AS neo4j_version
 ```
@@ -45,6 +44,7 @@ CALL dbms.components() YIELD versions RETURN versions[0] AS neo4j_version
 |---|---|
 | `2026.01` or higher | `SEARCH` clause (in-index filtering, preferred) |
 | `2025.x` | `db.index.vector.queryNodes()` procedure (**deprecated 2026.04** — use `SEARCH` when on 2026.x) |
+| `5.27` on Aura | Aura reports `5.27` regardless of engine until after 2026.12 LTS (then calendar version) — Aura runs latest 2026.x → use `SEARCH` |
 
 ---
 
