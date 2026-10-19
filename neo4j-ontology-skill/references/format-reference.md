@@ -1,225 +1,315 @@
-# Format Reference — Neo4j Ontology Graph Specification v1
+# Format Reference — Neo4j Ontology Graph Spec
 
-Deep reference for authoring ontology documents (YAML or JSON). Contract: `assets/ontology-graph-spec.schema.json` (JSON Schema draft 2020-12; `$id` `https://neo4j.com/ontology-graph-spec/1.0.0/schema.json`). Canonical examples: `assets/examples/` (`movies`, `org`, `foaf`).
+Contract: JSON Schema draft 2020-12, `$id` `https://neo4j.com/docs/ontology-graph-spec/1.0.0/schema.json` (schema title `GraphModel` — naming leftover, ignore). Schema resolved live from the published URL or the neo4j/graph-spec repo. Section names below are the schema's `$defs` names.
 
 ## Gotchas
 
-- Root key is plain `schema`, NOT `$schema` (ADR-0014). `$schema`/`$id` appear only at the top of the schema file itself — JSON Schema's own meta-keys.
-- No `tools` field anywhere (ADR-0013). Removed from v1; never write it.
-- VECTOR element types numeric only: `VECTOR<INTEGER>` or `VECTOR<FLOAT>` (ADR-0012). No other VECTOR arm exists.
-- Map keys under `nodes`/`relationships` are local ids, NOT labels/types. Label lives in `label` / `labels.identifier`; relationship type lives in `type`. Endpoints reference the id. Label renames do not break references.
-- `key: true` implies `unique` + `mustExist`.
-- Constraint object `properties` references property names declared on the SAME element: a node's constraints name that node's properties; a relationship's constraints name that relationship's properties.
-- Absent means none: empty maps and lists are omitted, never written empty. Never write `properties: {}`, `aliases: []`, `constraints: []`, `custom: []`.
-- Property names non-empty (ADR-0010, schema-enforced via `propertyNames.minLength: 1`).
-- Required root fields: `schema`, `id`, `version`. Root `additionalProperties: false` — unknown root fields rejected.
-- The file at `https://github.com/neo4j/graph-spec/blob/main/ontology-graph-spec.schema.json` is the OLD 4.0.0-era schema (title `GraphModel`). Never author against it. The vendored asset (`assets/ontology-graph-spec.schema.json`) is the v1 contract.
+- Required root fields: `schema`, `id`, `version`. Root `additionalProperties: false` — unknown root fields rejected. Every object in the schema is `additionalProperties: false`; the only free-form escape hatch is `custom`.
+- `version` is a STRING (user-defined revision label), not an integer. YAML: quote it (`version: "1"`).
+- Field names are snake_case: `must_exist` (NOT `mustExist`), `min_count`, `max_count`, `one_of`, `primary_keys`, `foreign_keys`, `from_node`, `to_node`, `match_label`, `depends_on`.
+- `type` values come from the Neo4jType enum exactly — case-sensitive; temporal tokens contain a space (`ZONED DATETIME`); parameterized tokens use angle brackets (`VECTOR<FLOAT32>`, `LIST<STRING>`).
+- `constraints` is a MAP id → constraint object, not a list. Object carries `type` (∈ EXISTS/KEY/PROPERTY_TYPE/UNIQUE) + `properties` (list of property ids declared on the SAME element).
+- Property flags (`must_exist`, `unique`, `key`) are single-property shorthands, expanded into constraints when the model is internalised. `key` = unique + exists per Neo4j key-constraint semantics. Composites and nameable constraints need the object form.
+- Map keys under `nodes`/`relationships` are local ids, NOT labels/types. Label lives in `label` / `labels.identifier`; relationship type lives in `type`. Endpoints reference node ids (`from.node` / `to.node`) — label renames never break references.
+- Extensions sit under `extensions` with a fixed shape per element: node → `indexes`/`display`/`custom`; relationship → `indexes`/`custom`; root → `tables`/`mappings`/`custom`; labels/property/constraint/index → `custom` only. Unknown extension keys rejected.
+- Index `options` is `null` or one of FULLTEXT/POINT/VECTOR option objects whose `type` const must match the index `type`. RANGE/TEXT/LOOKUP indexes: omit `options`.
+- `dimension` (integer|null) accompanies VECTOR types, on `Property` and `TableColumn`.
+- `Node` and `RelationshipTarget` require nothing per schema. A node with neither `label` nor `labels` is meaningless — always author one. Identify a relationship end by `node` (id) or `label`; cardinality via `count` (exact) or `min_count`/`max_count`; absent = unconstrained.
+- Absent means none: omit empty maps/lists. Never write `properties: {}`, `aliases: []`, `custom: {}`.
 
 ## Top level
 
 | field | type | required | notes |
 |---|---|---|---|
-| `schema` | string (uri) | yes | Spec link incl. version; doubles as document-type marker. Value: `https://neo4j.com/ontology-graph-spec/1.0.0/schema.json` |
-| `id` | string | yes | Unique identifier of the ontology |
-| `version` | integer ≥ 0 | yes | The ontology's own version. Identity metadata, not lifecycle |
+| `schema` | string | yes | Spec schema URI used; include version, e.g. `https://neo4j.com/docs/ontology-graph-spec/1.0.0/schema.json`. Validator resolves the schema from it |
+| `id` | string | yes | Unique model id, typically kebab-case of the name |
+| `version` | string | yes | User-defined revision label of this document |
 | `name` | string | no | Human-readable name |
-| `description` | string | no | Human-readable description |
-| `nodes` | map id → `node` | no | Keys are local ids |
-| `relationships` | map id → `relationshipEntry` | no | Keys are local ids |
-| `extensions` | `extensionsMap` | no | Ontology-scope extensions |
+| `description` | string | no | |
+| `nodes` | map id → Node | no | Keys are local ids |
+| `relationships` | map id → Relationship | no | Keys are local ids |
+| `extensions` | GraphModelExtensions | no | Root extensions: tables/mappings/custom |
 
-## `node`
+## `Node`
 
-One entry per node type. Map key = local id (not the label).
+| field | type | notes |
+|---|---|---|
+| `label` | string\|null | Shorthand for the identifying label |
+| `labels` | Labels | Full labels object; use when implied/optional labels exist |
+| `properties` | map id → Property | |
+| `constraints` | map id → NodeConstraint | Keyed objects, not a list |
+| `extensions` | NodeExtensions | indexes/display/custom |
+| `name` | string\|null | Human-readable; replaces id in the pretty form |
+| `description` | string | |
+| `aliases` | string[] | Alternative names |
+| `reference` | string | URI of an external resource describing the node |
+
+## `Labels`
+
+| field | type | notes |
+|---|---|---|
+| `identifier` | string\|null | The identifying (main) label |
+| `implied` | string[] | Labels entailed by the identifier; documented, never inferred |
+| `optional` | string[] | Labels that may be present but are not guaranteed |
+| `extensions` | LabelsExtensions | `custom` only |
+
+## `Property`
+
+| field | type | notes |
+|---|---|---|
+| `type` | Neo4jType | Type token from the enum |
+| `dimension` | integer\|null | VECTOR companion: element count |
+| `must_exist` | boolean\|null | Shorthand existence constraint |
+| `unique` | boolean\|null | Shorthand uniqueness constraint |
+| `key` | boolean\|null | Shorthand key constraint |
+| `extensions` | PropertyExtensions | `custom` only |
+| `name` | string\|null | Human-readable name |
+| `description` | string | |
+| `reference` | string | URI of an external resource |
+| `pattern` | string | Regex values are expected to match |
+| `one_of` | string[] | Values the property is restricted to |
+
+## Data types — `Neo4jType` enum
+
+Exact tokens (39):
+
+```
+ANY  LIST<ANY>  BOOLEAN  LIST<BOOLEAN>  DATE  LIST<DATE>  DURATION  LIST<DURATION>
+FLOAT  LIST<FLOAT>  FLOAT32  LIST<FLOAT32>
+INTEGER  LIST<INTEGER>  INTEGER8  LIST<INTEGER8>  INTEGER16  LIST<INTEGER16>  INTEGER32  LIST<INTEGER32>
+STRING  LIST<STRING>  POINT  LIST<POINT>  UUID
+LOCAL DATETIME  LIST<LOCAL DATETIME>  LOCAL TIME  LIST<LOCAL TIME>
+ZONED DATETIME  LIST<ZONED DATETIME>  ZONED TIME  LIST<ZONED TIME>
+VECTOR<FLOAT>  VECTOR<FLOAT32>  VECTOR<INTEGER>  VECTOR<INTEGER8>  VECTOR<INTEGER16>  VECTOR<INTEGER32>
+```
+
+- `UUID` and `VECTOR<...>` have no LIST arm. No nested lists, no unions.
+- `ANY` opts out of type constraint.
+- VECTOR element types: FLOAT/FLOAT32 or INTEGER8/16/32/INTEGER. Pair with `dimension` on the property.
+
+## Constraints — `NodeConstraint` / `RelationshipConstraint`
+
+`ConstraintType` enum: `EXISTS` | `KEY` | `PROPERTY_TYPE` | `UNIQUE`.
+
+| field | required | notes |
+|---|---|---|
+| `type` | yes | ConstraintType token |
+| `properties` | yes | Ids of properties declared on the SAME element |
+| `label` | no | NodeConstraint only — label the constraint applies to |
+| `name` | no | Human-readable name for tooling references |
+| `extensions` | no | NodeConstraintExtensions / RelationshipConstraintExtensions — `custom` only |
+
+## `Relationship`
+
+| field | type | required | notes |
+|---|---|---|---|
+| `type` | string | yes | The relationship type; several ids may share one type across endpoint pairs |
+| `from` | RelationshipTarget | yes | Start end |
+| `to` | RelationshipTarget | yes | End end |
+| `properties` | map id → Property | no | |
+| `constraints` | map id → RelationshipConstraint | no | |
+| `extensions` | RelationshipExtensions | no | indexes/custom |
+| `name` | string\|null | no | |
+| `description` | string | no | |
+| `aliases` | string[] | no | |
+| `reference` | string | no | |
+
+## `RelationshipTarget`
+
+| field | type | notes |
+|---|---|---|
+| `node` | string | Id of the node at this end (key from `nodes`) |
+| `label` | string | Label of the node at this end |
+| `count` | integer\|null | Exact relationships per node at this end |
+| `min_count` | integer\|null | Minimum count |
+| `max_count` | integer\|null | Maximum count |
+
+Counts on `to` constrain relationships per from-instance; counts on `from` per to-instance.
+
+## Extensions
+
+Fixed `extensions` shape per element; every extensions object is `additionalProperties: false`. `custom` is a free-form object (`additionalProperties: {}`) for arbitrary owner data, present on every extensions object (and directly on NodeIndex, RelationshipIndex, NodeDisplay, Table, TableColumn, ForeignKey, ForeignKeyReference).
+
+### Node — `NodeExtensions`
+
+| field | type | notes |
+|---|---|---|
+| `indexes` | map id → NodeIndex | Database indexes on this node |
+| `display` | null \| NodeDisplay | Visual placement |
+| `custom` | object | Free-form |
+
+`NodeIndex` — required: `type`, `labels`, `properties`:
 
 | field | notes |
 |---|---|
-| `label` | Shorthand for `labels.identifier`; use when no implied/optional labels exist |
-| `labels` | Full `labels` object; use when implied/optional labels exist |
-| `properties` | Map property-name → `property`. Names non-empty |
-| `constraints` | List of `constraint` objects — the nameable alternative to property flags |
-| `aliases` | String list; alternative names for this node type |
-| `reference` | Single informational URI pointing at an external definition (e.g. the original RDF resource) |
-| `description` | Human-readable description |
-| `extensions` | `extensionsMap` |
+| `type` | IndexType token |
+| `labels` | Labels covered |
+| `properties` | Property ids covered |
+| `options` | null \| IndexOption; must match `type` |
+| `name` | Human-readable name |
+| `custom` | Free-form |
 
-A node with neither `label` nor `labels` is meaningless (not schema-enforced — do not author one).
+`IndexType` enum: `FULLTEXT` | `POINT` | `RANGE` | `TEXT` | `VECTOR` | `LOOKUP`.
 
-## `labels`
+`IndexOption` — oneOf three shapes; `type` const must equal the index `type`; each requires only `type`:
 
-Full labels object: identifying label plus implied/optional labels.
+- FULLTEXT: `fulltext.default_analyzer` (string), `fulltext.analyzer` (string|null), `fulltext.eventually_consistent` (boolean), `fulltext.eventually_consistent_apply_parallelism` (integer), `fulltext.eventually_consistent_refresh_interval` (string), `fulltext.eventually_consistent_refresh_parallelism` (integer), `fulltext.eventually_consistent_index_update_queue_max_length` (integer)
+- POINT: `spatial.cartesian.min`/`.max`, `spatial.cartesian-3d.min`/`.max`, `spatial.wgs-84.min`/`.max`, `spatial.wgs-84-3d.min`/`.max` (number arrays)
+- VECTOR: `vector.dimensions` (integer|null), `vector.similarity_function` (string, e.g. cosine/euclidean), `vector.default_search_expansion_factor` (number|null), `vector.quantization.enabled` (boolean), `vector.quantization.type` (string), `vector.hnsw.m` (integer), `vector.hnsw.ef_construction` (integer)
 
-| field | required | notes |
+`NodeDisplay` — required: `x`, `y`:
+
+| field | type | notes |
 |---|---|---|
-| `identifier` | yes | The identifying (main) label |
-| `implied` | no | Labels entailed by the identifying label. Documented, never inferred |
-| `optional` | no | Labels that may be present on instances but are not guaranteed |
+| `x` | number | Horizontal position |
+| `y` | number | Vertical position |
+| `colour` | string\|null | Hex string, e.g. `#FF8800` |
+| `custom` | object | Free-form |
 
-## `property`
+### Relationship — `RelationshipExtensions`
+
+| field | type | notes |
+|---|---|---|
+| `indexes` | map id → RelationshipIndex | Indexes on this relationship |
+| `custom` | object | Free-form |
+
+`RelationshipIndex` — required: `type`, `properties`. Fields: `type` (IndexType), `properties` (property ids), `options` (null | IndexOption), `name`, `custom`. No `labels` field — relationship indexes key on the type.
+
+### Root — `GraphModelExtensions` (import)
+
+| field | type | notes |
+|---|---|---|
+| `tables` | map id → Table | Data source table schemas |
+| `mappings` | map id → Mapping[] | Mapping sets from tables to nodes/relationships |
+| `custom` | object | Free-form |
+
+`Table` — required: `source`:
 
 | field | notes |
 |---|---|
-| `type` | `propertyType` token |
-| `dimension` | VECTOR companion: element count, integer ≥ 1. Absent = unconstrained |
-| `mustExist` | boolean; shorthand single-property mustExist constraint |
-| `unique` | boolean; shorthand single-property unique constraint |
-| `key` | boolean; shorthand single-property key constraint (implies `unique` + `mustExist`) |
-| `one_of` | Allowed values list (JSON Schema's word). Default value support |
-| `pattern` | Regex the value must match |
-| `aliases` | String list |
-| `reference` | Single informational URI, as on `node` |
-| `description` | |
-| `extensions` | `extensionsMap` |
+| `source` | Where the table's data comes from |
+| `columns` | TableColumn list in source order |
+| `primary_keys` | Column names forming the primary key |
+| `foreign_keys` | map id → ForeignKey |
+| `custom` | Free-form |
 
-Flags are the single-property shorthand of the object form: `mustExist: true` on property `p` ≡ `{ constraint_type: mustExist, properties: [p] }`; likewise `unique`, `key`. Object form carries what shorthand cannot: composites (`properties` list > 1 entry) and names tooling can reference.
+`TableColumn` — nothing required. Fields: `name` (unique within table), `type` (source data type), `size` (integer), `suggested` (Neo4jType suggested for values), `supported` (Neo4jType list convertible by the import tool), `dimension` (integer|null, for vectors), `custom`.
 
-## `propertyType` — data types
+`ForeignKey` — required: `columns`, `references`. `columns`: column names in this table. `references`: ForeignKeyReference. Plus `custom`.
 
-Type token grammar (schema `pattern`, exact):
+`ForeignKeyReference` — required: `table` (referenced table id). Optional: `columns` (referenced column names), `custom`.
 
+### Mappings — `Mapping` = oneOf NODE | QUERY | RELATIONSHIP
+
+Discriminator: `type` const. Common optional: `id` (mapping id, so siblings can reference it), `depends_on` (id of a mapping that must import first).
+
+`NODE` — required: `type`, `node`, `table`, `properties`:
+
+| field | notes |
+|---|---|
+| `type` | const `NODE` |
+| `node` | Id of the node mapped |
+| `table` | Id of the source table |
+| `properties` | map property-id → PropertyMapping |
+| `mode` | MappingMode |
+| `match_label` | string\|null — label used to match existing nodes |
+| `key` | Property ids identifying a node |
+
+`QUERY` — required: `type`, `table`, `query`. `query`: the query string run against the table.
+
+`RELATIONSHIP` — required: `type`, `relationship`, `table`, `from_node`, `to_node`:
+
+| field | notes |
+|---|---|
+| `relationship` | Id of the relationship mapped |
+| `from_node` / `to_node` | TargetMapping — how each end node is matched |
+| `properties` | map property-id → PropertyMapping |
+| `mode`, `key`, `match_label` | As on NODE |
+
+`PropertyMapping` — required: `column` (source column name). Sole field.
+
+`MappingMode` enum: `MERGE` | `CREATE`.
+
+`TargetMapping` — nothing required. Fields: `label` (node label), `properties` (map property-id → PropertyMapping used to match the node).
+
+## Publication and schema resolution (ONT-31)
+
+- Versioned URL: `https://neo4j.com/docs/ontology-graph-spec/<version>/schema.json` — immutable per version; `1.0.0` is the current spec version. Set the document's `schema` field to the versioned URL it conforms to.
+- Moving alias: `https://neo4j.com/docs/ontology-graph-spec/current/schema.json` → newest stable.
+- Pre-live fallback: while the published URLs are not live, `scripts/validate.py` falls back to `https://raw.githubusercontent.com/neo4j/graph-spec/main/ontology-graph-spec.schema.json` (tracks main — moving).
+
+## Validation
+
+One tool: `scripts/validate.py` (PEP 723 — `uv` resolves jsonschema + pyyaml itself). Works from any cwd.
+
+```bash
+uv run neo4j-ontology-skill/scripts/validate.py <document.{yaml,yml,json}>
+uv run neo4j-ontology-skill/scripts/validate.py <document> --schema <path-or-url>
 ```
-ANY
-LIST<ANY>
-SCALAR           — STRING | INTEGER | FLOAT | BOOLEAN | DATE | TIME | LOCALTIME | DATETIME | LOCALDATETIME | DURATION | POINT | BYTES
-LIST<SCALAR>
-VECTOR<INTEGER>
-VECTOR<FLOAT>
-```
 
-- Element types always scalars: no nested lists, no lists of vectors.
-- VECTOR numeric only (ADR-0012); companion `dimension` lives on the property.
-- No union types in v1: a property is a single type token or `ANY`.
-- `ANY` opts the property out of type constraints (mixed value types).
-
-## `constraint`
-
-Object form; alternative to the property flags. Nameable so tooling can reference individual constraints.
-
-| field | required | notes |
-|---|---|---|
-| `constraint_type` | yes | `key` \| `unique` \| `mustExist` (`key` = unique + mustExist) |
-| `properties` | yes | List of ≥ 1 property names declared on the same element |
-| `name` | no | Optional name for tooling references |
-
-## `relationshipEntry`
-
-Map key = local id. One-to-one id-to-type in the common case; several keys may share one `type` across different endpoint pairs (graph-type enforcement keys on the type alone and cannot distinguish pairs).
-
-| field | required | notes |
-|---|---|---|
-| `type` | yes | The relationship type |
-| `from` | yes | Start `endpoint` |
-| `to` | yes | End `endpoint` |
-| `properties` | no | Map property-name → `property`, as on `node` |
-| `constraints` | no | List of `constraint` objects, as on `node` |
-| `aliases` | no | String list |
-| `reference` | no | Single informational URI |
-| `description` | no | |
-| `extensions` | no | `extensionsMap` |
-
-## `endpoint`
-
-Endpoint cardinality: `count` is the exact form, `min_count`/`max_count` the ranged form; absent means unconstrained (0..*). Counts on `to` constrain relationships per from-instance; counts on `from` constrain per to-instance.
-
-| field | required | notes |
-|---|---|---|
-| `node` | yes | A node id from the `nodes` map |
-| `count` | no | Exact relationship count per endpoint instance, integer ≥ 0 |
-| `min_count` | no | Minimum count, integer ≥ 0 |
-| `max_count` | no | Maximum count, integer ≥ 1 |
-
-## Extensions — `extensionsMap` and `extension`
-
-Named first-party keys on any `extensions` map: `neo4j:index`, `ui:display`, `importer:table`, `importer:mapping`. Payload shape owner-defined, shipped in the spec SDK, NEVER validated by the spec schema (`additionalProperties: true`). A named key's payload may be one object or a list of objects (owner's choice).
-
-Custom extensions ride the fixed envelope under the reserved `custom` key — a list of `extension` objects:
-
-| field | required | notes |
-|---|---|---|
-| `type` | yes | Custom extension type token (owner-namespaced, e.g. `governance:pii`) |
-| `schema` | no | The extension type's own schema URI, owner-managed; never the ontology spec schema |
-| `name` | no | Optional (a per-node display has no natural name) |
-| `definition` | no | Free-form payload; never validated by this spec |
-
-Unknown extra envelope fields (e.g. `description`) are carried untouched. Envelope always validates.
-
-Placement rule: an extension lives on the element it describes (root, node, relationship, property all accept `extensions`). Describes several elements or none (tables, mappings) → top level.
+Schema resolution order: `--schema` (path or URL; explicit = no fallback) → document's own `schema` field when a URL → published `current` alias → repo raw fallback. Exit codes: 0 valid · 1 schema violations (all printed with field paths) · 2 document/schema parse or fetch failure. `format` keywords are annotations only (no format checker). On exit 1: fix every reported path, re-run, never deliver non-zero.
 
 ## Examples
 
 YAML (`library.ontology.yaml`):
 
 ```yaml
-schema: "https://neo4j.com/ontology-graph-spec/1.0.0/schema.json"
-id: 9c2f1a4e-6b3d-4e8f-a1c5-7d2b9e4f6a08
-version: 1
-name: library
+schema: "https://neo4j.com/docs/ontology-graph-spec/1.0.0/schema.json"
+id: library
+version: "1"
+name: Library
 description: Library domain ontology
 nodes:
-  Author:
+  author:
     label: Author
     properties:
       id: { type: STRING, key: true }
-      name: { type: STRING, mustExist: true }
-  Book:
+      name: { type: STRING, must_exist: true }
+  book:
     label: Book
     properties:
       isbn: { type: STRING, key: true }
-      title: { type: STRING, mustExist: true }
+      title: { type: STRING, must_exist: true }
 relationships:
-  WROTE:
+  wrote:
     type: WROTE
-    from: { node: Author, max_count: 1 }
-    to: { node: Book }
+    from: { node: author, max_count: 1 }
+    to: { node: book }
 ```
 
 JSON (`library.ontology.json`) — same document:
 
 ```json
 {
-  "schema": "https://neo4j.com/ontology-graph-spec/1.0.0/schema.json",
-  "id": "9c2f1a4e-6b3d-4e8f-a1c5-7d2b9e4f6a08",
-  "version": 1,
-  "name": "library",
+  "schema": "https://neo4j.com/docs/ontology-graph-spec/1.0.0/schema.json",
+  "id": "library",
+  "version": "1",
+  "name": "Library",
   "description": "Library domain ontology",
   "nodes": {
-    "Author": {
+    "author": {
       "label": "Author",
       "properties": {
         "id": { "type": "STRING", "key": true },
-        "name": { "type": "STRING", "mustExist": true }
+        "name": { "type": "STRING", "must_exist": true }
       }
     },
-    "Book": {
+    "book": {
       "label": "Book",
       "properties": {
         "isbn": { "type": "STRING", "key": true },
-        "title": { "type": "STRING", "mustExist": true }
+        "title": { "type": "STRING", "must_exist": true }
       }
     }
   },
   "relationships": {
-    "WROTE": {
+    "wrote": {
       "type": "WROTE",
-      "from": { "node": "Author", "max_count": 1 },
-      "to": { "node": "Book" }
+      "from": { "node": "author", "max_count": 1 },
+      "to": { "node": "book" }
     }
   }
 }
 ```
 
-Both validated against the vendored schema. YAML parses to the identical document (`yaml.safe_load`).
-
-## Validate before delivering
-
-Run from skill root (`neo4j-ontology-skill/`):
-
-```bash
-# JSON document
-uv run --with jsonschema python3 -c "import json,jsonschema; s=json.load(open('assets/ontology-graph-spec.schema.json')); d=json.load(open('DOC.json')); jsonschema.validate(d,s); print('valid')"
-
-# YAML document
-uv run --with jsonschema --with pyyaml python3 -c "import json,yaml,jsonschema; s=json.load(open('assets/ontology-graph-spec.schema.json')); d=yaml.safe_load(open('DOC.yaml')); jsonschema.validate(d,s); print('valid')"
-```
-
-If validation fails: read the error path, fix the document, re-run. Never deliver an invalid document.
+Both validate exit 0 against the live-resolved schema via `scripts/validate.py`. YAML parses to the identical document (`yaml.safe_load`).
