@@ -8,7 +8,7 @@ description: Author and validate Neo4j Ontology Graph Specification (ontology gr
   neo4j-cypher-skill. Does NOT cover generic graph data modeling advice — use
   neo4j-modeling-skill.
 compatibility: uv required to run scripts/validate.py (PEP 723 inline deps)
-version: 1.1.0
+version: 1.0.0
 ---
 
 ## When to Use
@@ -59,7 +59,7 @@ Fix every reported error; re-run Step 3. Repeat until exit 0. Validation is MAND
 - `schema` value: the published URL of the version being authored, e.g. `https://neo4j.com/docs/ontology-graph-spec/1.0.0/schema.json`. Root key is plain `schema`, NOT `$schema`.
 - `nodes` / `relationships` are maps keyed by LOCAL IDS, not labels/types. Label lives in `label` or `labels.identifier`; relationship type lives in `type`. Endpoints reference node ids (`from.node` / `to.node`) — label renames never break references.
 - `label: X` is shorthand for `labels: {identifier: X}`. Use the full `labels` object only when `implied` or `optional` labels exist.
-- Type tokens come from the Neo4jType enum exactly — case-sensitive. Tokens incl. `STRING`, `INTEGER`, `FLOAT`, `BOOLEAN`, `DATE`, `TIME`, `DURATION`, `POINT`, `UUID`; temporal tokens contain a space (`ZONED DATETIME`, `LOCAL TIME`); parameterized tokens use angle brackets (`LIST<STRING>`, `VECTOR<FLOAT32>`). `UUID` and `VECTOR<...>` have no LIST arm. No unions, no nested lists. `dimension` (integer|null) sits on the property, paired with VECTOR types.
+- Type tokens come from the Neo4jType enum exactly — case-sensitive. Tokens incl. `STRING`, `INTEGER`, `FLOAT`, `BOOLEAN`, `DATE`, `DURATION`, `POINT`, `UUID`; temporal tokens contain a space (`ZONED DATETIME`, `LOCAL TIME`); parameterized tokens use angle brackets (`LIST<STRING>`, `VECTOR<FLOAT32>`). `UUID` and `VECTOR<...>` have no LIST arm. No unions, no nested lists. `dimension` (integer|null) sits on the property, paired with VECTOR types.
 - Constraints — two forms:
   - Flags on a property: `key: true`, `unique: true`, `must_exist: true` (snake_case — NOT `mustExist`). Single-property shorthands; `key` = unique + exists per Neo4j key-constraint semantics.
   - Object form: `constraints` is a MAP id → constraint object `{type: EXISTS|KEY|PROPERTY_TYPE|UNIQUE, properties: [p1, ...], name: optional}` — required for composites (≥ 2 properties) and nameable constraints. `properties` must name properties declared on the SAME element.
