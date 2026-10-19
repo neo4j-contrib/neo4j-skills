@@ -7,7 +7,7 @@ description: Generates, optimizes, and validates Cypher 25 queries for Neo4j 202
   Does NOT handle driver migration or API changes — use neo4j-migration-skill.
   Does NOT cover DB administration or server ops — use neo4j-cli-tools-skill.
 compatibility: Neo4j >= 2025.01 (safe baseline); Cypher 25
-version: 1.0.29
+version: 1.0.30
 ---
 
 ## When to Use
@@ -362,6 +362,7 @@ Default to 2025.01-safe features when version unknown.
 | `null / 0` returns `null` instead of raising division-by-zero | 2026.08 | `CASE WHEN d = 0 THEN null ELSE n / d END` |
 | Map comprehension `{k: v IN map \| keyExpr: valueExpr}` | 2026.09 | `apoc.map.fromPairs([k IN keys(m) \| [k, m[k]]])` |
 | `toString()`, `toStringList()`, `toStringOrNull()` on `LIST`, `MAP`, `NODE`, `RELATIONSHIP`, `PATH` | 2026.09 | convert scalar components individually, then `string.join()` |
+| Map addition `map1 + map2` (merge maps) | 2026.10 (Aura Oct 2026) | `apoc.map.merge(map1, map2)` |
 
 ---
 

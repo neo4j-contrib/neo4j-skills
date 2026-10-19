@@ -10,7 +10,7 @@ description: Serverless Aura Graph Analytics (AGA) GDS Sessions — covers GdsSe
   Does NOT cover the embedded GDS plugin on Aura Pro or self-managed Neo4j — use neo4j-gds-skill.
   Does NOT handle Cypher authoring — use neo4j-cypher-skill.
   Does NOT cover Snowflake Graph Analytics — use neo4j-snowflake-graph-analytics-skill.
-version: 1.0.11
+version: 1.0.12
 allowed-tools: Bash WebFetch
 ---
 
@@ -48,7 +48,7 @@ allowed-tools: Bash WebFetch
 
 ## Defaults
 
-- `graphdatascience >= 2.0` required; `>= 2.1` recommended
+- `graphdatascience >= 2.0` required; `>= 2.2` recommended
 - 2.0 endpoints: no `v2` prefix — `gds.page_rank.*`, `gds.graph.node_properties.*`, `gds.graph.construct(...)`
 - Use snake_case parameters end-to-end
 - Call `gds.verify_connectivity()` after session creation — verifies session and, if attached, the source DB
@@ -62,10 +62,10 @@ allowed-tools: Bash WebFetch
 ## Installation
 
 ```bash
-pip install "graphdatascience>=2.1"     # 2.1 is the current stable release
+pip install "graphdatascience>=2.2"     # 2.2 is the current stable release
 ```
 
-2.0 / 2.1 require: Python >= 3.10, `neo4j` driver 5.26–7.0, pandas 2–3, pyarrow 21–25, numpy <3.
+2.0–2.2 require: Python >= 3.10, `neo4j` driver 5.26–7.0, pandas 2–3, pyarrow 21–25, numpy <3.
 
 ### Client 1.x (legacy)
 
@@ -322,16 +322,19 @@ Long-running algorithms — non-blocking `compute()` returns a `JobHandle`:
 ```python
 import time
 
-job = gds.page_rank.compute(G, mutate_property="pagerank")
+job = gds.page_rank.compute(G, damping_factor=0.85)   # algorithm config only — no mutate/write args
 while not job.done():
     time.sleep(5)
-    print(f"Job status: {job.status()}")
-if job.status() != "RUNNING_DONE":
-    raise RuntimeError(f"Algorithm job failed: {job.status()}")
-result = job.result(wait=False)   # raises JobNotFinishedError if not done
+    print(f"Job status: {job.status().status} {job.status().progress_percent()}")
+if not job.status().succeeded():                       # status string "done" / "aborted" / "running"
+    raise RuntimeError(f"Algorithm job failed: {job.status().status}")
+df = job.stream(wait=False)                            # raises JobNotFinishedError if not done
+# or: job.mutate(mutate_property="pagerank")  /  job.write(write_properties="pagerank") → WriteJobHandle
 ```
 
-Handle methods: `.job_id()`, `.status()`, `.done()`, `.wait(*, termination_flag=None)`, `.cancel()`, `.summary(...)`, `.result(wait=False)`.
+Handle methods: `.job_id()`, `.status()` → `JobStatus` (`.status`, `.progress`, `.succeeded()`, `.aborted()`, `.running()`), `.done()`, `.wait(*, termination_flag=None)`, `.cancel()`, `.summary(wait=True)`, `.stream(wait=True)`, `.mutate(mutate_property=..., wait=True)`, `.write(write_properties=...)`.
+
+GraphSAGE prediction as job [2.2]: `gds.graph_sage.compute(G, model_name)` (classic model), `gds.graph_sage.supervised.compute(G, model_name, feature_properties)` (adds `predicted_class`, `predicted_probabilities`), `gds.graph_sage.unsupervised.compute(G, model_name, feature_properties)` — each returns `JobHandle`; materialize via `.stream()` / `.mutate()` / `.write()`.
 Async projections return `ProjectionJobHandle` (`gds.graph.project.native_async(...)`, `cypher_async(...)`); write-backs yield `WriteJobHandle`. List/recover jobs:
 
 ```python

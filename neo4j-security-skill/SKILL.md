@@ -8,7 +8,7 @@ description: Programmatic security management in Neo4j — RBAC/ABAC, user lifec
   — use neo4j-cypher-skill. Does NOT handle cluster ops or backups — use neo4j-cli-tools-skill.
   Property-level security and ABAC require Enterprise Edition.
 allowed-tools: Bash WebFetch
-version: 1.0.11
+version: 1.0.12
 ---
 
 ## When to Use
@@ -64,6 +64,8 @@ CREATE USER alice SET PASSWORD 'secret' CHANGE NOT REQUIRED;
 ```cypher
 CREATE USER $username SET PASSWORD $password CHANGE NOT REQUIRED;
 ```
+
+Aura password minimum rises 8 → 16 chars with 2027.01 upgrade (Jan 2027) — enforced on new users and password change/reset only; existing passwords keep working. Generate ≥16-char passwords in provisioning scripts now.
 
 ### Alter user
 ```cypher
@@ -252,8 +254,12 @@ GRANT MATCH {*} ON GRAPH mydb
   FOR (n) WHERE 1 > n.level
   TO analyst;
 GRANT READ {*} ON GRAPH mydb FOR (n) WHERE 3 < n.securityLevel TO regularUsers;
+
+// Dynamic row-level security: property matches caller's native user tags [2026.10, Enterprise]
+GRANT TRAVERSE ON GRAPH * FOR (n:Project) WHERE n.department IN abac.native.user_tags() TO projectTeam;
 ```
 
+- `n.prop IN abac.native.user_tags()` [2026.10] — one role serves every tag value; needs `native` in `dbms.security.abac.authorization_providers` (see §6). Cannot negate with `NOT` → grant on positive tag match instead
 - `value IN n.listProp` — list property contains value
 - Missing or scalar property — no match
 - Left value — non-null, not NaN
