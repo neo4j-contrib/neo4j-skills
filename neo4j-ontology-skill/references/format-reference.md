@@ -1,6 +1,6 @@
 # Format Reference — Neo4j Ontology Graph Spec
 
-Contract: JSON Schema draft 2020-12, `$id` `https://neo4j.com/docs/ontology-graph-spec/1.0.0/schema.json` (schema title `GraphModel` — naming leftover, ignore). Schema resolved live from the published URL or the neo4j/graph-spec repo. Section names below are the schema's `$defs` names.
+Contract: JSON Schema draft 2020-12, `$id` `https://neo4j.com/docs/ontology-graph-spec/1.0.0/schema.json` (schema title `GraphModel` — naming leftover, ignore). Schema resolved live from the published URL or the neo4j/ontology-graph-spec repo. Section names below are the schema's `$defs` names.
 
 ## Gotchas
 
@@ -236,7 +236,7 @@ Discriminator: `type` const. Common optional: `id` (mapping id, so siblings can 
 
 - Versioned URL: `https://neo4j.com/docs/ontology-graph-spec/<version>/schema.json` — immutable per version; `1.0.0` is the current spec version. Set the document's `schema` field to the versioned URL it conforms to.
 - Moving alias: `https://neo4j.com/docs/ontology-graph-spec/current/schema.json` → newest stable.
-- Pre-live fallback: while the published URLs are not live, `scripts/validate.py` falls back to `https://raw.githubusercontent.com/neo4j/graph-spec/main/ontology-graph-spec.schema.json` (tracks main — moving).
+- Pre-live fallback: while the published URLs are not live, `scripts/validate.py` falls back to `https://raw.githubusercontent.com/neo4j/ontology-graph-spec/main/ontology-graph-spec.schema.json` (tracks main — moving).
 
 ## Validation
 

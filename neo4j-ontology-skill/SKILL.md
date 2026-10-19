@@ -106,7 +106,7 @@ Load on demand:
 
 ## Spec Status
 
-Pre-publication: the ONT-31 URLs above are baked into `scripts/validate.py` but not live yet; until they are, the validator falls back to the raw schema from `neo4j/graph-spec` main (moving). Ontology Cypher procedures do not exist yet; applying an ontology to a database is out of scope here.
+Pre-publication: the ONT-31 URLs above are baked into `scripts/validate.py` but not live yet; until they are, the validator falls back to the raw schema from `neo4j/ontology-graph-spec` main (moving). Ontology Cypher procedures do not exist yet; applying an ontology to a database is out of scope here.
 
 ---
 

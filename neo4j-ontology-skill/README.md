@@ -25,7 +25,7 @@ Authors and validates **Neo4j Ontology Graph Specification** documents in YAML a
 
 ## Schema resolution
 
-`scripts/validate.py` resolves the schema live from published sources, in order: `--schema <path-or-url>` (explicit, no fallback) → the document's own `schema` field when it is a URL → the ONT-31 published URLs (`https://neo4j.com/docs/ontology-graph-spec/<version>/schema.json`, immutable per version; `.../current/schema.json`, moving alias) → transitional fallback `https://raw.githubusercontent.com/neo4j/graph-spec/main/ontology-graph-spec.schema.json` while publication is pending (pre-release).
+`scripts/validate.py` resolves the schema live from published sources, in order: `--schema <path-or-url>` (explicit, no fallback) → the document's own `schema` field when it is a URL → the ONT-31 published URLs (`https://neo4j.com/docs/ontology-graph-spec/<version>/schema.json`, immutable per version; `.../current/schema.json`, moving alias) → transitional fallback `https://raw.githubusercontent.com/neo4j/ontology-graph-spec/main/ontology-graph-spec.schema.json` while publication is pending (pre-release).
 
 A document's `schema` field names the published versioned URL of the version being authored — older versions validate against their published schema.
 

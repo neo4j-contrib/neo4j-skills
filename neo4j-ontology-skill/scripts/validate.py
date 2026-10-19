@@ -13,7 +13,7 @@ Schema resolution order:
      to fetch. No fallback — an explicit schema must load or the run fails.
   2. The document's own `schema` field, when it is an http(s) URL.
   3. The published `current` alias.
-  4. TRANSITIONAL: the raw schema from the neo4j/graph-spec repo (until the
+  4. TRANSITIONAL: the raw schema from the neo4j/ontology-graph-spec repo (until the
      published URLs go live).
 
 Exit codes:
@@ -40,7 +40,7 @@ SCHEMA_CURRENT_URL = SCHEMA_BASE_URL + "current/schema.json"  # moving alias →
 # TRANSITIONAL (pre-ONT-31): raw schema from the source repo, used while the
 # published URLs above are not live. Remove once ONT-31 ships.
 SCHEMA_REPO_FALLBACK_URL = (
-    "https://raw.githubusercontent.com/neo4j/graph-spec/main/ontology-graph-spec.schema.json"
+    "https://raw.githubusercontent.com/neo4j/ontology-graph-spec/main/ontology-graph-spec.schema.json"
 )
 
 FETCH_TIMEOUT_SECONDS = 30
