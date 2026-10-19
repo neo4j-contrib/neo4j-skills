@@ -76,6 +76,7 @@ codex plugin marketplace upgrade neo4j-skills-marketplace
 |---|---|
 | [`neo4j-cypher-skill`](./neo4j-cypher-skill) | Write, optimize, and debug Cypher queries. Covers CYPHER 25 syntax, query planning, indexes, and common patterns. |
 | [`neo4j-modeling-skill`](./neo4j-modeling-skill) | Design and review graph data models. Covers node/relationship patterns, property choices, and relational-to-graph migration. |
+| [`neo4j-ontology-skill`](./neo4j-ontology-skill) | Author and validate Neo4j Ontology Graph Specification v1 documents in YAML or JSON. Covers nodes, relationships, properties, data types, constraints, labels, and endpoint cardinality. |
 | [`neo4j-getting-started-skill`](./neo4j-getting-started-skill) | Zero-to-app walkthrough: provision → model → load → query. Use for first-time setup on Aura or Docker. |
 
 ### Importing Data
