@@ -8,6 +8,7 @@
       "skills": [
         "neo4j-getting-started-skill",
         "neo4j-modeling-skill",
+        "neo4j-ontology-skill",
         "neo4j-cypher-skill"
       ]
     },

@@ -78,6 +78,22 @@
       "expected_skills": ["neo4j-migration-skill"],
       "expected_patterns": ["SHORTEST 1", "elementId", "CYPHER 25"],
       "kind": "skill-routing"
+    },
+    {
+      "id": "ontology-author-customer-domain",
+      "starting_prompt": "Author an ontology for my customer support domain with Customer, Ticket, and Agent nodes.",
+      "conversation_plan": "Agent should produce a Neo4j Ontology Graph Specification v1 document in YAML or JSON, defining nodes and relationships with properties, data types, key/unique constraints, labels, and endpoint cardinality.",
+      "expected_skills": ["neo4j-ontology-skill"],
+      "expected_patterns": ["ontology", "properties", "constraints"],
+      "kind": "skill-routing"
+    },
+    {
+      "id": "ontology-validate-document",
+      "starting_prompt": "Here is my ontology YAML. Check it against the ontology graph spec and fix any errors.",
+      "conversation_plan": "Agent should validate the document against the Ontology Graph Specification v1 schema, report each violation, and produce a corrected document.",
+      "expected_skills": ["neo4j-ontology-skill"],
+      "expected_patterns": ["schema", "validation"],
+      "kind": "skill-routing"
     }
   ]
 }
