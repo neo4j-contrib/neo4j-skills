@@ -11,7 +11,7 @@ description: Run Neo4j Graph Analytics algorithms (PageRank, Louvain, WCC, Dijks
   Does NOT cover Cypher or Neo4j DBMS queries — use neo4j-cypher-skill.
   Does NOT cover Aura Graph Analytics — use neo4j-aura-graph-analytics-skill.
   Does NOT cover self-managed GDS — use neo4j-gds-skill.
-version: 1.2.1
+version: 1.2.2
 allowed-tools: Bash WebFetch
 ---
 
@@ -231,6 +231,7 @@ For complete algorithm compute/write parameter reference, see [references/algori
 | Label Propagation | `label_propagation` | Fast community detection by label spreading |
 | K-Means | `kmeans` | Cluster nodes by node properties |
 | Triangle Count | `triangle_count` | Local clustering / dense subgraphs |
+| K-1 Coloring | `k1coloring` | Assign colors so neighbours differ (greedy, few colors) |
 
 ### Centrality
 | Algorithm | Procedure | Use case |
