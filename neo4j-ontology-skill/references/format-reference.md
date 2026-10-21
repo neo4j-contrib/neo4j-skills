@@ -236,7 +236,7 @@ Discriminator: `type` const. Common optional: `id` (mapping id, so siblings can 
 
 - Versioned URL: `https://neo4j.com/docs/ontology-graph-spec/<version>/schema.json` — immutable per version; `1.0.0` is the current spec version. Set the document's `schema` field to the versioned URL it conforms to.
 - Moving alias: `https://neo4j.com/docs/ontology-graph-spec/current/schema.json` → newest stable.
-- Pre-live fallback: while the published URLs are not live, `scripts/validate.py` falls back to `https://raw.githubusercontent.com/neo4j/ontology-graph-spec/main/ontology-graph-spec.schema.json` (tracks main — moving).
+- Fallback: when the published host is unreachable, `scripts/validate.py` falls back to `https://raw.githubusercontent.com/neo4j/ontology-graph-spec/main/ontology-graph-spec.schema.json` (tracks main — moving).
 
 ## Validation
 

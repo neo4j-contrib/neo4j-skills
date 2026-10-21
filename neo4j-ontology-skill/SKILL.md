@@ -8,7 +8,7 @@ description: Author and validate Neo4j Ontology Graph Specification (ontology gr
   neo4j-cypher-skill. Does NOT cover generic graph data modeling advice — use
   neo4j-modeling-skill.
 compatibility: uv required to run scripts/validate.py (PEP 723 inline deps)
-version: 1.0.0
+version: 1.0.1
 ---
 
 ## When to Use
@@ -106,7 +106,7 @@ Load on demand:
 
 ## Spec Status
 
-Pre-publication: the ONT-31 URLs above are baked into `scripts/validate.py` but not live yet; until they are, the validator falls back to the raw schema from `neo4j/ontology-graph-spec` main (moving). Ontology Cypher procedures do not exist yet; applying an ontology to a database is out of scope here.
+Published: the ONT-31 URLs above are live and are the canonical schema source. If the published host is unreachable, the validator falls back to the raw schema from `neo4j/ontology-graph-spec` main (moving). Ontology Cypher procedures do not exist yet; applying an ontology to a database is out of scope here.
 
 ---
 
