@@ -1,7 +1,7 @@
 ---
 name: neo4j-agent-memory-skill
-description: Authoritative reference for the neo4j-agent-memory Python package — a graph-native memory system for AI agents built on Neo4j — and for the hosted service (NAMS) at memory.neo4jlabs.com. Use this skill whenever the user mentions neo4j-agent-memory, agent memory with Neo4j, context graphs, the POLE+O model, MemoryClient/MemorySettings, the memory MCP server, or any of the framework integrations (LangChain, PydanticAI, CrewAI, AWS Strands, Google ADK, Microsoft Agent Framework, OpenAI Agents, LlamaIndex). Also use when the user mentions the hosted service at memory.neo4jlabs.com, NAMS, the Neo4j Agent Memory Service, the `nams_` API key prefix, or the hosted MCP endpoint. Also use when writing documentation, blog posts, tutorials, PRDs, or code samples for the project, when comparing agent memory approaches, or when positioning graph-native memory against vector-only approaches — even if the user doesn't explicitly name the package.
-version: 1.0.8
+description: Authoritative reference for the neo4j-agent-memory Python package — a graph-native memory system for AI agents built on Neo4j — and for the hosted service (NAMS) at memory.neo4jlabs.com. Use this skill whenever the user mentions neo4j-agent-memory, agent memory with Neo4j, context graphs, the POLE+O model, MemoryClient/MemorySettings, the memory MCP server, or any of the framework integrations (LangChain, PydanticAI, CrewAI, AWS Strands, Google ADK, Microsoft Agent Framework, OpenAI Agents, LlamaIndex). Also use when the user mentions the hosted service at memory.neo4jlabs.com, NAMS, the Neo4j Agent Memory Service, the `nams_` API key prefix, or the hosted MCP endpoint. Also use when writing documentation, blog posts, tutorials, PRDs, or code samples for the project, when comparing agent memory approaches, or when positioning graph-native memory against vector-only approaches — even if the user doesn't explicitly name the package. Does NOT handle GraphRAG pipelines — use neo4j-graphrag-skill.
+version: 1.0.9
 ---
 
 # neo4j-agent-memory
@@ -37,10 +37,10 @@ Authoritative reference for the `neo4j-agent-memory` Python package — a Neo4j 
 | Hosted service | https://memory.neo4jlabs.com (NAMS — early-access, not yet documented on official project pages) |
 | Hosted MCP endpoint | https://memory.neo4jlabs.com/mcp (Streamable HTTP, bearer auth) |
 | License | Apache-2.0 |
-| Python | 3.10+ |
+| Python | 3.11+ (3.10 dropped in 0.8.0) |
 | Neo4j | 5.20+ (required for vector indexes) |
 | Status | Experimental (Neo4j Labs, community-supported) |
-| Current version (at time of writing) | **0.7.0** (2026-10-07) — **always verify PyPI before citing** |
+| Current version (at time of writing) | **0.8.0** (2026-10-22) — **always verify PyPI before citing** |
 
 ## What It Is (One Sentence)
 
@@ -393,7 +393,7 @@ Before publishing any content about this project, verify:
 - [ ] Canonical docs link points to `neo4j.com/labs/agent-memory`
 - [ ] Three memory types named correctly (short-term, long-term, reasoning)
 - [ ] POLE+O model named consistently (not POLEO, not POLE-O)
-- [ ] Python ≥ 3.10 and Neo4j ≥ 5.20 requirements are stated if relevant
+- [ ] Python ≥ 3.11 and Neo4j ≥ 5.20 requirements are stated if relevant
 - [ ] Labs disclaimer present for README/landing content
 - [ ] No competitor names in published positioning
 - [ ] Reasoning memory is called out as the differentiator

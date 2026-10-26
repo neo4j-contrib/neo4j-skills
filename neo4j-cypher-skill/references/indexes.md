@@ -220,17 +220,22 @@ SEARCH node IN (FULLTEXT INDEX article_search FOR 'graph database' LIMIT 10)
 SCORE AS score
 RETURN node.title, score
 
-// Query nodes via procedure (pre-2026.09) — returns node + score (descending)
+// Query relationships via SEARCH [2026.09]
+MATCH ()-[rel]->()
+SEARCH rel IN (FULLTEXT INDEX rel_search FOR 'query string' LIMIT 10)
+SCORE AS score
+RETURN type(rel) AS relType, rel.note, score
+
+// Procedures — pre-2026.09 only (deprecated 2026.10); returns node + score (descending)
 CALL db.index.fulltext.queryNodes('article_search', 'graph database')
 YIELD node, score
 WHERE score > 0.5
 RETURN node.title, score
 ORDER BY score DESC LIMIT 10
 
-// Query relationships
 CALL db.index.fulltext.queryRelationships('rel_search', 'query string')
 YIELD relationship, score
-RETURN relationship, score
+RETURN type(relationship) AS relType, score
 
 // Lucene query syntax:
 //   'graph database'         token AND (default)
@@ -243,7 +248,7 @@ RETURN relationship, score
 //   'team:"Operations"'      field + exact phrase
 ```
 
-Fulltext index does NOT participate in WHERE predicate planning. Query explicitly: `SEARCH ... FULLTEXT INDEX` [2026.09] or `CALL db.index.fulltext.queryNodes` / `queryRelationships`. Full SEARCH syntax → [cypher-syntax.md](cypher-syntax.md).
+Fulltext index does NOT participate in WHERE predicate planning. Query explicitly: `SEARCH ... FULLTEXT INDEX` [2026.09]; `CALL db.index.fulltext.queryNodes` / `queryRelationships` only on < 2026.09 (deprecated 2026.10). Full SEARCH syntax → [cypher-syntax.md](cypher-syntax.md).
 
 ---
 
@@ -293,7 +298,7 @@ Rules:
 - Typed hints (`USING RANGE INDEX`, `USING TEXT INDEX`) only valid when the planner can guarantee the type doesn't change results.
 - Hints do NOT guarantee improvement — PROFILE before/after; measure elapsed ms (not db-hits for TEXT).
 - Index **not used** when predicate compares two node properties (`WHERE p.name = p2.name`) — no anchor.
-- FULLTEXT has no `USING INDEX` hint — use `SEARCH ... FULLTEXT INDEX` [2026.09] or `db.index.fulltext.queryNodes` explicitly.
+- FULLTEXT has no `USING INDEX` hint — use `SEARCH ... FULLTEXT INDEX` [2026.09] (< 2026.09: `db.index.fulltext.queryNodes`, deprecated 2026.10).
 - Check query stats first (`CALL db.stats.retrieve('GRAPH COUNTS')`) before adding hints.
 
 ---
