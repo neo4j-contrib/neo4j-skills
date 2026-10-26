@@ -214,6 +214,8 @@ gds.graph.drop("myGraph")  # Drop by name
 gds.graph.drop(G)          # Drop via object
 ```
 
+GDS < 2026.10: `memoryUsage` / `sizeInBytes` under-report actual heap use significantly — size heap from `gds.graph.project.estimate`, not catalog numbers. Fixed in 2026.10.
+
 Drop graphs after use. Catalog graphs persist until dropped, source database stops/drops, or DBMS stops.
 
 ---

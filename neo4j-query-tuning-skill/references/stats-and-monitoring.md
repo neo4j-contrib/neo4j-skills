@@ -175,6 +175,8 @@ db.logs.query.page_logging_enabled=true
 
 Each log entry includes: `{elapsedMs} ms: {query}` with optional params, allocated bytes, page hits/misses.
 
+Format set in `server-logs.xml`: PLAIN default today; new installs default to JSON after 2026 LTS (upgrades keeping existing `server-logs.xml` stay PLAIN). Parse JSON field names, not PLAIN line layout, in new tooling.
+
 `LIMIT`/`SKIP` integer literals and `LOAD CSV ... FIELDTERMINATOR` strings appear unobfuscated [2026.08]; earlier releases masked them as sensitive literals.
 
 ---
