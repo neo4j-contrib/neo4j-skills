@@ -1,8 +1,31 @@
 {
   "$schema": "https://antigravity.google/schemas/v1/plugin.json",
-  "name": "Neo4j",
+  "name": "neo4j",
+  "displayName": "Neo4j",
+  "version": "1.0.1",
   "description": "Agent skills for Neo4j graph database — write Cypher queries, design graph models, use drivers, run imports, build GraphRAG pipelines, run GDS algorithms, and manage Aura instances.",
-  "logo": ".antigravity-plugin/logo-w-sq.png",
+  "logo": "assets/logo.png",
+  "author": {
+    "name": "Neo4j",
+    "url": "https://neo4j.com"
+  },
+  "homepage": "https://neo4j.com",
+  "repository": "https://github.com/neo4j-contrib/neo4j-skills",
+  "license": "MIT",
+  "keywords": [
+    "neo4j",
+    "cypher",
+    "graph-database",
+    "graphrag",
+    "gds",
+    "vector-search",
+    "aura"
+  ],
+  "suggestedPrompts": [
+    "Design a graph data model for my application's domain",
+    "Write and optimize a Cypher query to find related nodes",
+    "Build a GraphRAG pipeline with Neo4j vector indexes"
+  ],
   "skills": [
     "."
   ]
