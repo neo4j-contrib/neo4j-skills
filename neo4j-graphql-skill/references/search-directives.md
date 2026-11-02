@@ -1,6 +1,6 @@
 # @fulltext and @vector — Search Directives
 
-Neither directive creates its index. Create it in Cypher first — `assertIndexesAndConstraints` covers `@id` constraints only.
+Neither directive creates its index. Create it in Cypher first. `assertIndexesAndConstraints()` (after `await getSchema()`) validates `@fulltext`/`@vector` indexes and throws `Missing @fulltext index '…'` / `Missing @vector index '…'` if absent — it never creates them, and does nothing for `@id`.
 
 ## @fulltext
 
@@ -19,18 +19,21 @@ CREATE FULLTEXT INDEX ProductName FOR (n:Product) ON EACH [n.name]
 |---|---|---|
 | `indexName` | yes | must match the Cypher index name |
 | `fields` | yes | node properties covered by the index |
-| `queryName` | no | default generated name is `{plural}Fulltext{indexName}` |
+| `queryName` | yes (v7) | schema build fails without it in v7; optional in v5 (default `{plural}Fulltext{indexName}`) |
 
 ```graphql
+# v7: returns a connection; cursor args first/after (no limit/offset)
 query {
-  productsByName(phrase: "Hot sauce", where: { score: { min: 1.1 } }, sort: [{ product: { name: ASC } }], limit: 10) {
-    score
-    product { name }
+  productsByName(phrase: "Hot sauce", where: { score: { min: 1.1 } }, sort: [{ node: { name: ASC } }], first: 10) {
+    edges {
+      score
+      node { name }
+    }
   }
 }
 ```
 
-`where.score` takes `{ min, max }` FLOAT bounds; `where.product` takes the normal `ProductWhere` input.
+`where.score` takes `{ min, max }` FLOAT bounds; `where.node` takes the normal `ProductWhere` input. `sort` takes `{ score }` or `{ node: ProductSort }`. Select `score`/`node` inside `edges`. (v5 shape differs: list result with `score`/`product`, `limit`/`offset`.)
 
 ## @vector
 
@@ -60,7 +63,7 @@ type Product @node @vector(indexes: [{
 ```
 
 ```graphql
-query FindSimilarProducts($vector: [Float]!) {
+query FindSimilarProducts($vector: [Float!]) {   # generated arg is [Float!]; [Float]! fails validation
   searchByDescription(vector: $vector) {
     edges {
       cursor
