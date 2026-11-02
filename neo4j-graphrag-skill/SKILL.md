@@ -11,7 +11,7 @@ description: Build GraphRAG retrieval pipelines on Neo4j using the neo4j-graphra
   neo4j-document-import-skill. Does NOT handle plain vector search — use
   neo4j-vector-index-skill. Does NOT handle GDS analytics — use neo4j-gds-skill.
   Does NOT handle agent memory — use neo4j-agent-memory-skill.
-version: 1.1.1
+version: 1.1.2
 status: active
 allowed-tools: Bash WebFetch
 ---
@@ -435,7 +435,7 @@ schema_dict = get_structured_schema(driver, sample=1000)  # dict with labels/rel
 | `Text2CypherRetrievalError` | LLM generated a write statement | Expected security behavior (v1.16.0+); refine prompt or schema |
 | `TypeError: coroutine` | Missing `await` / `asyncio.run()` | Wrap async calls: `asyncio.run(pipeline.run_async(...))` |
 | Empty results from HybridRetriever | Fulltext index not ONLINE | `SHOW INDEXES YIELD name, state WHERE state <> 'ONLINE'` |
-| `VectorCypherRetriever` + `filters` raises "requires: node_label, embedding_node_property, …" (v1.19 name-mismatch bug) | `_fetch_index_infos` sets `self._embedding_node_property`, constructor sets `_node_embedding_property` | Shim after construction: `r._node_embedding_property = r._embedding_node_property or "embedding"`; append filter props to `r._filterable_properties` |
+| `VectorCypherRetriever` + `filters` raises "requires: node_label, embedding_node_property, …" (v1.19–1.22 name-mismatch bug; fixed v1.23.0) | `_fetch_index_infos` sets `self._embedding_node_property`, constructor sets `_node_embedding_property` | Upgrade `neo4j-graphrag>=1.23.0`. Pinned < 1.23 → shim after construction: `r._node_embedding_property = r._embedding_node_property or "embedding"`; append filter props to `r._filterable_properties` |
 | Embedding dimension mismatch | Index dims ≠ model dims | Recreate index with correct `dimensions=` value |
 
 ---

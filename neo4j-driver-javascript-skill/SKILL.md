@@ -9,7 +9,7 @@ description: Neo4j JavaScript/TypeScript Driver v6 — driver lifecycle, execute
   Does NOT handle Cypher query authoring — use neo4j-cypher-skill.
   Does NOT cover driver version migration — use neo4j-migration-skill.
 compatibility: neo4j-driver v6; Node.js >=18; TypeScript supported via bundled types
-version: 1.0.6
+version: 1.0.7
 allowed-tools: Bash WebFetch
 ---
 
@@ -94,6 +94,8 @@ neo4j.auth.bearer(token)           // SSO / JWT
 neo4j.auth.kerberos(base64Ticket)  // Kerberos
 neo4j.auth.none()                  // unauthenticated (dev only)
 ```
+
+6.3.0+: custom token object without `scheme` throws `Auth token is missing 'scheme'` (earlier silently sent `none`) — use `neo4j.auth.*` helpers or set `scheme`.
 
 **Singleton for web frameworks** — create once, import everywhere:
 ```javascript
@@ -403,6 +405,7 @@ Load on demand:
 - [references/advanced-patterns.md](references/advanced-patterns.md) — explicit transactions, causal consistency/bookmarks, connection pool tuning, result transformers, lazy streaming, repository pattern
 - [references/browser-usage.md](references/browser-usage.md) — WebSocket URIs, CORS, bundler config, security guidance
 - [references/rxjs-session.md](references/rxjs-session.md) — RxJS session API (`rxSession.run()`, observable patterns)
+- [references/property-encryption.md](references/property-encryption.md) — Property Encryption preview [6.3.0+]: `EnvelopeEncryptionProfile`, local key encapsulation, user key repository, `driver.encryption.encrypt/decrypt` with AAD
 
 ---
 
