@@ -5,7 +5,7 @@ description: Diagnoses and fixes slow Neo4j Cypher queries by reading execution 
   (indexes, hints, query rewrites, runtime selection). Use when a query is slow, when EXPLAIN
   or PROFILE output needs interpretation, when dbHits or pageCacheHitRatio are poor, when
   cardinality estimation diverges from actuals, or when deciding between slotted/pipelined/parallel
-  runtimes. Covers USING INDEX / USING SCAN / USING JOIN hints, db.stats.retrieve, SHOW QUERIES,
+  runtimes. Covers USING INDEX / USING SCAN / USING JOIN hints, db.stats.retrieve,
   SHOW TRANSACTIONS, TERMINATE TRANSACTION.
   Does NOT write new Cypher from scratch — use neo4j-cypher-skill.
   Does NOT cover GDS algorithm tuning — use neo4j-gds-skill.
@@ -19,7 +19,7 @@ version: 1.0.9
 - EXPLAIN/PROFILE output in hand — needs interpretation
 - Identifying which index is missing or unused
 - Deciding between slotted / pipelined / parallel runtimes
-- Monitoring live queries: SHOW QUERIES, SHOW TRANSACTIONS
+- Monitoring live queries: SHOW TRANSACTIONS (`SHOW QUERIES` does not exist)
 - Cardinality estimates wrong (plan replanning needed)
 
 ## When NOT to Use
@@ -77,22 +77,24 @@ Read plans **bottom-up** — leaf operators at bottom initiate data retrieval.
 |---|---|---|---|
 | `NodeIndexSeek` | ✓ | Exact match via RANGE/LOOKUP index | — |
 | `NodeUniqueIndexSeek` | ✓ | Unique constraint index hit | — |
-| `NodeIndexContainsScan` | ✓ | TEXT index CONTAINS / STARTS WITH | — |
+| `NodeIndexContainsScan` | ✓ | TEXT index `CONTAINS` | — |
+| `NodeIndexEndsWithScan` | ✓ | TEXT index `ENDS WITH` | — |
+| `NodeIndexSeekByRange` | ✓ | RANGE index range predicate, or `STARTS WITH` via RANGE/TEXT index | — |
 | `NodeIndexScan` | ~ | Full index scan (no predicate) | Add WHERE predicate or composite index |
 | `NodeByLabelScan` | ✗ | Scans all nodes of label | Add RANGE index on lookup property |
 | `AllNodesScan` | ✗✗ | Scans entire node store | Add label + index to MATCH |
 | `Expand(All)` | ~ | Traverse relationships from node | Normal; limit with LIMIT or WHERE |
 | `Expand(Into)` | ~ | Find rels between two matched nodes | Normal for known-endpoint joins |
 | `Filter` | ~ | Predicate applied after scan | Move predicate into WHERE with index |
-| `CartesianProduct` | ✗ | No join predicate between two MATCH | Add WHERE join or use WITH between MATCHes |
+| `CartesianProduct` | ✗ | No join predicate between two MATCH | Bad only when both inputs are large. Add a join predicate or a path (only if the relationship is a real requirement); harmless for two single-row seeks. `WITH` between MATCHes changes nothing |
 | `NodeHashJoin` | ~ | Hash join on node IDs | Normal; planner chose hash join |
 | `ValueHashJoin` | ~ | Hash join on values | Normal; watch memory for large inputs |
 | `EagerAggregation` | ~ | Full aggregation (ORDER BY, count(*)) | Normal for aggregates |
 | `Aggregation` | ✓ | Streaming aggregation | — |
 | `Eager` | ✗ | Read/write conflict; materialises all rows | See Eager fix strategies below |
-| `Sort` | ~ | Full sort — O(n log n) | Add `LIMIT` before Sort; push LIMIT earlier |
+| `Sort` | ~ | Full sort — O(n log n) | `ORDER BY … LIMIT` → `Top`; index-backed order. Never move `LIMIT` before Sort (changes results) |
 | `Top` | ✓ | Sort+Limit combined — O(n log k) | Preferred over Sort+Limit |
-| `Limit` | ✓ | Truncates rows early | Push as early as possible |
+| `Limit` | ✓ | Truncates rows early | Push early only where it can't change which rows win |
 | `Skip` | ~ | Offset pagination | Use keyset pagination on large graphs |
 | `ProduceResults` | — | Final output operator | Root of tree |
 | `UndirectedRelationshipByIdSeekPipe` | ~ | Lookup by relationship ID | Avoid `id(r)` — use `elementId(r)` |
@@ -175,11 +177,12 @@ MATCH (a:Author {id: $aid})
 MATCH (b:Book  {id: $bid})
 RETURN a.name, b.title
 
-// Good (explicit join or WITH):
+// Rewrite ONLY if the author must have written the book — it changes results:
+// unconnected author/book → original returns 1 row, rewrite returns 0
 MATCH (a:Author {id: $aid})-[:WROTE]->(b:Book {id: $bid})
 RETURN a.name, b.title
-// Or: WITH between them to reset planning context
 ```
+Two single-row seeks → `CartesianProduct` of 1 × 1 rows is harmless; keep the two MATCHes when no relationship is required. A `WITH` between them produces the identical plan.
 
 ### Eager — Read/Write Conflict
 Three strategies (pick simplest):
@@ -194,12 +197,13 @@ CALL (p) { SET p.tier = 'gold' } IN TRANSACTIONS OF 1000 ROWS
 
 ### Expensive CONTAINS / ENDS WITH
 ```cypher
-// Needs TEXT index (RANGE does NOT support these):
+// Needs TEXT index (RANGE can only scan all values for these):
 CREATE TEXT INDEX person_bio IF NOT EXISTS FOR (n:Person) ON (n.bio)
 MATCH (p:Person) WHERE p.bio CONTAINS $keyword RETURN p.name
 ```
 
 ### Over-Traversal — Push LIMIT Early
+Changes results: push `LIMIT` before an operation only when any N rows will do and that operation doesn't decide which rows win — never before `ORDER BY`, aggregation or a filtering MATCH. The "good" version returns every review of 10 arbitrary (author, book) pairs. Pairs without reviews drop out, so it can return more or fewer than 10 rows. Use it only when that's acceptable.
 ```cypher
 // Bad: LIMIT after expensive join
 MATCH (a:Author)-[:WROTE]->(b:Book)-[:REVIEWED_BY]->(r:Review)
@@ -218,11 +222,11 @@ RETURN a.name, b.title, r.text
 
 | Runtime | Select | Best For | Avoid When |
 |---|---|---|---|
-| `pipelined` | `CYPHER runtime=pipelined` | Default OLTP; streaming, low memory | Unsupported operators fall back to slotted |
+| `pipelined` | `CYPHER runtime=pipelined` | Default OLTP on Enterprise and all Aura tiers; streaming, low memory | Unsupported operators fall back to slotted |
 | `slotted` | `CYPHER runtime=slotted` | Guaranteed stable behavior; debug | Performance-critical OLTP |
 | `parallel` | `CYPHER 25 runtime=parallel` | Large analytical scans; aggregations | OLTP, writes, short queries, Aura Free |
 
-Pipelined is default for most queries. Parallel requires `dbms.cypher.parallel.worker_limit` configured; available on Enterprise and Aura Pro 2025+.
+Community always runs slotted (its default): `pipelined`/`parallel` hints are accepted but EXPLAIN shows `Runtime: SLOTTED`. Pipelined and parallel are Enterprise/Aura. Pipelined is the default on Enterprise and all Aura tiers. Parallel needs no configuration by default (`server.cypher.parallel.worker_limit`, default `0` = one worker per core); available on Enterprise and non-Free Aura.
 
 ```cypher
 // Force parallel for large aggregation:
@@ -236,17 +240,11 @@ RETURN n.currency, count(*), sum(n.amount)
 ## Query Monitoring Commands
 
 ```cypher
-// Live queries + resource usage:
-SHOW QUERIES YIELD query, queryId, elapsedTimeMillis, allocatedBytes, status, username
-
-// Running transactions:
+// Running transactions + their current query (SHOW QUERIES does not exist):
 SHOW TRANSACTIONS YIELD transactionId, currentQuery, currentQueryProgress, elapsedTime, status, username, cpuTime, activeLockCount  // currentQueryProgress added [2026.03]
 
 // Kill a specific transaction:
 TERMINATE TRANSACTION $transactionId
-
-// Kill a query:
-TERMINATE QUERY $queryId
 
 // Graph count stats (node/rel counts by label/type — feed into planner):
 CALL db.stats.retrieve('GRAPH COUNTS') YIELD section, data RETURN section, data
@@ -270,7 +268,7 @@ Full monitoring reference → [references/stats-and-monitoring.md](references/st
 - [ ] Run `PROFILE` twice — first warms cache, second is representative
 - [ ] Compare `dbHits` before/after fix
 - [ ] If `estimatedRows` wildly off → `CALL db.prepareForReplanning()`
-- [ ] Push `LIMIT` / `WITH n LIMIT k` before high-fanout operations
+- [ ] Push `LIMIT` / `WITH n LIMIT k` before high-fanout operations — only when it can't change which rows win (not before `ORDER BY` / aggregation)
 - [ ] For CONTAINS/ENDS WITH — TEXT index, not RANGE
 - [ ] For large analytical queries — consider `runtime=parallel`
 - [ ] Kill long-running queries with `TERMINATE TRANSACTION`
