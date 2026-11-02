@@ -34,7 +34,7 @@ dotnet add package Neo4j.Driver
 | Package | Use |
 |---|---|
 | `Neo4j.Driver` | Async API — **use this** |
-| `Neo4j.Driver.Simple` | Synchronous wrapper |
+| `Neo4j.Driver.Simple` | Synchronous wrapper — **v5 only (latest 5.28.x), no 6.x release; don't mix with v6** |
 | `Neo4j.Driver.Reactive` | System.Reactive streams |
 
 Pin `Neo4j.Driver >= 6.4.0` — fixes `CustomAuthToken.ToString()` leaking credentials in clear text, certificate validator accepting a peer with no certificate, and pool handing out server-closed idle connections.
@@ -305,8 +305,7 @@ string? city = record["city"].As<string?>();  // ✅ nullable
 int?    age2 = record["age"].As<int?>();      // ✅ nullable
 
 // Absent key — throws KeyNotFoundException (typo or not in RETURN)
-if (record.Keys.Contains("city"))
-    var city3 = record.Get<string?>("city");
+var city3 = record.Keys.Contains("city") ? record.Get<string?>("city") : null;
 ```
 
 ---
@@ -326,7 +325,7 @@ if (record.Keys.Contains("city"))
 | `Date` | `LocalDate` | `.ToDateOnly()` (.NET 6+) |
 | `DateTime` | `ZonedDateTime` | `.ToDateTimeOffset()` (ms precision) |
 | `LocalDateTime` | `LocalDateTime` | |
-| `Duration` | `Duration` | `.ToTimeSpan()` throws if has months/days |
+| `Duration` | `Duration` | no `ToTimeSpan()`; members `Months`, `Days`, `Seconds`, `Nanos` — convert manually |
 | `UUID` | `System.Guid` | [driver 6.2+, Bolt 6.1, Neo4j 2026.08+]; object mapping also converts to/from `string` |
 | `null` | `null` | use nullable types |
 
@@ -367,24 +366,26 @@ Custom class instances passed to `WithParameters` for UNWIND do not serialize �
 
 ---
 
-## Object Mapping (Preview API)
+## Object Mapping
 
 ```csharp
-using Neo4j.Driver.Preview.Mapping;   // REQUIRED — without this, AsObject<T>() is CS1061
+using Neo4j.Driver.Mapping;   // REQUIRED — without this, AsObject<T>() is CS1061 (not Neo4j.Driver.Preview.Mapping — CS0234)
 
 public record Person(string Name, int Age);   // C# records work well here
 
+// Keys match property names CASE-SENSITIVELY — alias to PascalCase (or use [MappingSource("name")])
 var result = await driver
-    .ExecutableQuery("MATCH (p:Person) RETURN p.name AS name, p.age AS age")
+    .ExecutableQuery("MATCH (p:Person) RETURN p.name AS Name, p.age AS Age")
     .WithConfig(new QueryConfig(database: "neo4j"))
     .ExecuteAsync();
 
-var person = result.Result[0].AsObject<Person>();   // RETURN keys map to record properties
+var person = result.Result[0].AsObject<Person>();
 
-// Bulk mapping
-var (people, _, _) = await driver
-    .ExecutableQuery("MATCH (p:Person) RETURN p.name AS name, p.age AS age")
+// Bulk mapping — extension on Task<EagerResult<...>>: call after ExecuteAsync(); returns IReadOnlyList<Person>
+var people = await driver
+    .ExecutableQuery("MATCH (p:Person) RETURN p.name AS Name, p.age AS Age")
     .WithConfig(new QueryConfig(database: "neo4j"))
+    .ExecuteAsync()
     .AsObjectsAsync<Person>();
 ```
 
@@ -438,20 +439,20 @@ If `CommitAsync()` throws a network error, commit may or may not have succeeded 
 | Missing `await` on `ExecuteAsync()` | Task silently never runs |
 | `async tx => tx.RunAsync(...)` no inner await | Remove `async`, return Task directly |
 | Omit `database` in `QueryConfig`/`AsyncSession` | Always specify — saves a round-trip |
-| No `CancellationToken` in web apps | Propagate `HttpContext.RequestAborted` |
+| No `CancellationToken` in web apps | Propagate `HttpContext.RequestAborted` to `ExecutableQuery.ExecuteAsync(ct)` / `cursor.ToListAsync(ct)` — session/tx methods take no token |
 | `.As<string>()` on null graph value | `.As<string?>()` — non-nullable throws |
 | `record["key"]` absent key | Check `record.Keys.Contains()` first |
 | `cursor.Current` after FetchAsync loop | Last record, not null — don't use after loop |
 | `FetchAsync()` after `false` return | Throws — stop loop, don't call again |
 | Return cursor from managed tx callback | Consume with `ToListAsync()` inside callback |
 | Need counters from session write | `await cursor.ConsumeAsync()` |
-| `AsObject<T>()` CS1061 compile error | Add `using Neo4j.Driver.Preview.Mapping;` |
+| `AsObject<T>()` CS1061 compile error | Add `using Neo4j.Driver.Mapping;` |
 | `ResultAvailableAfter` for total timing | Use `ResultConsumedAfter` (full wall-clock) |
 | Custom class in `WithParameters` for UNWIND | Use anonymous types or `Dictionary<string,object>` |
 | Rename C# param but not Cypher `$param` | Anonymous property names must match `$param` names |
 | `ExecuteWriteAsync` for reads | Use `ExecuteReadAsync` — routes to replicas |
 | Side effects inside managed tx callback | Move outside — callback retried on failure |
-| `Duration.ToTimeSpan()` with months/days | Only safe for pure second/nanosecond durations |
+| `Duration.ToTimeSpan()` (doesn't exist, CS1061) | Build from `Seconds`/`Nanos`; months/days have no fixed length |
 | Catch `Neo4jException` before `ClientException` | `ClientException` is subclass — catch it first |
 
 ---

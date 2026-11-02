@@ -14,7 +14,7 @@ Official Neo4j .NET Driver v6 — usage guide for C# / .NET applications connect
 - **Record access** — `.Get<T>()`, `.As<T>()`, null safety, absent key handling
 - **Type mapping** — Cypher → .NET table, temporal types, `ElementId` lifetime
 - **UNWIND batching** — anonymous type arrays, `Dictionary<string,object>`
-- **Object mapping** — `AsObject<T>`, `AsObjectsAsync<T>`, C# record types (Preview API)
+- **Object mapping** — `AsObject<T>`, `AsObjectsAsync<T>`, C# record types (`Neo4j.Driver.Mapping`)
 - **Error handling** — exception hierarchy, `ClientException` ordering, rollback safety
 - **Common mistakes** — 20+ mistake/fix table
 

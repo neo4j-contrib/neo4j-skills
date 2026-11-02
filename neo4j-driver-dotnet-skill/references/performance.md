@@ -104,17 +104,15 @@ public async Task<IActionResult> GetPeople(CancellationToken cancellationToken)
     return Ok(records.Select(r => r.Get<string>("name")));
 }
 
-// Session-based
+// Session / transaction APIs take NO token in v6: ExecuteReadAsync, ExecuteWriteAsync,
+// RunAsync, BeginTransactionAsync, CommitAsync — compile error if passed (CS1739 / CS1503 / CS1501).
+// Tokens accepted by ExecutableQuery.ExecuteAsync(ct) and the result-cursor extensions:
+// ToListAsync(ct), ToListAsync(maxRecords, ct), ToListAsync(mapper, maxRecords, ct), SingleAsync(ct),
+// SingleAsync(mapper, ct), ForEachAsync(action, ct), AsObjectsAsync(ct). Prefer ExecutableQuery when cancellation matters.
 return await session.ExecuteReadAsync(async tx =>
 {
-    var cursor = await tx.RunAsync(
-        "MATCH (p:Person) RETURN p.name AS name",
-        cancellationToken: cancellationToken);
-    return await cursor.ToListAsync(r => r.Get<string>("name"), cancellationToken);
-}, cancellationToken: cancellationToken);
-
-// Explicit transaction
-await using var tx = await session.BeginTransactionAsync(cancellationToken);
-await tx.RunAsync("CREATE (p:Person {name: $name})", new { name }, cancellationToken);
-await tx.CommitAsync(cancellationToken);
+    var cursor = await tx.RunAsync("MATCH (p:Person) RETURN p.name AS name");
+    var records = await cursor.ToListAsync(cancellationToken);
+    return records.Select(r => r.Get<string>("name")).ToList();
+});
 ```
