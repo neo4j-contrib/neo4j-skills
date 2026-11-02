@@ -129,8 +129,8 @@ Reference: [aura-cli-reference.md](references/aura-cli-reference.md)
 MCP server for AI agent integration. For full install + editor config → use `neo4j-mcp-skill` (covers Claude Code, Desktop, Cursor, Windsurf, VS Code, Kiro, stdio vs HTTP transport, troubleshooting).
 
 ```bash
-brew install neo4j-mcp && neo4j-mcp -v      # Homebrew: command is neo4j-mcp
-uvx neo4j-mcp-server                        # PyPI: command is neo4j-mcp-server (not neo4j-mcp)
+pip install neo4j-mcp-server && neo4j-mcp-server -v   # PyPI: command is neo4j-mcp-server
+brew install neo4j-mcp && neo4j-mcp -v                 # Homebrew: command is neo4j-mcp
 ```
 
 Server 2.0.0 (2026-10-28) accepts only `NEO4J_MCP_*` env vars and unprefixed flags (`--uri`, `--database`); STDIO requires `NEO4J_MCP_DATABASE`. See [CHANGELOG](https://github.com/neo4j/mcp/blob/main/CHANGELOG.md).
