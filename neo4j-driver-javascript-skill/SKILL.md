@@ -9,7 +9,7 @@ description: Neo4j JavaScript/TypeScript Driver v6 — driver lifecycle, execute
   Does NOT handle Cypher query authoring — use neo4j-cypher-skill.
   Does NOT cover driver version migration — use neo4j-migration-skill.
 compatibility: neo4j-driver v6; Node.js >=18; TypeScript supported via bundled types
-version: 1.0.7
+version: 1.0.8
 allowed-tools: Bash WebFetch
 ---
 
