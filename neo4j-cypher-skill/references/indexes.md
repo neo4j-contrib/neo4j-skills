@@ -176,7 +176,7 @@ CREATE CONSTRAINT rating_type IF NOT EXISTS
   FOR ()-[r:RATED]-() REQUIRE r.rating IS :: INTEGER
 ```
 
-Supported types for `IS ::`: `BOOLEAN`, `STRING`, `INTEGER`, `FLOAT`, `DATE`, `LOCAL TIME`, `ZONED TIME`, `LOCAL DATETIME`, `ZONED DATETIME`, `DURATION`, `POINT`, `LIST<type>`.
+Supported types for `IS ::`: `BOOLEAN`, `STRING`, `INTEGER`, `FLOAT`, `DATE`, `LOCAL TIME`, `ZONED TIME`, `LOCAL DATETIME`, `ZONED DATETIME`, `DURATION`, `POINT`, `LIST<type NOT NULL>` (`LIST<STRING>` is rejected — inner type must be `NOT NULL`).
 
 ---
 
@@ -238,9 +238,10 @@ YIELD relationship, score
 RETURN type(relationship) AS relType, score
 
 // Lucene query syntax:
-//   'graph database'         token AND (default)
+//   'graph database'         OR (default: either term matches)
+//   '+graph +database'       AND (also 'graph AND database')
 //   '"graph database"'       exact phrase
-//   'graph OR database'      OR
+//   'graph OR database'      OR (explicit)
 //   'graph -relational'      NOT
 //   'graph~'                 fuzzy
 //   'graph*'                 wildcard prefix
@@ -310,14 +311,16 @@ Rules:
 SHOW INDEXES YIELD name, type, state, labelsOrTypes, properties, populationPercent
   WHERE state <> 'ONLINE' OR populationPercent < 100   // building or not ready
 
-// Full details (includes: indexSize, lastRead, readCount, lastWrite, writeCount, indexConfig)
+// Full details (columns: id, name, state, populationPercent, type, entityType, labelsOrTypes, properties,
+// indexProvider, owningConstraint, lastRead, readCount, trackedSince, options, failureMessage, createStatement)
+// Config is under options.indexConfig — there is no indexConfig column
 SHOW INDEXES YIELD *
 
 // Filter by type
 SHOW RANGE INDEXES    YIELD name, state, labelsOrTypes, properties
 SHOW TEXT INDEXES     YIELD name, state, labelsOrTypes, properties
-SHOW FULLTEXT INDEXES YIELD name, state, indexConfig
-SHOW VECTOR INDEXES   YIELD name, state, populationPercent, indexConfig
+SHOW FULLTEXT INDEXES YIELD name, state, options
+SHOW VECTOR INDEXES   YIELD name, state, populationPercent, options
 SHOW LOOKUP INDEXES   YIELD name, state
 
 // Unused index candidates (never read — review for removal)
