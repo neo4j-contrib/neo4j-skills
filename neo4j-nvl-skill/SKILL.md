@@ -12,7 +12,7 @@ description: Neo4j Visualization Library (NVL) — framework-agnostic graph rend
   Does NOT handle driver lifecycle, sessions, or executeQuery setup — use neo4j-driver-javascript-skill.
   Does NOT handle GraphVisualization/Needle default embed — use @neo4j-ndl/react.
 compatibility: "@neo4j-nvl packages 2.0.x; React 19 for @neo4j-nvl/react; modern browsers with Canvas2D + WebGL2"
-version: 2.0.0
+version: 2.0.1
 allowed-tools: Bash WebFetch
 ---
 
@@ -317,7 +317,7 @@ export function MiniGraph({ nodes, rels }) {
 
 ## Wiring a Neo4j Driver Result
 
-`@neo4j-nvl/base` exports a `ResultTransformer` for the JS driver that deduplicates nodes/relationships across any record shape.
+`@neo4j-nvl/base` exports a `ResultTransformer` for the JS driver. Output: nodes with only `{ id }` (element id), relationships with only `{ id, from, to }`, plus `recordObjectMap` (element id → driver element). No captions, labels, properties or relationship `type` — graph renders as unlabeled grey circles unless mapped. Nodes are not deduplicated; nodes nested in maps are not collected (lists and paths are).
 
 ```javascript
 import neo4j from 'neo4j-driver'
@@ -326,13 +326,18 @@ import { NVL, nvlResultTransformer } from '@neo4j-nvl/base'
 const driver = neo4j.driver(process.env.NEO4J_URI,
   neo4j.auth.basic(process.env.NEO4J_USERNAME, process.env.NEO4J_PASSWORD))
 
-const { nodes, relationships } = await driver.executeQuery(
+// nvlResultTransformer returns ids only: add captions, drop duplicate ids
+const { nodes, relationships, recordObjectMap } = await driver.executeQuery(
   'MATCH (a)-[r]-(b) RETURN a, r, b LIMIT 25',
   {},
   { database: 'neo4j', resultTransformer: nvlResultTransformer }
 )
+const uniqueNodes = [...new Map(nodes.map(n => [n.id, n])).values()].map(n => ({
+  ...n,
+  caption: recordObjectMap.get(n.id)?.properties?.name ?? ''
+}))
 
-const nvl = new NVL(document.getElementById('viz'), nodes, relationships)
+const nvl = new NVL(document.getElementById('viz'), uniqueNodes, relationships)
 ```
 
 ```javascript
@@ -412,7 +417,7 @@ container.addEventListener('click', (evt) => {
 | Vanilla handlers not torn down | Call `.destroy()` on every interaction before `nvl.destroy()` |
 | Worker construction blocked (strict CSP / sandboxed runtime / older bundler) | `nvlOptions: { disableWebWorkers: true }` (NVL has a non-worker fallback) |
 | Telemetry enabled in regulated env | `nvlOptions: { disableTelemetry: true }` |
-| Layout never settles | Pin anchor nodes with `pinNode(id)`; tune `layoutTimeLimit` |
+| Layout never settles | Pin anchor nodes with `pinNode(id)`; `setLayout('hierarchical')` for DAG-like data; tune `minFps`/`maxFps`. No `layoutTimeLimit` option |
 | `selectOnClick` fires double | Toggle once at mount; don't flip `interactionOptions` per render |
 | Hit test misses near node edge | Pass `{ hitNodeMarginWidth: N }` to `getHits` |
 | Captions missing on WebGL | Expected in 2.0; captions are Canvas-only, so use `'canvas'` when labels matter |
