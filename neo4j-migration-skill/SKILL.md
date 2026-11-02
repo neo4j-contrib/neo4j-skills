@@ -9,7 +9,7 @@ description: Migrates Neo4j driver code and Cypher queries from older versions (
   Does NOT cover DB administration or server ops — use neo4j-cli-tools-skill.
   Does NOT provision new Neo4j instances — use neo4j-getting-started-skill.
 allowed-tools: WebFetch Bash
-version: 1.0.12
+version: 1.0.13
 ---
 
 ## When to Use
@@ -79,12 +79,14 @@ Apply to every Cypher string, `.cypher` file, OGM/SDN `@Query` annotation, and t
 | `USE composite.'1'` | `` USE `composite.1` `` | Backtick entire qualified name |
 | `RETURN 1 as my$Identifier` | `` RETURN 1 as `my$Identifier` `` | `$` removed from unescaped ids |
 
-### Vector Index Queries (version-branched)
+### Vector / Fulltext Index Queries (version-branched)
 
 | Version | Syntax |
 |---|---|
 | Neo4j < 2026.01 | `CALL db.index.vector.queryNodes(idx, k, $emb) YIELD node, score` |
 | Neo4j >= 2026.01 | `SEARCH n IN (VECTOR INDEX idx FOR $emb LIMIT k) SCORE AS score` |
+| Neo4j < 2026.09 | `CALL db.index.fulltext.queryNodes(idx, $q) YIELD node, score` |
+| Neo4j >= 2026.09 | `SEARCH n IN (FULLTEXT INDEX idx FOR $q LIMIT k) SCORE AS score` — procedures deprecated 2026.10 |
 
 ### Cypher Dialect Prefix Rule
 
@@ -318,6 +320,8 @@ Full migration guide: [references/go-driver.md](references/go-driver.md)
 | 2026.07.0 | Cypher 25 | Yes | **Skip this patch** — block-format UTF-8 regression makes `trim()` fail queries and corrupt stored strings; upgrade target is 2026.07.1 |
 | 2026.08+ | Cypher 25 | Yes | `UUID` type + string interpolation added; `UUID` properties require driver >= 6.2 (Python >= 6.3) — older drivers return placeholder `MAP` and warn `03N95`; 2026.08 bundles Java driver 6.2.1; **skip 2026.08.0** (query-failure bug) — target 2026.08.1+ |
 | 2026.09+ | Cypher 25 | Yes | `SEARCH` clause accepts `FULLTEXT INDEX`; page cache reserves full `server.memory.pagecache.size` at startup |
+| 2026.10+ | Cypher 25 | Yes | `db.index.fulltext.queryNodes` / `queryRelationships` deprecated → `SEARCH ... FULLTEXT INDEX`; map addition `map1 + map2`; legacy Browser removed from distribution in 2026.11.0 (new Browser only) |
+| Self-managed after 2026 LTS | Cypher 25 | Yes | Default native-user password minimum 8 → 16 chars (pin `dbms.security.auth_minimum_password_length` to keep old value); new installs default query log format PLAIN → JSON (existing `server-logs.xml` kept) — update log parsers |
 | Aura after 2026.12 LTS | Cypher 25 | Yes | `dbms.components()` switches from fixed `5.27` to calendar version (e.g. `2027.01`) — fix code (incl. Kafka/Spark/GraphQL integrations) that parses a `5.x` string |
 | Aura 2027.01 | Cypher 25 | Yes | Native-user password minimum 8 → 16 chars on create/change |
 

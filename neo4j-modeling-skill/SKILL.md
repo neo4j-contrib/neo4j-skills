@@ -9,7 +9,7 @@ description: Design, review, and refactor Neo4j graph data models. Use when choo
   Does NOT handle Spring Data Neo4j entity mapping — use neo4j-spring-data-skill.
   Does NOT handle GraphQL type definitions — use neo4j-graphql-skill.
   Does NOT handle data import — use neo4j-import-skill.
-version: 1.0.7
+version: 1.0.8
 allowed-tools: WebFetch Bash
 ---
 
@@ -234,7 +234,7 @@ CREATE CONSTRAINT movie_title_released_unique IF NOT EXISTS
 CREATE INDEX person_name_idx IF NOT EXISTS
   FOR (p:Person) ON (p.name);
 
-// 6. Fulltext index — ranked free-text search via `db.index.fulltext.queryNodes` / `SEARCH` (Lucene syntax, wildcards like `An*`); not used for CONTAINS / STARTS WITH predicates
+// 6. Fulltext index — ranked free-text search via `SEARCH ... FULLTEXT INDEX` [2026.09] (`db.index.fulltext.queryNodes` deprecated 2026.10) (Lucene syntax, wildcards like `An*`); not used for CONTAINS / STARTS WITH predicates
 CREATE FULLTEXT INDEX person_fulltext IF NOT EXISTS
   FOR (n:Person) ON EACH [n.name, n.bio];
 

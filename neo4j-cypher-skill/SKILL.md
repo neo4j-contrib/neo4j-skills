@@ -7,7 +7,7 @@ description: Generates, optimizes, and validates Cypher 25 queries for Neo4j 202
   Does NOT handle driver migration or API changes — use neo4j-migration-skill.
   Does NOT cover DB administration or server ops — use neo4j-cli-tools-skill.
 compatibility: Neo4j >= 2025.01 (safe baseline); Cypher 25
-version: 1.0.30
+version: 1.0.31
 ---
 
 ## When to Use
@@ -348,7 +348,7 @@ Default to 2025.01-safe features when version unknown.
 | Dynamic labels `$($expr)`, `coll.sort()` | 2025.01 | APOC or app-side |
 | `CONCURRENT TRANSACTIONS`, `REPORT STATUS` | 2025.01 | drop / omit |
 | `SEARCH` clause — `VECTOR INDEX` | 2026.01 | `CALL db.index.vector.queryNodes(...)` (deprecated 2026.04) |
-| `SEARCH` clause — `FULLTEXT INDEX` (`WITH ANALYZER`, `SKIP`/`OFFSET`) | 2026.09 | `CALL db.index.fulltext.queryNodes(...)` / `queryRelationships(...)` |
+| `SEARCH` clause — `FULLTEXT INDEX` (`WITH ANALYZER`, `SKIP`/`OFFSET`) | 2026.09 | `CALL db.index.fulltext.queryNodes(...)` / `queryRelationships(...)` (deprecated 2026.10) |
 | `ACYCLIC` path mode (no repeated nodes in path) | 2026.03 | post-filter with `size(nodes(p)) = size(apoc.coll.toSet(nodes(p)))` |
 | `string.indexOf()`, `string.join()`, `string.regexReplace()` | 2026.05 | `apoc.text.*` or app-side |
 | GQL aliases: `FOR`=`UNWIND`, `PROPERTY_EXISTS`=`IS NOT NULL`, `IS [NOT] LABELED`=`n:Label`; function aliases (`local_time`, `zoned_datetime`, `duration_between`, `collect_list`, etc.) | 2026.02–04 | GQL compliance only — use Cypher equivalents; full list → [references/cypher-syntax.md](references/cypher-syntax.md) |
@@ -363,6 +363,7 @@ Default to 2025.01-safe features when version unknown.
 | Map comprehension `{k: v IN map \| keyExpr: valueExpr}` | 2026.09 | `apoc.map.fromPairs([k IN keys(m) \| [k, m[k]]])` |
 | `toString()`, `toStringList()`, `toStringOrNull()` on `LIST`, `MAP`, `NODE`, `RELATIONSHIP`, `PATH` | 2026.09 | convert scalar components individually, then `string.join()` |
 | Map addition `map1 + map2` (merge maps) | 2026.10 (Aura Oct 2026) | `apoc.map.merge(map1, map2)` |
+| `db.schema.visualization(estimate => false)` — scans data, drops count-store ghost relationships (slower) | 2026.10 | call without args; verify rel combos with `MATCH (a:A)-[:R]->(b:B) RETURN count(*) LIMIT 1` |
 
 ---
 

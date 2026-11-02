@@ -10,7 +10,7 @@ description: Neo4j .NET Driver v6 — IDriver lifecycle, DI registration (single
   Does NOT cover driver version upgrades — use neo4j-migration-skill.
 compatibility: .NET 8, 9, 10; Neo4j.Driver v6
 allowed-tools: Bash WebFetch
-version: 1.0.7
+version: 1.0.8
 ---
 
 ## When to Use
@@ -36,6 +36,8 @@ dotnet add package Neo4j.Driver
 | `Neo4j.Driver` | Async API — **use this** |
 | `Neo4j.Driver.Simple` | Synchronous wrapper |
 | `Neo4j.Driver.Reactive` | System.Reactive streams |
+
+Pin `Neo4j.Driver >= 6.4.0` — fixes `CustomAuthToken.ToString()` leaking credentials in clear text, certificate validator accepting a peer with no certificate, and pool handing out server-closed idle connections.
 
 ---
 

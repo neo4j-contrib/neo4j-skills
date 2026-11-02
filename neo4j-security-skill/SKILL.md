@@ -8,7 +8,7 @@ description: Programmatic security management in Neo4j — RBAC/ABAC, user lifec
   — use neo4j-cypher-skill. Does NOT handle cluster ops or backups — use neo4j-cli-tools-skill.
   Property-level security and ABAC require Enterprise Edition.
 allowed-tools: Bash WebFetch
-version: 1.0.12
+version: 1.0.13
 ---
 
 ## When to Use
@@ -65,7 +65,7 @@ CREATE USER alice SET PASSWORD 'secret' CHANGE NOT REQUIRED;
 CREATE USER $username SET PASSWORD $password CHANGE NOT REQUIRED;
 ```
 
-Aura password minimum rises 8 → 16 chars with 2027.01 upgrade (Jan 2027) — enforced on new users and password change/reset only; existing passwords keep working. Generate ≥16-char passwords in provisioning scripts now.
+Password minimum rises 8 → 16 chars — Aura with 2027.01 upgrade (Jan 2027); self-managed default after 2026 LTS unless `dbms.security.auth_minimum_password_length` set explicitly. Enforced on new users and password change/reset only; existing passwords keep working. Generate ≥16-char passwords in provisioning scripts now.
 
 ### Alter user
 ```cypher
@@ -105,7 +105,16 @@ SHOW USERS YIELD user, roles, tags;
 // requires SHOW USER + SHOW USER CREDENTIALS; tags omitted without SHOW USER METADATA
 SHOW USERS AS COMMANDS;
 SHOW USERS WITH AUTH AS COMMANDS;   // includes auth provider config + credentials
+
+// caller identity combined with other system-db SHOW commands [2026.10, Cypher 25]
+USE system
+SHOW CURRENT USER YIELD user, home
+SHOW DATABASES YIELD name, aliases
+WHERE name = home
+RETURN user, name AS database, aliases;
 ```
+
+Combined `SHOW CURRENT USER` query: every clause must be allowed on `system` (no `MATCH`, `SHOW INDEXES`) — run graph reads as separate query.
 
 `SHOW USERS WITH AUTH AS COMMANDS` exposes credentials. Use only for secured backup/restore handling. Prefer `SHOW USERS AS COMMANDS` when auth material is not required. Never paste auth-export output into plaintext docs, logs, tickets, or source control.
 

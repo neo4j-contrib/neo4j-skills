@@ -749,7 +749,7 @@ SEARCH r IN (FULLTEXT INDEX communications FOR $query WITH ANALYZER 'english' SK
 SCORE AS score
 RETURN type(r), r.message, score
 
-// Procedure fallback (pre-2026.09):
+// Procedure fallback (pre-2026.09; deprecated 2026.10):
 CYPHER 25 CALL db.index.fulltext.queryNodes('entity', $query) YIELD node, score RETURN node.name, score LIMIT 20
 ```
 
