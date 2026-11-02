@@ -9,7 +9,7 @@ description: Migrates Neo4j driver code and Cypher queries from older versions (
   Does NOT cover DB administration or server ops — use neo4j-cli-tools-skill.
   Does NOT provision new Neo4j instances — use neo4j-getting-started-skill.
 allowed-tools: WebFetch Bash
-version: 1.0.13
+version: 1.0.14
 ---
 
 ## When to Use
@@ -62,11 +62,6 @@ Apply to every Cypher string, `.cypher` file, OGM/SDN `@Query` annotation, and t
 
 | Old syntax | Cypher 25 replacement | Notes |
 |---|---|---|
-| `[:REL*1..5]` | `(()-[:REL]->()){1,5}` | QPE quantifier group |
-| `[:REL*]` | `(()-[:REL]->()){1,}` | Unbounded QPE |
-| `[:REL*0..5]` | `(()-[:REL]->()){0,5}` | Zero-hop allowed |
-| `shortestPath((a)-[*]->(b))` | `SHORTEST 1 (a)(()-[]->()){1,}(b)` | QPE shortest path |
-| `allShortestPaths((a)-[*]->(b))` | `ALL SHORTEST (a)(()-[]->()){1,}(b)` | QPE all-shortest |
 | `id(n)` | `elementId(n)` | Returns string, not int |
 | `CALL { WITH x ... }` | `CALL (x) { ... }` | Explicit import syntax |
 | `PERIODIC COMMIT` | `CALL (...) { ... } IN TRANSACTIONS OF 1000 ROWS` | Batched writes |
@@ -79,18 +74,30 @@ Apply to every Cypher string, `.cypher` file, OGM/SDN `@Query` annotation, and t
 | `USE composite.'1'` | `` USE `composite.1` `` | Backtick entire qualified name |
 | `RETURN 1 as my$Identifier` | `` RETURN 1 as `my$Identifier` `` | `$` removed from unescaped ids |
 
+### Optional Modernisation (not required)
+
+`[:REL*]`, `shortestPath()` and `allShortestPaths()` still run in Cypher 25 — not removed or deprecated. Leave them in code that already compiles. Rewrite only when the user asks or needs a QPE-only feature; semantics differ when a `WHERE` filters the path — re-test results, not just compilation.
+
+| Existing syntax | QPE / `SHORTEST` form |
+|---|---|
+| `[:REL*1..5]` | `(()-[:REL]->()){1,5}` |
+| `[:REL*]` | `(()-[:REL]->()){1,}` |
+| `[:REL*0..5]` | `(()-[:REL]->()){0,5}` |
+| `shortestPath((a)-[*]->(b))` | `SHORTEST 1 (a)(()-[]->()){1,}(b)` |
+| `allShortestPaths((a)-[*]->(b))` | `ALL SHORTEST (a)(()-[]->()){1,}(b)` |
+
 ### Vector / Fulltext Index Queries (version-branched)
 
 | Version | Syntax |
 |---|---|
 | Neo4j < 2026.01 | `CALL db.index.vector.queryNodes(idx, k, $emb) YIELD node, score` |
-| Neo4j >= 2026.01 | `SEARCH n IN (VECTOR INDEX idx FOR $emb LIMIT k) SCORE AS score` |
+| Neo4j >= 2026.01 (Cypher 25) | `MATCH (n:Label) SEARCH n IN (VECTOR INDEX idx FOR $emb LIMIT k) SCORE AS score` — `SEARCH` is a subclause of `MATCH`; alone it is a syntax error |
 | Neo4j < 2026.09 | `CALL db.index.fulltext.queryNodes(idx, $q) YIELD node, score` |
-| Neo4j >= 2026.09 | `SEARCH n IN (FULLTEXT INDEX idx FOR $q LIMIT k) SCORE AS score` — procedures deprecated 2026.10 |
+| Neo4j >= 2026.09 | `MATCH (n:Label) SEARCH n IN (FULLTEXT INDEX idx FOR $q LIMIT k) SCORE AS score` — procedures deprecated 2026.10 |
 
 ### Cypher Dialect Prefix Rule
 
-- Target >= 2025.06, dialect = Cypher 25: prepend `CYPHER 25` to every top-level query
+- Target >= 2025.06, dialect = Cypher 25: fix removals, then prefix `CYPHER 25` (or set the database default language). Don't blanket-prefix code that already compiles unless the user chose this
 - Target >= 2025.06, dialect = Cypher 5: prepend `CYPHER 5` (keeps deprecated forms working)
 - Target 4.x or 5.x: no prefix needed; fetch changelog per [references/cypher-queries.md](references/cypher-queries.md)
 
@@ -113,7 +120,7 @@ Pick the section(s) matching languages found in Step 1.
 
 ### Python Driver (5.x → 6.x)
 
-**Min requirements**: Python >= 3.10, `neo4j` package (6.0+, released Jan 12 2026)
+**Min requirements**: Python >= 3.10, `neo4j` package (6.0.0 released 2025-09-30)
 
 #### Package Rename — do this first
 
@@ -133,9 +140,11 @@ Pick the section(s) matching languages found in Step 1.
 | `session.write_transaction(fn)` | `session.execute_write(fn)` | |
 | `session.last_bookmark()` | `session.last_bookmarks()` | Returns `Bookmarks` (plural) |
 | `Bookmark` class | `Bookmarks` class | |
-| `TRUST_ALL_CERTIFICATES` | `trusted_certificates=TrustAll()` | |
-| `TRUST_SYSTEM_CA_SIGNED_CERTIFICATES` | `trusted_certificates=TrustSystemCAs()` | |
+| `TRUST_ALL_CERTIFICATES` | `trusted_certificates=TrustAll()` | Only with `neo4j://`/`bolt://` |
+| `TRUST_SYSTEM_CA_SIGNED_CERTIFICATES` | `trusted_certificates=TrustSystemCAs()` | Only with `neo4j://`/`bolt://` |
 | `neo4j.conf`, `neo4j.data` modules | Removed — use top-level `neo4j.*` | |
+
+With a `+s` / `+ssc` URI, remove `encrypted=` and `trusted_certificates=` — they raise `ConfigurationError` there (the scheme already sets TLS).
 
 #### Resource Management Change
 
@@ -185,7 +194,7 @@ Full changelog: [references/python-driver.md](references/python-driver.md)
 
 | Old | New |
 |---|---|
-| `isRetriableError(err)` | `isRetryable(err)` |
+| `isRetriableError(err)` | `isRetryableError(err)` (`isRetryable` is not exported) |
 | `neo4jError.retriable` | `neo4jError.retryable` |
 | `notificationCategory` | `notificationClassification` |
 
@@ -204,7 +213,7 @@ Full changelog: [references/javascript-driver.md](references/javascript-driver.m
 
 ### Java Driver (5.x → 6.x)
 
-**Min requirements**: Java 21; Maven `org.neo4j.driver:neo4j-java-driver:6.x`
+**Min requirements**: Java 17+; Maven `org.neo4j.driver:neo4j-java-driver:6.x`
 
 #### Maven Coordinates
 
@@ -221,8 +230,8 @@ Full changelog: [references/javascript-driver.md](references/javascript-driver.m
 
 | Removed | Replacement | Notes |
 |---|---|---|
-| `RxSession` / `RxTransaction` | Use async `AsyncSession` or sync `Session` | Reactive API removed |
-| `Bookmark` multi-value constructor | `Bookmark.from(iterable)` | |
+| `RxSession` / `RxTransaction` | `ReactiveSession` / `ReactiveTransaction` (`org.neo4j.driver.reactivestreams` or `org.neo4j.driver.reactive` Flow); open with `driver.session(ReactiveSession.class, cfg)` | Rx API removed; reactive API remains |
+| `Bookmark` multi-value constructor | One `Bookmark.from(String)` per value, collected in a `Set<Bookmark>` | Multi-value form removed |
 | `session.readTransaction(fn)` | `session.executeRead(fn)` | |
 | `session.writeTransaction(fn)` | `session.executeWrite(fn)` | |
 | `TrustStrategy.certFile()` | `TrustStrategy.trustCustomCertificateSignedBy(path)` | |
@@ -261,6 +270,7 @@ Full changelog: [references/java-driver.md](references/java-driver.md)
 | `ConfigBuilder.WithIpv6Enabled()` | Remove call — IPv6 always enabled | |
 | `Config.Ipv6Enabled` property | Remove — always true | |
 | Simple driver | Use standard `IDriver` | Removed entirely |
+| `IAsyncSession.ReadTransactionAsync` / `WriteTransactionAsync` | `ExecuteReadAsync` / `ExecuteWriteAsync` | Removed in 6.0. Sync code (`Neo4j.Driver.Simple`, removed) must move to async `ExecuteReadAsync`/`ExecuteWriteAsync` |
 
 Full changelog: [references/dotnet-driver.md](references/dotnet-driver.md)
 
@@ -374,7 +384,7 @@ curl -X POST https://<host>/db/<database>/query/v2 \
 | `Neo4j.Driver.Exceptions.AuthenticationException` | Wrong credential config after .NET rename | Update `INeo4jLogger` usage; verify config |
 | `TypeError: neo4j-driver is deprecated` | Old package installed | Replace with `neo4j>=6.0.0` in requirements |
 | `AttributeError: 'Session' has no 'read_transaction'` | Python 5→6, method removed | Replace with `execute_read()` |
-| `RxSession not found` | Java 6.x, Reactive API removed | Migrate to async or sync session |
+| `RxSession not found` | Java 6.x, Rx API removed | Migrate to `ReactiveSession` |
 | `undefined is not a function (.readTransaction)` | JS 6.x, method removed | Replace with `executeRead()` |
 | Go: `undefined: neo4j.Config` | v5 import path still present | Update all imports to `/v6/` |
 | `PERIODIC COMMIT not supported` | Cypher 25, clause removed | Use `CALL (...) IN TRANSACTIONS` |
@@ -401,7 +411,7 @@ For any syntax not covered above, fetch:
 
 - [ ] Target Neo4j version confirmed; Cypher dialect selected (Cypher 5 or 25)
 - [ ] Dependency files scanned; all driver versions identified
-- [ ] Cypher substitution table applied to every query in codebase
+- [ ] Cypher substitution table applied to every query in codebase (optional-modernisation rows only if asked)
 - [ ] `id(n)` → `elementId(n)` and downstream int→string conversions fixed
 - [ ] `PERIODIC COMMIT` → `CALL IN TRANSACTIONS` in all batch writes
 - [ ] `CALL { WITH x ... }` → `CALL (x) { ... }` in all subqueries
@@ -410,7 +420,7 @@ For any syntax not covered above, fetch:
 - [ ] Resource cleanup added where missing (Python: context managers or `.close()`)
 - [ ] Bookmark API updated (`last_bookmark` → `last_bookmarks`, `Bookmark` → `Bookmarks`)
 - [ ] Go imports updated from `/v5/` to `/v6/`; `neo4j.Config` → `config.Config`
-- [ ] Java: Java 21 confirmed; RxSession usages removed
-- [ ] .NET: `ILogger` → `INeo4jLogger`; `Neo4j.Driver.Signed` → `Neo4j.Driver`
+- [ ] Java: Java 17+ confirmed; `RxSession` → `ReactiveSession`
+- [ ] .NET: `ILogger` → `INeo4jLogger`; `ReadTransactionAsync`/`WriteTransactionAsync` → `ExecuteReadAsync`/`ExecuteWriteAsync`; `Neo4j.Driver.Signed` → `Neo4j.Driver`
 - [ ] Tests pass with no DeprecationWarnings
 - [ ] `EXPLAIN` run on all migrated Cypher queries; no errors
