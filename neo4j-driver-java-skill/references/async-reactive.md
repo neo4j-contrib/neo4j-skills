@@ -1,6 +1,6 @@
 # Async & Reactive API — Neo4j Java Driver
 
-## Async API (`driver.asyncSession()`)
+## Async API (`driver.session(AsyncSession.class, cfg)`)
 
 Non-blocking via `CompletableFuture` / `CompletionStage`. Every method returns `CompletionStage` instead of blocking.
 
@@ -13,7 +13,7 @@ import org.neo4j.driver.async.AsyncSession;
 import org.neo4j.driver.async.ResultCursor;
 
 CompletableFuture<List<String>> getNames(Driver driver) {
-    AsyncSession session = driver.asyncSession(
+    AsyncSession session = driver.session(AsyncSession.class,
         SessionConfig.builder().withDatabase("neo4j").build());
 
     return session
@@ -50,7 +50,7 @@ cursor.forEachAsync(r -> System.out.println(r.get("name").asString()))
 
 ```java
 CompletionStage<Void> createPerson(Driver driver, String name) {
-    AsyncSession session = driver.asyncSession(
+    AsyncSession session = driver.session(AsyncSession.class,
         SessionConfig.builder().withDatabase("neo4j").build());
 
     return session
@@ -82,18 +82,23 @@ session.executeReadAsync(tx ->
 
 ---
 
-## Reactive API (`driver.rxSession()`)
+## Reactive API (`driver.session(ReactiveSession.class, cfg)`)
 
 Project Reactor / RxJava backpressure-aware streaming. Use only when downstream consumer is itself reactive.
 
+`RxSession` / `driver.rxSession()` do not exist in v6. Two `ReactiveSession` variants:
+- `org.neo4j.driver.reactivestreams.ReactiveSession` — returns `org.reactivestreams.Publisher`; works with `Flux.from` (use with Reactor).
+- `org.neo4j.driver.reactive.ReactiveSession` — returns `java.util.concurrent.Flow.Publisher`; `Flux.from` rejects it — wrap with `JdkFlowAdapter.flowPublisherToFlux`.
+
 ```java
-import org.neo4j.driver.reactive.RxSession;
+import org.neo4j.driver.reactivestreams.ReactiveSession;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 Flux<String> getNames(Driver driver) {
     return Flux.usingWhen(
         // acquire
-        Mono.fromSupplier(() -> driver.rxSession(
+        Mono.fromSupplier(() -> driver.session(ReactiveSession.class,
             SessionConfig.builder().withDatabase("neo4j").build())),
         // use
         session -> Flux.from(session.executeRead(tx ->
@@ -102,11 +107,11 @@ Flux<String> getNames(Driver driver) {
                 .map(r -> r.get("name").asString())
         )),
         // close on success
-        RxSession::close,
+        ReactiveSession::close,
         // close on error
         (session, err) -> session.close(),
         // close on cancel
-        RxSession::close
+        ReactiveSession::close
     );
 }
 ```
