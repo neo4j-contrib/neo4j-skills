@@ -14,7 +14,8 @@
 | `datetime.date` | Date |
 | `datetime.datetime` (naive, no `tzinfo`) | LocalDateTime |
 | `datetime.datetime` (timezone-aware) | DateTime (zoned) |
-| `datetime.time` | Time |
+| `datetime.time` (naive, no `tzinfo`) | LocalTime |
+| `datetime.time` (timezone-aware) | not supported — raises `TypeError: utcoffset(dt) argument must be a datetime instance or None, not datetime.time`; pass a tz-aware `datetime` or build in Cypher: `time($iso_string)` |
 | `datetime.timedelta` | Duration |
 | `uuid.UUID` | `UUID` [driver 6.3+, Neo4j 2026.08+; earlier: pass `str(uuid)`] |
 | `neo4j.time.*` types | Corresponding Cypher temporal |
