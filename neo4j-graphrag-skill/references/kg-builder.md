@@ -68,6 +68,8 @@ schema={
 
 Set exactly one of `node_label` or `relationship_type` per constraint. `UNIQUENESS` + `KEY` on the same relationship type and property set is rejected by schema validation.
 
+v1.23.0: `GraphSchema` rejects duplicate node labels — define each label once with all its properties. LLM-extracted schemas merge same-label node types (union of properties) and drop `EXISTENCE` / `UNIQUENESS` already covered by a `KEY` instead of raising `SchemaValidationError`. `Neo4jWriter` honours `neo4j_database` in setup/cleanup (earlier versions hit home database).
+
 ## Chunking Options
 
 ```python

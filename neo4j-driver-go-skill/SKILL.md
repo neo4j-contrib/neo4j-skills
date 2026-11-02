@@ -7,7 +7,7 @@ description: Covers the Neo4j Go Driver v6 — driver lifecycle, ExecuteQuery, m
   Triggers on NewDriver, ExecuteQuery, SessionConfig, ManagedTransaction, neo4j-go-driver.
   Does NOT handle Cypher query authoring — use neo4j-cypher-skill.
   Does NOT cover driver version migration steps — use neo4j-migration-skill.
-version: 1.0.7
+version: 1.0.8
 allowed-tools: Bash WebFetch
 ---
 
@@ -263,6 +263,8 @@ In managed tx callback: return error → driver retries if transient.
 | `UUID` | `neo4j.UUID` (= `dbtype.UUID`, `[16]byte` RFC 9562) — v6.2.0+, Bolt 6.1; parse with `dbtype.ParseUUID(s)`, render with `.String()` |
 | `null` | `nil` |
 
+Pin v6.4.0+ for temporal writes: earlier sends pre-1970 `Date` as next day, `dbtype.Time` an hour off on DST change days, `time.Time` with wrong offset when zone name resolves differently at that instant.
+
 ```go
 // Typed extraction (v6+, preferred):
 neo4j.GetRecordValue[string](record, "name")
@@ -433,6 +435,7 @@ Cross-session (parallel workers): combine bookmarks explicitly — see [referenc
 Load on demand:
 - [references/advanced-config.md](references/advanced-config.md) — connection pool tuning, custom address resolver, notification config, Bolt logging, auth options, URI scheme table, deprecated result-summary accessors (`Profile()` → `QueryProfile()`)
 - [references/repository-pattern.md](references/repository-pattern.md) — repository wrapper pattern, cross-session causal consistency with bookmarks
+- [references/property-encryption.md](references/property-encryption.md) — Property Encryption preview [v6.4.0+]: `EnvelopeProfile`, local key encapsulation, user key repository, `EncryptWithAAD` / `DecryptWithAAD`
 
 ## WebFetch
 

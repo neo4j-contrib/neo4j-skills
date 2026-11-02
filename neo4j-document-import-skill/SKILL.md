@@ -9,7 +9,7 @@ description: Ingests unstructured and semi-structured documents into Neo4j as a 
   Does NOT handle structured CSV/relational import — use neo4j-import-skill.
   Does NOT handle GraphRAG retrieval after ingestion — use neo4j-graphrag-skill.
   Does NOT handle vector index creation — use neo4j-vector-search-skill.
-version: 1.0.6
+version: 1.0.7
 status: stable
 allowed-tools: Bash WebFetch
 ---
@@ -477,7 +477,7 @@ schema = GraphSchema(
     ],
     relationship_types=[RelationshipType(label="WORKS_AT")],
     patterns=[("Person", "WORKS_AT", "Organization")],
-    # Constraints (v1.15.0+) — emitted to ParquetWriter metadata and enforce schema
+    # Constraints (v1.15.0+) — emitted to ParquetWriter metadata and enforce schema; one NodeType per label (duplicates rejected v1.23.0)
     constraints=[
         # UNIQUENESS — property must be unique across nodes of that label
         ConstraintType(label="Person", property_name="name", type=GraphConstraintType.UNIQUENESS),
@@ -526,7 +526,7 @@ from neo4j_graphrag.components.parquet_output import ParquetWriter
 # Use ParquetWriter instead of KGWriter inside a Pipeline to export to Parquet files
 writer = ParquetWriter(output_dir="/data/kg_export/")
 # Produces one Parquet file per node label and per relationship type
-# Metadata includes UNIQUENESS, EXISTENCE, and KEY constraints (v1.15.0/1.16.0)
+# Metadata includes UNIQUENESS, EXISTENCE, KEY constraints (v1.15.0/1.16.0); pin >=1.23.0 — earlier fails on mixed-type LIST props, emits extra KEY(__id__) → Data Importer re-import error 22N41
 ```
 
 ---

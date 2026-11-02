@@ -88,6 +88,18 @@ const driver = neo4j.driver(URI, auth, {
 })
 ```
 
+6.3.0+: pooled connections for other databases kept on routing table refresh; `TCP_NODELAY` set on all sockets.
+
+## Debug Logging
+
+```javascript
+const driver = neo4j.driver(URI, auth, {
+  logging: neo4j.logging.console('debug')          // 6.3.0+: query params + record fields redacted
+  // logging: neo4j.logging.console('debug', true)  // unredacted (pre-6.3 output) — local dev only
+  // custom: { level: 'debug', logger: (level, msg) => log[level](msg), unredactDebugLogs: false }
+})
+```
+
 ---
 
 ## Result Transformers
