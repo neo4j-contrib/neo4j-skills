@@ -2,18 +2,18 @@
 
 ## LLM Providers
 
-All implement `LLMBase`. All support sync + async, tool calling, and automatic rate limiting.
+All implement `LLMBase`. All support sync + async and automatic rate limiting. Tool calling (needed by `ToolsRetriever`): OpenAI, Azure OpenAI, Gemini, VertexAI, Ollama, Bedrock only — Anthropic, Mistral, Cohere raise `NotImplementedError`.
 Since v1.22 `neo4j_graphrag.llm` and `neo4j_graphrag.embeddings` resolve provider classes lazily — importing either no longer loads every provider SDK; public imports unchanged.
 
 | Class | Extra | Notes |
 |---|---|---|
 | `OpenAILLM` | `openai` | Structured output; tool calling |
 | `AzureOpenAILLM` | `openai` | Azure-hosted OpenAI |
-| `AnthropicLLM` | `anthropic` | Structured output + tool calling (v1.19; needs Claude 4.5+) |
-| `GeminiLLM` | `google` | Google GenAI SDK; added v1.17 (replaces deprecated-to-be `VertexAILLM`) |
+| `AnthropicLLM` | `anthropic` | Structured output (v1.19; needs Claude 4.5+); no tool calling |
+| `GeminiLLM` | `google-genai` | Google GenAI SDK; added v1.17 (replaces deprecated-to-be `VertexAILLM`) |
 | `VertexAILLM` | `google` | Structured output; tool calling; default model now `gemini-2.5-flash` (v1.19) |
-| `MistralAILLM` | `mistralai` | Tool calling; requires `mistralai>=2.7.1` (v1.19, breaking) |
-| `CohereLLM` | `cohere` | Constructible again since v1.19 |
+| `MistralAILLM` | `mistralai` | No tool calling; requires `mistralai>=2.7.1` (v1.19, breaking) |
+| `CohereLLM` | `cohere` | Constructible again since v1.19; no tool calling |
 | `OllamaLLM` | `ollama` | Local; tool calling |
 | `BedrockLLM` | `bedrock` | Boto3 Converse API; default model now `us.anthropic.claude-haiku-4-5-...` (v1.19) |
 
@@ -25,7 +25,7 @@ from neo4j_graphrag.llm import (
 )
 
 llm = OpenAILLM(model_name="gpt-4.1", model_params={"temperature": 0})
-llm = AnthropicLLM(model_name="claude-sonnet-4-5")
+llm = AnthropicLLM(model_name="claude-sonnet-4-6")
 llm = GeminiLLM(model_name="gemini-2.5-flash")
 llm = VertexAILLM(model_name="gemini-2.5-flash")
 llm = OllamaLLM(model_name="llama3")           # no API key needed
