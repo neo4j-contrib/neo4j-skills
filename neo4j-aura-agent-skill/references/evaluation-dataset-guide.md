@@ -6,7 +6,7 @@ How to generate an Aura Agent evaluation dataset (JSON) that can be imported in 
 ## Platform facts
 
 - Dataset = project-level asset, **max 50 questions**.
-- Questions become **permanently read-only once saved**; no version history. Get it right before import.
+- Datasets are editable (name, description, questions). Each save of changed questions creates a new version; each evaluation records the version it ran. Deleting a dataset deletes the evaluation history that used it.
 - Per question: `query_number` (1-based), `query_text`, `expected_answer`, optional `expected_tool_calls`.
 - Metrics: accuracy, relevance, grounding (0–1), tool trajectory (Jaccard of expected vs actual tool calls), latency. Scores < 0.8 are flagged.
 - **Never invent tool calls.** Tool names, types and parameter names must come from the agent's actual definition (`manage_agent.py get`, or the console export).
@@ -118,4 +118,4 @@ Do not create a multi-tool question unless the agent's tools genuinely cannot an
 4. Write `eval_dataset.json` (+ `eval_dataset.provenance.json` with Cypher and rationale per question).
 5. Validate: `uv run python3 scripts/validate_eval_dataset.py eval_dataset.json --agent agent.json`
 6. Show category counts and a sample to the user. Tell them to import in console: Agent → Evaluation → datasets
-   (remember questions are read-only after save).
+   (edits after import create a new dataset version).
