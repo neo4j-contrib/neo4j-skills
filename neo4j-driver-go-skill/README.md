@@ -17,7 +17,7 @@ Skill for writing Go code with the Neo4j Go Driver v6.
 ## Version / compatibility
 
 - Neo4j Go Driver **v6** (current stable)
-- Go >= 1.21 recommended
+- Go >= 1.24 (required by driver v6 go.mod)
 - v5 aliases still compile in v6; migrate before v7
 
 ## Not covered
