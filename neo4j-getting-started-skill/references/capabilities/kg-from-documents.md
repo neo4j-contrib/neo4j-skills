@@ -23,8 +23,8 @@ The `model` stage produces `schema.cypher`. For KG/documents it typically includ
 CYPHER 25
 CREATE CONSTRAINT document_id IF NOT EXISTS FOR (d:Document) REQUIRE d.id IS UNIQUE;
 CREATE CONSTRAINT chunk_id IF NOT EXISTS FOR (c:Chunk) REQUIRE c.id IS UNIQUE;
-// SimpleKGPipeline stores all extracted entities under :__KGBuilder__ — always add this constraint
-CREATE CONSTRAINT kgbuilder_name IF NOT EXISTS FOR (e:__KGBuilder__) REQUIRE e.name IS NOT NULL;
+// No NOT NULL constraint on :__KGBuilder__ — Document and Chunk nodes also carry that label
+// and have no `name`; property-existence constraints are also Enterprise-only.
 
 CREATE FULLTEXT INDEX entity_search IF NOT EXISTS
   FOR (e:__KGBuilder__) ON EACH [e.name];
@@ -108,7 +108,7 @@ elif provider == "ollama":
     from neo4j_graphrag.embeddings import OllamaEmbeddings
     embedder = OllamaEmbeddings(
         model=embedding_model or "nomic-embed-text",
-        base_url=os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
+        host=os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")  # `host=`, not `base_url=` (TypeError)
     )
     dimensions = 768  # nomic-embed-text default
 

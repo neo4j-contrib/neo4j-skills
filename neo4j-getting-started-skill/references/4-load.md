@@ -14,9 +14,10 @@ from neo4j import GraphDatabase; import os
 driver = GraphDatabase.driver(os.environ["NEO4J_URI"],
                                auth=(os.environ["NEO4J_USERNAME"], os.environ["NEO4J_PASSWORD"]))
 with driver.session() as s:
-    for stmt in open("schema/schema.cypher").read().split(";"):
-        stmt = stmt.strip()
-        if stmt and not stmt.startswith("//"):
+    for chunk in open("schema/schema.cypher").read().split(";"):
+        # strip comment lines inside each chunk — never skip a chunk that starts with a comment
+        stmt = "\n".join(l for l in chunk.splitlines() if not l.strip().startswith("//")).strip()
+        if stmt:
             s.run(stmt)
 driver.close()
 print("Schema applied")
@@ -58,9 +59,10 @@ def load_batches(query: str, rows: list[dict]) -> int:
 # ── Step 0: apply constraints before any data (idempotent) ────────────────────
 schema = open("schema/schema.cypher").read()
 with driver.session() as s:
-    for stmt in schema.split(";"):
-        stmt = stmt.strip()
-        if stmt and not stmt.startswith("//"):
+    for chunk in schema.split(";"):
+        # strip comment lines inside each chunk — never skip a chunk that starts with a comment
+        stmt = "\n".join(l for l in chunk.splitlines() if not l.strip().startswith("//")).strip()
+        if stmt:
             s.run(stmt)
 print("✓ Constraints applied")
 
@@ -112,6 +114,10 @@ Prefer coercing types in Python before passing rows (faster, avoids Cypher `toFl
 products["unitPrice"]    = pd.to_numeric(products["unitPrice"],    errors="coerce")
 products["unitsInStock"] = pd.to_numeric(products["unitsInStock"], errors="coerce").astype("Int64")
 ```
+Then convert missing values (`NaN`, `NA`) to `None` before building rows — otherwise missing strings/floats are stored as float `NaN`, not null:
+```python
+rows = products.astype(object).where(products.notna(), None).to_dict("records")
+```
 Then use `row.unitPrice` directly in Cypher without wrapping functions.
 
 ---
@@ -121,7 +127,7 @@ Then use `row.unitPrice` directly in Cypher without wrapping functions.
 ```bash
 source .env
 # Movies
-curl -s https://raw.githubusercontent.com/neo4j-graph-examples/movies/main/data/movies.cypher \
+curl -fsS https://raw.githubusercontent.com/neo4j-graph-examples/movies/main/scripts/movies.cypher \
   | cypher-shell -a "$NEO4J_URI" -u "$NEO4J_USERNAME" -p "$NEO4J_PASSWORD"
 ```
 

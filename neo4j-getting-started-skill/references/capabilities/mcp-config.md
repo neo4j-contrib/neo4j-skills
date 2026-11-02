@@ -15,10 +15,16 @@ echo "neo4j-mcp: $NEO4J_MCP_BIN"
 
 Use that absolute path in all config files below.
 
+## Server version and env vars (neo4j-mcp 2.0+)
+
+neo4j-mcp 2.0.0 (2026-10-28) accepts only `NEO4J_MCP_*` env vars (old `NEO4J_URI`, `NEO4J_USERNAME`, … are removed) and unprefixed flags (`--uri`, `--database`, …). STDIO mode requires `NEO4J_MCP_URI`, `NEO4J_MCP_USERNAME`, `NEO4J_MCP_PASSWORD` **and** `NEO4J_MCP_DATABASE` (no default). Defaults: read-only `false`, telemetry `true`. The server requires APOC (incl. `meta`) on the target DB — local Docker: add `-e NEO4J_PLUGINS='["apoc"]'`; Aura has APOC. Check `neo4j-mcp -v`. Docs: https://neo4j.com/docs/mcp/current/configuration/
+
 ## Claude Desktop
 
 **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`  
 **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+
+Merge the `neo4j` entry into existing `mcpServers` — never overwrite the file.
 
 ```json
 {
@@ -26,10 +32,10 @@ Use that absolute path in all config files below.
     "neo4j": {
       "command": "<absolute-path-to-neo4j-mcp>",
       "env": {
-        "NEO4J_URI": "<NEO4J_URI from .env>",
-        "NEO4J_USERNAME": "<NEO4J_USERNAME from .env>",
-        "NEO4J_PASSWORD": "<NEO4J_PASSWORD from .env>",
-        "NEO4J_DATABASE": "neo4j"
+        "NEO4J_MCP_URI": "<NEO4J_URI from .env>",
+        "NEO4J_MCP_USERNAME": "<NEO4J_USERNAME from .env>",
+        "NEO4J_MCP_PASSWORD": "<NEO4J_PASSWORD from .env>",
+        "NEO4J_MCP_DATABASE": "neo4j"
       }
     }
   }
@@ -38,45 +44,39 @@ Use that absolute path in all config files below.
 
 ## Claude Code
 
-Project-level (`.claude/settings.json` — checked in, safe since no secrets if using env vars):
+Claude Code reads MCP servers from `claude mcp add` (local/user scope, stored in `~/.claude.json`) or project `.mcp.json`. **Not** from `.claude/settings.json` or `~/.claude/settings.json` — servers there never load.
+
+Preferred — CLI (local scope: this project only, not checked in):
+```bash
+claude mcp add --env NEO4J_MCP_URI="<NEO4J_URI>" NEO4J_MCP_USERNAME=neo4j \
+  NEO4J_MCP_PASSWORD="<NEO4J_PASSWORD>" NEO4J_MCP_DATABASE=neo4j \
+  --transport stdio neo4j -- <absolute-path-to-neo4j-mcp>
+claude mcp get neo4j   # verify
+```
+
+Alternative — project `.mcp.json` (merge into existing file; never overwrite). It holds the password → add `.mcp.json` to `.gitignore`; never commit it:
 ```json
 {
   "mcpServers": {
     "neo4j": {
-      "command": "./neo4j-mcp",
-      "env": {
-        "NEO4J_URI": "<NEO4J_URI>",
-        "NEO4J_USERNAME": "neo4j",
-        "NEO4J_PASSWORD": "<NEO4J_PASSWORD>",
-        "NEO4J_DATABASE": "neo4j"
-      }
-    }
-  }
-}
-```
-
-User-level (`~/.claude/settings.json` — applies to all projects):
-```json
-{
-  "mcpServers": {
-    "neo4j-<project-name>": {
       "command": "<absolute-path-to-neo4j-mcp>",
       "env": {
-        "NEO4J_URI": "<URI>",
-        "NEO4J_USERNAME": "neo4j",
-        "NEO4J_PASSWORD": "<PASSWORD>",
-        "NEO4J_DATABASE": "neo4j"
+        "NEO4J_MCP_URI": "<NEO4J_URI>",
+        "NEO4J_MCP_USERNAME": "neo4j",
+        "NEO4J_MCP_PASSWORD": "<NEO4J_PASSWORD>",
+        "NEO4J_MCP_DATABASE": "neo4j"
       }
     }
   }
 }
 ```
+`.mcp.json` servers need one-time approval: run `claude` in the project and accept.
 
 ## Read-only mode (recommended for production / shared DBs)
 
-Add to env:
+Default is read-write. Add to env:
 ```json
-"NEO4J_READ_ONLY": "true"
+"NEO4J_MCP_READ_ONLY": "true"
 ```
 
 This disables the `write-cypher` tool entirely.

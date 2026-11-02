@@ -27,11 +27,12 @@ docker run -d \
   --name neo4j-dev \
   -p 7474:7474 -p 7687:7687 \
   -e NEO4J_AUTH="neo4j/${PASS}" \
-  -e NEO4J_ACCEPT_LICENSE_AGREEMENT=yes \
   -v "$(pwd)/neo4j-data:/data" \
-  neo4j:enterprise
-echo "✓ Container started (data persisted to $HOME/neo4j-dev/data) — waiting for Bolt..."
+  neo4j
+echo "✓ Container started (data persisted to $(pwd)/neo4j-data) — waiting for Bolt..."
 ```
+
+> **Edition:** `neo4j` = Community Edition — enough for every stage of this skill. Use `neo4j:enterprise` only when the user asks for Enterprise; it requires `NEO4J_ACCEPT_LICENSE_AGREEMENT=yes`, which accepts Neo4j's commercial license. Ask the user to accept it — never set it on their behalf.
 
 > **Why `-v $(pwd)/neo4j-data:/data`?** Without a volume, all data is lost when the
 > container is removed. With it, `docker rm neo4j-dev && docker run ...` keeps your graph.
@@ -199,12 +200,20 @@ def api(method, path, token=None, body=None, base="https://api.neo4j.io"):
         raise RuntimeError(f"{method} {path} → {e.code}: {e.read().decode()}") from e
 
 # ── Token ────────────────────────────────────────────────────────────────────
-# Endpoint: /oauth/token  •  JSON body  •  NOT /oauth2/token  •  NOT form-encoded
-token = api("POST", "/oauth/token", body={
-    "grant_type": "client_credentials",
-    "client_id": CLIENT_ID,
-    "client_secret": CLIENT_SECRET,
-})["access_token"]
+# Endpoint: /oauth/token (NOT /oauth2/token) • HTTP Basic auth (client id:secret)
+# • form-encoded body grant_type=client_credentials
+import base64, urllib.parse
+_basic = base64.b64encode(f"{CLIENT_ID}:{CLIENT_SECRET}".encode()).decode()
+_tok_req = urllib.request.Request(
+    "https://api.neo4j.io/oauth/token",
+    data=urllib.parse.urlencode({"grant_type": "client_credentials"}).encode(),
+    headers={"Authorization": f"Basic {_basic}",
+             "Content-Type": "application/x-www-form-urlencoded"},
+    method="POST")
+try:
+    token = json.loads(urllib.request.urlopen(_tok_req).read())["access_token"]
+except urllib.error.HTTPError as e:
+    raise RuntimeError(f"POST /oauth/token → {e.code}: {e.read().decode()}") from e
 print(f"✓ Token obtained ({token[:16]}...)")
 
 # ── Resolve org + project (v2beta1 for correct scoping) ──────────────────────
@@ -333,6 +342,9 @@ if not CLOUD_PROVIDER:
         print(f"  [5] hardcoded fallback (no tenant configs): {CLOUD_PROVIDER}/{REGION}")
 
 # ── Create instance ────────────────────────────────────────────────────────────
+# `version` and `memory` are required — take them from the chosen tenant configuration.
+_cfg = next((c for c in unique_configs
+             if c["cloud_provider"] == CLOUD_PROVIDER and c["region"] == REGION), {})
 try:
     result = api("POST", "/v1beta5/instances", token, body={
         "name": "myapp-db",
@@ -340,31 +352,18 @@ try:
         "cloud_provider": CLOUD_PROVIDER,
         "region": REGION,
         "type": DB_TYPE,
-        "memory": "1GB",
+        "version": _cfg.get("version", "5"),
+        "memory": _cfg.get("memory", "1GB"),
     })["data"]
     INSTANCE_ID = result["id"]
     PASSWORD     = result["password"]   # shown only once — captured here
     print(f"✓ Instance created: {INSTANCE_ID} ({CLOUD_PROVIDER}/{REGION})")
 except RuntimeError as e:
-    if "quota" not in str(e).lower() and "limit" not in str(e).lower():
-        raise
-    # Free quota exceeded — fall back to a Pro trial instance (also free for new accounts)
-    print(f"  Free quota exceeded. Falling back to professional-db trial instance...")
-    pro_configs = [c for c in available if c["type"] == "professional-db"]
-    if pro_configs:
-        CLOUD_PROVIDER = pro_configs[0]["cloud_provider"]
-        REGION         = pro_configs[0]["region"]
-    result = api("POST", "/v1beta5/instances", token, body={
-        "name": "myapp-db",
-        "tenant_id": PROJECT_ID,
-        "cloud_provider": CLOUD_PROVIDER,
-        "region": REGION,
-        "type": "professional-db",
-        "memory": "1GB",
-    })["data"]
-    INSTANCE_ID = result["id"]
-    PASSWORD     = result["password"]
-    print(f"✓ Pro trial instance created: {INSTANCE_ID}")
+    # No automatic fallback to another tier: a professional-db instance can be billable.
+    # Stop; report the error (e.g. Free quota reached) and ask the user how to proceed.
+    print(f"✗ Instance creation failed: {e}")
+    print("  Ask the user: delete/reuse an existing instance, or explicitly approve a paid tier.")
+    sys.exit(1)
 
 # ── Poll until running ────────────────────────────────────────────────────────
 CONNECTION = ""
@@ -496,41 +495,39 @@ done
 
 ## Docker Quick Reference
 
+Community image (`neo4j`) by default. Enterprise (`neo4j:enterprise`) only on user request, with the user accepting the license (see above).
+
 ```bash
 # Basic (ephemeral — data lost on container remove)
 docker run -d \
   --name neo4j-dev \
   -p 7474:7474 -p 7687:7687 \
   -e NEO4J_AUTH=neo4j/password123 \
-  -e NEO4J_ACCEPT_LICENSE_AGREEMENT=yes \
-  neo4j:enterprise
+  neo4j
 
 # Recommended — persistent data volume
 docker run -d \
   --name neo4j-dev \
   -p 7474:7474 -p 7687:7687 \
   -e NEO4J_AUTH=neo4j/password123 \
-  -e NEO4J_ACCEPT_LICENSE_AGREEMENT=yes \
   -v $(pwd)/neo4j-data:/data \
-  neo4j:enterprise
+  neo4j
 
 # With plugins (APOC + GDS)
 docker run -d \
   --name neo4j-dev \
   -p 7474:7474 -p 7687:7687 \
   -e NEO4J_AUTH=neo4j/password123 \
-  -e NEO4J_ACCEPT_LICENSE_AGREEMENT=yes \
   -e NEO4J_PLUGINS='["apoc","graph-data-science"]' \
-  neo4j:enterprise
+  neo4j
 
 # Persistent data volume
 docker run -d \
   --name neo4j-dev \
   -p 7474:7474 -p 7687:7687 \
   -e NEO4J_AUTH=neo4j/password123 \
-  -e NEO4J_ACCEPT_LICENSE_AGREEMENT=yes \
   -v $HOME/neo4j/data:/data \
-  neo4j:enterprise
+  neo4j
 
 # Check logs
 docker logs neo4j-dev -f
