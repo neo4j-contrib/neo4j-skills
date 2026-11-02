@@ -6,10 +6,10 @@
 |---|---|---|---|---|---|
 | **Free** | 200K nodes, 400K rels | GCP us-central1 only | On-demand snapshots only | No | Learning, prototyping |
 | **Professional** | Flexible sizing | AWS/GCP/Azure multi-region | Daily, 7-day retention | No | Production moderate |
-| **Business Critical** | Flexible sizing | AWS/GCP/Azure multi-region | Daily, 7-day retention | 99.95% SLA | Enterprise |
+| **Business Critical** | Flexible sizing | AWS/GCP/Azure multi-region | Daily full + hourly differential, 30-day retention | 99.95% SLA | Enterprise |
 | **Virtual Dedicated Cloud** | Flexible sizing | Dedicated infrastructure | Hourly, 60-day retention | Yes + CMEK, VPC | Compliance/security |
 
-Free auto-pauses after 72h inactivity. Professional/BC/VDC include 7-day free trial (extendable 7 more days).
+Free auto-pauses after 72h inactivity. Free trial (Professional or Business Critical, not VDC): 14 days, $150 credits; limits 1 running instance, max 4 GB memory.
 
 ## Connection String Format
 

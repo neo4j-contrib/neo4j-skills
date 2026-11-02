@@ -1,11 +1,15 @@
 # Aura Data Importer (GUI Import Tool)
 
 Data Importer is built into the Aura console. Access: instance → **Import** in left sidebar.
-No Cypher required — visual drag-and-drop CSV-to-graph mapping.
+No Cypher required — visual mapping of source data to graph. Sources: CSV, PostgreSQL, MySQL, SQL Server, Oracle, BigQuery, Databricks, Redshift, Snowflake, Azure Synapse, AWS S3, Azure Blob/Data Lake Storage, Google Cloud Storage. API: v2beta1 import-jobs.
+
+Requires `PROJECT_ADMIN` (tool creates indexes/constraints; `PROJECT_MEMBER` lacks privileges unless granted a custom import role on BC/VDC).
+
+**Bulk import** (Preview; S3/Azure/GCS only) **stops the database and overwrites existing data** — confirm with user first. **Online import** uses MERGE on ID; re-runs are idempotent.
 
 ## Workflow
 
-1. **Add data source** — click "New data source" → CSV or TSV → upload file
+1. **Add data source** — click "New data source" → pick source type (CSV upload, database, cloud storage)
 2. **Create node labels** — click "Add node label" → set label name → "Map from table" → select columns
 3. **Set unique identifier** — click key icon next to ID property → auto-creates unique constraint + index
 4. **Create relationships** — hover edge of source node → drag to target node → set type → map From/To ID columns
