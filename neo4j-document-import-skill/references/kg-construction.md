@@ -8,13 +8,13 @@ Overflow from `SKILL.md` — load when detailed chunking strategy or entity reso
 
 | Strategy | How it splits | Best for | neo4j-graphrag class |
 |---|---|---|---|
-| Fixed-size | Token count with optional boundary respect | Dense technical docs; most use-cases | `FixedSizeSplitter(chunk_size, chunk_overlap)` |
+| Fixed-size | Character count; `approximate=True` (default) avoids cutting words | Dense technical docs; most use-cases | `FixedSizeSplitter(chunk_size, chunk_overlap)` |
 | Sentence/paragraph | Natural language boundaries (`\n\n`, `.`) | Narrative text, news articles, course content | LangChain `CharacterTextSplitter(separator="\n\n")` |
 | Semantic | Embedding similarity between adjacent sentences | Long-form documents with topic shifts | LangChain `SemanticChunker` (requires embedder) |
 | N-gram | Overlapping windows of n words | Short snippets, keyword-dense text | Custom — not built into neo4j-graphrag |
 | Structural | By section/heading/method (doc-specific) | API docs, legal contracts, structured PDFs | Custom — parse structure then chunk |
 
-**Rule**: Start with `FixedSizeSplitter(chunk_size=512, chunk_overlap=50)`. Switch to paragraph-based when sentences must not break (courses, articles). Switch to semantic chunking only when topic coherence within chunks is critical and embedder calls during ingestion are affordable.
+**Rule**: Start with the default `FixedSizeSplitter()` (4000 / 200 characters, `approximate=True`). Switch to paragraph-based when sentences must not break (courses, articles). Switch to semantic chunking only when topic coherence within chunks is critical and embedder calls during ingestion are affordable.
 
 **Combination pattern** (course content model from GraphAcademy course):
 ```
@@ -57,7 +57,7 @@ from neo4j_graphrag.components.resolver import SinglePropertyExactMatchResolver
 
 resolver = SinglePropertyExactMatchResolver(
     driver=driver,
-    filter_query="WHERE n:Organization OR n:Person",   # optional: narrow scope
+    filter_query="WHERE entity:Organization OR entity:Person",   # optional; node variable is `entity`
     resolve_property="name",   # default: "name"
     neo4j_database="neo4j",    # optional
 )
@@ -73,8 +73,8 @@ from neo4j_graphrag.components.resolver import FuzzyMatchResolver
 resolver = FuzzyMatchResolver(
     driver=driver,
     resolve_properties=["name"],   # list of properties to concatenate + compare
-    threshold=0.9,    # Levenshtein similarity 0–1; lower = more aggressive merging
-    filter_query="WHERE n:Organization",
+    similarity_threshold=0.9,    # default 0.8; Levenshtein similarity 0–1; lower = more aggressive merging
+    filter_query="WHERE entity:Organization",
 )
 asyncio.run(resolver.run())
 ```
@@ -89,14 +89,14 @@ from neo4j_graphrag.components.resolver import SpaCySemanticMatchResolver
 resolver = SpaCySemanticMatchResolver(
     driver=driver,
     resolve_properties=["name"],
-    threshold=0.85,   # cosine similarity 0–1; higher = stricter
-    filter_query="WHERE n:Person",
+    similarity_threshold=0.85,   # default 0.8; cosine similarity 0–1; higher = stricter
+    filter_query="WHERE entity:Person",
 )
 asyncio.run(resolver.run())
 ```
 
 **Resolver selection:**
-| Scenario | Resolver | threshold |
+| Scenario | Resolver | similarity_threshold |
 |---|---|---|
 | Exact duplicates (OCR, same source) | `SinglePropertyExactMatchResolver` | — |
 | Typos / alternate spellings | `FuzzyMatchResolver` | 0.85–0.92 |
@@ -117,7 +117,7 @@ All fields have defaults — only override as needed:
 | `chunk_node_label` | `"Chunk"` | Label of the chunk node |
 | `chunk_to_document_relationship_type` | `"FROM_DOCUMENT"` | Chunk→Document relationship |
 | `next_chunk_relationship_type` | `"NEXT_CHUNK"` | Chunk→next Chunk (linked list) |
-| `node_to_chunk_relationship_type` | `"MENTIONS"` | Entity→Chunk relationship |
+| `node_to_chunk_relationship_type` | `"FROM_CHUNK"` | Entity→Chunk relationship |
 | `chunk_id_property` | `"id"` | Property storing chunk UUID |
 | `chunk_index_property` | `"index"` | Property storing chunk position |
 | `chunk_text_property` | `"text"` | Property storing chunk text |
