@@ -73,9 +73,9 @@ Procedure = `Neo4j_Graph_Analytics.graph.<name>`.
 |---|---|
 | Community Detection | WCC (`wcc`), Louvain (`louvain`), Leiden (`leiden`), Label Propagation (`label_propagation`), K-Means (`kmeans`), Triangle Count (`triangle_count`), K-1 Coloring (`k1coloring`) |
 | Centrality | PageRank (`page_rank`), Article Rank (`article_rank`), Betweenness (`betweenness`), Degree (`degree`) |
-| Pathfinding | Dijkstra (`dijkstra`, `dijkstra_single_source`), Delta-Stepping (`delta_stepping`), BFS (`bfs`), Yen's (`yens`), Max Flow (`max_flow`, `max_flow_min_cost`), FastPath (`fastpath`) |
+| Pathfinding | Dijkstra (`dijkstra`, `dijkstra_single_source`), Delta-Stepping (`delta_stepping`), BFS (`bfs`), Yen's (`yens`), Max Flow (`max_flow`, `max_flow_min_cost`) |
 | Similarity | Node Similarity (`node_similarity`, `node_similarity_filtered`), KNN (`knn`, `knn_filtered`) |
-| Node Embeddings | FastRP (`fast_rp`), Node2Vec (`node2vec`), HashGNN (`hashgnn`) |
+| Node Embeddings | FastRP (`fast_rp`), Node2Vec (`node2vec`), HashGNN (`hashgnn`), FastPath (`fastpath`, temporal path embeddings) |
 | Graph ML (GraphSAGE) | Node classification (`gs_nc_train`, `gs_nc_predict`), Unsupervised embeddings (`gs_unsup_train`, `gs_unsup_predict`) |
 
 ## Quick example
