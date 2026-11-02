@@ -6,7 +6,7 @@ Applies to neo4j-mcp **2.0.0+** (2026-10-28). 2.0.0 removed all `NEO4J_*` env va
 
 ```bash
 brew install neo4j-mcp            # Homebrew → command: neo4j-mcp
-uvx neo4j-mcp-server              # PyPI → command: neo4j-mcp-server (not neo4j-mcp)
+pip install neo4j-mcp-server      # PyPI → command: neo4j-mcp-server (not neo4j-mcp)
 
 # Release archive from https://github.com/neo4j/mcp/releases
 # Assets: neo4j-mcp_Darwin_arm64.tar.gz, neo4j-mcp_Darwin_x86_64.tar.gz,
