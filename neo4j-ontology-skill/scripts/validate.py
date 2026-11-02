@@ -32,13 +32,13 @@ from pathlib import Path
 import yaml
 from jsonschema import Draft202012Validator
 
-# Published schema locations (Linear ONT-31). Not live yet — see fallback below.
+# Published schema locations (live since spec 1.0.0). Versioned URLs are per spec version.
 SCHEMA_BASE_URL = "https://neo4j.com/docs/ontology-graph-spec/"
 SCHEMA_VERSIONED_URL_TEMPLATE = SCHEMA_BASE_URL + "{version}/schema.json"  # immutable, e.g. .../1.0.0/schema.json
 SCHEMA_CURRENT_URL = SCHEMA_BASE_URL + "current/schema.json"  # moving alias → newest stable
 
-# TRANSITIONAL (pre-ONT-31): raw schema from the source repo, used while the
-# published URLs above are not live. Remove once ONT-31 ships.
+# Fallback: raw schema from the source repo main branch (moving), used only when
+# the published URLs above are unreachable.
 SCHEMA_REPO_FALLBACK_URL = (
     "https://raw.githubusercontent.com/neo4j/ontology-graph-spec/main/ontology-graph-spec.schema.json"
 )
@@ -108,7 +108,7 @@ def resolve_schema(schema_arg, document):
     if is_http_url(doc_schema):
         candidates.append(doc_schema)
     candidates.append(SCHEMA_CURRENT_URL)
-    candidates.append(SCHEMA_REPO_FALLBACK_URL)  # TRANSITIONAL, pre-ONT-31
+    candidates.append(SCHEMA_REPO_FALLBACK_URL)  # fallback when published host unreachable
 
     tried = []
     for url in candidates:
