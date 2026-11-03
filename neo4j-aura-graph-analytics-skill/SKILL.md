@@ -39,7 +39,7 @@ allowed-tools: Bash WebFetch
 | Aura Pro + Graph Analytics plugin enabled (lightweight exploration, shared resources) | `neo4j-gds-skill` |
 | Aura Pro / Pro Trial + session (isolated compute) | **this skill** — up to 128 GB (Pro) / 8 GB (Pro Trial), 100 / 3 concurrent sessions, lifetime max 7 days / 1 day |
 | AuraDB + Python client sessions | **this skill** |
-| AuraDB Pro / BC / VDC + Cypher API (not Free) | **this skill** for AGA-specific projection/session notes; `neo4j-cypher-skill` for query authoring |
+| AuraDB Free / Pro / BC / VDC + Cypher API | **this skill** for AGA-specific projection/session notes; `neo4j-cypher-skill` for query authoring |
 | Self-managed Neo4j + AGA session | **this skill** |
 | Self-managed Neo4j + embedded plugin | `neo4j-gds-skill` |
 | Non-Neo4j data (Pandas, Spark) | **this skill** (standalone mode) |
@@ -266,7 +266,7 @@ RETURN gds.graph.project(
 ```
 
 Cypher API uses `gds.graph.project(...)`, not `gds.graph.project.remote(...)`. Put `memory`, `ttl`, `sessionId`, `batchSize` in fifth config argument.
-Cypher API works only for sessions attached to AuraDB Professional, Business Critical or VDC — not Free. Not supported: HITS, Topological Sort, Triangles listing, `gds.graph.project.cypher`, `gds.graph.project.estimate`, export/backup, `gds.version` ([limitations](https://neo4j.com/docs/graph-data-science/current/aura-graph-analytics/cypher/#limitations)). Models trained via Cypher API usable only in the same session. Size first with `gds.session.estimate(...)`.
+Cypher API works for sessions attached to AuraDB Free, Professional, Business Critical or VDC. Not supported: HITS, Topological Sort, Triangles listing, `gds.graph.project.cypher`, `gds.graph.project.estimate`, export/backup, `gds.version` ([limitations](https://neo4j.com/docs/graph-data-science/current/aura-graph-analytics/cypher/#limitations)). Models trained via Cypher API usable only in the same session. Size first with `gds.session.estimate(...)`.
 
 Session management via Cypher API:
 ```cypher

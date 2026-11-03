@@ -4,7 +4,7 @@
 |---|---|---|
 | Topological link prediction | ✅ Client 2.0+ (attached sessions) | ✅ |
 | ML model persistence across sessions | ❌ Session-local only | ✅ Persistent in model catalog |
-| Cypher API (`CALL gds.*`) | ✅ Sessions attached to AuraDB Pro / BC / VDC only (not Free); no HITS, Topological Sort, Triangles listing | ✅ |
+| Cypher API (`CALL gds.*`) | ✅ Sessions attached to AuraDB Free / Pro / BC / VDC; no HITS, Topological Sort, Triangles listing | ✅ |
 | Non-Neo4j data sources | ✅ Pandas, Spark, Arrow | ❌ |
 | Aura BC / VDC | ✅ | ❌ |
 | Aura Pro | ✅ | ✅ (Graph Analytics plugin, Professional only) |
