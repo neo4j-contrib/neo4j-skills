@@ -9,7 +9,7 @@ description: Import structured data into Neo4j — LOAD CSV, CALL IN TRANSACTION
   pipelines — use neo4j-document-import-skill. Does NOT handle live app write patterns
   (MERGE/CREATE) — use neo4j-cypher-skill. Does NOT handle neo4j-admin backup/restore/config
   — use neo4j-cli-tools-skill.
-version: 1.0.11
+version: 1.0.12
 allowed-tools: Bash WebFetch
 ---
 
@@ -40,7 +40,7 @@ allowed-tools: Bash WebFetch
 | Any size | Online | CSV (Aura or local) | LOAD CSV + CALL IN TRANSACTIONS |
 | < 1M rows | Online | List/API response | UNWIND + CALL IN TRANSACTIONS |
 | > 10M rows | **Offline** (local/self-managed) | CSV / Parquet | `neo4j-admin database import full` |
-| Any size | Online | APOC available | `apoc.periodic.iterate` + `apoc.load.csv` |
+| Any size | Online | APOC available | `apoc.periodic.iterate` (+ `apoc.load.csv` — APOC Extended only) |
 | Any size | Online | JSON/API | `apoc.load.json` or driver batching |
 | Incremental delta | Offline (Enterprise) | CSV | `neo4j-admin database import incremental` |
 
@@ -70,11 +70,11 @@ Run in this exact order — skipping causes hard-to-debug duplicates or missed i
    ```
    If fails → APOC not installed. Use plain LOAD CSV instead.
 
-3. **Confirm target is PRIMARY** (not replica):
+3. **Confirm target accepts writes** (not a secondary/replica):
    ```cypher
-   CALL dbms.cluster.role() YIELD role RETURN role;
+   SHOW DATABASE neo4j YIELD name, role, writer, currentStatus;
    ```
-   If role ≠ `PRIMARY` → stop. Redirect write to PRIMARY endpoint.
+   `writer = true` on standalone servers and on the cluster's writer. If no row has `writer = true` → stop; redirect the write to the writer endpoint (`neo4j://` routing URI). Don't use `dbms.cluster.role()` — fails with "no such procedure" on 2026.x standalone.
 
 4. **Count source file rows** before import (catch encoding issues early):
    ```bash
@@ -132,7 +132,10 @@ CALL (row) {
 } IN TRANSACTIONS OF 5000 ROWS
   ON ERROR CONTINUE
   REPORT STATUS AS s
+RETURN s.committed, s.errorMessage
 ```
+
+`REPORT STATUS` makes the `CALL` return rows → query must end with `RETURN` (or `FINISH`), else syntax error "incomplete query".
 
 Always import ALL nodes before ANY relationships — MATCH fails on missing nodes.
 
@@ -185,7 +188,7 @@ CALL (row) {
 
 | Mode | Behavior | Use when |
 |---|---|---|
-| `ON ERROR FAIL` | Default. Rolls back entire outer tx on first error | All-or-nothing strict import |
+| `ON ERROR FAIL` | Default. Stops the query on first error; failed batch rolls back, **earlier batches stay committed** | Fail-fast import. Not all-or-nothing — for that use one batch (`OF <n> ROWS` above row count) or a single transaction |
 | `ON ERROR CONTINUE` | Skips failed batch, continues remaining batches | Resilient bulk load — track errors via REPORT STATUS |
 | `ON ERROR BREAK` | Stops after first failed batch; keeps completed work | Semi-strict: stop early, keep successful batches |
 | `ON ERROR RETRY` | Exponential backoff retry (default 30s) + fallback | Concurrent writes with deadlock risk |
@@ -203,6 +206,7 @@ CALL (row) {
 } IN 4 CONCURRENT TRANSACTIONS OF 5000 ROWS
   ON ERROR RETRY FOR 30 SECONDS THEN CONTINUE
   REPORT STATUS AS s
+RETURN s.committed, s.errorMessage
 ```
 
 Use CONCURRENT for read-heavy MERGE on non-overlapping key spaces. Risk: deadlocks on overlapping writes → combine with `ON ERROR RETRY`.
@@ -236,10 +240,10 @@ Fastest method: ~3 min for 31M nodes / 78M rels on SSD. DB must be stopped or no
 
 ```bash
 neo4j-admin database import full \
-  --nodes=Person="persons_header.csv,persons.csv" \
-  --nodes=Movie="movies_header.csv,movies.csv" \
-  --relationships=ACTED_IN="acted_in_header.csv,acted_in.csv" \
-  --relationships=DIRECTED="directed_header.csv,directed.csv" \
+  --nodes=Person="./persons_header.csv,./persons.csv" \
+  --nodes=Movie="./movies_header.csv,./movies.csv" \
+  --relationships=ACTED_IN="./acted_in_header.csv,./acted_in.csv" \
+  --relationships=DIRECTED="./directed_header.csv,./directed.csv" \
   --delimiter=, \
   --id-type=STRING \
   --bad-tolerance=0 \
@@ -247,6 +251,8 @@ neo4j-admin database import full \
   --high-parallel-io=on \
   neo4j
 ```
+
+File paths need a directory part (`./file.csv`, `import/file.csv` or absolute) — bare names fail: "Unable to find the parent of the path". Database name goes last, after a single-value flag (as above) — placed right after `--nodes=`/`--relationships=` it is parsed as one more file.
 
 **Dry run** (2026.02+) — validate without writing:
 ```bash
@@ -257,7 +263,7 @@ neo4j-admin database import full --dry-run ...
 
 ```
 # persons_header.csv
-personId:ID,name,born:int,score:float,active:boolean,:LABEL
+personId:ID(Person),name,born:int,score:float,active:boolean,:LABEL
 ```
 
 ```
@@ -274,7 +280,7 @@ p002,Bob,1990,7.1,false,Person
 | `prop:int` | Typed property; types: `int long float double boolean byte short string` |
 | `prop:date` | Temporal: `date localtime time localdatetime datetime duration`; Parquet `INTERVAL` columns import as `DURATION` [2026.07+] |
 | `prop:int[]` | Array — semicolon-separated values in cell: `1;2;3` |
-| `prop:vector` | Float vector (2025.10+) — semicolon-separated coordinates in CSV; imports directly from native Parquet list types [2026.06+] |
+| `"prop:vector{coordinateType:float,dimensions:3}"` | Vector (2025.10+) — map must give `coordinateType` (`byte short int long float double`) and `dimensions` (1-4096); quote the header field (contains `,`). Coordinates semicolon-separated in CSV; imports directly from native Parquet list types [2026.06+]. Storing `VECTOR` needs `block` format (Enterprise); Community fails |
 
 ### Relationship header file format
 
@@ -312,11 +318,13 @@ Pass a Cypher file with `CREATE CONSTRAINT` / `CREATE INDEX` statements; execute
 
 ```bash
 neo4j-admin database import full \
+  --nodes=Person="./persons_header.csv,./persons.csv" \
   --format=block \
-  --schema=schema.cypher \
-  --nodes=Person="persons_header.csv,persons.csv" \
+  --schema=./schema.cypher \
   neo4j
 ```
+
+Community rejects `--schema` ("Record format batch import does not support schema changes").
 
 ```cypher
 // schema.cypher
@@ -332,71 +340,31 @@ For incremental import, `DROP CONSTRAINT` / `DROP INDEX` are also supported [202
 
 ### Incremental import (Enterprise only)
 
-Three-phase process — use when DB must stay online during import preparation:
+Three-stage process — limits downtime to `prepare` and `merge` (or `--stage=all` on a stopped DB):
 
 ```bash
-# Phase 1: Prepare staging area
-neo4j-admin database import incremental --stage=prepare \
-  --nodes=Person=persons_header.csv,delta.csv --force neo4j
+# Back up first: a failed or aborted merge may corrupt the database
 
-# Phase 2: Build indexes (DB can be read-only during this phase)
-neo4j-admin database import incremental --stage=build neo4j
+# Stage 1: prepare — DB stopped (STOP DATABASE neo4j WAIT)
+neo4j-admin database import incremental --stage=prepare --force \
+  --nodes=Person=./persons_header.csv,./delta.csv neo4j
 
-# Phase 3: Merge into live database (brief write-lock)
-neo4j-admin database import incremental --stage=merge neo4j
+# Stage 2: build — imports, deduplicates, validates; DB may be online in read-only mode
+# (ALTER DATABASE neo4j SET ACCESS READ ONLY). Repeat --nodes/--relationships
+neo4j-admin database import incremental --stage=build --force \
+  --nodes=Person=./persons_header.csv,./delta.csv neo4j
+
+# Stage 3: merge — DB stopped; updates indexes and constraints. No --nodes needed
+neo4j-admin database import incremental --stage=merge --force neo4j
 ```
 
-Requires Enterprise Edition + `block` store format.
+Enterprise only (Community has only `import full`). Uniqueness constraints must exist on the key label/property pairs of imported nodes, else the command errors. `block` format needed only for CSV update/delete actions.
 
 ---
 
 ## APOC Patterns (when APOC is available)
 
-Verify first: `RETURN apoc.version()` — if fails, use LOAD CSV or driver instead.
-
-### apoc.periodic.iterate — batch-process existing graph data
-
-```cypher
-CALL apoc.periodic.iterate(
-  "MATCH (p:Person) WHERE NOT (p)-[:HAS_ACCOUNT]->() RETURN p",
-  "CREATE (p)-[:HAS_ACCOUNT]->(a:Account {id: randomUUID()})",
-  {batchSize: 10000, parallel: false, retries: 2}
-) YIELD batches, total, errorMessages
-RETURN batches, total, errorMessages
-```
-
-| Config key | Default | Notes |
-|---|---|---|
-| `batchSize` | 10000 | Rows per inner transaction |
-| `parallel` | false | Enable for non-overlapping writes; risk: deadlocks |
-| `retries` | 0 | Retry failed batches N times with 100ms delay |
-
-Prefer `CALL IN TRANSACTIONS` (native Cypher) over `apoc.periodic.iterate` for new code — it has `REPORT STATUS`, `CONCURRENT`, and `RETRY` built in without APOC dependency.
-
-### apoc.load.csv — load with config options
-
-```cypher
-CALL apoc.load.csv('file:///persons.csv', {
-  header: true,
-  sep: ',',
-  skip: 1,
-  limit: 1000000
-}) YIELD lineNo, map, list
-CALL (map) {
-  MERGE (p:Person {id: map.id}) SET p.name = map.name
-} IN TRANSACTIONS OF 10000 ROWS ON ERROR CONTINUE
-```
-
-### apoc.load.json — load JSON from file or URL
-
-```cypher
-CALL apoc.load.json('https://api.example.com/persons') YIELD value
-CALL (value) {
-  MERGE (p:Person {id: value.id}) SET p.name = value.name
-} IN TRANSACTIONS OF 1000 ROWS ON ERROR CONTINUE
-```
-
----
+Read [references/apoc-patterns.md](references/apoc-patterns.md#apoc-patterns-when-apoc-is-available) when you need this.
 
 ## Driver Batch Write Pattern
 
@@ -421,7 +389,7 @@ Write gate — before any bulk write via MCP, show:
 
 Wait for user confirmation. Never auto-execute `CALL IN TRANSACTIONS` or `CREATE CONSTRAINT` without confirmation.
 
-Always pass `database` param if not default: `{"code": "...", "database": "neo4j"}`.
+MCP tools take only `{"query": "...", "params": {...}}` — no `database` argument. Database comes from server config: `NEO4J_MCP_DATABASE` (STDIO) or the `/db/{db}/mcp` URL path (HTTP).
 
 ---
 
@@ -434,6 +402,7 @@ Always pass `database` param if not default: `{"code": "...", "database": "neo4j
 | `toInteger() called on null` | Null column fed to non-null-safe fn | Replace `toInteger()` → `toIntegerOrNull()`, `toFloat()` → `toFloatOrNull()` |
 | `Node N already exists` / constraint violation mid-import | Duplicate source IDs | Dedup source CSV; use `MERGE` not `CREATE`; add `IF NOT EXISTS` to constraint |
 | Heap overflow / OutOfMemoryError | Batch too large or file too large | Reduce batch size; switch to `CALL IN TRANSACTIONS`; neo4j-admin for offline |
+| `TransactionStartFailed … can only be executed in an implicit transaction` | `CALL { … } IN TRANSACTIONS` run inside `session.execute_write` / explicit tx | Run it with `session.run` (auto-commit). `driver.execute_query` uses a managed transaction and fails the same way. Inside `execute_write`, use `UNWIND` batches instead |
 | `Invalid input 'IN': expected...'` | `PERIODIC COMMIT` used | Replace `USING PERIODIC COMMIT` → `CALL IN TRANSACTIONS` — PERIODIC COMMIT removed in Cypher 25 |
 | neo4j-admin: `Bad input data` | Wrong header format or type mismatch | Check `:ID`, `:START_ID`, `:END_ID` present; check typed columns parse correctly |
 | neo4j-admin: import fails silently | `--bad-tolerance` default was unlimited pre-2025.12 | Set `--bad-tolerance=0` to surface all errors |
@@ -487,7 +456,7 @@ Do NOT run production queries until all indexes are ONLINE.
 
 - [ ] Uniqueness constraints created before any MERGE-based import
 - [ ] APOC availability verified if using `apoc.*` procedures
-- [ ] Target confirmed as PRIMARY (not replica)
+- [ ] Target confirmed writable (`SHOW DATABASE … YIELD writer` = true)
 - [ ] Source files validated: UTF-8 encoding, expected row count, no BOM
 - [ ] LOAD CSV uses `toIntegerOrNull()` / `toFloatOrNull()` — never bare `toInteger()`/`toFloat()`
 - [ ] `nullIf(row.x, '')` applied where empty string ≠ null

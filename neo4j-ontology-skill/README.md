@@ -12,7 +12,7 @@ Authors and validates **Neo4j Ontology Graph Specification** documents in YAML a
 
 **Endpoint cardinality** — `count` exact or `min_count`/`max_count` ranged on relationship `from`/`to`
 
-**Extensions** — fixed `extensions` shape per element (node `indexes`/`display`/`custom`, relationship `indexes`/`custom`, root `tables`/`mappings`/`custom`), free-form data under `custom` only
+**Extensions** — fixed `extensions` shape per element (node `indexes`/`display`/`custom`, relationship `indexes`/`custom`, root `data_source_tables`/`data_source_mappings`/`custom`), free-form data under `custom` only
 
 **Validation workflow** — `uv run scripts/validate.py <document>` with exit-code semantics and mandatory re-validation
 

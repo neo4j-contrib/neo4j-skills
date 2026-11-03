@@ -11,7 +11,7 @@ description: Build GraphRAG retrieval pipelines on Neo4j using the neo4j-graphra
   neo4j-document-import-skill. Does NOT handle plain vector search — use
   neo4j-vector-index-skill. Does NOT handle GDS analytics — use neo4j-gds-skill.
   Does NOT handle agent memory — use neo4j-agent-memory-skill.
-version: 1.1.2
+version: 1.1.3
 status: active
 allowed-tools: Bash WebFetch
 ---
@@ -74,7 +74,8 @@ Vectors stored in external DB?      → WeaviateNeo4jRetriever / PineconeNeo4jRe
 ```bash
 pip install neo4j-graphrag[openai]        # OpenAI LLM + embeddings
 pip install neo4j-graphrag[anthropic]     # Anthropic Claude
-pip install neo4j-graphrag[google]        # Vertex AI / Gemini
+pip install neo4j-graphrag[google]        # Vertex AI (VertexAILLM)
+pip install neo4j-graphrag[google-genai]  # Gemini (GeminiLLM)
 pip install neo4j-graphrag[bedrock]       # Amazon Bedrock (boto3)
 pip install neo4j-graphrag[cohere]        # Cohere
 pip install neo4j-graphrag[mistralai]     # MistralAI
@@ -94,7 +95,7 @@ Pick from [Retriever Selection](#retriever-selection) table above.
 
 For custom Cypher hybrid search outside the `neo4j-graphrag` retriever APIs, use `neo4j-vector-index-skill`.
 
-**Vector backend selection [v1.16+, auto]**: on Neo4j 2026.01+ all four vector/hybrid retrievers auto-route through the Cypher 25 `SEARCH ... WHERE` clause when filters are SEARCH-compatible (simple AND comparisons) and all filter props are declared in the index `WITH [n.prop]` list. `$or`, `$in`, `$like`, or undeclared props → automatic fallback to `db.index.vector.queryNodes()` procedure path (with warning log). Declare filterable properties via `filterable_properties=[...]` on `create_vector_index()`.
+**Vector backend selection [v1.16+, auto]**: on Neo4j 2026.01+ all four vector/hybrid retrievers auto-route through the Cypher 25 `SEARCH` clause. Filters exist only on `VectorRetriever` / `VectorCypherRetriever` (hybrid retrievers take no `filters`). Filtered queries use `SEARCH ... WHERE` only when filters are SEARCH-compatible (simple AND comparisons) and every filter prop is in the retriever's `_filterable_properties`. `$or`, `$in`, `$like`, or undeclared props → automatic fallback to `db.index.vector.queryNodes()` procedure path (with warning log). Declare filterable properties via `filterable_properties=[...]` on `create_vector_index()`. Detection gap (verified 1.22.0 on Neo4j 2026.09; same code in 1.23.0): the library reads ``options.indexConfig.`vector.filterable_properties` `` but the server lists them in the index `properties`, so `_filterable_properties` stays `[]` and filtered queries always fall back. Workaround: after construction, `r._filterable_properties.extend(["prop", ...])`.
 
 ---
 
@@ -134,7 +135,7 @@ from neo4j_graphrag.llm import OpenAILLM
 from neo4j_graphrag.retrievers import HybridCypherRetriever
 
 driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USERNAME, NEO4J_PASSWORD))
-embedder = OpenAIEmbeddings(model="text-embedding-3-large")  # OPENAI_API_KEY from env
+embedder = OpenAIEmbeddings(model="text-embedding-3-small")  # 1536 dims, matches index; OPENAI_API_KEY from env
 
 # retrieval_query: Cypher fragment executed after the vector/fulltext lookup.
 # Auto-injected variables:  node  (matched node)   score  (similarity float)
@@ -222,19 +223,29 @@ results = retriever.search(query_text="Which people work at Neo4j?")
 ```python
 from neo4j_graphrag.retrievers import ToolsRetriever
 
-tools_retriever = ToolsRetriever(
-    llm=llm,
-    retrievers=[vector_retriever, text2cypher_retriever],
+# Convert each retriever to a Tool — name and description required:
+vector_tool = vector_retriever.convert_to_tool(
+    name="vector_search", description="Search chunks by semantic similarity",
 )
-# LLM decides which retriever(s) to invoke per query
+cypher_tool = text2cypher_retriever.convert_to_tool(
+    name="cypher_search", description="Answer structured questions with generated Cypher",
+)
 
-# Convert any retriever to a standalone Tool:
-tool = vector_retriever.convert_to_tool()
+tools_retriever = ToolsRetriever(
+    driver=driver,
+    llm=llm,                 # must support tool calling (not Anthropic, Mistral, Cohere)
+    tools=[vector_tool, cypher_tool],
+)
+# LLM decides which tool(s) to invoke per query
 ```
+
+Tool exceptions are swallowed: result is empty with `metadata["error"]` set. Check `result.metadata` when results are empty.
 
 ---
 
 ## Filters (pre-filter before vector search)
+
+`VectorRetriever` / `VectorCypherRetriever` only — hybrid retrievers raise `TypeError` on `filters`.
 
 ```python
 results = retriever.search(
@@ -245,7 +256,7 @@ results = retriever.search(
         "source": {"$eq": "10-K"},
     },
 )
-# Operators: $eq  $ne  $lt  $lte  $gt  $gte  $between  $in  $like  $ilike
+# Operators: $eq  $ne  $lt  $lte  $gt  $gte  $between ([low, high])  $in  $nin  $like  $ilike (substring; % not a wildcard)
 ```
 
 ---
@@ -276,15 +287,7 @@ response = rag.search(
 
 ## Cypher 25 SEARCH Clause (v1.16.0, Neo4j 2026.x+)
 
-```python
-# Enable SEARCH clause syntax in vector/hybrid retrievers (requires Neo4j 2026+)
-retriever = VectorRetriever(
-    driver=driver,
-    index_name="chunk_embedding",
-    embedder=embedder,
-    use_search_clause=True,
-)
-```
+Automatic — no flag. On Neo4j 2026.01+ vector and hybrid retrievers use `SEARCH`; there is no `use_search_clause` kwarg (`TypeError`). For in-index filters, declare `filterable_properties` (see Step 2).
 
 Since v1.19, the vector and vector-Cypher retrievers automatically prefix SEARCH queries
 with `CYPHER 25` and fall back to the procedure-based vector search when SEARCH is
@@ -322,15 +325,9 @@ Lazy `neo4j_graphrag.pipeline.Pipeline` + `LocalInterpreter(observers=[...])`; `
 
 ---
 
-## ORDER BY on Cypher Retrievers (v1.16.0)
+## ORDER BY on Cypher Retrievers
 
-```python
-results = retriever.search(
-    query_text="...",
-    top_k=10,
-    order_by="score DESC",
-)
-```
+No `order_by` param on `search()` (`TypeError`). Put `ORDER BY` inside `retrieval_query`.
 
 If `neo4j_schema=None`: retriever fetches schema automatically. For large schemas, pass a trimmed string to reduce LLM prompt size.
 
@@ -378,7 +375,11 @@ print(response.retriever_result)    # RawSearchResult when return_context=True
 from neo4j_graphrag.message_history import InMemoryMessageHistory
 
 history = InMemoryMessageHistory()
-r1 = rag.search(query_text="Who is Alice?", message_history=history)
+q1 = "Who is Alice?"
+r1 = rag.search(query_text=q1, message_history=history)
+# GraphRAG.search only reads history — append each turn yourself:
+history.add_message({"role": "user", "content": q1})
+history.add_message({"role": "assistant", "content": r1.answer})
 r2 = rag.search(query_text="Where does she work?", message_history=history)
 ```
 
@@ -435,7 +436,7 @@ schema_dict = get_structured_schema(driver, sample=1000)  # dict with labels/rel
 | `Text2CypherRetrievalError` | LLM generated a write statement | Expected security behavior (v1.16.0+); refine prompt or schema |
 | `TypeError: coroutine` | Missing `await` / `asyncio.run()` | Wrap async calls: `asyncio.run(pipeline.run_async(...))` |
 | Empty results from HybridRetriever | Fulltext index not ONLINE | `SHOW INDEXES YIELD name, state WHERE state <> 'ONLINE'` |
-| `VectorCypherRetriever` + `filters` raises "requires: node_label, embedding_node_property, …" (v1.19–1.22 name-mismatch bug; fixed v1.23.0) | `_fetch_index_infos` sets `self._embedding_node_property`, constructor sets `_node_embedding_property` | Upgrade `neo4j-graphrag>=1.23.0`. Pinned < 1.23 → shim after construction: `r._node_embedding_property = r._embedding_node_property or "embedding"`; append filter props to `r._filterable_properties` |
+| `VectorCypherRetriever` + `filters` raises "requires: node_label, embedding_node_property, …" (name-mismatch bug through 1.22.0; fixed in 1.23.0) | `_fetch_index_infos` sets `self._embedding_node_property`, constructor sets `_node_embedding_property` | Upgrade to ≥1.23.0. On 1.22.x shim after construction: `r._node_embedding_property = r._embedding_node_property or "embedding"`. Either version: append filter props to `r._filterable_properties` (Step 2) |
 | Embedding dimension mismatch | Index dims ≠ model dims | Recreate index with correct `dimensions=` value |
 
 ---

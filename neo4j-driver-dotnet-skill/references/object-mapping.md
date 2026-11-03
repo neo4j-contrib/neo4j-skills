@@ -1,11 +1,11 @@
 # Object Mapping and Repository Pattern
 
-## Preview Mapping API
+## Mapping API
 
-All mapping extension methods live in `Neo4j.Driver.Preview.Mapping`. Without this using directive, `AsObject<T>()` and `AsObjectsAsync<T>()` cause CS1061 compile errors.
+All mapping extension methods live in `Neo4j.Driver.Mapping` (not `Neo4j.Driver.Preview.Mapping` — CS0234). Without this using directive, `AsObject<T>()` and `AsObjectsAsync<T>()` cause CS1061 compile errors.
 
 ```csharp
-using Neo4j.Driver.Preview.Mapping;   // REQUIRED
+using Neo4j.Driver.Mapping;   // REQUIRED
 ```
 
 ## AsObject&lt;T&gt;() — Single Record
@@ -14,13 +14,13 @@ using Neo4j.Driver.Preview.Mapping;   // REQUIRED
 public record Person(string Name, int Age);
 
 var result = await driver
-    .ExecutableQuery("MATCH (p:Person) RETURN p.name AS name, p.age AS age")
+    .ExecutableQuery("MATCH (p:Person) RETURN p.name AS Name, p.age AS Age")
     .WithConfig(new QueryConfig(database: "neo4j"))
     .ExecuteAsync();
 
 var person = result.Result[0].AsObject<Person>();
-// RETURN key names map to property names (case-insensitive by default)
-// 'name' → Name, 'age' → Age
+// RETURN keys match property names CASE-SENSITIVELY
+// 'name' does NOT map to Name → MappingFailedException; alias AS Name, or [MappingSource("name")]
 ```
 
 C# `record` types work well — positional constructor parameters are matched by name.
@@ -43,10 +43,11 @@ var person = result.Result[0].AsObject(
 ## AsObjectsAsync&lt;T&gt;() — Bulk Mapping
 
 ```csharp
-var (people, summary, _) = await driver
-    .ExecutableQuery("MATCH (p:Person) RETURN p.name AS name, p.age AS age")
+var people = await driver
+    .ExecutableQuery("MATCH (p:Person) RETURN p.name AS Name, p.age AS Age")
     .WithConfig(new QueryConfig(database: "neo4j"))
-    .AsObjectsAsync<Person>();   // maps all records; returns EagerResult<IReadOnlyList<Person>>
+    .ExecuteAsync()
+    .AsObjectsAsync<Person>();   // extension on Task<EagerResult<...>>; returns IReadOnlyList<Person> (no deconstruct)
 ```
 
 ---

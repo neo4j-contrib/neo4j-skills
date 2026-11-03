@@ -11,7 +11,7 @@ description: Use Neo4j GenAI Plugin ai.text.* functions and procedures for in-Cy
   Cypher queries. Does NOT handle neo4j-graphrag Python library pipelines — use
   neo4j-graphrag-skill. Does NOT handle vector index creation/search — use
   neo4j-vector-index-skill.
-version: 1.0.7
+version: 1.0.8
 status: active
 allowed-tools: Bash WebFetch
 ---
@@ -61,8 +61,11 @@ All `ai.text.*` functions accept a `configuration :: MAP` as last argument.
 | `'openai'` | `token`, `model` | `token` = OpenAI API key |
 | `'azure-openai'` | `token`, `resource`, `model` | `token` = OAuth2 bearer; `resource` = Azure resource name |
 | `'vertexai'` | `model`, `project`, `region`, `token` or `apiKey` | `publisher` defaults to `'google'` |
-| `'bedrock-titan'` | `model`, `region`, `accessKeyId`, `secretAccessKey` | Embedding only |
-| `'bedrock-nova'` | `model`, `region`, `accessKeyId`, `secretAccessKey` | Completion only |
+| `'bedrock-titan'` | `model`, `region`, `accessKeyId`, `secretAccessKey` | Only Bedrock provider for embed; also accepted by completion |
+| `'bedrock-nova'` | `model`, `region`, `accessKeyId`, `secretAccessKey` | Completion; NOT structuredCompletion |
+| `'bedrock'` | `model`, `region`, `accessKeyId`, `secretAccessKey` | Generic Bedrock (Converse API): completion, structuredCompletion, tokenCount; NOT embed |
+
+Providers per function differ — structured output on Bedrock uses `'bedrock'`. Matrix → [references/providers.md](references/providers.md#providers-per-function).
 
 Optional for all: `vendorOptions :: MAP` passes provider-specific extras (e.g. `{ dimensions: 1024 }` for OpenAI).
 
@@ -81,16 +84,15 @@ CYPHER 25
 MATCH (c:Chunk)
 WHERE c.embedding IS NULL
 WITH c
-CALL {
-  WITH c
-  SET c.embedding = ai.text.embed(c.text, 'openai', {
+CALL (c) {
+  SET c.embedding = toFloatList(ai.text.embed(c.text, 'openai', {
     token: $openaiKey,
     model: 'text-embedding-3-small'
-  })
+  }))
 } IN TRANSACTIONS OF 500 ROWS
 ```
 
-`ai.text.embed()` returns `VECTOR` — directly storable and queryable in a vector index.
+`ai.text.embed()` returns `VECTOR`. Storing a raw `VECTOR` property on self-managed needs Enterprise Edition + block format; on aligned format (Community default) `SET` fails with 51N77. Wrap in `toFloatList()` — vector index accepts the resulting `LIST<FLOAT>`.
 
 ### Batch embed procedure [2025.11]
 
@@ -98,15 +100,15 @@ CALL {
 CYPHER 25
 MATCH (c:Chunk) WHERE c.embedding IS NULL
 WITH collect(c) AS chunks
-UNWIND chunks AS c
-WITH c.text AS text, c AS node
-CALL ai.text.embedBatch(text, 'openai', { token: $openaiKey, model: 'text-embedding-3-small' })
-YIELD index, resource, vector
-MATCH (c:Chunk {text: resource})
-SET c.embedding = vector
+CALL ai.text.embedBatch([x IN chunks | x.text], 'openai', { token: $openaiKey, model: 'text-embedding-3-small' })
+YIELD index, vector
+CALL (chunks, index, vector) {
+  WITH chunks[index] AS c
+  SET c.embedding = toFloatList(vector)
+}
 ```
 
-Procedure signature: `CALL ai.text.embedBatch(resource, provider, config) YIELD index, resource, vector`
+Procedure signature: `CALL ai.text.embedBatch(resources :: LIST<STRING>, provider, configuration = {}) YIELD index, resource, vector`. Pass one list per call; map results back by `index` (never join on text — duplicates break it).
 
 ### List configured embed providers
 
@@ -161,6 +163,7 @@ MATCH (chunk:Chunk)
 // SEARCH preferred on 2026.x; db.index.vector.queryNodes() deprecated 2026.04 — SEARCH syntax → neo4j-vector-index-skill
 MATCH (chunk)<-[:HAS_CHUNK]-(article:Article)
 OPTIONAL MATCH path = shortestPath((article)-[*..3]-(other:Article))
+  WHERE other <> article
 WITH chunk, article, collect(DISTINCT other.title) AS related, score
 ORDER BY score DESC LIMIT 5
 WITH collect(chunk.text + '\n[Source: ' + article.title + ']') AS context, $question AS question
@@ -287,7 +290,7 @@ Signatures:
 
 ## Write Gate
 
-`SET node.embedding = ai.text.embed(...)` and `SET node.* = ai.text.structuredCompletion(...)` write to the graph.
+`SET node.embedding = toFloatList(ai.text.embed(...))` and `SET node.* = ai.text.structuredCompletion(...)` write to the graph.
 
 Before bulk writes:
 1. Count nodes first: `MATCH (c:Chunk) WHERE c.embedding IS NULL RETURN count(c)`
@@ -314,7 +317,8 @@ Before bulk writes:
 | `Unknown function 'ai.text.embed'` | Missing CYPHER 25 prefix OR plugin not installed | Add `CYPHER 25` prefix; verify plugin installed |
 | `Cypher version not supported` | Using `CYPHER 25` on Neo4j < 5.20 or missing plugin | Upgrade Neo4j; ensure GenAI plugin loaded |
 | `Configuration key 'token' missing` | Provider config map incomplete | Check required keys for provider (see table above) |
-| `null` returned from embed | Wrong model name or provider auth failed | Test with `RETURN ai.text.embed('test', 'openai', {token:$k, model:'text-embedding-3-small'})` standalone |
+| `53N37` … `Not authorized to make API request; check your credentials` (or other cause in message) | Bad/missing key, wrong model or provider, unreachable endpoint — these raise, never return `null` | Test with `RETURN ai.text.embed('test', 'openai', {token:$k, model:'text-embedding-3-small'})` standalone |
+| `null` returned from embed | Input text was `null` | Filter `WHERE c.text IS NOT NULL` |
 | `Unsupported provider` | Provider string typo (case-sensitive, lowercase) | Use `'openai'` not `'OpenAI'`; run `CALL ai.text.embed.providers()` |
 | `ai.text.chat` fails on VertexAI | Chat only supported on openai/azure-openai | Switch to openai/azure-openai for chat |
 

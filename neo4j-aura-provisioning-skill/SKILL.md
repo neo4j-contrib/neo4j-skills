@@ -8,7 +8,7 @@ description: Provisions and manages Neo4j Aura instances via CLI (aura-cli v1.7+
   provisioning scripts. Does NOT handle Cypher queries — use neo4j-cypher-skill.
   Does NOT cover Graph Data Science algorithms — use neo4j-gds-skill or neo4j-aura-graph-analytics-skill.
   Does NOT cover neo4j-admin/cypher-shell — use neo4j-cli-tools-skill.
-version: 1.0.5
+version: 1.0.6
 allowed-tools: Bash WebFetch
 ---
 
@@ -33,11 +33,13 @@ allowed-tools: Bash WebFetch
 | Tier | API type code | Memory | GDS | Replicas | Use when |
 |---|---|---|---|---|---|
 | AuraDB Free | `free-db` | 1 GB | ❌ | ❌ | Dev/demo; ≤200k nodes/400k rels |
-| AuraDB Professional | `professional-db` | 2–64 GB | plugin available | ❌ | Production workloads |
-| AuraDB Business Critical | `business-critical` | 4–384 GB | plugin available | ✅ | HA, multi-AZ, SLA |
+| AuraDB Professional | `professional-db` | 1–128 GB | plugin available | ❌ | Production workloads |
+| AuraDB Business Critical | `business-critical` | 2 GB – 512 GB (AWS/Azure), 2 TB (GCP) | plugin available | ✅ | HA, multi-AZ, SLA |
 | AuraDB VDC | `enterprise-db` | custom | ✅ | ✅ | Dedicated infra, compliance |
 | AuraDS Professional | `professional-ds` | 2–64 GB | ✅ built-in | ❌ | Data science / GDS |
 | AuraDS Enterprise | `enterprise-ds` | custom | ✅ | ✅ | Enterprise GDS |
+
+Valid memory sizes per project: `GET /v1/tenants/{tenantId}` (CLI: `aura-cli tenant get <tenant-id>`).
 
 **AuraDB Free limits**: 200k nodes, 400k rels; auto-pauses after 72 h inactivity; deleted if paused >30 days; no resize.
 
@@ -47,10 +49,12 @@ allowed-tools: Bash WebFetch
 
 ### CLI (aura-cli v1.7+)
 
-Install (binary, not pip):
+Install (binary, not pip). Asset names carry version + OS + arch: `aura-cli_<ver>_Darwin_arm64.tar.gz`, `_Darwin_x86_64`, `_Linux_x86_64`, `_Linux_arm64`, `_Windows_x86_64.zip`. Pick from https://github.com/neo4j/aura-cli/releases:
 ```bash
-# macOS
-curl -L https://github.com/neo4j/aura-cli/releases/latest/download/aura-cli-darwin-amd64.tar.gz | tar xz
+# macOS / Linux — resolve latest version, pick OS/arch
+VER=$(curl -s https://api.github.com/repos/neo4j/aura-cli/releases/latest | jq -r '.tag_name' | sed 's/^v//')
+OS=$(uname -s); ARCH=$(uname -m); [ "$ARCH" = "aarch64" ] && ARCH=arm64
+curl -fL "https://github.com/neo4j/aura-cli/releases/download/v${VER}/aura-cli_${VER}_${OS}_${ARCH}.tar.gz" | tar xz
 sudo mv aura-cli /usr/local/bin/
 aura-cli -v          # verify
 ```
@@ -61,7 +65,7 @@ aura-cli credential add \
   --name "my-creds" \
   --client-id "$AURA_CLIENT_ID" \
   --client-secret "$AURA_CLIENT_SECRET"
-aura-cli credential use --name "my-creds"
+aura-cli credential use my-creds      # name is positional
 ```
 
 Verify:
@@ -91,7 +95,7 @@ Use in all subsequent calls: `--header "Authorization: Bearer $TOKEN"`
 
 CLI:
 ```bash
-aura-cli tenants list --output table
+aura-cli tenant list --output table
 # Copy TENANT_ID for create operations
 ```
 
@@ -116,13 +120,18 @@ aura-cli instance create \
   --cloud-provider gcp \
   --region europe-west1 \
   --type professional-db \
+  --memory 4GB \
   --tenant-id "$TENANT_ID" \
   --output json | tee aura-creds.json
 
-# Extract for .env
-INSTANCE_ID=$(jq -r '.id' aura-creds.json)
-PASSWORD=$(jq -r '.password' aura-creds.json)
+# Extract for .env — response is wrapped in "data"
+INSTANCE_ID=$(jq -r '.data.id' aura-creds.json)
+PASSWORD=$(jq -r '.data.password' aura-creds.json)
+[ -z "$INSTANCE_ID" ] || [ "$INSTANCE_ID" = "null" ] || [ -z "$PASSWORD" ] || [ "$PASSWORD" = "null" ] \
+  && echo "STOP: id/password missing — inspect aura-creds.json; do NOT write .env"
 ```
+
+`--memory` required for all types except `free-db` (CLI defaults `version` to `5`).
 
 ### REST API (full create)
 
@@ -148,19 +157,19 @@ Instance create request body fields:
 
 | Field | Required | Values |
 |---|---|---|
-| `name` | ✅ | any string |
+| `name` | ✅ | 1–30 chars, no leading/trailing whitespace |
 | `cloud_provider` | ✅ | `gcp` `aws` `azure` |
 | `region` | ✅ | see region table |
 | `type` | ✅ | see tier table |
 | `tenant_id` | ✅ | from tenant list |
-| `memory` | ✗ | `1GB` `2GB` `4GB` `8GB` … `384GB` |
-| `version` | ✗ | `5` (default) |
+| `memory` | ✅ | e.g. `1GB` `2GB` `4GB` `8GB` …; valid sizes per project from `GET /v1/tenants/{tenantId}` |
+| `version` | ✅ | `5` (provisions latest calendar version) |
 
 ---
 
 ## Step 3 — Poll Until RUNNING (CRITICAL — All Ops Are Async)
 
-ALL lifecycle operations (create, pause, resume, resize) are async. Do NOT attempt connection or next operation until status = `running` (or `paused` for pause op).
+ALL lifecycle operations (create, pause, resume, resize, delete) are async. Do NOT attempt connection or next operation until status = `running` (or `paused` for pause op).
 
 ```bash
 poll_status() {
@@ -168,8 +177,8 @@ poll_status() {
   local ELAPSED=0 STATUS
   echo "Polling for status=$TARGET (max ${MAX_WAIT}s)..."
   while [ $ELAPSED -lt $MAX_WAIT ]; do
-    STATUS=$(aura-cli instance get --instance-id "$INSTANCE_ID" --output json \
-             | jq -r '.status' 2>/dev/null)
+    STATUS=$(aura-cli instance get "$INSTANCE_ID" --output json \
+             | jq -r '.data.status')
     echo "  [${ELAPSED}s] status=$STATUS"
     [ "$STATUS" = "$TARGET" ] && echo "Ready." && return 0
     [ "$STATUS" = "destroying" ] && echo "ERROR: instance is being destroyed" && return 1
@@ -228,21 +237,22 @@ All operations require instance in the correct state. Wrong-state ops return 4xx
 ### Pause
 Required state: `running`
 ```bash
-aura-cli instance pause --instance-id "$INSTANCE_ID"
+aura-cli instance pause "$INSTANCE_ID"
 poll_status "$INSTANCE_ID" "paused" 600
 ```
 
 ### Resume
 Required state: `paused`
 ```bash
-aura-cli instance resume --instance-id "$INSTANCE_ID"
+aura-cli instance resume "$INSTANCE_ID"
 poll_status "$INSTANCE_ID" "running" 900   # resume can take longer
 ```
 
 ### Resize (Professional+ only — NOT Free)
 Required state: `running`; instance remains available during resize.
 ```bash
-# REST only — CLI resize not available in v1.7
+aura-cli instance update "$INSTANCE_ID" --memory "8GB"
+# or REST:
 curl -s -X PATCH "https://api.neo4j.io/v1/instances/$INSTANCE_ID" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
@@ -254,8 +264,8 @@ poll_status "$INSTANCE_ID" "running" 600
 ### Delete
 IRREVERSIBLE. Export snapshots first if data needed.
 ```bash
-aura-cli instance delete --instance-id "$INSTANCE_ID"
-# No poll needed — immediate
+aura-cli instance delete "$INSTANCE_ID"
+# Async — API returns 202; deletion completes in the background
 ```
 
 REST:
@@ -350,12 +360,12 @@ print("Instance ready.")
 |---|---|
 | `europe-west1` | Belgium |
 | `europe-west3` | Frankfurt |
-| `europe-west4` | Netherlands |
+| `europe-west4` | Netherlands (VDC only) |
 | `us-central1` | Iowa |
 | `us-east1` | S. Carolina |
-| `us-east4` | N. Virginia |
+| `us-east4` | N. Virginia (VDC only) |
 | `asia-east1` | Taiwan |
-| `asia-northeast1` | Tokyo |
+| `asia-northeast1` | Tokyo (VDC only) |
 | `asia-southeast1` | Singapore |
 | `australia-southeast1` | Sydney |
 
@@ -363,15 +373,15 @@ print("Instance ready.")
 | Region code | Location |
 |---|---|
 | `eastus` | E. US |
-| `eastus2` | E. US 2 |
+| `eastus2` | E. US 2 (VDC only) |
 | `westeurope` | Netherlands |
-| `northeurope` | Ireland |
+| `northeurope` | Ireland (VDC only) |
 | `uksouth` | London |
-| `southeastasia` | Singapore |
+| `southeastasia` | Singapore (VDC only) |
 | `brazilsouth` | Brazil |
 | `koreacentral` | Korea |
 
-Enterprise tiers (Business Critical, VDC) add 20+ additional regions per provider. Check console for full list.
+Professional and Business Critical share the same region list (12 AWS, 8 Azure, 12 GCP); only VDC and AuraDS Enterprise have the longer lists. "VDC only" rows are not available on Professional/BC. Full per-tier lists: https://neo4j.com/docs/aura/managing-instances/regions/
 Free tier: GCP only; limited subset of regions.
 
 ---
@@ -420,14 +430,13 @@ After `terraform apply`: poll status before marking infra ready — Terraform re
 | Error | Cause | Fix |
 |---|---|---|
 | `403 Forbidden` after working | Token expired (1 h TTL) | Re-run `get_token()` |
-| `409 Conflict` on create | Name already exists in tenant | Change name or delete existing |
-| `422` on pause | Instance not `running` | Check status; wait for ongoing op to finish |
-| `422` on resume | Instance not `paused` | Check status |
-| `422` on resize | Below current usage | Reduce data first; can't shrink below usage |
+| `400` on create | Invalid body (missing required field, bad name/memory/region) | Fix body; required: name, type, tenant_id, cloud_provider, region, memory, version |
+| `405` on create | Instance limit reached | Delete/pause unused instances or raise limit |
+| `409 Conflict` on pause/resume/resize/delete | Another operation in progress on the instance | Poll status; retry when op finishes |
 | Region not found | Tier doesn't support that region | Use `Free` tier on GCP only; Pro/BC on all 3 clouds |
 | Credentials lost after create | Password only returned at create time | Delete + recreate — no reset exists |
 | `429 Too Many Requests` | Rate limit hit (25 req/min Free, 125 req/min Pro+) | Add `time.sleep(2)` between polling calls |
-| `instance list` returns empty | Wrong credential active | `aura-cli credential use --name <name>` |
+| `instance list` returns empty | Wrong credential active | `aura-cli credential use <name>` |
 
 ---
 

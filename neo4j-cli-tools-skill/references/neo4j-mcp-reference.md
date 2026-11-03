@@ -1,54 +1,59 @@
 # neo4j-mcp Reference
 
+Applies to neo4j-mcp **2.0.0+** (2026-10-28). 2.0.0 removed all `NEO4J_*` env vars (e.g. `NEO4J_URI`) and `--neo4j-*` flags: only `NEO4J_MCP_*` env vars and unprefixed flags (`--uri`) work. See [CHANGELOG](https://github.com/neo4j/mcp/blob/main/CHANGELOG.md) and [configuration](https://neo4j.com/docs/mcp/current/configuration/).
+
 ## Installation
 
-Download binary from [github.com/neo4j/mcp](https://github.com/neo4j/mcp):
-
 ```bash
-# macOS/Linux
-curl -L https://github.com/neo4j/mcp/releases/latest/download/neo4j-mcp-<platform> -o neo4j-mcp
+brew install neo4j-mcp            # Homebrew → command: neo4j-mcp
+pip install neo4j-mcp-server      # PyPI → command: neo4j-mcp-server (not neo4j-mcp)
+
+# Release archive from https://github.com/neo4j/mcp/releases
+# Assets: neo4j-mcp_Darwin_arm64.tar.gz, neo4j-mcp_Darwin_x86_64.tar.gz,
+#         neo4j-mcp_Linux_x86_64.tar.gz, neo4j-mcp_Linux_arm64.tar.gz, neo4j-mcp_Windows_x86_64.zip
+curl -fL https://github.com/neo4j/mcp/releases/latest/download/neo4j-mcp_Darwin_arm64.tar.gz | tar xz
 chmod +x neo4j-mcp
 sudo mv neo4j-mcp /usr/local/bin/
 
 # Verify installation
-neo4j-mcp --version
+neo4j-mcp -v
 ```
 
-Requires: APOC plugin, network access to Neo4j.
+Requires: APOC plugin (incl. `meta` component), network access to Neo4j.
 
 ## Configuration Options
 
-### Connection Settings (Required)
+### Connection Settings (STDIO only — required; must NOT be set in HTTP mode)
 
 **Neo4j URI**:
 ```bash
-neo4j-mcp --neo4j-uri bolt://localhost:7687
+neo4j-mcp --uri bolt://localhost:7687
 # or
-export NEO4J_URI=bolt://localhost:7687
+export NEO4J_MCP_URI=bolt://localhost:7687
 neo4j-mcp
 ```
 
 **Username**:
 ```bash
-neo4j-mcp --neo4j-username neo4j
+neo4j-mcp --username neo4j
 # or
-export NEO4J_USERNAME=neo4j
+export NEO4J_MCP_USERNAME=neo4j
 neo4j-mcp
 ```
 
 **Password**:
 ```bash
-neo4j-mcp --neo4j-password password
+neo4j-mcp --password password
 # or
-export NEO4J_PASSWORD=password
+export NEO4J_MCP_PASSWORD=password
 neo4j-mcp
 ```
 
-**Database Name** (optional):
+**Database Name** (required in STDIO; no default since 2.0.0; must NOT be set in HTTP mode):
 ```bash
-neo4j-mcp --neo4j-database mydb
+neo4j-mcp --database mydb
 # or
-export NEO4J_DATABASE=mydb  # default: neo4j
+export NEO4J_MCP_DATABASE=mydb
 neo4j-mcp
 ```
 
@@ -56,9 +61,9 @@ neo4j-mcp
 
 **Read-Only Mode**:
 ```bash
-neo4j-mcp --neo4j-read-only true
+neo4j-mcp --read-only true
 # or
-export NEO4J_READ_ONLY=true
+export NEO4J_MCP_READ_ONLY=true  # default: false
 neo4j-mcp
 ```
 
@@ -66,17 +71,17 @@ Disables write tools when enabled.
 
 **Telemetry**:
 ```bash
-neo4j-mcp --neo4j-telemetry false
+neo4j-mcp --telemetry false
 # or
-export NEO4J_TELEMETRY=false  # default: true
+export NEO4J_MCP_TELEMETRY=false  # default: true
 neo4j-mcp
 ```
 
 **Schema Sample Size**:
 ```bash
-neo4j-mcp --neo4j-schema-sample-size 200
+neo4j-mcp --schema-sample-size 200
 # or
-export NEO4J_SCHEMA_SAMPLE_SIZE=200  # default: 100
+export NEO4J_MCP_SCHEMA_SAMPLE_SIZE=200  # default: 100
 neo4j-mcp
 ```
 
@@ -86,9 +91,9 @@ Number of nodes to sample for schema inference.
 
 **STDIO Mode** (default):
 ```bash
-neo4j-mcp --neo4j-transport-mode stdio
+neo4j-mcp --transport-mode stdio
 # or
-export NEO4J_TRANSPORT_MODE=stdio
+export NEO4J_MCP_TRANSPORT_MODE=stdio
 neo4j-mcp
 ```
 
@@ -96,46 +101,47 @@ Used for direct integration with AI agents.
 
 **HTTP Mode**:
 ```bash
-neo4j-mcp --neo4j-transport-mode http \
-  --neo4j-http-port 8080 \
-  --neo4j-http-host 0.0.0.0
+# No URI/username/password/database: clients send them per request
+neo4j-mcp --transport-mode http \
+  --http-port 8080 \
+  --http-allowed-uris "localhost:7687"
 # or
-export NEO4J_TRANSPORT_MODE=http
+export NEO4J_MCP_TRANSPORT_MODE=http
 export NEO4J_MCP_HTTP_PORT=8080
-export NEO4J_MCP_HTTP_HOST=0.0.0.0
+export NEO4J_MCP_HTTP_ALLOWED_URIS="localhost:7687"
 neo4j-mcp
 ```
 
-Used for remote access via HTTP.
+Used for remote access via HTTP. Endpoint: `POST /db/{databaseName}/mcp`. Each request sends `X-Neo4j-MCP-URI: bolt://...` and `Authorization: Basic <base64 user:pass>` (or `Bearer <token>`). Server refuses to start if `NEO4J_MCP_URI`/`USERNAME`/`PASSWORD`/`DATABASE` are set, or if `NEO4J_MCP_HTTP_ALLOWED_URIS` (comma-separated `host[:port]`, `*.` wildcard) is missing. See [HTTP mode](https://neo4j.com/docs/mcp/current/http-mode/).
 
 ### HTTP-Specific Settings
 
 **Port Configuration**:
 ```bash
-neo4j-mcp --neo4j-http-port 8443
+neo4j-mcp --http-port 8443
 # or
 export NEO4J_MCP_HTTP_PORT=8443  # default: 443 (TLS) or 80 (no TLS)
 ```
 
 **Host Binding**:
 ```bash
-neo4j-mcp --neo4j-http-host 127.0.0.1
+neo4j-mcp --http-host 127.0.0.1
 # or
 export NEO4J_MCP_HTTP_HOST=127.0.0.1  # default: 127.0.0.1
 ```
 
 **CORS Origins**:
 ```bash
-neo4j-mcp --neo4j-http-allowed-origins "https://example.com,https://app.example.com"
+neo4j-mcp --http-allowed-origins "https://example.com,https://app.example.com"
 # or
 export NEO4J_MCP_HTTP_ALLOWED_ORIGINS="https://example.com,https://app.example.com"
 ```
 
 **TLS/HTTPS**:
 ```bash
-neo4j-mcp --neo4j-http-tls-enabled true \
-  --neo4j-http-tls-cert-file /path/to/cert.pem \
-  --neo4j-http-tls-key-file /path/to/key.pem
+neo4j-mcp --http-tls-enabled true \
+  --http-tls-cert-file /path/to/cert.pem \
+  --http-tls-key-file /path/to/key.pem
 # or
 export NEO4J_MCP_HTTP_TLS_ENABLED=true
 export NEO4J_MCP_HTTP_TLS_CERT_FILE=/path/to/cert.pem
@@ -144,36 +150,39 @@ export NEO4J_MCP_HTTP_TLS_KEY_FILE=/path/to/key.pem
 
 **Authentication Header**:
 ```bash
-neo4j-mcp --neo4j-http-auth-header-name X-API-Key
+neo4j-mcp --http-auth-header-name X-API-Key
 # or
-export NEO4J_HTTP_AUTH_HEADER_NAME=X-API-Key  # default: Authorization
+export NEO4J_MCP_HTTP_AUTH_HEADER_NAME=X-API-Key  # default: Authorization
 ```
 
 ## Environment Variables Reference
 
-### Required
-- `NEO4J_URI` - Database connection URI
-- `NEO4J_USERNAME` - Database username
-- `NEO4J_PASSWORD` - Database password
+### Required (STDIO only)
+- `NEO4J_MCP_URI` - Database connection URI
+- `NEO4J_MCP_USERNAME` - Database username
+- `NEO4J_MCP_PASSWORD` - Database password
+- `NEO4J_MCP_DATABASE` - Database name (no default since 2.0.0)
 
 ### Optional
-- `NEO4J_DATABASE` - Database name (default: `neo4j`)
-- `NEO4J_READ_ONLY` - Enable read-only mode (default: `false`)
-- `NEO4J_TELEMETRY` - Enable telemetry (default: `true`)
-- `NEO4J_SCHEMA_SAMPLE_SIZE` - Schema sampling size (default: `100`)
-- `NEO4J_TRANSPORT_MODE` - Transport mode: `stdio` or `http` (default: `stdio`)
+- `NEO4J_MCP_READ_ONLY` - Enable read-only mode (default: `false`)
+- `NEO4J_MCP_TELEMETRY` - Enable telemetry (default: `true`)
+- `NEO4J_MCP_SCHEMA_SAMPLE_SIZE` - Schema sampling size (default: `100`)
+- `NEO4J_MCP_TRANSPORT_MODE` - Transport mode: `stdio` or `http` (default: `stdio`)
+- `NEO4J_MCP_TOOLS` - Comma-separated tools to advertise (default: all four)
+- `NEO4J_MCP_REQUEST_TIMEOUT` - Request timeout (default: `3m`, max `30m`)
 
-### HTTP Transport (when `NEO4J_TRANSPORT_MODE=http`)
+### HTTP Transport (when `NEO4J_MCP_TRANSPORT_MODE=http`)
+- `NEO4J_MCP_HTTP_ALLOWED_URIS` - Required. Hosts clients may target via `X-Neo4j-MCP-URI`
 - `NEO4J_MCP_HTTP_PORT` - HTTP server port (default: `443` with TLS, `80` without)
 - `NEO4J_MCP_HTTP_HOST` - HTTP server host (default: `127.0.0.1`)
 - `NEO4J_MCP_HTTP_ALLOWED_ORIGINS` - CORS origins (comma-separated)
 - `NEO4J_MCP_HTTP_TLS_ENABLED` - Enable TLS (default: `false`)
 - `NEO4J_MCP_HTTP_TLS_CERT_FILE` - TLS certificate file path
 - `NEO4J_MCP_HTTP_TLS_KEY_FILE` - TLS private key file path
-- `NEO4J_HTTP_AUTH_HEADER_NAME` - Auth header name (default: `Authorization`)
+- `NEO4J_MCP_HTTP_AUTH_HEADER_NAME` - Auth header name (default: `Authorization`)
 
-### Deprecated
-- `NEO4J_MCP_TRANSPORT` - Use `NEO4J_TRANSPORT_MODE` instead
+### Removed in 2.0.0
+- All unprefixed `NEO4J_*` names (`NEO4J_URI`, `NEO4J_TRANSPORT_MODE`, ...) and `NEO4J_MCP_TRANSPORT` — use the `NEO4J_MCP_*` names above
 
 ## Common Use Cases
 
@@ -187,10 +196,10 @@ export NEO4J_HTTP_AUTH_HEADER_NAME=X-API-Key  # default: Authorization
     "neo4j": {
       "command": "neo4j-mcp",
       "env": {
-        "NEO4J_URI": "bolt://localhost:7687",
-        "NEO4J_USERNAME": "neo4j",
-        "NEO4J_PASSWORD": "password",
-        "NEO4J_DATABASE": "neo4j"
+        "NEO4J_MCP_URI": "bolt://localhost:7687",
+        "NEO4J_MCP_USERNAME": "neo4j",
+        "NEO4J_MCP_PASSWORD": "password",
+        "NEO4J_MCP_DATABASE": "neo4j"
       }
     }
   }
@@ -200,10 +209,11 @@ export NEO4J_HTTP_AUTH_HEADER_NAME=X-API-Key  # default: Authorization
 ### Read-Only Access
 
 ```bash
-NEO4J_URI=bolt://localhost:7687 \
-NEO4J_USERNAME=neo4j \
-NEO4J_PASSWORD=password \
-NEO4J_READ_ONLY=true \
+NEO4J_MCP_URI=bolt://localhost:7687 \
+NEO4J_MCP_USERNAME=neo4j \
+NEO4J_MCP_PASSWORD=password \
+NEO4J_MCP_DATABASE=neo4j \
+NEO4J_MCP_READ_ONLY=true \
 neo4j-mcp
 ```
 
@@ -212,34 +222,38 @@ neo4j-mcp
 ### Neo4j Aura Integration
 
 ```bash
-NEO4J_URI=neo4j+s://xxxxx.databases.neo4j.io \
-NEO4J_USERNAME=neo4j \
-NEO4J_PASSWORD=your-aura-password \
-NEO4J_DATABASE=neo4j \
+NEO4J_MCP_URI=neo4j+s://xxxxx.databases.neo4j.io \
+NEO4J_MCP_USERNAME=neo4j \
+NEO4J_MCP_PASSWORD=your-aura-password \
+NEO4J_MCP_DATABASE=neo4j \
 neo4j-mcp
 ```
 
 ### HTTP Server Mode
 
 ```bash
-NEO4J_URI=bolt://localhost:7687 \
-NEO4J_USERNAME=neo4j \
-NEO4J_PASSWORD=password \
-NEO4J_TRANSPORT_MODE=http \
+# No credentials on the server: each request carries X-Neo4j-MCP-URI + Authorization
+NEO4J_MCP_TRANSPORT_MODE=http \
+NEO4J_MCP_HTTP_ALLOWED_URIS="localhost:7687" \
 NEO4J_MCP_HTTP_PORT=8080 \
-NEO4J_MCP_HTTP_HOST=0.0.0.0 \
 neo4j-mcp
+
+# Client request
+curl -X POST http://127.0.0.1:8080/db/neo4j/mcp \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json, text/event-stream' \
+  -H 'X-Neo4j-MCP-URI: bolt://localhost:7687' \
+  -H "Authorization: Basic $(echo -n 'neo4j:password' | base64)" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}'
 ```
 
-**Use Case**: Remote access from web applications or multiple clients.
+**Use Case**: Remote access from web applications or multiple clients. Bind `0.0.0.0` (`NEO4J_MCP_HTTP_HOST`) only behind TLS and a firewall.
 
 ### Secure HTTP with TLS
 
 ```bash
-NEO4J_URI=bolt://localhost:7687 \
-NEO4J_USERNAME=neo4j \
-NEO4J_PASSWORD=password \
-NEO4J_TRANSPORT_MODE=http \
+NEO4J_MCP_TRANSPORT_MODE=http \
+NEO4J_MCP_HTTP_ALLOWED_URIS="localhost:7687" \
 NEO4J_MCP_HTTP_PORT=8443 \
 NEO4J_MCP_HTTP_TLS_ENABLED=true \
 NEO4J_MCP_HTTP_TLS_CERT_FILE=/path/to/cert.pem \
@@ -252,10 +266,8 @@ neo4j-mcp
 ```bash
 docker run -d \
   --name neo4j-mcp \
-  -e NEO4J_URI=bolt://neo4j:7687 \
-  -e NEO4J_USERNAME=neo4j \
-  -e NEO4J_PASSWORD=password \
-  -e NEO4J_TRANSPORT_MODE=http \
+  -e NEO4J_MCP_TRANSPORT_MODE=http \
+  -e NEO4J_MCP_HTTP_ALLOWED_URIS="neo4j:7687" \
   -e NEO4J_MCP_HTTP_PORT=8080 \
   -e NEO4J_MCP_HTTP_HOST=0.0.0.0 \
   -p 8080:8080 \
@@ -266,53 +278,45 @@ docker run -d \
 
 ### Tools
 
-AI agents can execute Neo4j operations through tools:
+Four tools only — no MCP resources or prompts are registered:
 
-- **Query Execution**: Run Cypher queries
-- **Schema Inspection**: Get graph schema information
-- **Node Operations**: Create, read, update, delete nodes
-- **Relationship Operations**: Manage relationships
-- **Graph Algorithms**: Execute graph algorithms (via APOC)
+| Tool | Read-only | Purpose |
+|---|---|---|
+| `get-schema` | Yes | Labels, relationship types, property keys |
+| `read-cypher` | Yes | Run read Cypher; rejects writes, schema/admin and PROFILE |
+| `write-cypher` | No | Run write Cypher; hidden when read-only mode is on |
+| `list-gds-procedures` | Yes | List GDS procedures; omitted from `tools/list` when GDS is not installed |
 
-**Example Tool Usage** (conceptual):
-```
-Agent: "Show me the database schema"
-MCP Tool: schema_inspection()
-Result: Returns node labels, relationships, properties
-```
-
-### Resources
-
-Read-only access to database context:
-
-- **Database Schema**: Current graph schema
-- **Statistics**: Node/relationship counts
-- **Constraints**: Defined constraints and indexes
-- **Procedures**: Available APOC procedures
-
-### Prompts
-
-Pre-defined templates for common operations:
-
-- Natural language to Cypher translation
-- Schema exploration queries
-- Common graph patterns
-- Data analysis templates
+Restrict with `NEO4J_MCP_TOOLS` / `--tools 'get-schema,read-cypher'`. See [Tools](https://neo4j.com/docs/mcp/current/tools/).
 
 ## Integration Examples
 
 ### Claude Code Integration
 
-Add to your project's `.claude/mcp_servers.json`:
+Claude Code reads MCP servers from project `.mcp.json` (or `~/.claude.json` via `claude mcp add`) — not `settings.json` or `.claude/mcp_servers.json`. Add with the CLI:
+
+```bash
+claude mcp add --transport stdio neo4j \
+  --env NEO4J_MCP_URI=bolt://localhost:7687 \
+  --env NEO4J_MCP_USERNAME=neo4j \
+  --env NEO4J_MCP_PASSWORD=password \
+  --env NEO4J_MCP_DATABASE=neo4j \
+  -- /usr/local/bin/neo4j-mcp
+```
+
+Or project `.mcp.json` (gitignore it if it holds a password):
 
 ```json
 {
-  "neo4j": {
-    "command": "/usr/local/bin/neo4j-mcp",
-    "env": {
-      "NEO4J_URI": "bolt://localhost:7687",
-      "NEO4J_USERNAME": "neo4j",
-      "NEO4J_PASSWORD": "password"
+  "mcpServers": {
+    "neo4j": {
+      "command": "/usr/local/bin/neo4j-mcp",
+      "env": {
+        "NEO4J_MCP_URI": "bolt://localhost:7687",
+        "NEO4J_MCP_USERNAME": "neo4j",
+        "NEO4J_MCP_PASSWORD": "password",
+        "NEO4J_MCP_DATABASE": "neo4j"
+      }
     }
   }
 }
@@ -326,9 +330,10 @@ import json
 
 def start_neo4j_mcp():
     env = {
-        "NEO4J_URI": "bolt://localhost:7687",
-        "NEO4J_USERNAME": "neo4j",
-        "NEO4J_PASSWORD": "password"
+        "NEO4J_MCP_URI": "bolt://localhost:7687",
+        "NEO4J_MCP_USERNAME": "neo4j",
+        "NEO4J_MCP_PASSWORD": "password",
+        "NEO4J_MCP_DATABASE": "neo4j"
     }
 
     process = subprocess.Popen(
@@ -352,10 +357,11 @@ const { spawn } = require('child_process');
 
 const neo4jMcp = spawn('neo4j-mcp', [], {
   env: {
-    NEO4J_URI: 'bolt://localhost:7687',
-    NEO4J_USERNAME: 'neo4j',
-    NEO4J_PASSWORD: 'password',
-    NEO4J_TRANSPORT_MODE: 'stdio'
+    NEO4J_MCP_URI: 'bolt://localhost:7687',
+    NEO4J_MCP_USERNAME: 'neo4j',
+    NEO4J_MCP_PASSWORD: 'password',
+    NEO4J_MCP_DATABASE: 'neo4j',
+    NEO4J_MCP_TRANSPORT_MODE: 'stdio'
   }
 });
 
@@ -378,9 +384,8 @@ neo4jMcp.stdout.on('data', (data) => {
 ### Performance
 
 1. **Adjust Schema Sample Size**: Balance between accuracy and performance
-2. **Use APOC Procedures**: Leverage APOC for complex operations
-3. **Connection Pooling**: Let the MCP server manage connections
-4. **Monitor Resources**: Track memory and CPU usage
+2. **Connection Pooling**: Let the MCP server manage connections
+3. **Monitor Resources**: Track memory and CPU usage
 
 ### Operational
 
@@ -413,9 +418,7 @@ Error: Unable to connect to Neo4j
 
 ### APOC Not Available
 
-```
-Warning: APOC procedures not found
-```
+Server fails on MCP `initialize` with an error asking to ensure the APOC plugin is installed and includes the `meta` component.
 
 **Solution**:
 Install APOC plugin:
@@ -448,7 +451,7 @@ Error: Address already in use
 **Solution**:
 ```bash
 # Use different port
-neo4j-mcp --neo4j-transport-mode http --neo4j-http-port 8081
+neo4j-mcp --transport-mode http --http-port 8081 --http-allowed-uris "localhost:7687"
 ```
 
 ### TLS Certificate Errors
@@ -482,9 +485,10 @@ After=network.target neo4j.service
 [Service]
 Type=simple
 User=neo4j
-Environment="NEO4J_URI=bolt://localhost:7687"
-Environment="NEO4J_USERNAME=neo4j"
-Environment="NEO4J_PASSWORD=password"
+# HTTP mode: STDIO exits when stdin closes, so a service must run HTTP (no credentials here)
+Environment="NEO4J_MCP_TRANSPORT_MODE=http"
+Environment="NEO4J_MCP_HTTP_PORT=8080"
+Environment="NEO4J_MCP_HTTP_ALLOWED_URIS=localhost:7687"
 ExecStart=/usr/local/bin/neo4j-mcp
 Restart=on-failure
 
@@ -498,7 +502,7 @@ WantedBy=multi-user.target
 #!/bin/bash
 # health-check.sh
 
-if curl -f http://localhost:8080/health > /dev/null 2>&1; then
+if curl -f http://localhost:8080/healthz > /dev/null 2>&1; then
     echo "neo4j-mcp is healthy"
     exit 0
 else
@@ -514,7 +518,7 @@ fi
 **User**: "What's in this database?"
 
 **Agent via MCP**:
-- Calls `schema_inspection` tool
+- Calls `get-schema` tool
 - Returns: Labels, relationships, properties
 - Presents summary to user
 
@@ -524,7 +528,7 @@ fi
 
 **Agent via MCP**:
 - Converts to Cypher: `MATCH (p:Person) WHERE p.age > 30 RETURN p`
-- Executes via `query_execution` tool
+- Executes via `read-cypher` tool
 - Formats results for user
 
 ### Data Analysis
@@ -532,8 +536,7 @@ fi
 **User**: "Find the most connected person"
 
 **Agent via MCP**:
-- Uses graph algorithms
-- Executes: `MATCH (p:Person)-[r]->() RETURN p.name, count(r) ORDER BY count(r) DESC LIMIT 1`
+- Executes via `read-cypher`: `MATCH (p:Person)-[r]->() RETURN p.name, count(r) ORDER BY count(r) DESC LIMIT 1`
 - Provides insights
 
 ## Additional Resources

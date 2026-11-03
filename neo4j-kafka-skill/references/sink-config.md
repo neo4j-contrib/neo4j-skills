@@ -9,15 +9,17 @@ Source: [neo4j.com/docs/kafka/current/](https://neo4j.com/docs/kafka/current/)
 | `connector.class` | STRING | — | `org.neo4j.connectors.kafka.sink.Neo4jConnector` |
 | `topics` | STRING | — | Comma-separated list of Kafka topics to consume |
 | `neo4j.uri` | STRING | — | Connection URI (`neo4j://`, `neo4j+s://`, `bolt://`, `bolt+s://`) |
-| `neo4j.database` | STRING | `neo4j` | Target database name |
+| `neo4j.database` | STRING | — (home database) | Target database name; set explicitly |
 | `neo4j.authentication.type` | STRING | `BASIC` | `BASIC` \| `BEARER` \| `KERBEROS` \| `CUSTOM` \| `NONE` |
 | `neo4j.authentication.basic.username` | STRING | — | Username (BASIC auth) |
 | `neo4j.authentication.basic.password` | PASSWORD | — | Password (BASIC auth) |
 | `neo4j.authentication.bearer.token` | PASSWORD | — | Bearer token |
 | `neo4j.authentication.kerberos.ticket` | PASSWORD | — | Kerberos base64 ticket |
 | `neo4j.connection-timeout` | DURATION | `30s` | Max time to establish connection |
-| `neo4j.max-connection-pool-size` | INT | `100` | Connection pool max size |
-| `neo4j.connection-acquisition-timeout` | DURATION | `60s` | Max wait for pool connection |
+| `neo4j.pool.max-connection-pool-size` | INT | `100` | Connection pool max size |
+| `neo4j.pool.connection-acquisition-timeout` | DURATION | `60s` | Max wait for pool connection |
+| `neo4j.pool.idle-time-before-connection-test` | DURATION | no test | Idle time before liveness test |
+| `neo4j.pool.max-connection-lifetime` | DURATION | `1h` | Max connection lifetime |
 | `neo4j.batch-size` | INT | `1000` | Messages per write batch |
 | `neo4j.batch-timeout` | DURATION | `0s` | Max wait to fill batch (0=no wait) |
 
@@ -59,7 +61,15 @@ Pattern syntax:
 |---|---|---|---|
 | `neo4j.cud.topics` | STRING | — | Topics with CUD-formatted messages |
 
-CUD message format: `{"op": "create"/"update"/"delete", "labels": [...], "properties": {...}, "ids": {...}}`
+CUD messages: `type` (`node` | `relationship`) and `op` (`create` | `update` | `merge` | `delete`) mandatory. `ids` optional for `create`; `properties` optional for `delete`; `detach` (node `delete`, default `false`). Relationships also need `rel_type`, `from`, `to` (each with `labels`/`ids`, optional `op`: `match` default or `merge`). Field table: [CUD docs](https://neo4j.com/docs/kafka/current/sink/cud/).
+
+```json
+{"type": "node", "op": "merge", "labels": ["Person"], "ids": {"id": 1}, "properties": {"name": "Alice"}}
+{"type": "relationship", "op": "create", "rel_type": "KNOWS",
+ "from": {"labels": ["Person"], "ids": {"id": 1}},
+ "to": {"labels": ["Person"], "ids": {"id": 2}},
+ "properties": {"since": 2020}}
+```
 
 ## Exactly-Once Semantics
 
@@ -72,6 +82,11 @@ Required constraint before enabling:
 CREATE CONSTRAINT kafka_offset_key IF NOT EXISTS
 FOR (n:__KafkaOffset)
 REQUIRE (n.strategy, n.topic, n.partition) IS NODE KEY;
+
+// Community Edition: NODE KEY unsupported — use composite uniqueness
+CREATE CONSTRAINT kafka_offset_key IF NOT EXISTS
+FOR (n:__KafkaOffset)
+REQUIRE (n.strategy, n.topic, n.partition) IS UNIQUE;
 ```
 
 Default (no EOS): at-least-once — ensure Cypher is idempotent.
@@ -85,7 +100,7 @@ Default (no EOS): at-least-once — ensure Cypher is idempotent.
 | `errors.log.include.messages` | BOOLEAN | `false` | Include topic/partition/offset in logs |
 | `errors.deadletterqueue.topic.name` | STRING | `""` | DLQ topic (empty = no DLQ) |
 | `errors.deadletterqueue.context.headers.enable` | BOOLEAN | `false` | Add `__connect.errors.*` headers to DLQ |
-| `errors.deadletterqueue.topic.replication.factor` | INT | `3` | DLQ topic replication (use `1` for single-node) |
+| `errors.deadletterqueue.topic.replication.factor` | INT | `3` | DLQ topic replication; `3` needs 3+ brokers — set `1` on single-broker clusters |
 
 ## Schema / Converter Properties
 
@@ -137,3 +152,5 @@ For Avro with schema registry:
   "value.converter.schemas.enable": "false"
 }
 ```
+
+DLQ replication factor `3` assumes 3+ brokers; on a single-broker dev cluster set it to `"1"`.

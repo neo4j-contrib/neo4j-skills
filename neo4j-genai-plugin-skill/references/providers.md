@@ -59,11 +59,11 @@ RETURN ai.text.embed('Hello', 'azure-openai', {
 
 ### Override Azure base URL [2026.04]
 
-Self-managed only — set `genai.azure.openai.baseurl` in `<NEO4J_HOME>/conf/genai.conf` (create file manually; not auto-created). Default: `https://%s.openai.azure.com/openai/v1` where `%s` is replaced by `resource`. Use for private endpoints, custom hostnames, or proxy gateways.
+Self-managed only — set `genai.azureopenai.baseurl` in `<NEO4J_HOME>/conf/genai.conf` (create file manually; not auto-created). Default: `https://%s.openai.azure.com/openai/v1` where `%s` is replaced by `resource`. Use for private endpoints, custom hostnames, or proxy gateways. The docs page spells it `genai.azure.openai.baseurl`, but the server (GenAI plugin 2026.09) reads `genai.azureopenai.baseurl`.
 
 ```ini
 # genai.conf — single %s placeholder substituted with provider `resource`
-genai.azure.openai.baseurl=https://my-azure-openai-proxy.example.com
+genai.azureopenai.baseurl=https://my-azure-openai-proxy.example.com
 genai.openai.baseurl=https://my-openai-proxy.example.com
 ```
 
@@ -135,6 +135,26 @@ RETURN ai.text.embed('Hello', 'bedrock-titan', {
 | `chatHistory` | LIST<ANY> | No | — | Conversation history |
 
 **Note**: `ai.text.chat()` NOT supported on Bedrock — use openai/azure-openai for chat.
+
+---
+
+## Amazon Bedrock — Generic Converse (`'bedrock'`)
+
+Most Bedrock models via the Converse API. Same keys as `'bedrock-nova'` (`model`, `region`, `accessKeyId`, `secretAccessKey`; optional `vendorOptions`, `chatHistory`). Use for completion, structuredCompletion and tokenCount. Not accepted by `ai.text.embed` — use `'bedrock-titan'`.
+
+---
+
+## Providers per function
+
+| Function | Providers |
+|---|---|
+| `ai.text.embed`, `ai.text.embedBatch` | `openai`, `azure-openai`, `vertexai`, `bedrock-titan` |
+| `ai.text.completion`, `aggregateCompletion`, `aggregateStructuredCompletion` | `openai`, `azure-openai`, `vertexai`, `bedrock`, `bedrock-nova`, `bedrock-titan` |
+| `ai.text.structuredCompletion` | `openai`, `azure-openai`, `vertexai`, `bedrock` |
+| `ai.text.chat` | `openai`, `azure-openai` |
+| `ai.text.tokenCount` | `openai` (default), `vertexai`, `bedrock` |
+
+Confirm at runtime with each function's `.providers()` procedure (below; also `ai.text.structuredCompletion.providers()`).
 
 ---
 

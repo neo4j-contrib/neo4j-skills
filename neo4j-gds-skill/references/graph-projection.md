@@ -16,8 +16,8 @@ Prefer native projection. Use Cypher projection for filtering, transformations, 
 ```cypher
 CALL gds.graph.project(
   'graphName',
-  nodeProjection,      -- '*', label string, list of labels, or map with properties
-  relationshipProjection  -- '*', type string, list of types, or map with orientation/properties
+  nodeProjection,      // '*', label string, list of labels, or map with properties
+  relationshipProjection  // '*', type string, list of types, or map with orientation/properties
 )
 YIELD graphName, nodeCount, relationshipCount, projectMillis
 ```
@@ -58,7 +58,7 @@ YIELD graphName, nodeCount, relationshipCount, projectMillis
 // With orientation and properties
 {
   KNOWS: {
-    orientation: 'UNDIRECTED',    -- NATURAL (default), UNDIRECTED, REVERSE
+    orientation: 'UNDIRECTED',    // NATURAL (default), UNDIRECTED, REVERSE
     properties: ['weight']
   },
   LIVES_IN: {
@@ -77,7 +77,8 @@ YIELD graphName, nodeCount, relationshipCount, projectMillis
 | `UNDIRECTED` | Adds reverse direction — doubles relationship count |
 | `REVERSE` | Flips direction |
 
-Use `UNDIRECTED` for undirected algorithms: community detection, most similarity/embedding algorithms. Use `NATURAL` for directed algorithms: PageRank, Betweenness.
+`UNDIRECTED` required: Leiden, Triangle Count, Local Clustering Coefficient, K-Core (fail on NATURAL). Directed required: HITS. `UNDIRECTED` fine: Louvain, WCC, FastRP. `NATURAL` for directed algorithms: PageRank, Betweenness.
+Bipartite Node Similarity (e.g. user→item): NATURAL gives user-user pairs, REVERSE gives item-item pairs; UNDIRECTED silently mixes both. KNN uses node properties, not topology.
 
 ### Default values
 
@@ -92,7 +93,7 @@ Use `UNDIRECTED` for undirected algorithms: community detection, most similarity
 }
 ```
 
-Null node properties in projection → algorithm errors. Set `defaultValue` for optional properties.
+Missing node property → projected as NaN; projection does not fail. Algorithms that read the property as a feature (e.g. `fastRP` `featureProperties`) fail: `invalid feature property value NaN`. Set `defaultValue` for optional feature properties.
 
 ---
 
@@ -145,7 +146,7 @@ G, result = gds.graph.project.cypher(
 ```
 
 No `database=` parameter — set `GraphDataScience(..., database=...)` at construction or call `gds.set_database(...)` before projecting.
-Use `gds.graph.project($graph_name, source, target, {...})` in `RETURN`; `$graph_name` parameter injected automatically.
+Use `gds.graph.project($graph_name, source, target, {...})` in `RETURN`; pass graph name as keyword (`graph_name="x"`) — it binds to `$graph_name`. Not injected: omitting it → `ParameterMissing: Expected parameter(s): graph_name`.
 Query must end with exactly one `RETURN gds.graph.project(...)`. Else use `gds.run_cypher(...)`, then `gds.graph.get("filteredGraph")`.
 1.x fallback: `gds.graph.cypher.project(query, database=...)`.
 AGA Sessions → `neo4j-aura-graph-analytics-skill`.

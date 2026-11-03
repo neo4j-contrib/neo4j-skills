@@ -5,8 +5,11 @@ validate_queries.py — batch-validate queries/queries.cypher against the live D
 Run from the project work directory (where .env lives):
     python3 "${CLAUDE_SKILL_DIR}/scripts/validate_queries.py"
 
-Substitutes $param placeholders with safe test defaults, runs all queries in
-one driver session, and prints a pass/fail table. Exits 0 if ≥60% pass.
+Substitutes $param placeholders (comment defaults like `// $minAge = 30` first,
+then built-in defaults), runs all queries, and prints a pass/fail table.
+Exit 0 only when the stage-6 gate holds: ≥5 queries, ≥2 traversal queries
+(`->` or `<-` anywhere in the query), ≥3 queries returning ≥1 row.
+Exit 1 if the gate fails; exit 2 on setup errors (no file, no connection).
 """
 import os
 import re
@@ -101,16 +104,40 @@ PARAM_DEFAULTS = {
     r"\$\w+":           "'test'",   # fallback for any remaining $param
 }
 
-def substitute_params(q: str) -> str:
+COMMENT_DEFAULT = re.compile(r"^\s*//\s*\$(\w+)\s*=\s*(.+?)\s*(?:←.*)?$", re.MULTILINE)
+
+def _cypher_literal(value: str) -> str:
+    value = value.strip()
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
+        inner = value[1:-1].replace("\\", "\\\\").replace("'", "\\'")
+        return f"'{inner}'"
+    return value  # numbers, booleans, lists — used as written
+
+def substitute_params(q: str) -> tuple[str, list[str]]:
+    # 1) comment defaults declared in the query: // $name = value
+    for name, value in COMMENT_DEFAULT.findall(q):
+        q = re.sub(rf"\${name}\b", lambda _m, v=_cypher_literal(value): v, q)
+    # 2) built-in defaults; track params that fall through to 'test'
+    guessed = []
     for pattern, default in PARAM_DEFAULTS.items():
-        q = re.sub(pattern, default, q)
-    return q
+        if pattern == r"\$\w+":
+            guessed = re.findall(r"\$(\w+)", "\n".join(
+                ln for ln in q.splitlines() if not ln.strip().startswith("//")))
+        q = re.sub(pattern, lambda _m, d=default: d, q)
+    return q, guessed
 
 passed = 0
 results = []
 
+def _is_traversal(q: str) -> bool:
+    body = "\n".join(ln for ln in q.splitlines() if not ln.strip().startswith("//"))
+    return "->" in body or "<-" in body
+
 for i, raw_query in enumerate(queries, 1):
-    test_query = substitute_params(raw_query)
+    test_query, guessed = substitute_params(raw_query)
+    if guessed:
+        print(f"WARN Q{i}: no default for ${', $'.join(guessed)} — guessed 'test'; "
+              f"add a `// $name = value` comment", file=sys.stderr)
     # extract first non-comment line for display
     label = next(
         (ln.strip() for ln in raw_query.splitlines()
@@ -120,10 +147,10 @@ for i, raw_query in enumerate(queries, 1):
     try:
         records, _, _ = driver.execute_query(test_query, database_=database)
         row_count = len(records)
-        results.append((i, True,  row_count, label))
+        results.append((i, True,  row_count, label, _is_traversal(raw_query)))
         passed += 1
     except Exception as e:
-        results.append((i, False, str(e)[:80], label))
+        results.append((i, False, str(e)[:80], label, _is_traversal(raw_query)))
 
 driver.close()
 
@@ -131,18 +158,25 @@ driver.close()
 print(f"\nQuery validation — {queries_file}")
 print(f"{'Q':<4} {'Status':<8} {'Rows/Error':<12}  Query")
 print("-" * 80)
-for qnum, ok, detail, label in results:
+for qnum, ok, detail, label, _ in results:
     icon   = "✓" if ok else "✗"
     detail_str = str(detail)
     print(f"Q{qnum:<3} {icon:<8} {detail_str:<12}  {label}")
 
-traversals = sum(1 for _, _, _, lbl in results if "->" in lbl or "<-" in lbl)
-print(f"\n{passed}/{len(queries)} passed  |  {traversals} traversal queries detected")
+traversals = sum(1 for r in results if r[4])
+with_rows  = sum(1 for r in results if r[1] and r[2] > 0)
+print(f"\n{passed}/{len(queries)} executed  |  {with_rows} returned rows  |  "
+      f"{traversals} traversal queries detected")
 
-min_pass = max(3, int(len(queries) * 0.6))
-if passed < min_pass:
-    print(f"FAIL: need ≥{min_pass} passing (60%). Fix failing queries before proceeding.")
+problems = []
+if len(queries) < 5:
+    problems.append(f"need ≥5 queries (have {len(queries)})")
+if traversals < 2:
+    problems.append(f"need ≥2 traversal queries (have {traversals})")
+if with_rows < 3:
+    problems.append(f"need ≥3 queries returning ≥1 row (have {with_rows})")
+if problems:
+    print("FAIL: " + "; ".join(problems) + ". Fix queries before proceeding.")
     sys.exit(1)
-else:
-    print("PASS")
-    sys.exit(0)
+print("PASS" + (f" ({len(queries) - passed} query error(s) — fix them)" if passed < len(queries) else ""))
+sys.exit(0)

@@ -10,7 +10,7 @@ description: Neo4j Graph Data Science (GDS) embedded plugin via Python client or
   Cypher API projection/session management — use neo4j-aura-graph-analytics-skill.
   Does NOT handle Cypher authoring — use neo4j-cypher-skill.
   Does NOT cover driver setup — use neo4j-driver-python-skill or other driver skill.
-version: 1.0.22
+version: 1.0.23
 allowed-tools: Bash WebFetch
 ---
 
@@ -98,7 +98,7 @@ GDS plugin `2026.07.0` removed `CALL gds.userLog()` — read hints and warnings 
 - Typed result attributes: `result.write_millis`, not `result["writeMillis"]` (`stream` still returns DataFrame)
 - Server version via `gds.server_version()` — no `gds.version()` client method (Cypher `RETURN gds.version()` still valid)
 - Procedure aliases: `gds.betweenness` ≡ `gds.betweenness_centrality`; also `gds.closeness`, `gds.degree`, `gds.eigenvector`, `gds.harmonic`, `gds.kcore`
-- Pipelines: `gds.pipeline.node_classification` / `link_prediction` / `node_regression` — the only API in 2.0
+- Pipelines: `gds.pipeline.node_classification` / `link_prediction` / `node_regression` — the only API in 2.0; `train(G, model_name=..., ...)` — `model_name` required
 - `gds.run_cypher(query, auto_commit=True)` [2.1] for `CALL { … } IN TRANSACTIONS` — 2.0 default retryable transaction rejects it; on 2.0 use the Neo4j driver directly
 - `gds.db_driver()` [2.1] → underlying `neo4j.Driver` for custom sessions/transactions; closed by `gds.close()` only if client created it
 - `mode="READ"` / `"WRITE"` strings accepted wherever `QueryMode` is [2.1]
@@ -142,13 +142,16 @@ G, result = gds.graph.project.cypher(
     MATCH (source:Person)-[r:KNOWS]->(target:Person)
     WHERE source.active = true
     RETURN gds.graph.project($graph_name, source, target,
-        { sourceNodeProperties: source { .score }, relationshipType: 'KNOWS' })
+        { sourceNodeProperties: source { .score }, targetNodeProperties: target { .score },
+          relationshipType: 'KNOWS' })
     """,
     graph_name="activeGraph",
 )
 ```
 
 `gds.graph.project.cypher(query)` takes no `database=` — set `GraphDataScience(..., database=...)` at construction or call `gds.set_database(...)` before projecting.
+`sourceNodeProperties` without `targetNodeProperties` fails (`configuration key 'targetNodeProperties' is missing`) — set both, or `targetNodeProperties: NULL`.
+Pass the graph name as keyword `graph_name="..."` — binds to `$graph_name`; not injected automatically.
 Query must end with exactly one `RETURN gds.graph.project(...)`. If validation fails: use `gds.run_cypher(...)`, then `gds.graph.get("graphName")`.
 1.x fallback: `gds.graph.cypher.project(query, database=...)`.
 
@@ -159,7 +162,7 @@ AGA Sessions → `neo4j-aura-graph-analytics-skill`; never use plugin Cypher pro
 Native projection: set `orientation: 'UNDIRECTED'` per relationship type.
 Plugin Cypher projection: set `undirectedRelationshipTypes: ['*']` in fifth `gds.graph.project(...)` config argument.
 
-Leiden is defined for directed and undirected graphs. Project undirected relationships when community structure is naturally symmetric.
+Leiden, Triangle Count, Local Clustering Coefficient and K-Core require `UNDIRECTED` — on NATURAL they fail: `... requires relationship projections to be UNDIRECTED`. HITS requires directed (NATURAL/REVERSE).
 
 ### Inspect and Drop
 
@@ -276,7 +279,7 @@ print(write_result.community_count)
 
 Leiden is a refinement of Louvain avoiding poorly connected communities — use when community quality > raw speed.
 `modularity` in stats result: range -0.5 to 1.0. [field] Values > 0.3 often indicate meaningful community structure; > 0.7 is strong.
-Leiden is defined for directed and undirected graphs. Project undirected relationships when community structure is naturally symmetric.
+Leiden requires `orientation: 'UNDIRECTED'`; fails on NATURAL. Louvain runs on either.
 
 ### WCC — Weakly Connected Components
 
@@ -397,7 +400,7 @@ gds.graph.drop(G)
 | Bottleneck / bridge nodes | Betweenness Centrality |
 | Direct connections | Degree Centrality |
 | Community (general, fast) | Louvain |
-| Community (higher quality) | Leiden |
+| Community (higher quality) | Leiden (UNDIRECTED projection required) |
 | Is graph connected? | WCC (run first) |
 | Similarity from embeddings | KNN |
 | Similarity from neighbors | Node Similarity |
@@ -419,6 +422,7 @@ Full algorithm catalog → [references/algorithms.md](references/algorithms.md)
 | `AttributeError: ... no attribute 'version'` | `gds.version()` does not exist in client 2.0 | Use `gds.server_version()` |
 | `DeprecationWarning` at client construction | GDS server < 2.13 | Upgrade GDS server, or pin `graphdatascience<2` and use the 1.x mapping table |
 | `Insufficient heap memory` / OOM | Graph too large for available JVM heap | Run `gds.graph.project.estimate`; increase `server.memory.heap.max_size` |
+| `... requires relationship projections to be UNDIRECTED` | Leiden, Triangle Count, LCC or K-Core on NATURAL projection | Re-project with `orientation: 'UNDIRECTED'` |
 | `Procedure not found: gds.leiden` | Older or incompatible GDS | Check `CALL gds.list()` for available procedures; upgrade GDS or use Louvain |
 | `Node property 'X' not found` after mutate | Property not projected or wrong graph name | Verify `G.node_properties()` includes the property; check `mutate_property` spelling |
 | `Graph 'myGraph' already exists` | Leftover projection from failed run | `overwrite=True`, `CALL gds.graph.drop('myGraph')`, or `gds.graph.drop(G)` |

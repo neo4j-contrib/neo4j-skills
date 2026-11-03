@@ -1,6 +1,6 @@
 Language: Javascript/Node.JS
 Upgrade versions: >= 1.0
-Package: https://www.npmjs.com/package/neo4j
+Package: https://www.npmjs.com/package/neo4j-driver (npm `neo4j` is an unrelated REST client)
 
 # Upgrade paths
 

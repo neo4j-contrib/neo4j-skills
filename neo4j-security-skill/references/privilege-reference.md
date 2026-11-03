@@ -18,7 +18,7 @@ REVOKE [IMMUTABLE] [GRANT | DENY] <privilege>
   FROM <role>[,...]
 ```
 
-`IMMUTABLE` — privilege cannot be revoked by non-admin users; only `admin` can remove.
+`IMMUTABLE` — privilege cannot be granted, denied or revoked while auth is enabled, even by `admin`. Change only with auth disabled.
 
 ---
 
@@ -50,7 +50,7 @@ GRANT MATCH {*} ON GRAPH mydb ELEMENTS * TO role;            // all nodes + rels
 GRANT WRITE     ON GRAPH mydb TO role;              // all writes (shorthand)
 GRANT CREATE    ON GRAPH mydb NODES Person TO role; // create Person nodes
 GRANT SET PROPERTY {name} ON GRAPH mydb NODES Person TO role;
-GRANT MERGE     ON GRAPH mydb NODES Person TO role; // MERGE statement
+GRANT MERGE {*} ON GRAPH mydb NODES Person TO role; // MERGE statement; property list required
 GRANT DELETE    ON GRAPH mydb NODES Person TO role;
 GRANT SET LABEL Person ON GRAPH mydb TO role;
 GRANT REMOVE LABEL Person ON GRAPH mydb TO role;
@@ -129,8 +129,10 @@ GRANT CREATE CONSTRAINT ON DATABASE mydb TO role;
 GRANT DROP CONSTRAINT   ON DATABASE mydb TO role;
 GRANT SHOW CONSTRAINT   ON DATABASE mydb TO role;
 GRANT CONSTRAINT        ON DATABASE mydb TO role; // CREATE + DROP + SHOW CONSTRAINT
-GRANT CREATE NEW ELEMENT TYPES ON DATABASE mydb TO role;  // new labels/types/props
-GRANT NAME MANAGEMENT   ON DATABASE mydb TO role; // all element type management
+GRANT CREATE NEW NODE LABEL ON DATABASE mydb TO role;
+GRANT CREATE NEW RELATIONSHIP TYPE ON DATABASE mydb TO role;
+GRANT CREATE NEW PROPERTY NAME ON DATABASE mydb TO role;
+GRANT NAME MANAGEMENT   ON DATABASE mydb TO role; // all three above
 GRANT ALL ON DATABASE mydb TO role;               // all database privileges
 GRANT ALL ON DATABASE * TO role;                  // all databases
 ```
@@ -173,10 +175,10 @@ GRANT SET DATABASE ACCESS ON DBMS TO role;
 GRANT DATABASE MANAGEMENT ON DBMS TO role; // all database management
 
 // Procedure / function execution
-GRANT EXECUTE PROCEDURE apoc.* TO role;
-GRANT EXECUTE BOOSTED PROCEDURE apoc.* TO role;  // elevated mode
-GRANT EXECUTE USER DEFINED FUNCTION apoc.* TO role;
-GRANT EXECUTE BOOSTED USER DEFINED FUNCTION apoc.* TO role;
+GRANT EXECUTE PROCEDURE apoc.* ON DBMS TO role;
+GRANT EXECUTE BOOSTED PROCEDURE apoc.* ON DBMS TO role;  // elevated mode
+GRANT EXECUTE USER DEFINED FUNCTION apoc.* ON DBMS TO role;
+GRANT EXECUTE BOOSTED USER DEFINED FUNCTION apoc.* ON DBMS TO role;
 
 // Full DBMS admin
 GRANT ALL ON DBMS TO role;
@@ -214,7 +216,7 @@ SHOW USER alice PRIVILEGES AS COMMANDS;       // returns runnable GRANT statemen
 SHOW ROLE analyst PRIVILEGES;
 SHOW ROLE analyst PRIVILEGES AS COMMANDS;
 
-SHOW ROLE analyst PRIVILEGES YIELD privilege, action, resource, graph, segment
+SHOW ROLE analyst PRIVILEGES YIELD access, action, resource, graph, segment, role
 WHERE action = 'read';
 
 // AUTH RULES filter — privileges of roles granted to the named auth rules [2026.09]
@@ -227,13 +229,13 @@ Recreate users and roles from a running DBMS [2026.09]:
 
 ```cypher
 SHOW USERS AS COMMANDS;                    // CREATE USER statements
-SHOW USERS WITH AUTH AS COMMANDS;          // + auth provider config and credentials
+SHOW USERS WITH AUTH AS COMMANDS;          // + provider and auth columns
 SHOW ROLES AS COMMANDS;                    // CREATE ROLE statements
 SHOW ROLES WITH USERS AS COMMANDS;         // + GRANT ROLE ... TO user
 SHOW ROLES WITH AUTH RULES AS COMMANDS;    // + GRANT ROLE ... TO AUTH RULE
 ```
 
-`SHOW USERS WITH AUTH AS COMMANDS` exposes credentials. Use only for secured backup/restore handling. Prefer `SHOW USERS AS COMMANDS` when auth material is not required. Never paste auth-export output into shell history, docs, tickets, or source control.
+Both `SHOW USERS AS COMMANDS` and `SHOW USERS WITH AUTH AS COMMANDS` expose password hashes (`SET ENCRYPTED PASSWORD ...` in each command); `WITH AUTH` adds `provider`/`auth` columns and one row per auth provider. Use only for secured backup/restore handling. Never paste auth-export output into shell history, docs, tickets, or source control.
 
 ---
 
@@ -251,7 +253,9 @@ SHOW ROLES WITH AUTH RULES AS COMMANDS;    // + GRANT ROLE ... TO AUTH RULE
 
 | Feature | Community | Enterprise |
 |---|---|---|
-| RBAC (users/roles/privileges) | Basic | Full |
+| Users: `CREATE USER ... SET PASSWORD`, `ALTER USER ... SET PASSWORD`, `DROP USER`, `SHOW USERS` | Yes | Yes |
+| User status, home database, tags, `ALTER USERS` | No | Yes |
+| Roles, `GRANT/DENY/REVOKE`, `SHOW ROLES`, `SHOW PRIVILEGES` | No | Yes |
 | Sub-graph / label-based access | No | Yes |
 | Property-level READ/DENY | No | Yes |
 | Property-based pattern (`FOR`) | No | Yes |

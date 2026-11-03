@@ -8,7 +8,7 @@ description: Programmatic security management in Neo4j — RBAC/ABAC, user lifec
   — use neo4j-cypher-skill. Does NOT handle cluster ops or backups — use neo4j-cli-tools-skill.
   Property-level security and ABAC require Enterprise Edition.
 allowed-tools: Bash WebFetch
-version: 1.0.13
+version: 1.0.14
 ---
 
 ## When to Use
@@ -54,11 +54,14 @@ All security Cypher runs against the **system** database:
 
 ### Create user
 ```cypher
-CREATE USER alice SET PASSWORD 'secret' CHANGE NOT REQUIRED;
+CREATE USER alice SET PASSWORD 'change-me-2026' CHANGE NOT REQUIRED;
+// min length 8 by default (dbms.security.auth_minimum_password_length); shorter → error 22N85
 // CHANGE REQUIRED (default): forces password change on first login
 // CHANGE NOT REQUIRED: password valid immediately
-// SET STATUS ACTIVE (default) | SUSPENDED
+// SET STATUS ACTIVE (default) | SUSPENDED  [Enterprise]
 ```
+
+Community: users only — `CREATE USER ... SET PASSWORD`, `ALTER USER ... SET PASSWORD`, `DROP USER`, `SHOW USERS` work. `SET STATUS`, `SET HOME DATABASE`, tags, `ALTER USERS`, and all role/privilege commands fail with "not supported in community edition".
 
 ### Parameterised password (preferred in scripts)
 ```cypher
@@ -70,18 +73,18 @@ Password minimum rises 8 → 16 chars — Aura with 2027.01 upgrade (Jan 2027); 
 ### Alter user
 ```cypher
 ALTER USER alice SET PASSWORD $newPw CHANGE NOT REQUIRED;
-ALTER USER alice SET STATUS SUSPENDED;          // lock account
-ALTER USER alice SET STATUS ACTIVE;             // unlock
-ALTER USER alice SET HOME DATABASE mydb;        // default db on connect
+ALTER USER alice SET STATUS SUSPENDED;          // lock account [Enterprise]
+ALTER USER alice SET STATUS ACTIVE;             // unlock [Enterprise]
+ALTER USER alice SET HOME DATABASE mydb;        // default db on connect [Enterprise]
 ALTER USER alice IF EXISTS SET PASSWORD $pw;    // safe if missing
 ```
 
 ### User tags [2026.06+, Enterprise]
 Tags are arbitrary strings on the native user object, readable in ABAC rules via `abac.native.user_tags()`.
 ```cypher
-CREATE USER jake SET PASSWORD $pw SET TAGS 'finance', 'auditor';
+CREATE USER jake SET PASSWORD $pw SET TAGS ['finance', 'auditor'];   // single STRING, LIST<STRING> or parameter — never comma-separated strings
 ALTER USER jake REMOVE TAG 'auditor' ADD TAG 'on-call';   // REMOVE before ADD before SET
-ALTER USER jake SET TAGS 'finance', 'auditor';            // replaces all existing tags
+ALTER USER jake SET TAGS ['finance', 'auditor'];          // replaces all existing tags
 ALTER USER jake REMOVE ALL TAGS;
 ALTER USERS jake, alice ADD TAGS 'pii-access';            // bulk tag edit
 ```
@@ -97,6 +100,7 @@ GRANT USER METADATA MANAGEMENT ON DBMS TO userManager;   // both of the above
 SHOW USERS YIELD user, roles, passwordChangeRequired, suspended, home
 WHERE suspended = false
 RETURN user, roles ORDER BY user;
+// Community: suspended and roles are null → this WHERE returns no rows
 
 // tags column returns null without SHOW USER METADATA [2026.06+]
 SHOW USERS YIELD user, roles, tags;
@@ -104,7 +108,7 @@ SHOW USERS YIELD user, roles, tags;
 // runnable CREATE USER commands for the whole DBMS [2026.09]
 // requires SHOW USER + SHOW USER CREDENTIALS; tags omitted without SHOW USER METADATA
 SHOW USERS AS COMMANDS;
-SHOW USERS WITH AUTH AS COMMANDS;   // includes auth provider config + credentials
+SHOW USERS WITH AUTH AS COMMANDS;   // adds provider + auth columns
 
 // caller identity combined with other system-db SHOW commands [2026.10, Cypher 25]
 USE system
@@ -116,7 +120,7 @@ RETURN user, name AS database, aliases;
 
 Combined `SHOW CURRENT USER` query: every clause must be allowed on `system` (no `MATCH`, `SHOW INDEXES`) — run graph reads as separate query.
 
-`SHOW USERS WITH AUTH AS COMMANDS` exposes credentials. Use only for secured backup/restore handling. Prefer `SHOW USERS AS COMMANDS` when auth material is not required. Never paste auth-export output into plaintext docs, logs, tickets, or source control.
+Both `SHOW USERS AS COMMANDS` and `SHOW USERS WITH AUTH AS COMMANDS` expose password hashes (`SET ENCRYPTED PASSWORD '1,<hash>,<salt>'` in every command); `WITH AUTH` adds `provider`/`auth` columns and one row per auth provider. Use either only for secured backup/restore handling. Never paste auth-export output into plaintext docs, logs, tickets, or source control.
 
 ### Drop user
 ```cypher
@@ -143,7 +147,7 @@ REVOKE ROLE analyst FROM alice;
 
 ### Inspect roles
 ```cypher
-SHOW ROLES YIELD role, member ORDER BY role;
+SHOW ROLES WITH USERS YIELD role, member ORDER BY role;   // member exists only WITH USERS
 SHOW ROLE analyst PRIVILEGES AS COMMANDS;   // returns runnable GRANT commands
 SHOW POPULATED ROLES YIELD role;            // only roles with members
 
@@ -168,14 +172,14 @@ SHOW ROLES WITH AUTH RULES AS COMMANDS;     // adds GRANT ROLE ... TO AUTH RULE
 | Write (create/set) | `GRANT WRITE ON GRAPH mydb TO writer` |
 | Create nodes only | `GRANT CREATE ON GRAPH mydb NODES Person TO writer` |
 | Delete nodes only | `GRANT DELETE ON GRAPH mydb NODES Person TO writer` |
-| Execute procedure | `GRANT EXECUTE PROCEDURE apoc.* TO analyst` |
-| Execute function | `GRANT EXECUTE USER DEFINED FUNCTION apoc.* TO analyst` |
+| Execute procedure | `GRANT EXECUTE PROCEDURE apoc.* ON DBMS TO analyst` |
+| Execute function | `GRANT EXECUTE USER DEFINED FUNCTION apoc.* ON DBMS TO analyst` |
 | All on one db | `GRANT ALL ON DATABASE mydb TO dba` |
 | Full DBMS admin | `GRANT ALL ON DBMS TO dba` |
 | Manage users | `GRANT USER MANAGEMENT ON DBMS TO secadmin` |
 | Manage user tags [2026.06] | `GRANT USER METADATA MANAGEMENT ON DBMS TO secadmin` |
 | Manage roles | `GRANT ROLE MANAGEMENT ON DBMS TO secadmin` |
-| Schema changes | `GRANT CREATE ELEMENT TYPES ON DATABASE mydb TO schemaadmin` |
+| Schema changes | `GRANT NAME MANAGEMENT ON DATABASE mydb TO schemaadmin` (or `CREATE NEW NODE LABEL` / `CREATE NEW RELATIONSHIP TYPE` / `CREATE NEW PROPERTY NAME`) |
 
 ### DENY overrides GRANT
 ```cypher
@@ -200,7 +204,7 @@ REVOKE MATCH {*} ON GRAPH mydb NODES Person FROM analyst;  // removes both grant
 CREATE ROLE analyst IF NOT EXISTS;
 GRANT ACCESS            ON DATABASE mydb TO analyst;
 GRANT MATCH {*}         ON GRAPH mydb ELEMENTS * TO analyst;
-GRANT EXECUTE PROCEDURE apoc.* TO analyst;
+GRANT EXECUTE PROCEDURE apoc.* ON DBMS TO analyst;
 ```
 
 ### Write role (no admin)
@@ -292,8 +296,9 @@ ABAC grants roles dynamically from OIDC/JWT claims or native user tags rather th
 
 ### Prerequisites
 ```
-# neo4j.conf — providers must also appear in dbms.security.authorization_providers
-dbms.security.abac.authorization_providers=<oidc-provider-alias>,native   # native [2026.06+]
+# neo4j.conf — every entry must also appear in dbms.security.authorization_providers, same name
+dbms.security.authorization_providers=oidc-<alias>,native
+dbms.security.abac.authorization_providers=oidc-<alias>,native   # native [2026.06+]
 ```
 Unlisted provider → its accessor function (`abac.oidc.user_attribute()`, `abac.native.user_tags()`) unavailable and rules referencing it fail (no silent default).
 
@@ -316,7 +321,7 @@ GRANT ROLE senior_engineer TO AUTH RULE seniorRule;
 
 ### Manage auth rules
 ```cypher
-SHOW AUTH RULES YIELD ruleName, condition, roles;
+SHOW AUTH RULES YIELD name, condition, enabled, roles;
 ALTER AUTH RULE salesRule SET ENABLED false;     // disable without dropping
 RENAME AUTH RULE salesRule TO salesDeptRule;
 DROP AUTH RULE salesDeptRule;
@@ -362,7 +367,7 @@ SHOW PRIVILEGES YIELD *;
 SHOW USER alice PRIVILEGES AS COMMANDS;
 
 // Privileges for a specific role
-SHOW ROLE analyst PRIVILEGES YIELD privilege, action, resource, graph, segment;
+SHOW ROLE analyst PRIVILEGES YIELD access, action, resource, graph, segment, role;
 
 // Privileges of roles granted to an auth rule [2026.09]
 SHOW AUTH RULES salesRule PRIVILEGES AS COMMANDS;
@@ -405,7 +410,8 @@ dbms.security.auth_max_failed_attempts=3    # lockout threshold
 
 ### LDAP
 ```
-dbms.security.auth_provider=ldap
+dbms.security.authentication_providers=ldap,native   # drop native to disable fallback
+dbms.security.authorization_providers=ldap,native
 dbms.security.ldap.host=ldap://ldap.example.com
 dbms.security.ldap.authentication.mechanism=simple
 dbms.security.ldap.authentication.user_dn_template=uid={0},ou=users,dc=example,dc=com
@@ -417,6 +423,9 @@ dbms.security.ldap.authorization.group_to_role_mapping=\
 
 ### OIDC / SSO (Okta, Auth0, Entra ID)
 ```
+# enable provider — without these two lines the oidc.<alias>.* keys are ignored
+dbms.security.authentication_providers=oidc-<alias>,native
+dbms.security.authorization_providers=oidc-<alias>,native
 dbms.security.oidc.<alias>.display_name=Okta
 dbms.security.oidc.<alias>.auth_flow=pkce      # `implicit` deprecated 2026.06, removal planned — keep pkce
 dbms.security.oidc.<alias>.well_known_discovery_uri=https://example.okta.com/.well-known/openid-configuration

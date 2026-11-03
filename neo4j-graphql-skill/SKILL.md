@@ -2,12 +2,12 @@
 name: neo4j-graphql-skill
 description: Build and configure a GraphQL API backed by Neo4j using @neo4j/graphql v7 (current) or v5 (LTS).
   Covers Neo4jGraphQL constructor, getSchema(), assertIndexesAndConstraints(), type definitions with @node,
-  @relationship (IN/OUT/UNDIRECTED), @cypher for custom resolvers, @authorization/@authentication for JWT/JWKS
+  @relationship (IN/OUT, queryDirection), @cypher for custom resolvers, @authorization/@authentication for JWT/JWKS
   security, auto-generated queries/mutations, OGM programmatic access, subscriptions via CDC, and Apollo
   Federation. Use when writing typeDefs, securing fields, or wiring Neo4j to Apollo Server.
   Does NOT handle raw Cypher outside resolvers — use neo4j-cypher-skill.
   Does NOT cover Spring Data Neo4j entity mapping — use neo4j-spring-data-skill.
-version: 1.0.5
+version: 1.0.6
 allowed-tools: Bash WebFetch
 ---
 
@@ -15,7 +15,7 @@ allowed-tools: Bash WebFetch
 
 - Creating a GraphQL API from a Neo4j graph schema with `@neo4j/graphql`
 - Writing type definitions with `@relationship`, `@cypher`, `@authorization` directives
-- Using OGM for server-side programmatic Neo4j access (bypasses GraphQL auth)
+- Using OGM (v5 only) for server-side programmatic Neo4j access (bypasses GraphQL auth)
 - Configuring auto-generated queries, mutations, subscriptions
 - Securing types/fields with JWT or JWKS-based `@authorization` rules
 - Migrating from v5/v6 to v7 (breaking changes below)
@@ -32,7 +32,7 @@ allowed-tools: Bash WebFetch
 
 | Version | Status | Notes |
 |---|---|---|
-| v7 | Current — use ≥ 7.6.2 | `@node` required; `options` removed; explicit `eq` syntax |
+| v7 | Current — use ≥ 7.6.4 | `@node` required; `options` removed; explicit `eq` syntax |
 | v5 | LTS — use ≥ 5.12.15 | Older syntax; `options: {limit, offset, sort}` still valid |
 
 Default to v7 unless codebase is on v5. Upgrade past these security patches before shipping auth:
@@ -42,6 +42,10 @@ Default to v7 unless codebase is on v5. Upgrade past these security patches befo
 | Subscriptions accepted an unverified JWT from WebSocket `connectionParams` (auth/authz bypass) | 7.5.6 / 5.12.14 |
 | Field-level `@authentication` on a root custom-resolver field ignored when the operation type also had type-level `@authentication` (privilege escalation) | 7.6.0 / 5.12.15 |
 | `@authorization` rules not applied on create-relationship operations | 7.6.2 |
+| Source `@authorization` rules not applied to source node on delete-relationship | 7.6.3 |
+| Type-level `@authentication` not enforced on entities returned by `@cypher` fields; `none` quantifier inverted in authorization filters | 7.6.4 |
+
+7.6.5 / 5.12.16 fix Apollo Federation `getSubgraphSchema()` only. Prefer latest patch.
 
 ---
 
@@ -87,10 +91,18 @@ const driver = neo4j.driver(
 
 const neoSchema = new Neo4jGraphQL({ typeDefs, driver });
 
-// assertIndexesAndConstraints syncs @id → UNIQUE constraints; wrap in try/catch
-await neoSchema.assertIndexesAndConstraints({ options: { create: true } });
+// getSchema() first — assertIndexesAndConstraints() throws if called before it
+const schema = await neoSchema.getSchema();
 
-const server = new ApolloServer({ schema: await neoSchema.getSchema() });
+// v7: validates @fulltext/@vector indexes only; creates nothing (no `options.create` in v7)
+try {
+  await neoSchema.assertIndexesAndConstraints();
+} catch (e) {
+  console.error(e.message); // e.g. Missing @fulltext index 'ProductName' on Node 'Product'
+  process.exit(1);
+}
+
+const server = new ApolloServer({ schema });
 
 const { url } = await startStandaloneServer(server, {
   context: async ({ req }) => ({ token: req.headers.authorization }),
@@ -126,14 +138,15 @@ type Person @node {
   # direction: IN = (other)-[:ACTED_IN]->(this)
   actedIn: [Movie!]! @relationship(type: "ACTED_IN", direction: IN)
 
-  # direction: UNDIRECTED = matches both directions (use sparingly — double-counts)
-  colleagues: [Person!]! @relationship(type: "COLLEAGUE_OF", direction: UNDIRECTED)
+  # direction accepts only IN | OUT. Undirected querying = queryDirection
+  # v7: DIRECTED (default) | UNDIRECTED; v5: DEFAULT_DIRECTED | DEFAULT_UNDIRECTED | DIRECTED_ONLY | UNDIRECTED_ONLY
+  colleagues: [Person!]! @relationship(type: "COLLEAGUE_OF", direction: OUT, queryDirection: UNDIRECTED)
 
-  # Relationship with properties — reference an @relationshipProperties interface
+  # Relationship with properties — reference an @relationshipProperties type
   reviews: [Movie!]! @relationship(type: "REVIEWED", direction: OUT, properties: "ReviewedProps")
 }
 
-interface ReviewedProps @relationshipProperties {
+type ReviewedProps @relationshipProperties {  # type, not interface — interface fails schema build
   rating: Int!
   date: Date
 }
@@ -149,7 +162,7 @@ query {
     title
     actorsConnection {
       edges {
-        properties { role }   # maps to @relationshipProperties interface
+        properties { role }   # maps to @relationshipProperties type
         node { name }
       }
     }
@@ -214,7 +227,7 @@ extend type Movie @node {
 
 ```graphql
 type Post @node {
-  id: ID! @id                          # auto-generates UUID; creates UNIQUE constraint
+  id: ID! @id                          # auto-generates UUID only; creates no constraint
   createdAt: DateTime! @timestamp(operations: [CREATE])
   updatedAt: DateTime @timestamp(operations: [CREATE, UPDATE])
   title: String!
@@ -278,7 +291,7 @@ type Post @node
   @authentication
   @authorization(filter: [{ where: { node: { author: { id: { eq: "$jwt.sub" } } } } }]) {
   title: String!
-  author: User! @relationship(type: "AUTHORED", direction: IN)
+  author: User @relationship(type: "AUTHORED", direction: IN)  # single rel field must be nullable
 }
 
 # requireAuthentication: false = allow public access without JWT
@@ -289,6 +302,7 @@ type Article @node
   ]) {
   title: String!
   published: Boolean!
+  author: User @relationship(type: "AUTHORED", direction: IN)
 }
 
 # validate (throws error) vs filter (silently hides data)
@@ -298,6 +312,7 @@ type BankAccount @node
     where: { node: { owner: { id: { eq: "$jwt.sub" } } } }
   }]) {
   balance: Float!
+  owner: User @relationship(type: "OWNS", direction: IN)
 }
 
 # Role-based with custom JWT claims
@@ -364,46 +379,19 @@ mutation {
 
 ## OGM — Programmatic Access
 
-OGM bypasses GraphQL authorization — use only in trusted server-side contexts.
-
-```javascript
-import { OGM } from '@neo4j/graphql-ogm';
-
-const ogm = new OGM({ typeDefs, driver });
-await ogm.init();  // must await before using models
-
-const Movie = ogm.model('Movie');
-
-// find
-const movies = await Movie.find({
-  where: { title: { eq: 'The Matrix' } },
-  selectionSet: `{ id title actors { name } }`,
-});
-
-// create
-const { movies: created } = await Movie.create({
-  input: [{ title: 'Dune', actors: { create: [{ node: { name: 'Timothée Chalamet' } }] } }],
-});
-
-// update
-await Movie.update({
-  where: { id: { eq: movieId } },
-  update: { title: { set: 'Dune: Part One' } },
-});
-
-// delete
-await Movie.delete({ where: { id: { eq: movieId } } });
-```
-
-Install separately: `npm install @neo4j/graphql-ogm`
-
----
+Read [references/ogm.md](references/ogm.md#ogm--programmatic-access) when you need this.
 
 ## Subscriptions (CDC Required)
 
-Requires Neo4j CDC enabled in `FULL` mode. See [CDC docs](https://neo4j.com/docs/cdc/current/).
+Requires Neo4j CDC enabled in `FULL` mode — Enterprise Edition or Aura Business Critical/VDC only (on Community `getSchema()` fails: no procedure `db.cdc.current`). See [CDC docs](https://neo4j.com/docs/cdc/current/).
+
+v7: feature flag alone generates no Subscription type. Add `extend schema @subscription` (all types) or `@subscription` on individual types. v5 generates subscriptions from the flag alone.
 
 ```javascript
+const typeDefs = `#graphql
+  type Movie @node { title: String }
+  extend schema @subscription   # v7 required
+`;
 const neoSchema = new Neo4jGraphQL({
   typeDefs,
   driver,
@@ -431,7 +419,7 @@ type ReadOnlyData @node @mutation(operations: []) { value: String! }  # disable 
 
 type HeavyDoc @node {
   id: ID! @id
-  content: String! @filterable(byValue: false) @sortable(enabled: false)  # perf guard
+  content: String! @filterable(byValue: false) @sortable(byValue: false)  # perf guard
   title: String!
 }
 
@@ -447,12 +435,13 @@ type Series @node @plural(value: "seriesList") { title: String! }  # irregular p
 | `Type 'X' not found` | Missing `@node` on type (v7) | Add `@node` to every node type |
 | `@cypher` field returns null | `columnName` mismatch with RETURN alias | Match `columnName` exactly to RETURN alias |
 | Relationship direction mismatch | Both sides declare same direction | Inverse: if A has `direction: OUT`, B must have `direction: IN` |
-| `assertIndexesAndConstraints` throws | `@id` constraint not in DB | Add `{ options: { create: true } }` or run `CREATE CONSTRAINT` manually |
+| `You must await .getSchema() before .assertIndexesAndConstraints()` | Called before `getSchema()` | `await neoSchema.getSchema()` first |
+| `Missing @fulltext index …` / `Missing @vector index …` | Index not in DB; v7 never creates it | `CREATE FULLTEXT INDEX` / `CREATE VECTOR INDEX` in Cypher first |
 | Auth not applied | JWT not in context | Pass `token: req.headers.authorization` in context function |
 | 0 results with valid data | v7 filter missing `eq` | Use `{ field: { eq: value } }` not `{ field: value }` |
 | `connectOrCreate not found` | Removed in v7 | Use `connect` + `create` separately |
 | Memory errors on large mutations | Complex Cypher generation | Batch mutations; increase `server.memory.heap.max_size` |
-| `@subscription` not generating | v7 requires explicit enable | Add `features: { subscriptions: true }` to constructor |
+| Subscription type missing | v7 requires flag + directive | `features: { subscriptions: true }` AND `extend schema @subscription` in typeDefs; CDC enabled |
 
 ---
 
@@ -465,9 +454,9 @@ type Series @node @plural(value: "seriesList") { title: String! }  # irregular p
 | `{ field: value }` filter | `{ field: { eq: value } }` |
 | `connectOrCreate` nested mutation | Removed — use `connect` + `create` |
 | `directed` arg on queries | `queryDirection` in `@relationship` |
-| Single rel fields `actor: Person` | Must use list `actors: [Person!]!` |
+| Single rel fields `actor: Person` | Allowed from 7.5.0 but must be nullable (`actor: Person`, not `Person!`); else use list |
 | `@private` directive | Removed |
-| `@unique` directive | Removed |
+| `@unique` directive | Removed — create uniqueness constraints in Cypher |
 
 ---
 
@@ -484,8 +473,8 @@ type Series @node @plural(value: "seriesList") { title: String! }  # irregular p
 ## Checklist
 
 - [ ] `@node` on every GraphQL type representing a Neo4j node (v7 hard requirement)
-- [ ] `@id` on identity fields (triggers `CREATE CONSTRAINT` via `assertIndexesAndConstraints`)
-- [ ] `assertIndexesAndConstraints` called on startup with try/catch
+- [ ] `@id` on identity fields (UUID only) + uniqueness constraint created in Cypher: `CREATE CONSTRAINT movie_id IF NOT EXISTS FOR (m:Movie) REQUIRE m.id IS UNIQUE`
+- [ ] `assertIndexesAndConstraints()` called after `await getSchema()`, in try/catch; `@fulltext`/`@vector` indexes created first
 - [ ] `@relationship` direction correct: `OUT` = arrow leaves this node, `IN` = arrow enters
 - [ ] Both sides of relationship declared with inverse directions
 - [ ] `@cypher` `columnName` matches RETURN alias exactly
@@ -493,7 +482,7 @@ type Series @node @plural(value: "seriesList") { title: String! }  # irregular p
 - [ ] `@authorization` filter vs validate chosen deliberately (silent hide vs thrown error)
 - [ ] v7: filters use explicit `{ field: { eq: value } }` syntax
 - [ ] v7: `limit`/`sort` passed as direct query args (not `options` wrapper)
-- [ ] OGM: `await ogm.init()` called before any `ogm.model()` usage
-- [ ] Subscriptions: CDC enabled in FULL mode before enabling `features.subscriptions`
-- [ ] `@neo4j/graphql` ≥ 7.6.2 (v7) or ≥ 5.12.15 (LTS) — earlier versions have auth bypasses
+- [ ] OGM: v5 only, v5 filter syntax; `await ogm.init()` before any `ogm.model()` usage
+- [ ] Subscriptions: CDC enabled in FULL mode (Enterprise / Aura BC/VDC); v7 also `extend schema @subscription`
+- [ ] `@neo4j/graphql` ≥ 7.6.4 (v7) or ≥ 5.12.15 (LTS) — earlier versions have auth bypasses
 - [ ] `.env` holds credentials; `.env` in `.gitignore`

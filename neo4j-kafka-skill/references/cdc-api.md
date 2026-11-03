@@ -6,10 +6,11 @@ Source: [neo4j.com/docs/cdc/current/](https://neo4j.com/docs/cdc/current/)
 
 | Requirement | Detail |
 |---|---|
-| Neo4j version | 5.13+ |
+| Neo4j version | 5.17+ for `db.cdc.*` (5.13-5.16: `cdc.*`; GA since 5.23) |
 | Edition | Enterprise Edition, AuraDB Business Critical, AuraDB VDC |
-| Self-managed config | `db.cdc.enabled=true` in `neo4j.conf` |
-| Aura | Enabled by default on BC/VDC tiers |
+| Self-managed config | Per database: `ALTER DATABASE <db> SET OPTION txLogEnrichment "DIFF"` (or `"FULL"`); default `OFF`; no `neo4j.conf` setting |
+| Aura | Off by default; admin enables via **Edit CDC Mode** in instance options |
+| Privileges | `db.cdc.query`: admin, or `EXECUTE` + `EXECUTE BOOSTED PROCEDURE db.cdc.query ON DBMS` + database access |
 
 CDC is NOT available on Community Edition or AuraDB Free/Professional.
 
@@ -109,7 +110,7 @@ Selectors are ANDed within one map, ORed across list items.
     "eventType": "n",
     "operation": "c",
     "labels": ["Person", "Employee"],
-    "keys": {"id": "user-001"},
+    "keys": {"Person": [{"id": "user-001"}]},
     "state": {
       "before": null,
       "after": {
@@ -117,7 +118,8 @@ Selectors are ANDed within one map, ORed across list items.
           "id": "user-001",
           "name": "Alice",
           "age": 30
-        }
+        },
+        "labels": ["Person", "Employee"]
       }
     }
   }
@@ -137,16 +139,16 @@ Selectors are ANDed within one map, ORed across list items.
     "eventType": "r",
     "operation": "u",
     "type": "KNOWS",
-    "keys": {},
+    "keys": [],
     "start": {
       "elementId": "4:abc123:0",
       "labels": ["Person"],
-      "keys": {"id": "user-001"}
+      "keys": {"Person": [{"id": "user-001"}]}
     },
     "end": {
       "elementId": "4:abc123:1",
       "labels": ["Person"],
-      "keys": {"id": "user-002"}
+      "keys": {"Person": [{"id": "user-002"}]}
     },
     "state": {
       "before": {
@@ -300,7 +302,9 @@ RETURN id, event;
 |---|---|---|---|
 | `connector.class` | STRING | — | `org.neo4j.connectors.kafka.source.Neo4jConnector` |
 | `neo4j.source-strategy` | STRING | — | `CDC` or `QUERY` |
-| `neo4j.start-from` | STRING | `NOW` | `NOW` \| `EARLIEST` \| cursor string |
+| `neo4j.start-from` | STRING | `NOW` | `NOW` \| `EARLIEST` \| `USER_PROVIDED`. First run only; ignored when a stored offset exists |
+| `neo4j.start-from.value` | STRING | — | Custom cursor; required with `USER_PROVIDED` |
+| `neo4j.ignore-stored-offset` | BOOLEAN | `false` | Ignore stored offset (use after DB restore) |
 | `neo4j.cdc.poll-interval` | DURATION | `1s` | How often to check for new changes |
 | `neo4j.cdc.poll-duration` | DURATION | `5s` | Max duration per poll call |
 | `neo4j.cdc.topic.<T>.patterns.<N>.pattern` | STRING | — | Entity pattern for topic T, index N |
@@ -310,5 +314,5 @@ RETURN id, event;
 | `neo4j.query` | STRING | — | Cypher with `$lastCheck` param (QUERY strategy) |
 | `neo4j.query.streaming-property` | STRING | — | Return column used as cursor |
 | `neo4j.query.topic` | STRING | — | Target Kafka topic (QUERY strategy) |
-| `neo4j.query.polling-interval` | DURATION | `5s` | Poll frequency (QUERY strategy) |
-| `neo4j.query.polling-duration` | DURATION | `10s` | Poll duration (QUERY strategy) |
+| `neo4j.query.poll-interval` | DURATION | `1s` | Poll frequency (QUERY strategy) |
+| `neo4j.query.poll-duration` | DURATION | `5s` | Poll duration (QUERY strategy) |

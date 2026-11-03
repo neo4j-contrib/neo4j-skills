@@ -1,14 +1,14 @@
 ---
 name: neo4j-spark-skill
 description: Use when reading from or writing to Neo4j with Apache Spark or Databricks using the
-  Neo4j Connector for Apache Spark 6.0 (org.neo4j.connectors:spark) or 5.x
+  Neo4j Connector for Apache Spark 6.x (org.neo4j.connectors:spark) or 5.x
   (org.neo4j:neo4j-connector-apache-spark). Covers SparkSession
   setup, DataFrame reads via labels/Cypher/relationship scan, DataFrame writes with SaveMode,
   node.keys for MERGE, relationship write mapping, partition and batch tuning, PySpark and Scala
   examples, Databricks cluster config, Databricks secrets for credentials, Delta Lake to Neo4j
   pipelines. Does NOT handle Cypher authoring — use neo4j-cypher-skill. Does NOT handle the Python
   bolt driver — use neo4j-driver-python-skill. Does NOT handle GDS algorithms — use neo4j-gds-skill.
-version: 1.0.3
+version: 1.0.4
 allowed-tools: Bash WebFetch
 ---
 
@@ -35,10 +35,10 @@ allowed-tools: Bash WebFetch
 
 | Connector | Spark | Scala | Java | Databricks Runtime | Neo4j | Maven coordinate |
 |-----------|-------|-------|------|--------------------|-------|------------------|
-| 6.0.x | 4.0, 4.1 | 2.13 | 17+ | 17.3 LTS | 5.x, 2025.x, 2026.x | `org.neo4j.connectors:spark:6.0.0-s_2.13` |
-| 5.5.x / 5.4.x | 3.4, 3.5 | 2.12, 2.13 | 8+ | 14.3–16.4 LTS | 4.4, 5.x, 2025.x, 2026.x | `org.neo4j:neo4j-connector-apache-spark_2.13:5.5.0_for_spark_3` |
+| 6.1.x / 6.0.x (latest 6.1.2) | 4.0, 4.1 | 2.13 | 17+ | 17.3 LTS | 5.x, 2025.x, 2026.x | `org.neo4j.connectors:spark:6.1.2-s_2.13` |
+| 5.6.x / 5.5.x / 5.4.x (latest 5.6.0) | 3.4, 3.5 | 2.12, 2.13 | 8+ | 14.3–16.4 LTS | 4.4, 5.x, 2025.x, 2026.x | `org.neo4j:neo4j-connector-apache-spark_2.13:5.6.0_for_spark_3` |
 
-Group ID changed in 6.0 — `org.neo4j:neo4j-connector-apache-spark_<scala>` is now a relocation POM pointing at `org.neo4j.connectors:spark`. On Spark 3.x stay on 5.5.x.
+Group ID changed in 6.0 — `org.neo4j:neo4j-connector-apache-spark_<scala>` is now a relocation POM pointing at `org.neo4j.connectors:spark`. On Spark 3.x stay on 5.x. Check [Maven Central](https://central.sonatype.com/artifact/org.neo4j.connectors/spark) for the latest patch.
 
 ### 6.0 breaking changes
 
@@ -51,6 +51,7 @@ Group ID changed in 6.0 — `org.neo4j:neo4j-connector-apache-spark_<scala>` is 
 | `;`-separated multi-statement `script` removed | `script.1`, `script.2`, … `script.N` — executed in numbered order |
 | `relationship.save.strategy` default `native` → `keys` | Set `.option("relationship.save.strategy", "native")` explicitly to keep old behaviour |
 | `query` option rewritten for Data Source V2 predicate push-down | No action; verify plans on upgrade |
+| Read columns `<id>`, `<rel.id>`, `<source.id>`, `<target.id>` (numeric `id()`) renamed `<elementId>`, `<rel.elementId>`, `<source.elementId>`, `<target.elementId>` (STRING element IDs) | Update column references; selecting `` `<id>` `` fails on 6.x |
 
 ---
 
@@ -64,7 +65,7 @@ from pyspark.sql import SparkSession
 spark = (SparkSession.builder
     .appName("neo4j-app")
     .config("spark.jars.packages",
-            "org.neo4j.connectors:spark:6.0.0-s_2.13")   # Spark 3.x: org.neo4j:neo4j-connector-apache-spark_2.13:5.5.0_for_spark_3
+            "org.neo4j.connectors:spark:6.1.2-s_2.13")   # Spark 3.x: org.neo4j:neo4j-connector-apache-spark_2.13:5.6.0_for_spark_3
     .config("neo4j.url", "neo4j+s://xxxx.databases.neo4j.io")
     .config("neo4j.authentication.type", "basic")
     .config("neo4j.authentication.basic.username", "neo4j")
@@ -78,7 +79,7 @@ spark = (SparkSession.builder
 val spark = SparkSession.builder
   .appName("neo4j-app")
   .config("spark.jars.packages",
-    "org.neo4j.connectors:spark:6.0.0-s_2.13")
+    "org.neo4j.connectors:spark:6.1.2-s_2.13")
   .config("neo4j.url", "neo4j+s://xxxx.databases.neo4j.io")
   .config("neo4j.authentication.type", "basic")
   .config("neo4j.authentication.basic.username", "neo4j")
@@ -89,7 +90,7 @@ val spark = SparkSession.builder
 ### Databricks — Cluster Installation
 
 1. Cluster → **Libraries** → **Install New** → **Maven**
-2. Coordinate `org.neo4j.connectors:spark:6.0.0-s_2.13` on DBR 17.3 LTS; `org.neo4j:neo4j-connector-apache-spark_2.13:5.5.0_for_spark_3` on DBR 14.3–16.4 LTS
+2. Coordinate `org.neo4j.connectors:spark:6.1.2-s_2.13` on DBR 17.3 LTS; `org.neo4j:neo4j-connector-apache-spark_2.13:5.6.0_for_spark_3` on DBR 14.3–16.4 LTS
 3. Cluster → **Advanced Options** → **Spark** tab — add config:
    ```
    neo4j.url neo4j+s://xxxx.databases.neo4j.io
@@ -181,7 +182,7 @@ val df = spark.read
 
 Multi-label filter (AND): `.option("labels", ":Person:Employee")`
 
-Result includes `<id>` (internal Neo4j id) and `<labels>` columns.
+Result includes `<elementId>` (STRING element ID) and `<labels>` columns. 5.x: `<id>` (numeric internal id) instead of `<elementId>`.
 
 ### Cypher query read
 
@@ -191,7 +192,7 @@ df = (spark.read.format("org.neo4j.spark.DataSource")
     .load())
 ```
 
-Use explicit RETURN aliases — they become DataFrame column names. No `SKIP`/`LIMIT` in query (connector handles pagination).
+Use explicit RETURN aliases — they become DataFrame column names. No final `SKIP`/`LIMIT` (connector adds `SKIP`/`LIMIT` windows per partition); `LIMIT` inside a `WITH` is allowed. Partitioned `query` reads (`partitions` > 1): add a deterministic `ORDER BY` (otherwise rows silently go missing from every partition) and set `query.count`. Partitions run in separate transactions — no shared snapshot.
 
 ### Relationship scan
 
@@ -203,15 +204,14 @@ df = (spark.read.format("org.neo4j.spark.DataSource")
     .load())
 ```
 
-Result columns: `<rel.id>`, `<rel.type>`, `<source.*>`, `<target.*>`, plus relationship properties.
+Result columns: `<rel.elementId>`, `<rel.type>`, `<source.elementId>`, `<source.labels>`, `source.*`, `<target.elementId>`, `<target.labels>`, `target.*`, plus `rel.*` relationship properties. 5.x: `<rel.id>`, `<source.id>`, `<target.id>`.
 
 ### Read partition tuning
 
 ```python
 df = (spark.read.format("org.neo4j.spark.DataSource")
     .option("labels", ":Transaction")
-    .option("partitions", "10")        # parallel partitions (default: 1)
-    .option("batch.size", "5000")      # rows per partition batch (default: 5000)
+    .option("partitions", "10")        # parallel partitions (default: 1); each reads a SKIP/LIMIT window
     .option("schema.flatten.limit", "100")  # rows sampled for schema inference
     .load())
 ```
@@ -228,7 +228,8 @@ Full read options reference: [references/read-patterns.md](references/read-patte
 |----------|--------|----------|
 | `Append` | `CREATE` | nothing extra |
 | `Overwrite` | `MERGE` | `node.keys` (nodes) or `*.node.keys` (rels) |
-| `ErrorIfExists` | `CREATE` + error if exists | — |
+
+`ErrorIfExists` and `Ignore` are rejected. Spark's default when `.mode()` is omitted is `ErrorIfExists` — always set `.mode("Append")` or `.mode("Overwrite")`.
 
 Always create uniqueness constraints on `node.keys` properties before writing in `Overwrite` mode.
 
@@ -289,7 +290,7 @@ rel_df = spark.createDataFrame([
     .option("relationship", "BOUGHT")
     .option("relationship.save.strategy", "keys")
     .option("relationship.source.labels", ":Customer")
-    .option("relationship.source.save.mode", "Match")          # require existing nodes
+    .option("relationship.source.save.mode", "Match")          # MATCH existing nodes; rows without a match are skipped silently
     .option("relationship.source.node.keys", "cust_id:id")
     .option("relationship.target.labels", ":Product")
     .option("relationship.target.save.mode", "Match")
@@ -299,7 +300,7 @@ rel_df = spark.createDataFrame([
 ```
 
 `relationship.source.save.mode` / `relationship.target.save.mode`:
-- `Match` — find existing nodes (fail if missing)
+- `Match` — MATCH existing nodes; rows without a match are skipped silently (no error). Verify counts after the write
 - `Append` — always CREATE new nodes
 - `Overwrite` — MERGE nodes
 
@@ -351,18 +352,20 @@ customers_df.write.format("org.neo4j.spark.DataSource").mode("Overwrite") \
 products_df.write.format("org.neo4j.spark.DataSource").mode("Overwrite") \
     .option("labels", ":Product").option("node.keys", "product_id").save()
 
-# Step 2: write relationships (single partition)
-orders_df.coalesce(1).write.format("org.neo4j.spark.DataSource").mode("Append") \
+# Step 2: write relationships (single partition); Overwrite everywhere = MERGE, safe to re-run
+orders_df.coalesce(1).write.format("org.neo4j.spark.DataSource").mode("Overwrite") \
     .option("relationship", "ORDERED") \
     .option("relationship.save.strategy", "keys") \
     .option("relationship.source.labels", ":Customer") \
-    .option("relationship.source.save.mode", "Match") \
+    .option("relationship.source.save.mode", "Overwrite") \
     .option("relationship.source.node.keys", "customer_id:customer_id") \
     .option("relationship.target.labels", ":Product") \
-    .option("relationship.target.save.mode", "Match") \
+    .option("relationship.target.save.mode", "Overwrite") \
     .option("relationship.target.node.keys", "product_id:product_id") \
     .save()
 ```
+
+`Append` on relationships builds `CREATE`: every re-run adds duplicate relationships, even with `Match` on both ends. Upserts: `.mode("Overwrite")` with `Overwrite` source/target save modes.
 
 ---
 
@@ -394,12 +397,14 @@ orders_df.coalesce(1).write.format("org.neo4j.spark.DataSource").mode("Append") 
 |-------|-------|-----|
 | `ClassNotFoundException: org.neo4j.spark.DataSource` | JAR not on classpath | Add `spark.jars.packages` or attach library |
 | Deadlock on relationship write | Multiple partitions locking nodes | `coalesce(1)` before write |
-| Duplicate nodes on Overwrite | No uniqueness constraint on keys | `CREATE CONSTRAINT ON (n:Label) ASSERT n.prop IS UNIQUE` |
+| Duplicate nodes on Overwrite | No uniqueness constraint on keys | `CREATE CONSTRAINT IF NOT EXISTS FOR (n:Label) REQUIRE n.prop IS UNIQUE` (or `script.N`), or `.option("schema.optimization.node.keys", "UNIQUE")` |
 | OOM on Neo4j side | `batch.size` too large | Reduce to 5000–10000; check heap |
 | Schema all `string` columns | No APOC, schema not sampled | Set `schema.flatten.limit` higher; or use `query` mode with explicit types |
 | `Access mode is read` error on write | Session opened in read mode | Remove `neo4j.access.mode` or set to `write` |
 | Databricks Shared cluster fails | Unity Catalog shared mode unsupported | Switch to Single User access mode |
-| `NoSuchMethodError` / `IncompatibleClassChangeError` on Spark 4 | 5.x connector on a Spark 4 runtime | Use `org.neo4j.connectors:spark:6.0.0-s_2.13` |
+| `NoSuchMethodError` / `IncompatibleClassChangeError` on Spark 4 | 5.x connector on a Spark 4 runtime | Use `org.neo4j.connectors:spark:6.1.2-s_2.13` |
+| `[UNSUPPORTED_DATA_SOURCE_SAVE_MODE] ... "ErrorIfExists" mode` | `.mode()` omitted (Spark default) or `ErrorIfExists` | `.mode("Append")` or `.mode("Overwrite")` |
+| `` `<id>` `` column not found on 6.x | Read columns renamed in 6.0 | Use `<elementId>` (`<rel.elementId>`, `<source.elementId>`, `<target.elementId>`) |
 | Relationship write ignores `rel.*` / `source.*` columns after upgrade | 6.0 default strategy is `keys`, not `native` | `.option("relationship.save.strategy", "native")` |
 | `script` option rejected with multiple statements | 6.0 removed `;`-separated scripts | Split into `script.1`, `script.2`, … |
 
@@ -415,5 +420,7 @@ orders_df.coalesce(1).write.format("org.neo4j.spark.DataSource").mode("Append") 
 - [ ] `coalesce(1)` applied before relationship writes
 - [ ] `batch.size` sized to Neo4j heap (start 5000, tune up)
 - [ ] Delta Lake → Neo4j: nodes written before relationships
-- [ ] `query` mode: no `SKIP`/`LIMIT` in Cypher (connector paginates internally)
+- [ ] `query` mode: no final `SKIP`/`LIMIT`; partitioned reads have `ORDER BY` + `query.count`
+- [ ] `.mode("Append")` or `.mode("Overwrite")` set on every write
+- [ ] Re-runnable relationship writes use `Overwrite` (not `Append`)
 - [ ] Databricks: Single User access mode (not Shared)

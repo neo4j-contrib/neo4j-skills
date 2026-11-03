@@ -10,12 +10,10 @@ Fastest path to a populated graph. Load via `:play movies` in Neo4j Browser or t
 // Then click "Create" in the guide to populate the database
 ```
 
-Alternatively, load programmatically:
-```cypher
-// Load sample movie data directly
-LOAD CSV WITH HEADERS FROM 'https://data.neo4j.com/importing-cypher/movies.csv' AS row
-MERGE (m:Movie {movieId: row.movieId})
-SET m.title = row.title, m.year = toInteger(row.year)
+Alternatively, load programmatically (creates the full Person/Movie graph):
+```bash
+curl -fsS https://raw.githubusercontent.com/neo4j-graph-examples/movies/main/scripts/movies.cypher \
+  | cypher-shell -a "$NEO4J_URI" -u "$NEO4J_USERNAME" -p "$NEO4J_PASSWORD"
 ```
 
 Movie graph schema: `(Person)-[:ACTED_IN {roles}]->(Movie)`, `(Person)-[:DIRECTED]->(Movie)`

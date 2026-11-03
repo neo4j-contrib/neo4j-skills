@@ -107,22 +107,20 @@ aura-cli instance pause <instance-id>
 
 aura-cli instance resume <instance-id>
 
+# No --confirm flag: delete runs immediately — confirm with the user first
 aura-cli instance delete <instance-id>
-aura-cli instance delete abc123def456 --confirm
 
 aura-cli instance overwrite <target-instance-id> \
   --source-instance-id <source-instance-id>
 ```
 
 ```bash
+# Subcommands: create, get, list only (no restore — use the Aura console or REST API)
 # List snapshots
-aura-cli instance snapshot list <instance-id>
+aura-cli instance snapshot list --instance-id <instance-id>
 
 # Create snapshot
-aura-cli instance snapshot create <instance-id> --name "backup-2026-02-16"
-
-# Restore from snapshot
-aura-cli instance snapshot restore <instance-id> --snapshot-id <snapshot-id>
+aura-cli instance snapshot create --instance-id <instance-id> --await
 ```
 
 ### tenant
@@ -135,18 +133,24 @@ aura-cli tenant get <tenant-id>
 ### graph-analytics
 
 ```bash
-aura-cli graph-analytics list
-aura-cli graph-analytics get <instance-id>
+# Only subgroup: session (create, delete, get, list)
+aura-cli graph-analytics session list
+aura-cli graph-analytics session get <session-id>
 ```
 
 ### customer-managed-key
 
 ```bash
+# Subcommands: create, delete, get, list
 aura-cli customer-managed-key list
 
-aura-cli customer-managed-key add \
-  --key-id <key-id> \
+aura-cli customer-managed-key create \
+  --name <name> \
+  --key-id <key-arn> \
+  --region <region> \
+  --type <type> \
   --cloud-provider <provider>
+# --tenant-id <id> required if no default tenant is set
 ```
 
 ## Configuration

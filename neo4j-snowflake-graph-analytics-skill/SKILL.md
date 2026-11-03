@@ -11,7 +11,7 @@ description: Run Neo4j Graph Analytics algorithms (PageRank, Louvain, WCC, Dijks
   Does NOT cover Cypher or Neo4j DBMS queries — use neo4j-cypher-skill.
   Does NOT cover Aura Graph Analytics — use neo4j-aura-graph-analytics-skill.
   Does NOT cover self-managed GDS — use neo4j-gds-skill.
-version: 1.2.2
+version: 1.2.3
 allowed-tools: Bash WebFetch
 ---
 
@@ -156,6 +156,8 @@ CALL Neo4j_Graph_Analytics.graph.wcc('CPU_X64_XS', {
 SELECT * FROM MY_DATABASE.MY_SCHEMA.result_wcc_user_communities;
 ```
 
+`compute` keys are algorithm-specific (`consecutiveIds` is WCC-only; `triangle_count` rejects it) — check the algorithm's section in [references/algorithms.md](references/algorithms.md).
+
 ### Config parts
 
 - **`defaultTablePrefix`** — set to the database + schema where your views and output tables live (`DB.SCHEMA`); lets you reference them by short name.
@@ -218,68 +220,7 @@ For relationship results, join the source table twice — once on `SOURCENODEID`
  
 ## Available Algorithms
 
-Procedure = `Neo4j_Graph_Analytics.graph.<name>`. Names below are exact.
-
-For complete algorithm compute/write parameter reference, see [references/algorithms.md](references/algorithms.md).
-
-### Community Detection
-| Algorithm | Procedure | Use case |
-|---|---|---|
-| Weakly Connected Components | `wcc` | Find disconnected subgraphs |
-| Louvain | `louvain` | Community detection (modularity) |
-| Leiden | `leiden` | Community detection, more stable than Louvain |
-| Label Propagation | `label_propagation` | Fast community detection by label spreading |
-| K-Means | `kmeans` | Cluster nodes by node properties |
-| Triangle Count | `triangle_count` | Local clustering / dense subgraphs |
-| K-1 Coloring | `k1coloring` | Assign colors so neighbours differ (greedy, few colors) |
-
-### Centrality
-| Algorithm | Procedure | Use case |
-|---|---|---|
-| PageRank | `page_rank` | Rank nodes by influence |
-| Article Rank | `article_rank` | PageRank variant, discounts high-degree neighbours |
-| Betweenness | `betweenness` | Find bridge nodes |
-| Degree | `degree` | Count direct connections |
-
-### Pathfinding
-| Algorithm | Procedure | Use case |
-|---|---|---|
-| Dijkstra Source-Target | `dijkstra` | Shortest path(s) from source to target(s) or pairs |
-| Dijkstra Single-Source | `dijkstra_single_source` | Shortest paths from one node to all others |
-| Delta-Stepping SSSP | `delta_stepping` | Parallel single-source shortest paths |
-| Breadth First Search | `bfs` | BFS traversal from a source |
-| Yen's K-Shortest Paths | `yens` | Top-K shortest loopless paths |
-| Max Flow | `max_flow` | Maximum flow with capacities |
-| Min-Cost Max Flow | `max_flow_min_cost` | Max flow minimising total cost |
-| FastPath | `fastpath` | Fast approximate shortest paths |
-
-### Similarity
-| Algorithm | Procedure | Use case |
-|---|---|---|
-| Node Similarity | `node_similarity` | Similar nodes by shared neighbours |
-| Filtered Node Similarity | `node_similarity_filtered` | Node similarity with source/target filters |
-| KNN | `knn` | K most similar nodes |
-| Filtered KNN | `knn_filtered` | KNN with source/target filters |
-
-### Node Embeddings
-| Algorithm | Procedure | Use case |
-|---|---|---|
-| FastRP | `fast_rp` | Fast node embeddings |
-| Node2Vec | `node2vec` | Random-walk node embeddings |
-| HashGNN | `hashgnn` | GNN-inspired embeddings without training |
-
-### GraphSAGE (Graph ML)
-| Algorithm | Procedure | Use case |
-|---|---|---|
-| Node Classification — train | `gs_nc_train` | Train supervised node-label model |
-| Node Classification — predict | `gs_nc_predict` | Predict labels with a trained model |
-| Unsupervised embeddings — train | `gs_unsup_train` | Train unsupervised embedding model |
-| Unsupervised embeddings — predict | `gs_unsup_predict` | Infer embeddings with a trained model |
-
-### Model catalog (GraphSAGE)
-`show_models`, `model_exists`, `drop_model`.
-
----
+Read [references/algorithms.md](references/algorithms.md#available-algorithms) when you need this. For complete algorithm compute/write parameter reference, see [references/algorithms.md](references/algorithms.md).
 
 ## Algorithm-Specific Notes
 
@@ -287,7 +228,9 @@ For complete algorithm compute/write parameter reference, see [references/algori
 - Projected node tables used by GraphSAGE must **not** contain `ARRAY` property columns — use `VECTOR(FLOAT, n)` for multi-valued numeric features. (`ARRAY` is fine for non-GraphSAGE algorithms.)
 - Feature columns must be **non-NULL and finite** — filter, impute, or exclude nullable feature columns in the view. For `gs_nc_train`, the `targetProperty` is a label (not a feature) and may be NULL.
 - Before running, list the node properties GraphSAGE will use per node table: all non-`NODEID` columns; for `gs_nc_train` exclude the `targetProperty`.
+- `targetProperty` must be a numeric (`BIGINT`/`DOUBLE`) column — convert text labels in the view (`CASE label_text WHEN 'low' THEN 0 WHEN 'high' THEN 1 END::BIGINT AS risk_code`); a `VARCHAR` target fails validation (`invalid type VARCHAR`). Write its name lowercase (`'risk_code'`, not `'RISK_CODE'`) — the app exposes GraphSAGE node properties in lowercase.
 - Training (`gs_nc_train`, `gs_unsup_train`) can be slow and may use a GPU pool (`GPU_NV_S`). Show the exact `CALL` and get explicit confirmation before running training.
+- Run prediction (`gs_nc_predict`, `gs_unsup_predict`) on the same pool type as training — a GPU-trained model fails on a CPU pool (`Attempting to deserialize object on a CUDA device…`).
 
 ### Dijkstra Source-Target (`dijkstra`)
 Provide one of:
@@ -342,7 +285,7 @@ GRANT USAGE ON SCHEMA MY_DATABASE.MY_SCHEMA TO ROLE MY_CONSUMER_ROLE;
 GRANT SELECT ON FUTURE TABLES IN SCHEMA MY_DATABASE.MY_SCHEMA TO ROLE MY_CONSUMER_ROLE;
 ```
 
-> `ACCOUNTADMIN` does **not** implicitly hold the application roles. The `preview.*` and `admin.*` procedures require a role that was granted `Neo4j_Graph_Analytics.app_admin`; algorithm procedures and `preview.register_user_role` require `app_user`.
+> `ACCOUNTADMIN` does **not** implicitly hold the application roles. `admin.*` procedures (app 1.0.38+) require a role granted `Neo4j_Graph_Analytics.app_admin`; algorithm procedures require `app_user`. A role holding only `app_user` can't see the `admin` schema — on 1.0.40 it can still self-register with `preview.register_user_role` (same arguments).
 
 ### Part B, option 1 — App-identity grants (default, run once per database/schema)
 
@@ -369,7 +312,7 @@ USE ROLE MY_CONSUMER_ROLE;   -- run algorithms as the consumer role
 
 ### Part B, option 2 — Execute-as-user (preview)
 
-Jobs authenticate as the calling user with a Programmatic Access Token (PAT), under a role that user holds, bounded by caller grants. Procedures live in `<APP>.preview.*` and may change before GA.
+Jobs authenticate as the calling user with a Programmatic Access Token (PAT), under a role that user holds, bounded by caller grants. Procedures live in `<APP>.admin.*` on app 1.0.38+; `<APP>.preview.*` names remain on at least 1.0.40 (check the version with `SHOW APPLICATIONS;`).
 
 Onboarding can't be scripted end-to-end: `ADD PROGRAMMATIC ACCESS TOKEN` reveals the token secret **once**. Run Part 1, collect the token from the user, then run Part 2.
 
@@ -388,7 +331,7 @@ ALTER USER <user_name> SET AUTHENTICATION POLICY pat_no_network_required;
 -- Step 1: enable on the install — once per account, not per user. Needs app_admin,
 -- which ACCOUNTADMIN does not hold implicitly.
 USE ROLE MY_ADMIN_ROLE;
-CALL Neo4j_Graph_Analytics.preview.set_enable_custom_credentials(TRUE);
+CALL Neo4j_Graph_Analytics.admin.set_enable_custom_credentials(TRUE);
 
 -- Step 2a: mint a PAT bound to the role. ROLE_RESTRICTION is load-bearing — it pins
 -- the PAT to this role whatever the app's registry says, and must match Step 2d.
@@ -416,8 +359,11 @@ GRANT READ ON SECRET MY_DATABASE.MY_SCHEMA.pat_secret_<user_name>
 ```sql
 -- Step 2d: register the user. Run in a session opened AS <user_name> so
 -- CURRENT_USER() resolves to them, under a role holding app_user.
+-- If admin.register_user_role is 'does not exist or not authorized' under the consumer role,
+-- call Neo4j_Graph_Analytics.preview.register_user_role(...) with the same arguments,
+-- or run this step under a role that also holds app_admin.
 USE ROLE MY_CONSUMER_ROLE;
-CALL Neo4j_Graph_Analytics.preview.register_user_role(
+CALL Neo4j_Graph_Analytics.admin.register_user_role(
     'MY_CONSUMER_ROLE',                              -- = ROLE_RESTRICTION on the PAT
     'MY_DATABASE.MY_SCHEMA.pat_secret_<user_name>'   -- FQN of the SECRET
 );
@@ -438,7 +384,7 @@ GRANT INHERITED CALLER SELECT ON ALL VIEWS  IN SCHEMA MY_DATABASE.MY_SCHEMA TO A
 
 To check what an admin registered for a user:
 ```sql
-CALL Neo4j_Graph_Analytics.preview.get_user_role_registration('<user_name>');
+CALL Neo4j_Graph_Analytics.admin.get_user_role_registration('<user_name>');
 ```
 
 Rotating and rolling back:
@@ -451,7 +397,7 @@ CREATE OR REPLACE SECRET MY_DATABASE.MY_SCHEMA.pat_secret_<user_name>
 ALTER USER <user_name> REMOVE PROGRAMMATIC ACCESS TOKEN <old_pat_name>;
 
 -- Disable account-wide: app identity returns for everyone, registrations sit unused.
-CALL Neo4j_Graph_Analytics.preview.set_enable_custom_credentials(FALSE);
+CALL Neo4j_Graph_Analytics.admin.set_enable_custom_credentials(FALSE);
 
 -- Revoke a single user, leaving registry and SECRET intact:
 REVOKE READ ON SECRET MY_DATABASE.MY_SCHEMA.pat_secret_<user_name>
@@ -487,7 +433,7 @@ The graph engine can't use VARCHAR as a property. Map categories to numbers in t
 | Problem | Solution |
 |---|---|
 | `Insufficient privileges` | App needs `SELECT` on your tables/views and `CREATE TABLE` on the schema (see Privilege Setup) |
-| `no role registered for <user>` | Execute-as-user is enabled but this user isn't onboarded — run `preview.register_user_role` as that user (Part B option 2, Step 2d) |
+| `no role registered for <user>` | Execute-as-user is enabled but this user isn't onboarded — run `admin.register_user_role` (`preview.*` before app 1.0.38) as that user (Part B option 2, Step 2d) |
 | `Network policy is required` | The PAT user has no authentication policy allowing PATs without a network policy — attach one with `PAT_POLICY = (NETWORK_POLICY_EVALUATION = ENFORCED_NOT_REQUIRED)` |
 | `does not exist or not authorized` in execute-as-user mode | Missing caller grants on the data schema, or objects created after the `ON ALL ...` grants — re-run Step 2e |
 | `Insufficient privileges to operate on table` on write in execute-as-user mode | The write schema is missing `CALLER CREATE TABLE` / `INHERITED CALLER INSERT ON ALL TABLES` — re-run Step 2e |
@@ -496,6 +442,9 @@ The graph engine can't use VARCHAR as a property. Map categories to numbers in t
 | `Column nodeId not found` | View is missing/mis-cast the key — expose `NODEID` (and `SOURCENODEID`/`TARGETNODEID`) with explicit casts |
 | Type / projection error on a property | A property column wasn't cast to a supported type — apply the casting rules; relationship props must be `BIGINT`/`DOUBLE`/`INT` |
 | GraphSAGE fails on features | Remove `ARRAY` feature columns (use `VECTOR`), and ensure features are non-NULL/finite |
+| `Column <X> has invalid type VARCHAR` on GraphSAGE training | `targetProperty` must be numeric — convert text labels to `BIGINT` in the view |
+| `Attempting to deserialize object on a CUDA device` on prediction | Model was trained on a GPU pool — run `gs_*_predict` on a GPU pool too |
+| `not present … available: [...]` on a property name | Copy the name exactly as listed under "available" (GraphSAGE `targetProperty` is lowercase) |
 | `Compute pool not available` | Pool may still be starting; wait a minute and retry |
 | Algorithm returns no results | Check node/relationship views aren't empty and that every `SOURCENODEID`/`TARGETNODEID` matches a `NODEID` |
 

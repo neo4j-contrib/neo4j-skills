@@ -2,10 +2,10 @@
 
 ## URI Scheme
 
-Browser uses **WebSockets**, not TCP. Use `neo4j+s://` (WSS) or `neo4j://` (WS).
+Browser build uses **WebSockets for every scheme**: `bolt://` / `neo4j://` → `ws://`; `bolt+s://` / `neo4j+s://` → `wss://`. Scheme keeps its TLS and routing meaning. Use encrypted (`+s`) schemes for anything non-local.
 
 ```javascript
-// ❌ bolt:// uses TCP — not supported in browsers
+// ✅ bolt:// → WS (plaintext, no routing) — local single instance
 neo4j.driver('bolt://localhost:7687', auth)
 
 // ✅ neo4j+s:// → WSS (TLS) — Aura and production

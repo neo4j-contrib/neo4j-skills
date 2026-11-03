@@ -46,11 +46,12 @@ RETURN p, distance
 
 ---
 
-## Stateful Route Planning with allReduce [2025.x]
+## Stateful Route Planning with allReduce [2025.08]
 
 `allReduce` for simulation-style traversal where path validity depends on accumulated state (energy, time, cost):
 
 ```cypher
+// runtime=parallel: Enterprise / non-Free Aura only; Community runs slotted
 CYPHER 25 runtime=parallel
 MATCH (src:Geo {name: $source}), (dst:Geo {name: $target})
 MATCH REPEATABLE ELEMENTS p=(src)(()-[r:ROAD|CHARGE]-(x:Geo)){1,12}(dst)
@@ -82,7 +83,7 @@ Model: ActivityStart/ActivityEnd nodes connected by weighted `:ACTIVITY` edges; 
 // Longest path (critical path) — small graphs only
 // For large graphs use gds.dag.longestPath instead
 CYPHER 25
-MATCH p=(a:ActivityStart)-[:ACTIVITY|DEPENDS_ON]*->(b:ActivityEnd)
+MATCH p=(a:ActivityStart)-[:ACTIVITY|DEPENDS_ON*]->(b:ActivityEnd)
 WITH b.name AS task,
      reduce(t=0, r IN [x IN relationships(p) WHERE type(x)='ACTIVITY' | x] |
             t + r.expectedTime) AS totalTime
@@ -182,6 +183,7 @@ RETURN p, length(p) AS cycleLength
 ORDER BY cycleLength LIMIT 20
 
 // Count paths through complex small-graph traversal
+// runtime=parallel: Enterprise / non-Free Aura only; Community runs slotted
 CYPHER 25 runtime=parallel
 MATCH REPEATABLE ELEMENTS path=(:Start)((xs:!End)--(:!Start)){0,100}(e:End)
 WHERE allReduce(

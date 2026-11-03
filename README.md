@@ -76,6 +76,7 @@ codex plugin marketplace upgrade neo4j-skills-marketplace
 |---|---|
 | [`neo4j-cypher-skill`](./neo4j-cypher-skill) | Write, optimize, and debug Cypher queries. Covers CYPHER 25 syntax, query planning, indexes, and common patterns. |
 | [`neo4j-modeling-skill`](./neo4j-modeling-skill) | Design and review graph data models. Covers node/relationship patterns, property choices, and relational-to-graph migration. |
+| [`neo4j-query-tuning-skill`](./neo4j-query-tuning-skill) | Diagnose and fix slow Cypher: read EXPLAIN/PROFILE plans, spot bad operators, choose indexes, hints and runtimes. |
 | [`neo4j-ontology-skill`](./neo4j-ontology-skill) | Author and validate Neo4j Ontology Graph Specification v1 documents in YAML or JSON. Covers nodes, relationships, properties, data types, constraints, labels, and endpoint cardinality. |
 | [`neo4j-getting-started-skill`](./neo4j-getting-started-skill) | Zero-to-app walkthrough: provision → model → load → query. Use for first-time setup on Aura or Docker. |
 
@@ -86,6 +87,8 @@ codex plugin marketplace upgrade neo4j-skills-marketplace
 | [`neo4j-import-skill`](./neo4j-import-skill) | Load structured data (CSV, JSON) via `LOAD CSV`, `neo4j-admin import`, and the Data Importer GUI. |
 | [`neo4j-document-import-skill`](./neo4j-document-import-skill) | Extract knowledge graphs from unstructured documents and PDFs using `SimpleKGPipeline`. |
 | [`neo4j-migration-skill`](./neo4j-migration-skill) | Upgrade drivers and Cypher from 4.x/5.x to 2025.x. Covers API changes, deprecated functions, and Cypher 25 syntax. |
+| [`neo4j-kafka-skill`](./neo4j-kafka-skill) | Stream between Kafka and Neo4j with the Neo4j Connector for Kafka (sink and CDC source) and the native CDC API. |
+| [`neo4j-spark-skill`](./neo4j-spark-skill) | Read and write Neo4j from Apache Spark and Databricks with the Neo4j Connector for Apache Spark. |
 
 ### AI & Search
 
@@ -124,6 +127,8 @@ codex plugin marketplace upgrade neo4j-skills-marketplace
 | [`neo4j-cli-tools-skill`](./neo4j-cli-tools-skill) | DB admin via `neo4j-admin`, `cypher-shell`, `aura-cli`, and `neo4j-cli` (preview unified CLI). Covers backups, imports, user management, Aura provisioning, and agent skill install. |
 | [`neo4j-aura-provisioning-skill`](./neo4j-aura-provisioning-skill) | Create and manage Neo4j Aura instances via the Aura CLI and REST API. Covers async polling, credential handling, and tier selection. |
 | [`neo4j-aura-agent-skill`](./neo4j-aura-agent-skill) | Create, configure, and invoke Aura Agents via the v2beta1 REST API. Covers CypherTemplate, SimilaritySearch, and Text2Cypher tools, system prompts, REST/MCP deployment, and OAuth2 auth. |
+| [`neo4j-security-skill`](./neo4j-security-skill) | Users, roles and privileges: RBAC, fine-grained and attribute-based access control, with edition gating. |
+| [`neo4j-nvl-skill`](./neo4j-nvl-skill) | Render Neo4j graphs in the browser with the Neo4j Visualization Library (NVL): renderers, interaction handlers, React wrappers. |
 
 ## What are Agent Skills?
 

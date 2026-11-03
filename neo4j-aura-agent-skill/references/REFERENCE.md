@@ -43,7 +43,7 @@ Token TTL: 3600 s. On 401/403: re-authenticate.
 | `name` | string | ✅ | Max 100 chars |
 | `description` | string | ✅ | |
 | `dbid` | string | ✅ | AuraDB instance ID |
-| `is_private` | boolean | ✅ | `false` = accessible to project members; `true` = creator only |
+| `is_private` | boolean | ✅ | `true` = internal: free, console only (project members), no REST invoke, no MCP; `false` = external: REST endpoint (optionally MCP), billed |
 | `tools` | array | ✅ | Min 1 tool; see Tool Schemas |
 | `system_prompt` | string | ❌ | Custom instructions for the LLM |
 | `is_mcp_enabled` | boolean | ❌ | Enable MCP server endpoint |
@@ -52,6 +52,8 @@ Token TTL: 3600 s. On 401/403: re-authenticate.
 ## PatchAgentRequest Schema
 
 All fields optional: `name`, `description`, `system_prompt`, `dbid`, `is_private`, `is_mcp_enabled`, `tools`, `enabled`.
+
+**`tools` replaces the agent's whole tool list** (min 1 item). To add or change one tool: GET the agent, edit the full `tools` array, PATCH it back.
 
 ---
 
@@ -93,13 +95,13 @@ All fields optional: `name`, `description`, `system_prompt`, `dbid`, `is_private
     "model": "text-embedding-3-small",
     "index": "vector_index_name",
     "top_k": 5,
-    "dimension": 1536,
+    "dimensions": 1536,
     "post_processing_cypher": "OPTIONAL MATCH (node)<-[:HAS_EXCERPT]-(cc) RETURN node, score, cc"
   }
 }
 ```
 
-`dimension` must match the vector index dimension (`vector.dimensions` in `schema.json → metadata.vector_index[].options.indexConfig`). `post_processing_cypher` is optional — use it to traverse from matched nodes to related context nodes.
+`dimensions` (optional integer) — set when the provider or index requires an explicit size; must match the vector index dimension (`vector.dimensions` in `schema.json → metadata.vector_index[].options.indexConfig`). `post_processing_cypher` is optional — use it to traverse from matched nodes to related context nodes.
 
 ### Text2Cypher
 
@@ -116,7 +118,7 @@ All fields optional: `name`, `description`, `system_prompt`, `dbid`, `is_private
 
 ## Embedding Provider Options
 
-`provider`, `model`: from request, else ask. `dimension`: from index (`vector.dimensions`). Never pick provider/model that neither request nor index implies.
+`provider`, `model`: from request, else ask. `dimensions`: from index (`vector.dimensions`). Never pick provider/model that neither request nor index implies.
 
 ### OpenAI (`provider: "openai"`)
 
@@ -148,15 +150,14 @@ All fields optional: `name`, `description`, `system_prompt`, `dbid`, `is_private
   "project_id": "string",
   "organization_id": "string",
   "created_by": "string",
-  "created_at": "datetime",
-  "updated_at": "datetime",
-  "is_private": false,
+  "is_private": true,
   "is_mcp_enabled": false,
   "enabled": true,
-  "endpoint_link": "https://api.neo4j.io/v2beta1/organizations/.../invoke",
   "tools": [...]
 }
 ```
+
+No `endpoint_link`, `mcp_endpoint_link`, `created_at` or `updated_at` on create/get. `endpoint_link` and `mcp_endpoint_link` appear only on list summaries (`AgentSummary`).
 
 ---
 
@@ -185,12 +186,12 @@ Note: Aura Agent does NOT store conversation history between requests. Include p
   "type": "message",
   "role": "assistant",
   "content": [
-    { "type": "text", "text": "There are 510 contracts in the database." },
-    { "type": "tool_use", "name": "Aggregation and Discovery Tool", "input": {...} },
-    { "type": "tool_result", "content": [...] }
+    { "type": "tool_use", "id": "toolu_1", "name": "Aggregation and Discovery Tool", "input": {...} },
+    { "type": "tool_result", "tool_use_id": "toolu_1", "output": {...} },
+    { "type": "text", "text": "There are 510 contracts in the database." }
   ],
-  "end_reason": "end_turn",
-  "status": "completed",
+  "end_reason": "FINAL_ANSWER_PROVIDED",
+  "status": "SUCCESS",
   "usage": {
     "request_tokens": 245,
     "response_tokens": 87,
@@ -199,16 +200,16 @@ Note: Aura Agent does NOT store conversation history between requests. Include p
 }
 ```
 
-`type` enum: `message` | `error`
+`type` enum: `message` | `error`. Content block `type`: `text`, `thinking`, `tool_use`, `tool_result`, `cypher_template_tool_use`, `cypher_template_tool_result`. Clients: branch on `type == "message"` and read content; don't match literal `status`/`end_reason` strings.
 
 Error response:
 ```json
 {
   "type": "error",
   "error": {
-    "message": "Agent not found",
-    "type": "not_found",
-    "status_code": 404
+    "message": "<human-readable message>",
+    "type": "EXECUTION_ERROR",
+    "status_code": 500
   }
 }
 ```
@@ -224,7 +225,7 @@ Error response:
 | `202` | Delete accepted |
 | `400` | Invalid request body or parameters |
 | `401` | Token expired or missing |
-| `403` | Insufficient permissions (not project admin) |
+| `403` | Create/update/delete: not project admin. Invoke: agent disabled or internal (`is_private: true`) |
 | `404` | Agent/project/org not found |
 | `500` | Server error — retry with backoff |
 
@@ -332,7 +333,7 @@ Key fields:
 - `low_cardinality` — `true` if ≤50 distinct values; `description` MUST list valid values when true
 - `values` — sorted list of distinct values; only present when `low_cardinality: true`
 - `has_fulltext_index` — `true` if a FULLTEXT index covers this property; priority filter target
-- `metadata.vector_index` — usable in SimilaritySearch; filter by `state == "ONLINE"`; use `name` as `index`, `options.indexConfig["vector.dimensions"]` as `dimension`
+- `metadata.vector_index` — usable in SimilaritySearch; filter by `state == "ONLINE"`; use `name` as `index`, `options.indexConfig["vector.dimensions"]` as `dimensions`
 - `metadata.fulltext_index` — cross-referenced to set `has_fulltext_index` on matching properties
 
 ---
@@ -345,7 +346,7 @@ All Aura Agents run in `europe-west1` (Belgium, GCP). Regardless of AuraDB insta
 
 ## External Access (REST + MCP)
 
-Enable via `is_private: false` and optionally `is_mcp_enabled: true` in the agent config.
+Enable via `is_private: false` and optionally `is_mcp_enabled: true` in the agent config. External agents incur charges; internal agents are free but answer only in the console.
 
 External endpoint URL format:
 ```

@@ -3,13 +3,13 @@ name: neo4j-kafka-skill
 description: Configure and operate the Neo4j Connector for Kafka (sink + source) and the
   native Neo4j CDC API. Covers Cypher/Pattern/CUD sink strategies, CDC-based and query-based
   source, exactly-once semantics, DLQ error handling, Confluent Cloud managed connector,
-  schema registry (Avro/JSON), and native db.cdc.query cursor-loop patterns (Neo4j 5.13+
+  schema registry (Avro/JSON), and native db.cdc.query cursor-loop patterns (Neo4j 5.17+
   Enterprise/Aura BC/VDC). Use when streaming Kafka events into Neo4j, streaming Neo4j
   changes to Kafka, or querying Neo4j change events without Kafka. Does NOT handle Cypher
   query authoring — use neo4j-cypher-skill. Does NOT handle bulk CSV/file import — use
   neo4j-import-skill. Does NOT handle GDS algorithms — use neo4j-gds-skill.
 allowed-tools: Bash WebFetch
-version: 1.0.4
+version: 1.0.5
 ---
 
 # Neo4j Kafka Skill
@@ -48,11 +48,13 @@ version: 1.0.4
 
 ## Prerequisites
 
-- Neo4j Connector for Kafka ≥ 5.5.2 (download from [neo4j.com/labs/kafka](https://neo4j.com/labs/kafka/) or Confluent Hub) — 5.5.2 processes incoming messages per partition instead of per topic; 5.5.1 forces static labels in generated queries
-- Kafka Connect ≥ 3.x or Confluent Platform ≥ 7.x
-- For CDC source/sink: Neo4j 5.13+ Enterprise Edition, AuraDB Business Critical, or AuraDB VDC
-- For query source: any Neo4j edition
-- Java 11+
+- Neo4j Connector for Kafka ≥ 5.5.2 (download versioned assets from [GitHub releases](https://github.com/neo4j/neo4j-kafka-connector/releases) or Confluent Hub; no unversioned "latest" archive) — 5.5.2 processes incoming messages per partition instead of per topic; 5.5.1 forces static labels in generated queries
+- Kafka Connect ≥ 3.x or Confluent Platform ≥ 7.x (5.x connector)
+- For CDC source: Neo4j 5.13+ Enterprise Edition, AuraDB Business Critical, or AuraDB VDC, with CDC enabled (off by default — see Native CDC API)
+- For CDC sink strategies and query source: any Neo4j edition — CDC sink only reads CDC events from Kafka; target needs no CDC
+- Java 11+ (5.x connector)
+
+**Connector 6.0** (6.0.0 released 2026-10-15; docs `current` = 6.0): needs Kafka Connect 4.3.0+ (Confluent Platform/Cloud 8.3+) and Java 17+. Sink task fails to start when the EOS offset constraint is missing; `neo4j.eos-offset-auto-constraint=true` creates it. Check [6.0 release notes](https://github.com/neo4j/neo4j-kafka-connector/releases) before upgrading. Stay on 5.x (≥ 5.5.2) for older Connect/Java.
 
 ---
 
@@ -142,13 +144,18 @@ Or with source-id tracking (stores elementId as property):
 
 ### Exactly-Once Semantics (EOS)
 
-Requires: connector ≥ 5.3.0 (Cypher/Pattern/CDC strategies), connector ≥ 5.3.1 (CUD strategy), Kafka broker EOS support, and a NODE KEY constraint.
+Requires: connector ≥ 5.3.0 (Cypher/Pattern/CDC strategies), connector ≥ 5.3.1 (CUD strategy), Kafka broker EOS support, and a NODE KEY constraint (Enterprise) or uniqueness constraint (Community).
 
 Step 1 — Create constraint:
 ```cypher
 CREATE CONSTRAINT kafka_offset_key IF NOT EXISTS
 FOR (n:__KafkaOffset)
 REQUIRE (n.strategy, n.topic, n.partition) IS NODE KEY;
+
+// Community Edition: NODE KEY unsupported — use composite uniqueness
+CREATE CONSTRAINT kafka_offset_key IF NOT EXISTS
+FOR (n:__KafkaOffset)
+REQUIRE (n.strategy, n.topic, n.partition) IS UNIQUE;
 ```
 
 Step 2 — Add to connector config:
@@ -174,6 +181,8 @@ Without EOS: connector provides at-least-once — write idempotent Cypher (MERGE
 ```
 
 `errors.tolerance=none` (default) — stops on first error. Use `all` + DLQ for production.
+
+DLQ replication factor `3` (default) needs 3+ brokers. Single-broker dev cluster: set `"errors.deadletterqueue.topic.replication.factor": "1"`, else DLQ topic creation fails and first bad record fails the task.
 
 ---
 
@@ -201,7 +210,7 @@ Without EOS: connector provides at-least-once — write idempotent Cypher (MERGE
 }
 ```
 
-`neo4j.start-from` options: `NOW` | `EARLIEST` | a specific cursor string
+`neo4j.start-from` options: `NOW` | `EARLIEST` | `USER_PROVIDED` (custom cursor in `neo4j.start-from.value`). Used only on first run; ignored once Kafka Connect has a stored offset.
 
 Multiple patterns per topic — indexed 0, 1, 2...:
 ```json
@@ -211,7 +220,7 @@ Multiple patterns per topic — indexed 0, 1, 2...:
 }
 ```
 
-Cursor warning: after DB restore from backup, CDC cursors are invalidated. Reconfigure `neo4j.start-from`.
+Cursor warning: after DB restore from backup, CDC cursors are invalidated. `neo4j.start-from` alone does not help (stored offset wins) — also set `neo4j.ignore-stored-offset=true`, or recreate connector under a new name.
 
 ### Query-Based Source (legacy / any edition)
 
@@ -221,8 +230,8 @@ Cursor warning: after DB restore from backup, CDC cursors are invalidated. Recon
   "neo4j.query": "MATCH (p:Person) WHERE p.updatedAt > $lastCheck RETURN p.id AS id, p.name AS name, p.updatedAt AS updatedAt",
   "neo4j.query.streaming-property": "updatedAt",
   "neo4j.query.topic": "person-changes",
-  "neo4j.query.polling-interval": "5s",
-  "neo4j.query.polling-duration": "10s"
+  "neo4j.query.poll-interval": "1s",
+  "neo4j.query.poll-duration": "5s"
 }
 ```
 
@@ -232,13 +241,30 @@ Cursor warning: after DB restore from backup, CDC cursors are invalidated. Recon
 
 ## Native CDC API (no Kafka required)
 
-Requires: Neo4j 5.13+ Enterprise, AuraDB BC, or AuraDB VDC.
+Requires: Neo4j 5.17+ Enterprise, AuraDB BC, or AuraDB VDC (5.13-5.16 used `cdc.*` names; CDC GA since 5.23).
 
-Enable CDC first (self-managed — set in neo4j.conf):
+CDC is `OFF` by default everywhere. Enable per database first — no `neo4j.conf` setting exists.
+
+Self-managed:
+```cypher
+// Mode: DIFF or FULL
+ALTER DATABASE neo4j SET OPTION txLogEnrichment "DIFF";
+// New database
+CREATE DATABASE mydb IF NOT EXISTS OPTIONS {txLogEnrichment: "FULL"};
+// Check
+SHOW DATABASES YIELD name, options;
 ```
-db.cdc.enabled=true
+Aura: admin sets **Edit CDC Mode** (`OFF`/`DIFF`/`FULL`) in instance options. Aura resets CDC to `OFF` on new, cloned, paused/resumed and snapshot-restored instances.
+
+Disabling then re-enabling CDC invalidates all earlier cursors.
+
+Privileges: `db.cdc.query` needs admin, or:
+```cypher
+GRANT EXECUTE PROCEDURE db.cdc.query ON DBMS TO $role;
+GRANT EXECUTE BOOSTED PROCEDURE db.cdc.query ON DBMS TO $role;
+GRANT ACCESS ON DATABASE $database TO $role;
 ```
-On Aura: enabled by default on eligible tiers.
+`db.cdc.current` / `db.cdc.earliest` need only database access and normal execute.
 
 ### Cursor Bootstrap
 
@@ -314,7 +340,7 @@ RETURN id, event.state.before AS before, event.state.after AS after;
     operation:  STRING,         // "c", "u", "d"
     labels:     [STRING],       // nodes only
     type:       STRING,         // relationships only
-    keys:       MAP,
+    keys:       MAP | LIST,    // node: {Label: [ {keyProp: v} ]}; rel: [ {keyProp: v} ]; empty without key constraints
     state: {
       before: { properties: MAP },  // null on CREATE
       after:  { properties: MAP }   // null on DELETE
@@ -415,10 +441,10 @@ Sink converter must match source — Avro sink cannot consume JSON schema source
 
 | Error | Cause | Fix |
 |---|---|---|
-| `CDC is not enabled` | `db.cdc.enabled` not set / wrong tier | Enable in neo4j.conf or upgrade to EE/BC/VDC |
-| `Invalid cursor` after DB restore | Backup invalidates cursors | Reset `neo4j.start-from` to `NOW` or `EARLIEST` |
+| `Neo.DatabaseError.ChangeDataCapture.Disabled` / CDC not enabled | `txLogEnrichment` is `OFF` (default) / wrong tier | `ALTER DATABASE <db> SET OPTION txLogEnrichment "DIFF"` (Aura: Edit CDC Mode) or upgrade to EE/BC/VDC |
+| `Invalid cursor` after DB restore | Backup invalidates cursors | Set `neo4j.start-from` to `NOW`/`EARLIEST` **and** `neo4j.ignore-stored-offset=true` (or recreate connector under new name) |
 | `Cannot merge node using null` | Key property missing in message | Validate message schema; add null check in Cypher |
-| Messages replayed after restart | No EOS configured | Add `neo4j.eos-offset-label` + NODE KEY constraint |
+| Messages replayed after restart | No EOS configured | Add `neo4j.eos-offset-label` + NODE KEY constraint (Community: `IS UNIQUE`) |
 | Connector stops on bad message | `errors.tolerance=none` (default) | Set `errors.tolerance=all` + DLQ topic |
 | `SchemaException` on sink | Converter mismatch source/sink | Match key/value converters on both ends |
 | Empty events from `db.cdc.query` | Cursor points to current | Use `db.cdc.earliest()` to replay; wait for new txns |
@@ -436,7 +462,8 @@ Sink converter must match source — Avro sink cannot consume JSON schema source
 
 ## Checklist
 
-- [ ] CDC availability confirmed (Neo4j 5.13+ EE / Aura BC / VDC) if using CDC source or sink
+- [ ] CDC availability confirmed (Neo4j 5.13+ EE / Aura BC / VDC) if using CDC source or `db.cdc.*` (5.17+)
+- [ ] CDC enabled: `txLogEnrichment` `DIFF`/`FULL` (self-managed) or Edit CDC Mode (Aura) — off by default
 - [ ] Uniqueness/NODE KEY constraints created before sink import (MERGE uses them)
 - [ ] EOS constraint created if using `neo4j.eos-offset-label`
 - [ ] Credentials via secrets provider — not hardcoded in config
@@ -444,5 +471,5 @@ Sink converter must match source — Avro sink cannot consume JSON schema source
 - [ ] `errors.tolerance=all` + DLQ configured for production sink
 - [ ] Source: `neo4j.query.streaming-property` indexed
 - [ ] Schema registry converters match on both source and sink sides
-- [ ] After DB restore: CDC cursor reconfigured (`neo4j.start-from`)
+- [ ] After DB restore: CDC cursor reset (`neo4j.start-from` + `neo4j.ignore-stored-offset=true`)
 - [ ] CDC cursor-loop: advance cursor only after successful processing

@@ -1,6 +1,6 @@
 # Format Reference — Neo4j Ontology Graph Spec
 
-Contract: JSON Schema draft 2020-12, `$id` `https://neo4j.com/docs/ontology-graph-spec/1.0.0/schema.json` (schema title `GraphModel` — naming leftover, ignore). Schema resolved live from the published URL or the neo4j/ontology-graph-spec repo. Section names below are the schema's `$defs` names.
+Contract: JSON Schema draft 2020-12, `$id` = the versioned URL per spec version, e.g. `https://neo4j.com/docs/ontology-graph-spec/1.1.0/schema.json` (schema title `GraphModel` — naming leftover, ignore). Schema resolved live from the published URL or the neo4j/ontology-graph-spec repo. Section names below are the schema's `$defs` names.
 
 ## Gotchas
 
@@ -11,7 +11,7 @@ Contract: JSON Schema draft 2020-12, `$id` `https://neo4j.com/docs/ontology-grap
 - `constraints` is a MAP id → constraint object, not a list. Object carries `type` (∈ EXISTS/KEY/PROPERTY_TYPE/UNIQUE) + `properties` (list of property ids declared on the SAME element).
 - Property flags (`must_exist`, `unique`, `key`) are single-property shorthands, expanded into constraints when the model is internalised. `key` = unique + exists per Neo4j key-constraint semantics. Composites and nameable constraints need the object form.
 - Map keys under `nodes`/`relationships` are local ids, NOT labels/types. Label lives in `label` / `labels.identifier`; relationship type lives in `type`. Endpoints reference node ids (`from.node` / `to.node`) — label renames never break references.
-- Extensions sit under `extensions` with a fixed shape per element: node → `indexes`/`display`/`custom`; relationship → `indexes`/`custom`; root → `tables`/`mappings`/`custom`; labels/property/constraint/index → `custom` only. Unknown extension keys rejected.
+- Extensions sit under `extensions` with a fixed shape per element: node → `indexes`/`display`/`custom`; relationship → `indexes`/`custom`; root → `data_source_tables`/`data_source_mappings`/`custom`; labels/property/constraint/index → `custom` only. Unknown extension keys rejected.
 - Index `options` is `null` or one of FULLTEXT/POINT/VECTOR option objects whose `type` const must match the index `type`. RANGE/TEXT/LOOKUP indexes: omit `options`.
 - `dimension` (integer|null) accompanies VECTOR types, on `Property` and `TableColumn`.
 - `Node` and `RelationshipTarget` require nothing per schema. A node with neither `label` nor `labels` is meaningless — always author one. Identify a relationship end by `node` (id) or `label`; cardinality via `count` (exact) or `min_count`/`max_count`; absent = unconstrained.
@@ -28,7 +28,7 @@ Contract: JSON Schema draft 2020-12, `$id` `https://neo4j.com/docs/ontology-grap
 | `description` | string | no | |
 | `nodes` | map id → Node | no | Keys are local ids |
 | `relationships` | map id → Relationship | no | Keys are local ids |
-| `extensions` | GraphModelExtensions | no | Root extensions: tables/mappings/custom |
+| `extensions` | GraphModelExtensions | no | Root extensions: data_source_tables/data_source_mappings/custom |
 
 ## `Node`
 
@@ -179,8 +179,8 @@ Fixed `extensions` shape per element; every extensions object is `additionalProp
 
 | field | type | notes |
 |---|---|---|
-| `tables` | map id → Table | Data source table schemas |
-| `mappings` | map id → Mapping[] | Mapping sets from tables to nodes/relationships |
+| `data_source_tables` | map id → Table | Data source table schemas |
+| `data_source_mappings` | map id → Mapping[] | Mapping sets from tables to nodes/relationships |
 | `custom` | object | Free-form |
 
 `Table` — required: `source`:
@@ -234,7 +234,7 @@ Discriminator: `type` const. Common optional: `id` (mapping id, so siblings can 
 
 ## Publication and schema resolution (ONT-31)
 
-- Versioned URL: `https://neo4j.com/docs/ontology-graph-spec/<version>/schema.json` — immutable per version; `1.0.0` is the current spec version. Set the document's `schema` field to the versioned URL it conforms to.
+- Versioned URL: `https://neo4j.com/docs/ontology-graph-spec/<version>/schema.json` — immutable per version. New document: use the versioned URL in `/current/schema.json`'s `$id`; never write `/current/`. Existing document: keep its URL unless upgrading. Tagged-but-unpublished versions (URL not 200) are not used.
 - Moving alias: `https://neo4j.com/docs/ontology-graph-spec/current/schema.json` → newest stable.
 - Fallback: when the published host is unreachable, `scripts/validate.py` falls back to `https://raw.githubusercontent.com/neo4j/ontology-graph-spec/main/ontology-graph-spec.schema.json` (tracks main — moving).
 
@@ -254,7 +254,7 @@ Schema resolution order: `--schema` (path or URL; explicit = no fallback) → do
 YAML (`library.ontology.yaml`):
 
 ```yaml
-schema: "https://neo4j.com/docs/ontology-graph-spec/1.0.0/schema.json"
+schema: "https://neo4j.com/docs/ontology-graph-spec/1.1.0/schema.json"
 id: library
 version: "1"
 name: Library
@@ -281,7 +281,7 @@ JSON (`library.ontology.json`) — same document:
 
 ```json
 {
-  "schema": "https://neo4j.com/docs/ontology-graph-spec/1.0.0/schema.json",
+  "schema": "https://neo4j.com/docs/ontology-graph-spec/1.1.0/schema.json",
   "id": "library",
   "version": "1",
   "name": "Library",

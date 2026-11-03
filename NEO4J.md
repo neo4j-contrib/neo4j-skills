@@ -39,6 +39,14 @@ Configure via environment variables or agent plugin settings:
 | `neo4j-getting-started-skill` | Zero-to-app: provision → model → load → query |
 | `neo4j-mcp-skill` | Neo4j MCP server setup and usage |
 | `neo4j-agent-memory-skill` | Persistent agent memory backed by Neo4j |
+| `neo4j-ontology-skill` | Writing or validating Neo4j Ontology Graph Specification documents |
+| `neo4j-query-tuning-skill` | Diagnosing slow Cypher with EXPLAIN/PROFILE |
+| `neo4j-genai-plugin-skill` | In-Cypher embeddings and LLM calls with `ai.text.*` |
+| `neo4j-snowflake-graph-analytics-skill` | Graph algorithms inside Snowflake |
+| `neo4j-security-skill` | Users, roles, privileges and access control |
+| `neo4j-kafka-skill` | Kafka connector (sink, CDC source) and native CDC |
+| `neo4j-spark-skill` | Spark / Databricks connector |
+| `neo4j-nvl-skill` | Graph visualization in the browser (NVL) |
 
 ## Quick start
 

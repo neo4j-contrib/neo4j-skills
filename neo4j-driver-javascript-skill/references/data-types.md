@@ -73,8 +73,9 @@ dt.toStandardDate()                  // JS Date (lossy — drops nanoseconds)
 // Create from JS Date
 const neo4jDt = neo4j.types.DateTime.fromStandardDate(new Date())
 
-// Pass native JS Date as parameter — driver converts automatically
-await driver.executeQuery('CREATE (e:Event {at: $ts})', { ts: new Date() })
+// ❌ native JS Date is NOT converted — sent as empty map; CREATE fails ("Property values can only be of primitive types")
+// ✅ convert first
+await driver.executeQuery('CREATE (e:Event {at: $ts})', { ts: neo4j.types.DateTime.fromStandardDate(new Date()) })
 
 // ❌ temporals don't JSON.stringify correctly
 JSON.stringify(dt)   // '{}' — silent failure

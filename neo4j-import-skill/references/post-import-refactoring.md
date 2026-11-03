@@ -136,12 +136,13 @@ Node must exist before relationship can reference it — even when both ends sha
 
 // Pass 2: Create REPORTS_TO from same file
 LOAD CSV WITH HEADERS FROM 'file:///employees.csv' AS row
-WHERE row.reports_to IS NOT NULL
+WITH row WHERE row.reports_to IS NOT NULL
 CALL (row) {
   MATCH (e:Employee {employeeID: toIntegerOrNull(row.employee_id)})
   MATCH (m:Employee {employeeID: toIntegerOrNull(row.reports_to)})
   MERGE (e)-[:REPORTS_TO]->(m)
-} IN TRANSACTIONS OF 5000 ROWS ON ERROR CONTINUE REPORT STATUS AS s;
+} IN TRANSACTIONS OF 5000 ROWS ON ERROR CONTINUE REPORT STATUS AS s
+RETURN s.committed, s.errorMessage;
 ```
 
 ## Refactoring Checklist

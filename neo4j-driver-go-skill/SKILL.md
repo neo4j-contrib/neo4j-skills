@@ -3,11 +3,11 @@ name: neo4j-driver-go-skill
 description: Covers the Neo4j Go Driver v6 — driver lifecycle, ExecuteQuery, managed and
   explicit transactions, session config, error handling, data type mapping, and connection
   tuning. Use when writing Go code that connects to Neo4j, setting up NewDriver or ExecuteQuery,
-  debugging sessions/transactions/result handling, or working with neo4j-go-driver v5→v6 migration.
+  or debugging sessions/transactions/result handling.
   Triggers on NewDriver, ExecuteQuery, SessionConfig, ManagedTransaction, neo4j-go-driver.
   Does NOT handle Cypher query authoring — use neo4j-cypher-skill.
   Does NOT cover driver version migration steps — use neo4j-migration-skill.
-version: 1.0.8
+version: 1.0.9
 allowed-tools: Bash WebFetch
 ---
 
@@ -258,7 +258,11 @@ In managed tx callback: return error → driver retries if transient.
 | `Relationship` | `neo4j.Relationship` |
 | `Path` | `neo4j.Path` |
 | `Date` | `neo4j.Date` |
-| `DateTime` | `neo4j.Time` |
+| `DateTime` | `time.Time` |
+| `LocalDateTime` | `neo4j.LocalDateTime` |
+| `Time` | `neo4j.Time` (= `dbtype.Time`, alias `OffsetTime`) |
+| `LocalTime` | `neo4j.LocalTime` |
+| `Point` | `neo4j.Point2D` / `neo4j.Point3D` |
 | `Duration` | `neo4j.Duration` |
 | `UUID` | `neo4j.UUID` (= `dbtype.UUID`, `[16]byte` RFC 9562) — v6.2.0+, Bolt 6.1; parse with `dbtype.ParseUUID(s)`, render with `.String()` |
 | `null` | `nil` |
