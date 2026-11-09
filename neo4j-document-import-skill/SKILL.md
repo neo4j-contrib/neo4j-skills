@@ -54,7 +54,8 @@ allowed-tools: Bash WebFetch
 pip install neo4j-graphrag                   # includes SimpleKGPipeline
 pip install neo4j-graphrag[openai]           # + OpenAI LLM/embedder
 pip install neo4j-graphrag[anthropic]        # + Anthropic Claude
-pip install neo4j-graphrag[google]           # + Vertex AI / Gemini
+pip install neo4j-graphrag[google]           # + Vertex AI (VertexAILLM)
+pip install neo4j-graphrag[google-genai]     # + GeminiLLM / GeminiEmbedder
 pip install neo4j-graphrag[bedrock]          # + Amazon Bedrock (boto3) — added v1.15.0
 pip install neo4j-graphrag[ollama]           # + Ollama (local)
 pip install neo4j-graphrag[mistralai]        # + MistralAI

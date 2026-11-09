@@ -119,7 +119,7 @@ resolver = SpaCySemanticMatchResolver(driver=driver, neo4j_database="neo4j")
 asyncio.run(resolver.run())
 ```
 
-Install: `pip install "neo4j-graphrag[nlp]"` + `python -m spacy download en_core_web_lg`
+Install: `pip install "neo4j-graphrag[nlp]"` (Python < 3.14) + `python -m spacy download en_core_web_lg`
 
 Risk of over-merging ("Apple" company vs "Apple" fruit). Apply domain `filter_query` to restrict by label.
 

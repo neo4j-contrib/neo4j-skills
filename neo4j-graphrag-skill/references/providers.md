@@ -54,7 +54,7 @@ All include automatic rate limiting with tenacity exponential backoff.
 |---|---|---|
 | `OpenAIEmbeddings` | `openai` | 3072 / 1536 |
 | `AzureOpenAIEmbeddings` | `openai` | varies |
-| `GeminiEmbedder` | `google` | added v1.17 (replaces deprecated-to-be `VertexAIEmbeddings`) |
+| `GeminiEmbedder` | `google-genai` | added v1.17 (replaces deprecated-to-be `VertexAIEmbeddings`) |
 | `VertexAIEmbeddings` | `google` | 768 |
 | `MistralAIEmbeddings` | `mistralai` | 1024 |
 | `CohereEmbeddings` | `cohere` | 1024 |
