@@ -9,7 +9,7 @@ description: Ingests unstructured and semi-structured documents into Neo4j as a 
   Does NOT handle structured CSV/relational import — use neo4j-import-skill.
   Does NOT handle GraphRAG retrieval after ingestion — use neo4j-graphrag-skill.
   Does NOT handle vector index creation — use neo4j-vector-search-skill.
-version: 1.0.7
+version: 1.0.8
 status: stable
 allowed-tools: Bash WebFetch
 ---
@@ -54,7 +54,8 @@ allowed-tools: Bash WebFetch
 pip install neo4j-graphrag                   # includes SimpleKGPipeline
 pip install neo4j-graphrag[openai]           # + OpenAI LLM/embedder
 pip install neo4j-graphrag[anthropic]        # + Anthropic Claude
-pip install neo4j-graphrag[google]           # + Vertex AI / Gemini
+pip install neo4j-graphrag[google]           # + Vertex AI (VertexAILLM)
+pip install neo4j-graphrag[google-genai]     # + GeminiLLM / GeminiEmbedder
 pip install neo4j-graphrag[bedrock]          # + Amazon Bedrock (boto3) — added v1.15.0
 pip install neo4j-graphrag[ollama]           # + Ollama (local)
 pip install neo4j-graphrag[mistralai]        # + MistralAI
@@ -63,7 +64,7 @@ pip install neo4j-graphrag[fuzzy-matching]   # + FuzzyMatchResolver (rapidfuzz)
 pip install neo4j-graphrag[nlp]
 ```
 
-Requires: `neo4j>=5.17.0` (driver 6.x supported), Python>=3.10, Neo4j>=5.18.1 (Aura>=5.18.0).
+Requires: `neo4j>=6.3.1,<7` (neo4j-graphrag v1.22+; driver 5.x → pin `neo4j-graphrag<1.22`), Python>=3.10,<3.15, Neo4j>=5.18.1 (Aura>=5.18.0).
 
 ---
 
@@ -437,7 +438,7 @@ If rows returned: wait, then re-run. ONLINE = safe to ingest.
 | Chunking loses sentence mid-way | `approximate=False` (default) cuts at exact token count | Set `approximate=True` in `FixedSizeSplitter` |
 | `chunk_size` too large → LLM timeouts | Extraction prompt + chunk exceeds context | Keep chunk_size ≤ 512 for GPT-4o extraction; ≤ 2048 absolute max |
 | `SpaCySemanticMatchResolver` fails on Python 3.14 | spaCy not supported on 3.14+ | Use `FuzzyMatchResolver` or downgrade to Python 3.13 |
-| `neo4j-driver` package not found | Deprecated package name since 6.0 | Use `neo4j` package: `pip install neo4j>=5.17.0` |
+| `neo4j-driver` package not found | Deprecated package name since 6.0 | Use `neo4j` package: `pip install "neo4j>=6.3.1"` |
 | `ValidationError` on `NodeType` with no properties | `NodeType` requires ≥1 property since v1.13.0 | Add at least `PropertyType(name="name", type="STRING")`; string-list labels get it automatically |
 | `from_pdf` deprecation warning | `from_pdf=True` removed in v1.15.0 | Use `from_file=True` instead |
 | `response_format` in `model_params` ignored | `SimpleKGPipeline` auto-enables structured output for OpenAI/VertexAI (v1.14.0+) | Remove `response_format` from `model_params`; the pipeline manages it |

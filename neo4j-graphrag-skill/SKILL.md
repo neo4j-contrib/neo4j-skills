@@ -11,7 +11,7 @@ description: Build GraphRAG retrieval pipelines on Neo4j using the neo4j-graphra
   neo4j-document-import-skill. Does NOT handle plain vector search — use
   neo4j-vector-index-skill. Does NOT handle GDS analytics — use neo4j-gds-skill.
   Does NOT handle agent memory — use neo4j-agent-memory-skill.
-version: 1.1.2
+version: 1.1.3
 status: active
 allowed-tools: Bash WebFetch
 ---
@@ -74,7 +74,9 @@ Vectors stored in external DB?      → WeaviateNeo4jRetriever / PineconeNeo4jRe
 ```bash
 pip install neo4j-graphrag[openai]        # OpenAI LLM + embeddings
 pip install neo4j-graphrag[anthropic]     # Anthropic Claude
-pip install neo4j-graphrag[google]        # Vertex AI / Gemini
+pip install neo4j-graphrag[google]        # Vertex AI (VertexAILLM / VertexAIEmbeddings)
+pip install neo4j-graphrag[google-genai]  # GeminiLLM / GeminiEmbedder (google-genai SDK)
+pip install neo4j-graphrag[sentence-transformers]  # SentenceTransformerEmbeddings (local)
 pip install neo4j-graphrag[bedrock]       # Amazon Bedrock (boto3)
 pip install neo4j-graphrag[cohere]        # Cohere
 pip install neo4j-graphrag[mistralai]     # MistralAI
@@ -84,7 +86,7 @@ pip install neo4j-graphrag[pinecone]      # Pinecone external retriever
 pip install neo4j-graphrag[qdrant]        # Qdrant external retriever
 ```
 
-Requires: Python >= 3.10, `neo4j >= 5.17.0` (driver 6.x supported).
+Requires: Python >= 3.10, < 3.15; `neo4j >= 6.3.1, < 7` (v1.22+; driver 5.x → pin `neo4j-graphrag<1.22`).
 
 ---
 
@@ -442,7 +444,7 @@ schema_dict = get_structured_schema(driver, sample=1000)  # dict with labels/rel
 
 ## Verification Checklist
 
-- [ ] `neo4j-graphrag` (not `neo4j-genai`) installed; `neo4j >= 5.17.0` driver
+- [ ] `neo4j-graphrag` (not `neo4j-genai`) installed; `neo4j >= 6.3.1` driver (v1.22+)
 - [ ] Vector index ONLINE before ingesting embeddings or running retriever
 - [ ] Fulltext index ONLINE if using Hybrid variants
 - [ ] Embedding dims in `create_vector_index` match the embedder output
