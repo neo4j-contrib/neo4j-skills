@@ -106,20 +106,20 @@ resolver = FuzzyMatchResolver(
 asyncio.run(resolver.run())
 ```
 
-Install: `pip install neo4j-graphrag[fuzzy]` (adds `rapidfuzz`)
+Install: `pip install "neo4j-graphrag[fuzzy-matching]"` (adds `rapidfuzz`)
 
-#### SpacySemanticMatchResolver
+#### SpaCySemanticMatchResolver
 
 Merges entities with same label + semantically similar textual properties via spaCy:
 
 ```python
-from neo4j_graphrag.components.resolver import SpacySemanticMatchResolver
+from neo4j_graphrag.components.resolver import SpaCySemanticMatchResolver
 
-resolver = SpacySemanticMatchResolver(driver=driver, neo4j_database="neo4j")
+resolver = SpaCySemanticMatchResolver(driver=driver, neo4j_database="neo4j")
 asyncio.run(resolver.run())
 ```
 
-Install: `pip install neo4j-graphrag[spacy]` + `python -m spacy download en_core_web_lg`
+Install: `pip install "neo4j-graphrag[nlp]"` (Python < 3.14) + `python -m spacy download en_core_web_lg`
 
 Risk of over-merging ("Apple" company vs "Apple" fruit). Apply domain `filter_query` to restrict by label.
 

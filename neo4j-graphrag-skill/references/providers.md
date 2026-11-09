@@ -10,7 +10,7 @@ Since v1.22 `neo4j_graphrag.llm` and `neo4j_graphrag.embeddings` resolve provide
 | `OpenAILLM` | `openai` | Structured output; tool calling |
 | `AzureOpenAILLM` | `openai` | Azure-hosted OpenAI |
 | `AnthropicLLM` | `anthropic` | Structured output + tool calling (v1.19; needs Claude 4.5+) |
-| `GeminiLLM` | `google` | Google GenAI SDK; added v1.17 (replaces deprecated-to-be `VertexAILLM`) |
+| `GeminiLLM` | `google-genai` | Google GenAI SDK; added v1.17 (replaces deprecated-to-be `VertexAILLM`) |
 | `VertexAILLM` | `google` | Structured output; tool calling; default model now `gemini-2.5-flash` (v1.19) |
 | `MistralAILLM` | `mistralai` | Tool calling; requires `mistralai>=2.7.1` (v1.19, breaking) |
 | `CohereLLM` | `cohere` | Constructible again since v1.19 |
@@ -54,7 +54,7 @@ All include automatic rate limiting with tenacity exponential backoff.
 |---|---|---|
 | `OpenAIEmbeddings` | `openai` | 3072 / 1536 |
 | `AzureOpenAIEmbeddings` | `openai` | varies |
-| `GeminiEmbedder` | `google` | added v1.17 (replaces deprecated-to-be `VertexAIEmbeddings`) |
+| `GeminiEmbedder` | `google-genai` | added v1.17 (replaces deprecated-to-be `VertexAIEmbeddings`) |
 | `VertexAIEmbeddings` | `google` | 768 |
 | `MistralAIEmbeddings` | `mistralai` | 1024 |
 | `CohereEmbeddings` | `cohere` | 1024 |
