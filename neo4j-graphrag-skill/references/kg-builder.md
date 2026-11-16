@@ -89,7 +89,7 @@ pipeline = SimpleKGPipeline(
 ## Graph Structure Created
 
 ```
-(Chunk {text, embedding, index, ...})
+(Chunk {text, embedding, embedding_model_name, index, ...})   // embedding_model_name v1.24+
   -[:FROM_DOCUMENT]->
 (Document {path, createdAt, <document_metadata keys>})
 
