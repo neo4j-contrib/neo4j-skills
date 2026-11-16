@@ -11,8 +11,8 @@ description: Neo4j Visualization Library (NVL) — framework-agnostic graph rend
   Does NOT handle Cypher query authoring — use neo4j-cypher-skill.
   Does NOT handle driver lifecycle, sessions, or executeQuery setup — use neo4j-driver-javascript-skill.
   Does NOT handle GraphVisualization/Needle default embed — use @neo4j-ndl/react.
-compatibility: "@neo4j-nvl packages 2.0.x; React 19 for @neo4j-nvl/react; modern browsers with Canvas2D + WebGL2"
-version: 2.0.0
+compatibility: "@neo4j-nvl packages 2.0+ (latest 2.1.x); React 19 for @neo4j-nvl/react; modern browsers with Canvas2D + WebGL2"
+version: 2.0.1
 allowed-tools: Bash WebFetch
 ---
 
@@ -284,6 +284,8 @@ Cluster decorations and cluster hull interactions apply to force-directed `layou
 - `getNodes()` and `onLayoutStep` return `NodeWithClientPosition[]`: `x`/`y` are layout coordinates and `clientPosition` is relative to the canvas element.
 - Use `styling.overlayLineColor`; `styling.minimapViewportBoxColor` is deprecated.
 
+2.1 upgrade: `@neo4j-nvl/react` + `@neo4j-nvl/interaction-handlers` are ESM-only (`"type": "module"`, `exports` map) — deep imports into `lib/` fail; import from package root. Both now depend on `lodash-es` → Jest `transformIgnorePatterns` must also transform `lodash-es`. Base types resolve under `moduleResolution: "nodenext"`.
+
 ---
 
 ## React — BasicNvlWrapper + Ref
@@ -419,6 +421,9 @@ container.addEventListener('click', (evt) => {
 | React wrapper ignores `layout` / `layoutOptions` | In 2.0 these must be nested in `nvlOptions` |
 | `onZoom` never fires | It was removed in 2.0; use `onZoomAndPan` |
 | Cluster callback misses clicks on a node | Cluster callbacks target empty cluster-hull space; node hits take priority |
+| `import ... from '@neo4j-nvl/react/lib/...'` fails after 2.1 | Import from package root (`'@neo4j-nvl/react'`, `'@neo4j-nvl/interaction-handlers'`) |
+| Jest `SyntaxError: Unexpected token 'export'` in `lodash-es` (2.1) | Add `lodash-es` to Jest `transformIgnorePatterns` exceptions alongside `@neo4j-nvl/*` |
+| Arrow keys move focused/selected nodes (2.1 `KeyboardInteraction`) and positions lost | Persist via `onNodeMove(nodes, evt)`; remap keys via `moveUpKey` / `moveDownKey` / `moveLeftKey` / `moveRightKey` in `interactionOptions` |
 
 ---
 

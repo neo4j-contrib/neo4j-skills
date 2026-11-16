@@ -506,6 +506,15 @@ new KeyboardInteraction(nvl, options?: {
   navigateBackwardKey?:string[]
   exitGraphKey?:       string[]
   contextMenuKey?:     string[]
+  // 2.1+: arrow-key node moves (selected nodes, else focused node)
+  moveUpKey?:          string[]   // default ['ArrowUp']
+  moveDownKey?:        string[]   // default ['ArrowDown']
+  moveLeftKey?:        string[]   // default ['ArrowLeft']
+  moveRightKey?:       string[]   // default ['ArrowRight']
+  moveStep?:           number     // screen px per press, default 5
+  largeMoveStep?:      number     // default 50
+  largeMoveStepModifier?: 'Shift' | 'Ctrl' | 'Alt' | 'Meta'  // default 'Shift'
+  canvasOutlineColor?: string     // focus outline, default '#30839D'
 })
 keyboard.getFocused(): Node | Relationship | undefined
 ```
@@ -518,6 +527,7 @@ keyboard.getFocused(): Node | Relationship | undefined
 | `onRelationshipFocus` / `onRelationshipBlur` | `(rel: Relationship, event: KeyboardEvent) => void` |
 | `onCanvasFocus` / `onCanvasBlur` | `(event: FocusEvent) => void` |
 | `onContextMenu` | `(element: Node \| Relationship \| undefined, event: KeyboardEvent) => void` |
+| `onNodeMove` [2.1] | `(nodes: (Node & Point)[], event: KeyboardEvent) => void` — moved nodes with updated positions |
 
 ---
 
@@ -582,7 +592,7 @@ onKeyDown, onKeyUp,
 onNodeFocus, onNodeBlur,
 onRelationshipFocus, onRelationshipBlur,
 onCanvasFocus, onCanvasBlur,
-onContextMenu
+onContextMenu, onNodeMove   // onNodeMove 2.1+
 ```
 
 ### `InteractionOptions`
@@ -592,5 +602,8 @@ Merged union of every handler's options:
 ```
 { selectOnClick?, drawShadowOnHover?, selectOnRelease?, excludeNodeMargin?, controlledZoom?,
   controlledPan?, enterGraphKey?, navigateForwardKey?, navigateBackwardKey?, exitGraphKey?,
-  contextMenuKey?, ghostGraphStyling? }
+  contextMenuKey?, ghostGraphStyling?,
+  // 2.1+: moveUpKey?, moveDownKey?, moveLeftKey?, moveRightKey?, moveStep?, largeMoveStep?,
+  //       largeMoveStepModifier?, canvasOutlineColor?
+}
 ```
