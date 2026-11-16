@@ -9,7 +9,7 @@ description: Ingests unstructured and semi-structured documents into Neo4j as a 
   Does NOT handle structured CSV/relational import — use neo4j-import-skill.
   Does NOT handle GraphRAG retrieval after ingestion — use neo4j-graphrag-skill.
   Does NOT handle vector index creation — use neo4j-vector-search-skill.
-version: 1.0.8
+version: 1.0.9
 status: stable
 allowed-tools: Bash WebFetch
 ---
@@ -273,7 +273,7 @@ Pipeline always produces this lexical graph layer:
 ```
 (:Document {id, fileName, status, ...metadata})
     -[:HAS_CHUNK]->
-(:Chunk {id, text, index, embedding, ...})
+(:Chunk {id, text, index, embedding, embedding_model_name, ...})   ← embedding_model_name v1.24+
     -[:NEXT_CHUNK]->          ← linked list for ordered traversal
 (:Chunk {...})
 

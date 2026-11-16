@@ -11,7 +11,7 @@ description: Build GraphRAG retrieval pipelines on Neo4j using the neo4j-graphra
   neo4j-document-import-skill. Does NOT handle plain vector search — use
   neo4j-vector-index-skill. Does NOT handle GDS analytics — use neo4j-gds-skill.
   Does NOT handle agent memory — use neo4j-agent-memory-skill.
-version: 1.1.3
+version: 1.1.4
 status: active
 allowed-tools: Bash WebFetch
 ---
@@ -389,7 +389,7 @@ r2 = rag.search(query_text="Where does she work?", message_history=history)
 ## External Retrievers, LLM + Embedder Providers
 
 - Weaviate / Pinecone / Qdrant constructors → [references/retrievers.md](references/retrievers.md#external-vector-db-retrievers)
-- LLM classes (`OpenAILLM`, `AnthropicLLM`, `GeminiLLM`, `VertexAILLM`, `BedrockLLM`, …), `base_url`, token usage, `close()`; embedder classes + dims → [references/providers.md](references/providers.md)
+- LLM classes (`OpenAILLM`, `AnthropicLLM`, `GeminiLLM`, `VertexAILLM`, `BedrockLLM`, …), `base_url`, token usage, `close()`; embedder classes + dims, custom `Embedder.embedding_model_name` [v1.24] → [references/providers.md](references/providers.md)
 
 ---
 

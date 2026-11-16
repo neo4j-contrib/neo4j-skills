@@ -77,3 +77,19 @@ embedder = OpenAIEmbeddings(model="text-embedding-3-small")   # 1536 dims
 embedder = SentenceTransformerEmbeddings(model="all-MiniLM-L6-v2")  # 384 dims, local
 embedder = BedrockEmbeddings(model_id="amazon.titan-embed-text-v2:0")
 ```
+
+v1.24: `Embedder.embedding_model_name` property; `TextChunkEmbedder` writes it to chunk metadata → `Chunk.embedding_model_name` in Neo4j. Built-in embedders return their model id. Custom subclasses default to `""` — override it:
+
+```python
+from neo4j_graphrag.embeddings import Embedder
+
+class MyEmbedder(Embedder):
+    def embed_query(self, text: str) -> list[float]:
+        return my_model.encode(text).tolist()
+
+    @property
+    def embedding_model_name(self) -> str:
+        return "my-model-v1"
+```
+
+Re-embedding chunks with a new model → also update `c.embedding_model_name`. Find stale chunks: `MATCH (c:Chunk) WHERE coalesce(c.embedding_model_name, '') <> $current RETURN c.index, c.embedding_model_name` (chunks written < v1.24 have no property).

@@ -90,7 +90,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 ```
 (Document {source, metadata})
   -[:FROM_DOCUMENT]->
-(Chunk {text, embedding, index, ...})
+(Chunk {text, embedding, embedding_model_name, index, ...})   // embedding_model_name v1.24+
   -[:HAS_ENTITY]->
 (Entity {name, label, description, ...})
   -[:<RELATION_TYPE>]->
