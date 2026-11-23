@@ -60,7 +60,7 @@ RETURN gds.version() AS gds_version
 GDS plugin unavailable: client raises `GdsNotFound` at construction; Cypher raises `Unknown function 'gds.version'`. AuraDB serverless analytics → `neo4j-aura-graph-analytics-skill`. Self-managed/local → install or enable GDS plugin.
 
 ```bash
-pip install "graphdatascience>=2.3"          # 2.3 required for GDS 2026.10; 2.1 for 2026.09
+pip install "graphdatascience>=2.4"          # >= 2.3 required for GDS 2026.10; 2.1 for 2026.09
 pip install "graphdatascience[rust-ext]"     # optional: faster serialization
 ```
 
@@ -68,6 +68,7 @@ Compatibility ([table](https://neo4j.com/docs/graph-data-science-client/current/
 
 | Client | GDS server | Python | pyarrow |
 |---|---|---|---|
+| 2.4 | >= 2.13, < 2.28, < 2026.11 | >= 3.11, < 3.16 | >= 26.0.1, < 27 |
 | 2.3 | >= 2.13, < 2.28, < 2026.11 | >= 3.11, < 3.16 | >= 22, < 27 |
 | 2.1 / 2.2 | >= 2.13, < 2.28, < 2026.10 | >= 3.10, < 3.15 | 21–25 |
 | 2.0 | >= 2.13, < 2.28, < 2026.9 | >= 3.10, < 3.15 | 21–25 |

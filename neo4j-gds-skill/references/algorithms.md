@@ -119,6 +119,10 @@ RETURN totalCost, [nodeId IN nodeIds | gds.util.asNode(nodeId).name] AS nodes
 | `normalization_strength` | `normalizationStrength` | 0.0 | Negative = downplay high-degree hubs |
 | `random_seed` | `randomSeed` | — | Set for reproducibility |
 
+Client 2.4 + GDS 2026.11+:
+- `result_as_vector=True` on `stream` / `mutate` / `write` of `fast_rp`, `node2vec`, `hash_gnn`, `graph_sage` → Neo4j `VECTOR` values instead of `LIST<FLOAT>`. Older GDS server → parameter rejected; omit it.
+- `patience` on `gds.graph_sage.train` / `train.estimate` — stop early only after `patience` consecutive epochs with loss change < `tolerance`. Default `1` (previous behavior).
+
 ### Node2Vec — key parameters
 | Client parameter | Cypher parameter | Default | Notes |
 |---|---|---|---|

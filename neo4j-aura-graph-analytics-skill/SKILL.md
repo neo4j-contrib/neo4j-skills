@@ -48,7 +48,7 @@ allowed-tools: Bash WebFetch
 
 ## Defaults
 
-- `graphdatascience >= 2.0` required; `>= 2.3` recommended
+- `graphdatascience >= 2.0` required; `>= 2.4` recommended
 - 2.0 endpoints: no `v2` prefix — `gds.page_rank.*`, `gds.graph.node_properties.*`, `gds.graph.construct(...)`
 - Use snake_case parameters end-to-end
 - Call `gds.verify_connectivity()` after session creation — verifies session and, if attached, the source DB
@@ -63,10 +63,10 @@ allowed-tools: Bash WebFetch
 ## Installation
 
 ```bash
-pip install "graphdatascience>=2.3"     # 2.3 is the current stable release
+pip install "graphdatascience>=2.4"     # 2.4 is the current stable release
 ```
 
-2.0–2.2 require: Python >= 3.10, `neo4j` driver 5.26–7.0, pandas 2–3, pyarrow 21–25, numpy <3. 2.3: Python >= 3.11 and < 3.16 (3.10 dropped), pyarrow >= 22 and < 27 — stay on 2.2 for Python 3.10.
+2.0–2.2 require: Python >= 3.10, `neo4j` driver 5.26–7.0, pandas 2–3, pyarrow 21–25, numpy <3. 2.3: Python >= 3.11 and < 3.16 (3.10 dropped), pyarrow >= 22 and < 27 — stay on 2.2 for Python 3.10. 2.4: pyarrow >= 26.0.1 and < 27 (CVE-2026-111497 fix).
 
 ### Client 1.x (legacy)
 
@@ -92,6 +92,8 @@ Migration guide: [Neo4j GDS Python client 2.0 migration](https://neo4j.com/docs/
 2.1 additions: `gds.run_cypher(query, auto_commit=True)` for `CALL { … } IN TRANSACTIONS` (2.0 default retryable transaction rejects it); `gds.db_driver()` → session client's managed `neo4j.Driver` (closed by `gds.close()`); `mode="READ"`/`"WRITE"` strings accepted for `QueryMode`.
 
 2.3 additions: `get_or_create` attaches to Aura virtual graph instances (type auto-detected; pass `uri=` + `aura_instance_id=`); `DbmsConnectionInfo(uri=...)` used as-is for AuraDB instead of replaced by Aura API connection URL; graphs projected via AuraDB Cypher API usable from Python client and vice versa (preview); `gds.graph.project.cypher` on query matching no data reports no graph created.
+
+2.4 additions: `result_as_vector=True` on `fast_rp` / `node2vec` / `hash_gnn` / `graph_sage` stream/mutate/write + session `compute` → Neo4j `VECTOR` values instead of `LIST<FLOAT>` (GDS 2026.11+); `patience` on `graph_sage.train` (early-stop after N consecutive epochs below `tolerance`, default `1`); `project.native` accepts single string or list for labels/types/properties; `page_rank.compute(username=...)`; `QueryType` / `AlgorithmCategory` are `StrEnum` → `str(AlgorithmCategory.X)` returns raw value, compares equal to string.
 
 ---
 
