@@ -172,7 +172,6 @@ type PartialRelationship = Partial<Relationship> & { id: string }
 | `instanceId` | `string` | — | |
 | `layout` | `Layout` | `'forceDirected'` | See Layout enum below |
 | `layoutOptions` | `LayoutOptions` | — | Layout-specific |
-| `layoutTimeLimit` | `number` | — | ms cap for layout iteration |
 | `minFps` | `number` | `3` | Minimum presentation target while layout is active; capped to `1..120` |
 | `maxFps` | `number` | `30` | Maximum presentation target while layout is active; capped to `1..120` |
 | `minZoom` | `number` | `0.075` | |
@@ -349,15 +348,14 @@ interface HitTargetCluster {
 ## `nvlResultTransformer`
 
 ```typescript
-import type { ResultTransformer, EagerResult } from 'neo4j-driver'
-
-const nvlResultTransformer: ResultTransformer<
-  EagerResult,
-  { nodes: Node[]; relationships: Relationship[] }
->
+const nvlResultTransformer: ResultTransformer<{
+  nodes: Node[]            // { id } only (element id)
+  relationships: Relationship[]  // { id, from, to } only
+  recordObjectMap: Map<string, DriverNode | DriverRelationship | Path>  // element id -> driver element
+}>
 ```
 
-Usage: `driver.executeQuery(cypher, params, { database: 'neo4j', resultTransformer: nvlResultTransformer })`. Returns deduplicated `{ nodes, relationships }`.
+Usage: `driver.executeQuery(cypher, params, { database: 'neo4j', resultTransformer: nvlResultTransformer })`. Collects nodes/relationships from top-level values, lists and paths; nodes nested in maps are skipped. Not deduplicated — `nodes` may repeat ids. No captions, labels, properties or relationship `type`: map them from `recordObjectMap` and deduplicate by `id` before rendering.
 
 ---
 

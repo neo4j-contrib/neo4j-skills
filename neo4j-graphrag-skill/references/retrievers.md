@@ -44,7 +44,7 @@ HybridRetriever(
 )
 ```
 
-`search()` params: `query_text` (required — used for both vector and fulltext), `top_k=5`, `filters={}`, `effective_search_ratio=1`
+`search()` params: `query_text` (required — used for both vector and fulltext), `top_k=5`, `effective_search_ratio=1`, `ranker="naive"` (or `"linear"`), `alpha` (linear ranker: vector-score weight; fulltext × `1 - alpha`). No `filters` (`TypeError`).
 
 ## HybridCypherRetriever
 
@@ -60,7 +60,7 @@ HybridCypherRetriever(
 )
 ```
 
-`search()` params: `query_text` (required), `top_k=5`, `query_params={}`, `filters={}`, `effective_search_ratio=1`
+`search()` params: `query_text` (required), `top_k=5`, `query_params={}`, `effective_search_ratio=1`, `ranker="naive"` (or `"linear"`), `alpha`. No `filters` (`TypeError`).
 
 ## Text2CypherRetriever
 
@@ -74,7 +74,7 @@ Text2CypherRetriever(
 )
 ```
 
-`search()` params: `query_text` (natural language question), `query_params={}`
+`search()` params: `query_text` (natural language question), `prompt_params={}` (overrides `schema` / `examples` or fills a custom prompt)
 
 No embedder needed. LLM generates the Cypher; `neo4j_schema` is injected into prompt.
 
@@ -84,7 +84,7 @@ No embedder needed. LLM generates the Cypher; `neo4j_schema` is injected into pr
 ToolsRetriever(
     driver,
     llm,
-    tools: list,             # list of retrievers converted via convert_to_tool()
+    tools: list,             # Tools from retriever.convert_to_tool(name=..., description=...)
     system_instruction: str = None,
     neo4j_database: str = None,
 )
@@ -92,9 +92,10 @@ ToolsRetriever(
 
 Convert a retriever to a tool:
 ```python
-from neo4j_graphrag.tool import convert_to_tool
-tool = convert_to_tool(retriever, name="vector_search", description="Searches by embedding similarity")
+tool = retriever.convert_to_tool(name="vector_search", description="Searches by embedding similarity")
 ```
+
+`llm` must support tool calling (OpenAI, Azure OpenAI, Gemini, VertexAI, Ollama, Bedrock — not Anthropic, Mistral, Cohere). Tool exceptions are swallowed: empty result with `metadata["error"]`.
 
 ## External Vector DB Retrievers
 
@@ -164,13 +165,15 @@ Controls candidate pool: `candidates = top_k * effective_search_ratio`. Increase
 
 ## Pre-filter Operators
 
+`VectorRetriever` / `VectorCypherRetriever` only.
+
 ```python
 filters = {
     "property_name": {"$eq": value},
     "property_name": {"$in": [v1, v2]},
-    "property_name": {"$between": {"min": 0, "max": 1}},
-    "property_name": {"$like": "prefix%"},   # case-sensitive
-    "property_name": {"$ilike": "prefix%"},  # case-insensitive
+    "property_name": {"$between": [0, 1]},     # [low, high] list; a dict silently returns 0 rows
+    "property_name": {"$like": "substr"},      # case-sensitive substring (CONTAINS); trailing % stripped, no wildcards
+    "property_name": {"$ilike": "substr"},     # case-insensitive substring
 }
 # Combine: {"$and": [{...}, {...}]} or {"$or": [{...}, {...}]}
 ```

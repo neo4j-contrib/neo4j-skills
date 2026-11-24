@@ -7,7 +7,7 @@ description: Use when building Spring Boot applications with Neo4j using Spring 
   Does NOT handle raw Java driver code without Spring — use neo4j-driver-java-skill.
   Does NOT handle Cypher query authoring — use neo4j-cypher-skill.
   Does NOT handle driver version upgrades — use neo4j-migration-skill.
-version: 1.0.5
+version: 1.0.6
 allowed-tools: Bash WebFetch
 ---
 
@@ -38,9 +38,11 @@ allowed-tools: Bash WebFetch
 
 | SDN    | Spring Boot | Spring Framework | Java | Neo4j |
 |--------|-------------|-----------------|------|-------|
-| 8.0.x  | 3.3.x / 3.4.x | 6.2.x          | 17+  | 5.15+ |
-| 8.1.x  | 3.4.x+      | 7.0.x           | 17+  | 5.15+ |
-| 7.5.x  | 3.2.x       | 6.1.x           | 17+  | 4.4+  |
+| 8.1.x  | 4.1.x       | 7.0.x           | 17+  | 5.15+ |
+| 8.0.x  | 4.0.x       | 7.0.x           | 17+  | 5.15+ |
+| 7.5.x  | 3.5.x       | 6.2.x           | 17+  | 4.4+  |
+
+Older: Boot 3.4 → SDN 7.4, Boot 3.3 → 7.3, Boot 3.2 → 7.2. SDN version comes from Boot's `spring-data-bom` — let Boot pick it.
 
 Use `spring-boot-starter-data-neo4j` — it pulls SDN + driver. No explicit SDN version needed when using Spring Boot BOM.
 
@@ -70,6 +72,19 @@ implementation 'org.springframework.boot:spring-boot-starter-data-neo4j'
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-webflux</artifactId>
 </dependency>
+```
+
+Boot does NOT auto-configure a reactive transaction manager. Without this bean, `ReactiveNeo4jRepository` calls fail: `NoSuchBeanDefinitionException: No bean named 'reactiveTransactionManager'`.
+
+```java
+import org.neo4j.driver.Driver;
+import org.springframework.data.neo4j.core.ReactiveDatabaseSelectionProvider;
+import org.springframework.data.neo4j.core.transaction.ReactiveNeo4jTransactionManager;
+
+@Bean
+ReactiveNeo4jTransactionManager reactiveTransactionManager(Driver driver, ReactiveDatabaseSelectionProvider dsp) {
+    return new ReactiveNeo4jTransactionManager(driver, dsp);
+}
 ```
 
 ---
@@ -112,6 +127,8 @@ Credentials: store in `.env`; never hardcode. Verify `.env` is in `.gitignore`.
 
 ```java
 import org.springframework.data.neo4j.core.schema.*;
+import org.springframework.data.neo4j.core.support.UUIDStringGenerator;   // not GeneratedValue.UUIDStringGenerator
+import org.springframework.data.annotation.Version;                      // not in core.schema
 
 // Internal generated ID (default for most cases)
 @Node("Person")
@@ -126,7 +143,7 @@ public class PersonEntity {
 // UUID business key
 @Node("Product")
 public class ProductEntity {
-    @Id @GeneratedValue(generatorClass = GeneratedValue.UUIDStringGenerator.class)
+    @Id @GeneratedValue(generatorClass = UUIDStringGenerator.class)
     private String id;
     @Version private Long version;               // optimistic locking; required with business key
 }
@@ -302,7 +319,7 @@ public interface ReactivePersonRepository extends ReactiveNeo4jRepository<Person
 }
 ```
 
-Do NOT mix imperative and reactive database access in the same application context.
+Do NOT mix imperative and reactive database access in the same application context. Reactive-only app: define the `reactiveTransactionManager` bean (see Setup → Reactive stack).
 
 ---
 
@@ -364,7 +381,7 @@ neo4jClient.query("MATCH (p:Person)-[:DIRECTED]->(m:Movie) WHERE p.name=$n RETUR
     )).one();
 ```
 
-Full API: [references/neo4j-client.md](references/neo4j-client.md)
+Full API: [Neo4jClient reference](https://docs.spring.io/spring-data/neo4j/reference/appendix/neo4j-client.html)
 
 ---
 
@@ -388,63 +405,18 @@ public class PersonService {
 
 ## Spring AI — Neo4jVectorStore
 
-### Dependency
-
-```xml
-<dependency>
-    <groupId>org.springframework.ai</groupId>
-    <artifactId>spring-ai-starter-vector-store-neo4j</artifactId>
-</dependency>
-```
-
-### application.yml
-
-```yaml
-spring:
-  ai:
-    vectorstore:
-      neo4j:
-        initialize-schema: true         # creates vector index on first run
-        index-name: my-index
-        embedding-dimension: 1536       # must match your embedding model
-        distance-type: cosine           # cosine (default) or euclidean
-        label: Document                 # node label for stored chunks
-        embedding-property: embedding   # property for the vector
-```
-
-Requires Neo4j 5.15+. Reuses `spring.neo4j.*` connection config.
-
-### Usage
-
-```java
-@Autowired VectorStore vectorStore;
-
-// Store
-vectorStore.add(List.of(new Document("text", Map.of("author", "alice"))));
-
-// Similarity search
-List<Document> results = vectorStore.similaritySearch(
-    SearchRequest.builder().query("spring neo4j").topK(5).similarityThreshold(0.75).build()
-);
-
-// With metadata filter
-vectorStore.similaritySearch(
-    SearchRequest.builder().query("spring neo4j").topK(5)
-        .filterExpression("author == 'alice'").build()
-);
-```
-
----
+Read [references/spring-ai.md](references/spring-ai.md#spring-ai--neo4jvectorstore) when you need this.
 
 ## Common Errors
 
 | Error | Cause | Fix |
 |---|---|---|
 | `MappingException: Could not find entity` | Entity not scanned | Check `@EnableNeo4jRepositories` base package |
-| Relationships null after load | Default depth may skip deep rels | Use `@Query` with `RETURN m, collect(r), collect(p)` |
+| Relationships null after custom `@Query` | Query didn't return rels + related nodes | Use `@Query` with `RETURN m, collect(r), collect(p)` |
 | N+1 queries | Per-entity relationship fetch | Rewrite with single `@Query`; use projections |
 | `OptimisticLockingFailureException` | Stale `@Version` on concurrent write | Retry in service layer |
-| `IllegalStateException: Cannot mix reactive/imperative` | Both repo types in same context | Pick one stack |
+| `NoSuchBeanDefinitionException: No bean named 'reactiveTransactionManager'` | Reactive repo; Boot defines no reactive tx manager | Add `ReactiveNeo4jTransactionManager` bean |
+| Reactive repo fails with `No bean named 'reactiveTransactionManager'` in an app that also has imperative repos | Boot only auto-configures the imperative tx manager | Pick one stack, or add the `ReactiveNeo4jTransactionManager` bean |
 | Projection null fields | Getter name mismatch | Match getter to property name; check `@Property` alias |
 | `@Query` empty with rels | Missing `collect(r), collect(p)` | Return root node + rels + related nodes together |
 | `Cannot delete node, node has relationships` | `deleteById` without detach | Use `@Query` with `DETACH DELETE` |
@@ -454,7 +426,7 @@ vectorStore.similaritySearch(
 
 ## Relationship Loading — Key Rule
 
-SDN loads related entities eagerly up to a configured depth (default: 1 hop). For deeper graphs:
+SDN has no depth setting. Derived finders and `findAll()` load the full reachable graph of mapped relationships (every hop). Control it with projections, `@Query`, or by mapping one direction only:
 
 ```java
 // Explicit @Query to control what gets loaded

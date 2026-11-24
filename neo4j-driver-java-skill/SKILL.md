@@ -8,7 +8,7 @@ description: Neo4j Java Driver v6 — driver lifecycle, Maven/Gradle setup, exec
   Does NOT handle Cypher authoring — use neo4j-cypher-skill.
   Does NOT cover driver version upgrades — use neo4j-migration-skill.
   Does NOT cover Spring Data Neo4j (@Node, Neo4jRepository) — use neo4j-spring-data-skill.
-version: 1.0.12
+version: 1.0.13
 allowed-tools: Bash WebFetch
 ---
 
@@ -110,8 +110,8 @@ Auth options: `AuthTokens.basic(u,p)` · `AuthTokens.bearer(token)` · `AuthToke
 | `session.executeRead/Write()` | Large results, callback control | ✅ | ✅ |
 | `session.beginTransaction()` | Multi-method, external coordination | ❌ | ✅ |
 | `session.run()` | Self-managing queries (`CALL IN TRANSACTIONS`) | ⚠️ one-shot [6.1+] | ✅ |
-| `driver.asyncSession()` | Non-blocking `CompletableFuture` | ✅ | ✅ |
-| `driver.rxSession()` | Reactor/RxJava backpressure | ✅ | ✅ |
+| `driver.session(AsyncSession.class, cfg)` | Non-blocking `CompletableFuture` | ✅ | ✅ |
+| `driver.session(ReactiveSession.class, cfg)` | Reactor/RxJava backpressure | ✅ | ✅ |
 
 `CALL { … } IN TRANSACTIONS` and `USING PERIODIC COMMIT` self-manage their transaction — use `session.run()` only. `executableQuery` and `executeRead/Write` will fail for these queries.
 
@@ -296,14 +296,16 @@ Map<String,Object> props = node.asMap();
 | Situation | `record.get(key)` | `.asString()` |
 |---|---|---|
 | Key present, value non-null | the value | returns string |
-| Key present, value is graph null | `Value` where `.isNull()` = true | **throws** `Uncoercible` |
-| Key absent (typo / not projected) | `Value.NULL` sentinel | **throws** `NoSuchElementException` |
+| Key present, value is graph null | `Values.NULL` (`.isNull()` = true) | returns the string `"null"` — no throw |
+| Key absent (typo / not projected) | `Values.NULL` (`.isNull()` = true) | returns the string `"null"` — no throw |
+
+Primitive accessors (`asLong()`, `asInt()`, `asDouble()`, `asBoolean()`) on either null **throw** `Uncoercible`. No path throws `NoSuchElementException`.
 
 ```java
-// Graph null — use default overload (safe only if key is always projected):
+// Graph null or absent key — default overload returns default for both:
 String city = record.get("city").asString("Unknown");
 
-// Absent key — check containsKey first:
+// Distinguish absent key from graph null — check containsKey:
 if (record.containsKey("city") && !record.get("city").isNull()) {
     String city = record.get("city").asString();
 }
@@ -326,11 +328,11 @@ var person = driver.executableQuery("MATCH (p:Person {name: $name}) RETURN p.nam
     .execute()
     .records()
     .stream()
-    .map(r -> r.get("name").asString())   // or: r.as(Person.class) — see note
+    .map(r -> r.get("name").asString())   // String only; for Person use r.as(Person.class) below
     .findFirst()
     .orElseThrow();
 
-// Using .as(Person.class) — maps RETURN keys to record fields by name
+// record.as(Person.class) — maps RETURN keys to record fields by name
 var person2 = driver.executableQuery("""
         MATCH (p:Person {name: $name})
         RETURN p.name AS name, p.age AS age
@@ -340,7 +342,7 @@ var person2 = driver.executableQuery("""
     .execute()
     .records()
     .stream()
-    .map(record -> record.get("p").as(Person.class))
+    .map(record -> record.as(Person.class))   // NOT record.get("p") — no "p" key → NPE; get("p").as(...) only after RETURN p
     .findFirst()
     .orElseThrow(() -> new RuntimeException("Person not found"));
 ```
@@ -421,8 +423,8 @@ Config.builder()
 | Leave `Result` open before next `tx.run()` | Consume before next call |
 | Side effects in managed tx callback | Move outside — callback may retry |
 | Pass custom objects to UNWIND params | Convert to `List<Map<String,Object>>` |
-| `asString()` on graph null | `.asString("default")` or check `.isNull()` |
-| `asString()` on absent key | `containsKey()` before optional access |
+| `asString()` on graph null / absent key (returns `"null"`); `asLong()` etc. throw `Uncoercible` | `.asString("default")` / `.asLong(0)` or check `.isNull()` |
+| Treat absent key as graph null | `containsKey()` to tell them apart |
 | Naked `tx.rollback()` in catch | Wrap in try/catch; use `addSuppressed` |
 | Assume `commit()` failure = no commit | Commit uncertainty — design writes idempotent |
 | Block inside async callback (`.join()`) | Chain with `thenCompose` |
@@ -435,7 +437,7 @@ Config.builder()
 ## References
 
 Load on demand:
-- [references/async-reactive.md](references/async-reactive.md) — full async `CompletableFuture` patterns, reactive `RxSession` with `Flux.usingWhen`, deadlock avoidance
+- [references/async-reactive.md](references/async-reactive.md) — full async `CompletableFuture` patterns, reactive `ReactiveSession` with `Flux.usingWhen`, deadlock avoidance
 - [references/property-encryption.md](references/property-encryption.md) — Property Encryption preview [6.3.0+]: envelope profile, key encapsulation services (local, AWS KMS, Azure Key Vault, GCP KMS), key manager, encrypt/decrypt with AAD
 - [references/advanced-config.md](references/advanced-config.md) — full `Config.builder()` options, TLS, notification filtering, session-level auth, user impersonation, cross-session bookmarks, spatial types (Values.point/WGS-84/Cartesian)
 

@@ -14,7 +14,7 @@ Python client 2.0: plain endpoints (no `v2` prefix) and snake_case parameters. P
 | ArticleRank | `gds.articleRank` | PageRank variant dampening high-degree nodes |
 | Eigenvector | `gds.eigenvector` | Influence via well-connected neighbors |
 | Closeness | `gds.closeness` | Average distance to all other nodes |
-| HITS | `gds.hits` | Authority/hub scores (web-like graphs) |
+| HITS | `gds.hits` | Authority/hub scores (web-like graphs); directed projection required |
 
 ### PageRank — key parameters
 | Client parameter | Cypher parameter | Default | Notes |
@@ -24,7 +24,7 @@ Python client 2.0: plain endpoints (no `v2` prefix) and snake_case parameters. P
 | `tolerance` | `tolerance` | 1e-7 | Convergence threshold |
 | `relationship_weight_property` | `relationshipWeightProperty` | — | Optional weight property |
 
-Spider traps (closed groups, no outlinks) inflate scores — increase `dampingFactor`. Negative weights silently ignored.
+Spider traps (closed groups, no outlinks) and sinks inflate scores — a high `dampingFactor` makes this worse; lower it (more teleportation) or remove the trap structure. Keep the default 0.85 unless the user asks for tuning. Negative weights silently ignored.
 
 ---
 
@@ -33,13 +33,13 @@ Spider traps (closed groups, no outlinks) inflate scores — increase `dampingFa
 | Algorithm | Procedure | Notes |
 |---|---|---|
 | Louvain | `gds.louvain` | Best general-purpose; modularity maximization |
-| Leiden | `gds.leiden` | Refinement of Louvain; avoids poorly connected communities |
+| Leiden | `gds.leiden` | Refinement of Louvain; avoids poorly connected communities; UNDIRECTED projection required |
 | WCC | `gds.wcc` | Weakly connected components; run first to partition graph |
 | SCC | `gds.scc` | Strongly connected components (directed graphs only) |
 | Label Propagation | `gds.labelPropagation` | Fast, large graphs; non-deterministic |
-| K-Core Decomposition | `gds.kcore` | Dense subgraphs by degree threshold |
-| Triangle Count | `gds.triangleCount` | Counts triangles per node; prerequisite for LCC |
-| Local Clustering Coefficient | `gds.localClusteringCoefficient` | Ratio of closed triangles |
+| K-Core Decomposition | `gds.kcore` | Dense subgraphs by degree threshold; UNDIRECTED projection required |
+| Triangle Count | `gds.triangleCount` | Counts triangles per node; prerequisite for LCC; UNDIRECTED projection required |
+| Local Clustering Coefficient | `gds.localClusteringCoefficient` | Ratio of closed triangles; UNDIRECTED projection required |
 | K-Means | `gds.kmeans` | Requires node embedding properties as input; `computeSilhouette` + `numberOfRestarts` together fail before GDS 2026.08.1 |
 | HDBSCAN | `gds.hdbscan` | Density-based; finds variable-density communities |
 
@@ -55,9 +55,9 @@ Spider traps (closed groups, no outlinks) inflate scores — increase `dampingFa
 
 | Algorithm | Procedure | Input | Notes |
 |---|---|---|---|
-| KNN | `gds.knn` | Node properties | Defaults metric by type; override with `{embedding: 'COSINE'}` |
+| KNN | `gds.knn` | Node properties | Defaults metric by type; override with `{embedding: 'COSINE'}`. Filtered variant: `gds.knn.filtered` |
 | Node Similarity | `gds.nodeSimilarity` | Bipartite graph topology | Jaccard / Overlap / Cosine from common neighbors; no node properties needed |
-| Filtered Node Similarity | `gds.nodeSimilarity` | Bipartite graph topology | With `sourceNodeFilter`/`targetNodeFilter` |
+| Filtered Node Similarity | `gds.nodeSimilarity.filtered` | Bipartite graph topology | `sourceNodeFilter`/`targetNodeFilter`; plain `gds.nodeSimilarity` rejects these keys |
 
 ### KNN — key parameters
 | Client parameter | Cypher parameter | Default | Notes |
@@ -125,14 +125,14 @@ RETURN totalCost, [nodeId IN nodeIds | gds.util.asNode(nodeId).name] AS nodes
 | `embedding_dimension` | `embeddingDimension` | 128 | |
 | `walk_length` | `walkLength` | 80 | Steps per random walk |
 | `walks_per_node` | `walksPerNode` | 10 | Random walks per node |
-| `in_out_factor` | `inOutFactor` | 1.0 | DFS bias (>1) vs BFS bias (<1) |
-| `return_factor` | `returnFactor` | 1.0 | Probability of returning to previous node |
+| `in_out_factor` | `inOutFactor` | 1.0 | Higher keeps walks local (BFS-like); lower fans out (DFS-like) |
+| `return_factor` | `returnFactor` | 1.0 | Below 1.0 makes returning to previous node more likely |
 
 ---
 
 ## ML Pipelines
 
-Pipelines: `gds.pipeline.node_classification` / `link_prediction` / `node_regression` — the only API in client 2.0. Get pipelines: `gds.pipeline.node_classification.get(name)`; trained models: `gds.pipeline.node_classification.get_model(name)`.
+Pipelines: `gds.pipeline.node_classification` / `link_prediction` / `node_regression` — the only API in client 2.0. Get pipelines: `gds.pipeline.node_classification.get(name)`; trained models: `gds.pipeline.node_classification.get_model(name)`. Pipelines and models stay in the catalog until dropped.
 
 ### Node Classification
 
@@ -142,7 +142,8 @@ pipe.add_node_property("fastRP", mutate_property="emb", embedding_dimension=128,
 pipe.select_features("emb")
 pipe.add_logistic_regression(max_epochs=100)
 
-model, train_result = pipe.train(G, target_property="label", metrics=["ACCURACY"])
+model, train_result = pipe.train(G, model_name="ncModel", target_property="label",
+                                 metrics=["ACCURACY"])   # model_name required in client 2.x
 predictions = model.predict_stream(G)
 model.predict_write(G, write_property="predicted_label")
 ```
@@ -155,8 +156,9 @@ pipe.add_node_property("fastRP", mutate_property="emb", embedding_dimension=128,
 pipe.add_feature("hadamard", node_properties=["emb"])
 pipe.add_logistic_regression(max_epochs=100)
 
-model, result = pipe.train(G, source_node_label="Person", target_node_label="Person",
-                           target_relationship_type="KNOWS", metrics=["AUCPR"])
+model, result = pipe.train(G, model_name="lpModel", source_node_label="Person",
+                           target_node_label="Person", target_relationship_type="KNOWS",
+                           metrics=["AUCPR"])   # model_name required in client 2.x
 model.predict_stream(G, top_n=10, threshold=0.5)
 ```
 

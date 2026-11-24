@@ -1,30 +1,31 @@
 # Stats and Monitoring — Reference
 
-## SHOW QUERIES
+## Long-Running Queries (via SHOW TRANSACTIONS)
 
-Lists currently running queries across all databases (admin required for other users' queries).
+`SHOW QUERIES` and `TERMINATE QUERY` do not exist (syntax error). Running queries appear as the `currentQuery*` columns of `SHOW TRANSACTIONS` (needs `SHOW TRANSACTION` privilege for other users' transactions).
 
 ```cypher
-SHOW QUERIES
-YIELD query, queryId, database, username, elapsedTimeMillis, allocatedBytes,
-      status, activeLockCount, pageHits, pageFaults, protocol, connectionId
-WHERE elapsedTimeMillis > 5000
-RETURN queryId, username, elapsedTimeMillis, allocatedBytes, query
-ORDER BY elapsedTimeMillis DESC
+SHOW TRANSACTIONS
+YIELD transactionId, database, username, currentQuery, currentQueryElapsedTime,
+      currentQueryAllocatedBytes, currentQueryStatus, activeLockCount,
+      currentQueryPageHits, currentQueryPageFaults
+WHERE currentQueryElapsedTime > duration('PT5S')
+RETURN transactionId, username, currentQueryElapsedTime, currentQueryAllocatedBytes, currentQuery
+ORDER BY currentQueryElapsedTime DESC
 ```
 
 Key fields:
-- `queryId` — use with `TERMINATE QUERY`
-- `elapsedTimeMillis` — wall time since query started
-- `allocatedBytes` — heap allocated; high = memory pressure
-- `status` — `running`, `planning`, `waiting`, `closing`
+- `transactionId` — use with `TERMINATE TRANSACTION`
+- `currentQueryElapsedTime` — wall time since the current query started (`DURATION`)
+- `currentQueryAllocatedBytes` — heap allocated; high = memory pressure
+- `currentQueryStatus` — `parsing`, `planning`, `planned`, `running`, `waiting`
 - `activeLockCount` — >0 means write transaction holding locks
-- `pageHits` / `pageFaults` — cache hit/miss counts for this query
+- `currentQueryPageHits` / `currentQueryPageFaults` — cache hit/miss counts for this query
 
-Kill a single query:
+Kill a running query → terminate its transaction:
 ```cypher
-TERMINATE QUERY "query-id-string"
-YIELD queryId, username, message
+TERMINATE TRANSACTION "neo4j-transaction-123"
+YIELD transactionId, username, message
 ```
 
 ---
@@ -75,12 +76,10 @@ YIELD section, data
 RETURN section, data
 ```
 
-`data` map includes keys like:
-- `nodes` — total node count
-- `relationships` — total rel count
-- `nodesByLabel` — map of `{label: count}`
-- `relsByType` — map of `{type: count}`
-- `relsByTypeStartingLabel` / `relsByTypeEndingLabel` — selectivity data
+`data` map keys: `nodes`, `relationships`, `indexes`, `constraints`.
+- `data.nodes` — list: `[{count: 15200}, {count: 5000, label: 'Person'}, …]` (entry without `label` = total)
+- `data.relationships` — list of `{count, relationshipType, startLabel, endLabel}` entries (selectivity data)
+- No `nodesByLabel` / `relsByType*` keys
 
 ### Token Stats
 ```cypher
@@ -155,22 +154,22 @@ Index types and supported predicates:
 | RANGE | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ |
 | TEXT | ✓ | ✓ | ✗ | ✗ | ✓ | ✓ | ✓ | ✗ |
 | POINT | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✓ |
-| FULLTEXT | — | — | — | — | — | ✓ | — | — |
+| FULLTEXT | — | — | — | — | — | ✗ | — | — |
 | LOOKUP | node/rel by ID | — | — | — | — | — | — | — |
+
+FULLTEXT is never used for `WHERE … CONTAINS` (plans as `NodeByLabelScan` + `Filter`) — query it with `SEARCH … FULLTEXT INDEX` [2026.09] or `db.index.fulltext.queryNodes`.
 
 ---
 
 ## Query Log (server-side)
 
-On self-managed Neo4j, slow queries log to `neo4j.log` and `query.log`:
+Enterprise Edition only (Community query log stays empty). On self-managed Enterprise, queries log to `query.log`:
 
 Config options (`neo4j.conf`):
 ```
-db.logs.query.enabled=INFO          # Log all queries (verbose) or WARN (slow only)
-db.logs.query.threshold=2s          # Log queries taking longer than this
+db.logs.query.enabled=INFO          # OFF | INFO (only queries over threshold, at end) | VERBOSE (all queries, start + end; default)
+db.logs.query.threshold=2s          # INFO logs queries taking longer than this
 db.logs.query.parameter_logging_enabled=true
-db.logs.query.allocation_logging_enabled=true
-db.logs.query.page_logging_enabled=true
 ```
 
 Each log entry includes: `{elapsedMs} ms: {query}` with optional params, allocated bytes, page hits/misses.
@@ -185,14 +184,14 @@ Format set in `server-logs.xml`: PLAIN default today; new installs default to JS
 
 Small page cache → high `pageFaults` → disk I/O → slow queries.
 
+Measure with `PROFILE` (page cache hits/misses per operator) or `SHOW TRANSACTIONS` (`dbms.queryJmx` has no Neo4j page cache bean — returns zero rows):
 ```cypher
-// Current page cache stats:
-CALL dbms.queryJmx("org.neo4j:instance=kernel#0,name=Page cache")
-YIELD attributes
-RETURN attributes
+SHOW TRANSACTIONS
+YIELD transactionId, pageHits, pageFaults, currentQuery
+RETURN transactionId, pageHits, pageFaults, currentQuery
 ```
 
-Or from SHOW TRANSACTIONS/QUERIES:
+From SHOW TRANSACTIONS:
 - `pageHits` high, `pageFaults` low → cache is sufficient
 - `pageFaults` > 1% of pageHits → increase `server.memory.pagecache.size` in `neo4j.conf`
 

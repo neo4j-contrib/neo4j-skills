@@ -11,7 +11,7 @@ Skill for database administration and automation using Neo4j command-line tools.
 
 **Version / compatibility:**
 - `neo4j-admin` bundled with Neo4j 5.x / 2025.x
-- `aura-cli` — install via `pip install aura-cli`
+- `aura-cli` — Go binary from [GitHub releases](https://github.com/neo4j/aura-cli/releases) (PyPI `aura-cli` is not the official package); prefer `neo4j-cli aura`
 - `cypher-shell` — standalone download or bundled with Neo4j
 
 **Not covered:**

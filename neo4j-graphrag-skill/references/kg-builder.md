@@ -16,10 +16,12 @@ pipeline = SimpleKGPipeline(
     perform_entity_resolution: bool = True,
     neo4j_database: str = None,
     on_error: str = "IGNORE",     # "RAISE" or "IGNORE"
-    prompt_template: str = None,  # custom extraction prompt
-    chunk_size: int = 1000,
-    chunk_overlap: int = 200,
+    prompt_template=ERExtractionTemplate(),  # or str — a str REPLACES the whole prompt
+    text_splitter=None,           # TextSplitter; default FixedSizeSplitter(4000, 200) chars
+    file_loader=None,             # DataLoader (pdf_loader= is deprecated)
+    lexical_graph_config=None,
 )
+# No chunk_size / chunk_overlap params (TypeError) — pass a splitter via text_splitter=
 ```
 
 ## Schema Modes
@@ -48,7 +50,7 @@ schema={
     "node_types": [...],
     "relationship_types": [...],
     "patterns": [
-        {"start": "Person", "end": "Organization", "relation": "WORKS_AT"},
+        ("Person", "WORKS_AT", "Organization"),   # (source, relationship, target)
     ]
 }
 ```
@@ -77,37 +79,37 @@ from neo4j_graphrag.components.text_splitters.fixed_size_splitter import FixedSi
 
 pipeline = SimpleKGPipeline(
     ...,
-    chunk_size=800,      # tokens per chunk
-    chunk_overlap=150,   # overlap between consecutive chunks
+    text_splitter=FixedSizeSplitter(chunk_size=800, chunk_overlap=150),  # characters
 )
-# For LangChain splitters:
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-# Pass custom splitter via pipeline component wiring (advanced — see pipeline docs)
+# For LangChain splitters: `from langchain_text_splitters import ...` (not langchain.text_splitter),
+# wrap in LangChainTextSplitterAdapter, pass as text_splitter=
+# → see knowledge-graph-construction.md#langchain-adapter
 ```
 
 ## Graph Structure Created
 
 ```
-(Document {source, metadata})
-  -[:FROM_DOCUMENT]->
 (Chunk {text, embedding, index, ...})
-  -[:HAS_ENTITY]->
-(Entity {name, label, description, ...})
-  -[:<RELATION_TYPE>]->
-(Entity)
+  -[:FROM_DOCUMENT]->
+(Document {path, createdAt, <document_metadata keys>})
+
+(Chunk)-[:NEXT_CHUNK]->(Chunk)
+
+(:Person:__Entity__ {name, ...})     // entity type is a label, plus __Entity__
+  -[:FROM_CHUNK]->
+(Chunk)
+
+(:Person:__Entity__)-[:<RELATION_TYPE>]->(:Organization:__Entity__)
+// all pipeline nodes also carry __KGBuilder__
 ```
 
 ## entity_resolution
 
-When `perform_entity_resolution=True` (default): similar entity nodes are merged using LLM judgment. Increases accuracy, slower. Set `False` for initial development, `True` for production ingestion.
+When `perform_entity_resolution=True` (default): `SinglePropertyExactMatchResolver` merges nodes with same label and identical `name`. No LLM; near-duplicates stay separate — run `FuzzyMatchResolver` / `SpaCySemanticMatchResolver` after ingestion (knowledge-graph-construction.md). Set `False` for initial development, `True` for production ingestion.
 
 ## Structured Output
 
-Use with OpenAI or VertexAI to enforce JSON schema at API level (reduces parsing errors):
-```python
-llm = OpenAILLM(model_name="gpt-4o", model_params={"use_structured_output": True})
-```
-Not available for Anthropic, Ollama, Mistral (as of v1.x).
+Automatic: `SimpleKGPipeline` enables structured output when `llm.supports_structured_output` is True (`OpenAILLM`, `VertexAILLM`, `AnthropicLLM`). No flag. Never put `use_structured_output` in `model_params` — passed to the provider API → `TypeError`.
 
 ## Batch Processing Multiple Documents
 

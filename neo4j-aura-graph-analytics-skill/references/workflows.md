@@ -23,7 +23,7 @@ gds = sessions.get_or_create(
     session_name="prod-analysis",
     memory=memory,
     db_connection=DbmsConnectionInfo.from_env(),
-    ttl=timedelta(hours=4),
+    ttl=timedelta(hours=4),   # Pro/BC/VDC; Free max 30 min
 )
 gds.verify_connectivity()
 
@@ -76,7 +76,7 @@ sessions = GdsSessions(api_credentials=AuraAPICredentials.from_env())
 gds = sessions.get_or_create(
     session_name="csv-analysis",
     memory=SessionMemory.m_4GB,
-    ttl=timedelta(hours=1),
+    ttl=timedelta(hours=1),   # Free max 30 min
     cloud_location=CloudLocation("gcp", "europe-west1"),
 )
 

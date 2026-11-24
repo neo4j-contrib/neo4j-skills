@@ -8,8 +8,8 @@ description: Ingests unstructured and semi-structured documents into Neo4j as a 
   resolution, chunking strategies, and graph schema design for RAG pipelines.
   Does NOT handle structured CSV/relational import — use neo4j-import-skill.
   Does NOT handle GraphRAG retrieval after ingestion — use neo4j-graphrag-skill.
-  Does NOT handle vector index creation — use neo4j-vector-search-skill.
-version: 1.0.7
+  Does NOT handle vector index creation — use neo4j-vector-index-skill.
+version: 1.0.8
 status: stable
 allowed-tools: Bash WebFetch
 ---
@@ -30,7 +30,7 @@ allowed-tools: Bash WebFetch
 
 - **Structured CSV / relational data** → `neo4j-import-skill`
 - **GraphRAG retrieval after ingestion** → `neo4j-graphrag-skill`
-- **Vector index creation** → `neo4j-vector-search-skill`
+- **Vector index creation** → `neo4j-vector-index-skill`
 - **Cypher query writing** → `neo4j-cypher-skill`
 
 ---
@@ -63,7 +63,7 @@ pip install neo4j-graphrag[fuzzy-matching]   # + FuzzyMatchResolver (rapidfuzz)
 pip install neo4j-graphrag[nlp]
 ```
 
-Requires: `neo4j>=5.17.0` (driver 6.x supported), Python>=3.10, Neo4j>=5.18.1 (Aura>=5.18.0).
+Requires: driver `neo4j>=6.3.1,<7` (installed automatically with neo4j-graphrag), Python `>=3.10,<3.15`, Neo4j>=5.18.1 (Aura>=5.18.0).
 
 ---
 
@@ -84,7 +84,7 @@ patterns = [
 
 # Option B — Rich GraphSchema (production; best extraction quality)
 from neo4j_graphrag.components.schema import (
-    GraphSchema, NodeType, RelationshipType, PropertyType, ConstraintType
+    GraphSchema, NodeType, RelationshipType, PropertyType, ConstraintType, GraphConstraintType
 )
 schema = GraphSchema(
     node_types=[
@@ -111,8 +111,8 @@ schema = GraphSchema(
     patterns=[("Person", "WORKS_AT", "Organization")],
     # Optional: constraints emitted to ParquetWriter metadata (v1.15.0+)
     constraints=[
-        ConstraintType(label="Person", property_name="name", type="UNIQUENESS"),
-        ConstraintType(label="Organization", property_name="name", type="KEY"),
+        ConstraintType(type=GraphConstraintType.UNIQUENESS, node_type="Person", property_name="name"),
+        ConstraintType(type=GraphConstraintType.KEY, node_type="Organization", property_name="name"),
     ],
 )
 
@@ -163,7 +163,7 @@ pipeline = SimpleKGPipeline(
 - `AnthropicLLM(model_name="claude-3-5-sonnet-20241022")`
 - `VertexAILLM(model_name="gemini-2.0-flash")`
 - `OllamaLLM(model_name="llama3")` — local; no API key needed
-- `BedrockLLM(model_id="anthropic.claude-3-5-sonnet-20241022-v2:0")` — Amazon Bedrock (v1.15.0+)
+- `BedrockLLM(model_name="anthropic.claude-3-5-sonnet-20241022-v2:0")` — Amazon Bedrock (v1.15.0+); keyword is `model_name`, not `model_id`
 
 ---
 
@@ -173,7 +173,7 @@ pipeline = SimpleKGPipeline(
 # From PDF file:
 result = asyncio.run(pipeline.run_async(
     file_path="report.pdf",        # auto-dispatches to PdfLoader
-    document_metadata={"source": "Q4 report", "year": 2025},
+    document_metadata={"source": "Q4 report", "year": "2025"},   # values must be strings
 ))
 
 # From Markdown file (v1.15.0+):
@@ -186,8 +186,11 @@ result = asyncio.run(pipeline.run_async(
 # pipeline = SimpleKGPipeline(..., from_file=True)   ← correct
 # pipeline = SimpleKGPipeline(..., from_pdf=True)    ← deprecated
 
-# From raw text:
-result = asyncio.run(pipeline.run_async(
+# From raw text — needs a separate pipeline built with from_file=False
+# (text= on a from_file=True pipeline raises PipelineDefinitionError):
+text_pipeline = SimpleKGPipeline(llm=llm, driver=driver, embedder=embedder,
+                                 schema=schema, from_file=False)
+result = asyncio.run(text_pipeline.run_async(
     text=document_text,
 ))
 
@@ -199,21 +202,21 @@ async def ingest_all(paths):
 asyncio.run(ingest_all(list(pdf_dir.glob("*.pdf"))))
 ```
 
-`document_metadata` dict is stored as properties on the `:Document` node.
+`document_metadata` dict (`Dict[str, str]` — string values only) is stored as properties on the `:Document` node.
 
 ---
 
 ## Step 4 — Chunking Configuration
 
-Default splitter: `FixedSizeSplitter(chunk_size=300, chunk_overlap=50)`.
+Default splitter: `FixedSizeSplitter()` = `chunk_size=4000, chunk_overlap=200, approximate=True`. Sizes are **characters**, not tokens.
 
 ```python
 from neo4j_graphrag.components.text_splitters.fixed_size_splitter import FixedSizeSplitter
 
 splitter = FixedSizeSplitter(
-    chunk_size=512,       # tokens; 300–512 typical for GPT-4o
-    chunk_overlap=50,     # ~10% of chunk_size; preserves boundary context
-    approximate=True,     # respect sentence/word boundaries when possible
+    chunk_size=2000,      # characters (not tokens)
+    chunk_overlap=200,    # ~10% of chunk_size; preserves boundary context
+    approximate=True,     # default; avoids cutting words
 )
 
 pipeline = SimpleKGPipeline(
@@ -223,13 +226,13 @@ pipeline = SimpleKGPipeline(
 ```
 
 Chunking guidance:
-| Document type | chunk_size | chunk_overlap |
+| Document type | chunk_size (chars) | chunk_overlap (chars) |
 |---|---|---|
-| Dense technical text | 256–512 | 50–80 |
-| Narrative / news articles | 512–1024 | 80–128 |
-| Legal / financial docs | 256–384 | 40–64 |
+| Dense technical text | 1000–2000 | 200–300 |
+| Narrative / news articles | 2000–4000 | 300–500 |
+| Legal / financial docs | 1000–1500 | 150–250 |
 
-Rule: chunk must fit within LLM context for extraction + within embedding model limits. GPT-4o: 128k context; `text-embedding-3-small`: 8191 tokens. Never set chunk_size > 2048.
+Rule: chunk must fit within LLM context for extraction + within embedding model limits (`text-embedding-3-small`: 8191 tokens ≈ 4 chars/token for English). `chunk_size` counts characters.
 
 ---
 
@@ -250,13 +253,13 @@ asyncio.run(resolver.run())
 
 # Fuzzy match (handles typos / alternate spellings)
 from neo4j_graphrag.components.resolver import FuzzyMatchResolver
-resolver = FuzzyMatchResolver(driver, threshold=0.9)
+resolver = FuzzyMatchResolver(driver, similarity_threshold=0.9)
 asyncio.run(resolver.run())
 
 # Scope resolution to specific labels only:
 resolver = SinglePropertyExactMatchResolver(
     driver,
-    filter_query="WHERE n:Organization OR n:Person",
+    filter_query="WHERE entity:Organization OR entity:Person",   # node variable is `entity`
 )
 asyncio.run(resolver.run())
 ```
@@ -267,128 +270,48 @@ Run resolvers after ingestion, not inline — bulk merges are faster.
 
 ## Resulting Graph Structure
 
-Pipeline always produces this lexical graph layer:
+SimpleKGPipeline produces this lexical graph layer (default `LexicalGraphConfig`):
 
 ```
-(:Document {id, fileName, status, ...metadata})
-    -[:HAS_CHUNK]->
-(:Chunk {id, text, index, embedding, ...})
-    -[:NEXT_CHUNK]->          ← linked list for ordered traversal
-(:Chunk {...})
+(:Chunk {index, text, embedding})
+    -[:FROM_DOCUMENT]->
+(:Document {path, createdAt, document_type, ...metadata})
 
-(:Chunk)-[:FROM_DOCUMENT]->(:Document)   ← back-pointer
+(:Chunk)-[:NEXT_CHUNK]->(:Chunk)          ← linked list for ordered traversal
 ```
 
-Entity extraction adds:
+Entity extraction adds (entities also get labels `__Entity__` and `__KGBuilder__`):
 ```
-(:Chunk)-[:MENTIONS]->(:Person {name, ...})
-(:Chunk)-[:MENTIONS]->(:Organization {name, ...})
+(:Person:__Entity__ {name, ...})-[:FROM_CHUNK]->(:Chunk)
+(:Organization:__Entity__ {name, ...})-[:FROM_CHUNK]->(:Chunk)
 (:Person)-[:WORKS_AT]->(:Organization)
 ```
+
+No `HAS_CHUNK` / `MENTIONS` — that shape needs a custom writer or `LexicalGraphConfig` overrides.
 
 Verify after ingestion:
 ```cypher
 CYPHER 25
-MATCH (d:Document)-[:HAS_CHUNK]->(c:Chunk)
-RETURN d.fileName, count(c) AS chunks LIMIT 10;
+MATCH (c:Chunk)-[:FROM_DOCUMENT]->(d:Document)
+RETURN d.path, count(c) AS chunks LIMIT 10;
 
-MATCH (c:Chunk)-[:MENTIONS]->(e)
-RETURN labels(e)[0] AS type, count(*) AS cnt ORDER BY cnt DESC LIMIT 20;
+MATCH (e:__Entity__)-[:FROM_CHUNK]->(c:Chunk)
+RETURN [l IN labels(e) WHERE NOT l STARTS WITH '__'][0] AS type, count(*) AS cnt ORDER BY cnt DESC LIMIT 20;
 ```
 
 ---
 
 ## LLM Graph Builder (No-Code UI)
 
-Use when: non-developers need to ingest docs; rapid prototyping; no Python environment.
-
-**Hosted**: https://llm-graph-builder.neo4jlabs.com/
-
-**Local** (Docker):
-```bash
-git clone https://github.com/neo4j-labs/llm-graph-builder
-cd llm-graph-builder
-# Set OPENAI_API_KEY (or other provider keys) in .env
-docker-compose up
-# Opens at http://localhost:8080
-```
-
-Supported sources: PDF, plain text, Markdown, images, web pages, YouTube transcripts, S3/GCS bucket uploads.
-
-LLM providers: OpenAI, Gemini, Claude, Llama3, Diffbot, Qwen.
-
-Limitations: best with long-form English text; poor on tabular data (use `neo4j-import-skill` for CSV/Excel); visual diagrams not extracted.
-
----
+Read [references/other-ingestion.md](references/other-ingestion.md#llm-graph-builder-no-code-ui) when you need this.
 
 ## APOC JSON Ingestion (Semi-Structured)
 
-Use when source is JSON from REST APIs, S3, or file exports.
-
-```cypher
-CYPHER 25
-CALL apoc.load.json("https://example.com/articles.json") YIELD value
-UNWIND value.articles AS article
-CALL (article) {
-  MERGE (d:Document {id: article.id})
-  SET d.title = article.title, d.url = article.url, d.publishedAt = article.publishedAt
-  FOREACH (tag IN article.tags |
-    MERGE (t:Tag {name: tag})
-    MERGE (d)-[:HAS_TAG]->(t)
-  )
-} IN TRANSACTIONS OF 1000 ROWS
-```
-
-Local file: `apoc.load.json("file:///import/data.json")`. File must be in `$NEO4J_HOME/import/` or APOC `allowlist` configured.
-
-Check APOC available: `RETURN apoc.version()`. APOC is included on all Aura tiers.
-
----
+Read [references/other-ingestion.md](references/other-ingestion.md#apoc-json-ingestion-semi-structured) when you need this.
 
 ## LangChain Integration Pattern
 
-```python
-from langchain_community.graphs import Neo4jGraph
-from langchain_community.document_loaders import PyPDFLoader
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_openai import OpenAIEmbeddings
-from neo4j import GraphDatabase
-
-graph = Neo4jGraph(
-    url="neo4j+s://xxxx.databases.neo4j.io",
-    username="neo4j",
-    password="password",
-)
-
-loader = PyPDFLoader("report.pdf")
-docs = loader.load()
-splitter = RecursiveCharacterTextSplitter(chunk_size=512, chunk_overlap=64)
-chunks = splitter.split_documents(docs)
-
-embedder = OpenAIEmbeddings()
-driver = GraphDatabase.driver(url, auth=("neo4j", "password"))
-
-for i, chunk in enumerate(chunks):
-    emb = embedder.embed_query(chunk.page_content)
-    driver.execute_query(
-        """
-        MERGE (doc:Document {id: $doc_id})
-        SET doc.source = $source
-        CREATE (c:Chunk {id: $chunk_id, text: $text, embedding: $emb, index: $idx})
-        CREATE (doc)-[:HAS_CHUNK]->(c)
-        """,
-        doc_id=chunk.metadata.get("source", "unknown"),
-        source=chunk.metadata.get("source"),
-        chunk_id=f"chunk-{i}",
-        text=chunk.page_content,
-        emb=emb,
-        idx=i,
-    )
-```
-
-For entity extraction with LangChain: use `LLMGraphTransformer` (from `langchain_experimental.graph_transformers`). Produces same `:Document`/`:Chunk`/entity pattern.
-
----
+Read [references/other-ingestion.md](references/other-ingestion.md#langchain-integration-pattern) when you need this.
 
 ## Constraints and Indexes (Run Before Ingestion)
 
@@ -402,11 +325,12 @@ CREATE CONSTRAINT doc_id_unique IF NOT EXISTS
 CREATE CONSTRAINT chunk_id_unique IF NOT EXISTS
   FOR (c:Chunk) REQUIRE c.id IS UNIQUE;
 
-// Entity deduplication
-CREATE CONSTRAINT person_name_unique IF NOT EXISTS
-  FOR (p:Person) REQUIRE p.name IS UNIQUE;
-CREATE CONSTRAINT org_name_unique IF NOT EXISTS
-  FOR (o:Organization) REQUIRE o.name IS UNIQUE;
+// Entity names: index only — NO uniqueness constraint before ingestion.
+// The extractor writes same-name entities as separate nodes; a UNIQUE constraint makes
+// the writer fail (ConstraintError) and, with on_error="IGNORE", leaves the graph empty.
+// Add uniqueness after the resolver has merged duplicates.
+CREATE INDEX person_name IF NOT EXISTS FOR (p:Person) ON (p.name);
+CREATE INDEX org_name IF NOT EXISTS FOR (o:Organization) ON (o.name);
 
 // Vector index for chunk embeddings (adjust dims for your model)
 CREATE VECTOR INDEX chunk_embeddings IF NOT EXISTS
@@ -433,11 +357,11 @@ If rows returned: wait, then re-run. ONLINE = safe to ingest.
 | `MissingEmbedderError` | `embedder=` omitted | Always pass `embedder=` even if not doing vector search — pipeline stores embeddings on Chunk nodes |
 | Zero entities extracted | LLM context overflow | Reduce `chunk_size`; switch to model with larger context |
 | Duplicate entity nodes after ingestion | Entity resolution not run | Run `SinglePropertyExactMatchResolver` after bulk ingest |
-| `apoc.load.json` permission denied | APOC allowlist not configured | Add URL to `apoc.import.file.enabled=true` and `dbms.security.allow_csv_import_from_file_urls=true` |
-| Chunking loses sentence mid-way | `approximate=False` (default) cuts at exact token count | Set `approximate=True` in `FixedSizeSplitter` |
-| `chunk_size` too large → LLM timeouts | Extraction prompt + chunk exceeds context | Keep chunk_size ≤ 512 for GPT-4o extraction; ≤ 2048 absolute max |
+| `Import from files not enabled, please set apoc.import.file.enabled=true in your apoc.conf` | Local file access off (default) | Add `apoc.import.file.enabled=true` to `conf/apoc.conf`; restart. HTTP URLs don't need it |
+| Chunking cuts words mid-way | `approximate=False` cuts at exact character count (default is `True`) | Keep `approximate=True` in `FixedSizeSplitter` |
+| `chunk_size` too large → LLM timeouts | Extraction prompt + chunk exceeds context | Reduce `chunk_size` (characters; default 4000) |
 | `SpaCySemanticMatchResolver` fails on Python 3.14 | spaCy not supported on 3.14+ | Use `FuzzyMatchResolver` or downgrade to Python 3.13 |
-| `neo4j-driver` package not found | Deprecated package name since 6.0 | Use `neo4j` package: `pip install neo4j>=5.17.0` |
+| `neo4j-driver` package not found | Deprecated package name since 6.0 | Use `neo4j` package: `pip install "neo4j>=6.3.1,<7"` (neo4j-graphrag pins it) |
 | `ValidationError` on `NodeType` with no properties | `NodeType` requires ≥1 property since v1.13.0 | Add at least `PropertyType(name="name", type="STRING")`; string-list labels get it automatically |
 | `from_pdf` deprecation warning | `from_pdf=True` removed in v1.15.0 | Use `from_file=True` instead |
 | `response_format` in `model_params` ignored | `SimpleKGPipeline` auto-enables structured output for OpenAI/VertexAI (v1.14.0+) | Remove `response_format` from `model_params`; the pipeline manages it |
@@ -448,15 +372,15 @@ If rows returned: wait, then re-run. ONLINE = safe to ingest.
 
 - [ ] Constraints created and ONLINE before ingestion starts
 - [ ] Vector index created before storing embeddings
-- [ ] `chunk_size` within embedding model limit (≤2048; ≤512 for extraction)
+- [ ] `chunk_size` (characters) within embedding model limit
 - [ ] `chunk_overlap` set to 10–15% of chunk_size
-- [ ] `Document`→`HAS_CHUNK`→`Chunk` pattern used (enables graph traversal in retrieval)
+- [ ] `(Chunk)-[:FROM_DOCUMENT]->(Document)` + `NEXT_CHUNK` present (enables graph traversal in retrieval)
 - [ ] `document_metadata` populated with source identifier
 - [ ] Entity resolver run after bulk ingestion
 - [ ] `apoc.version()` confirmed if using `apoc.load.json`
 - [ ] `.env` has API keys; `.env` in `.gitignore`
-- [ ] Verify structure: `MATCH (d:Document)-[:HAS_CHUNK]->(c:Chunk) RETURN count(c)`
-- [ ] Verify entities: `MATCH (c:Chunk)-[:MENTIONS]->(e) RETURN labels(e)[0], count(*)`
+- [ ] Verify structure: `MATCH (c:Chunk)-[:FROM_DOCUMENT]->(d:Document) RETURN count(c)`
+- [ ] Verify entities: `MATCH (e:__Entity__)-[:FROM_CHUNK]->(c:Chunk) RETURN labels(e), count(*)`
 
 ---
 
@@ -480,16 +404,16 @@ schema = GraphSchema(
     # Constraints (v1.15.0+) — emitted to ParquetWriter metadata and enforce schema; one NodeType per label (duplicates rejected v1.23.0)
     constraints=[
         # UNIQUENESS — property must be unique across nodes of that label
-        ConstraintType(label="Person", property_name="name", type=GraphConstraintType.UNIQUENESS),
+        ConstraintType(type=GraphConstraintType.UNIQUENESS, node_type="Person", property_name="name"),
         # KEY — uniqueness + existence (null not allowed)
-        ConstraintType(label="Organization", property_name="name", type=GraphConstraintType.KEY),
+        ConstraintType(type=GraphConstraintType.KEY, node_type="Organization", property_name="name"),
         # EXISTENCE — property must be non-null (replaces deprecated PropertyType.required)
-        ConstraintType(label="Event", property_name="date", type=GraphConstraintType.EXISTENCE),
+        ConstraintType(type=GraphConstraintType.EXISTENCE, node_type="Event", property_name="date"),
         # Composite KEY (v1.15.0+)
         ConstraintType(
-            label="Person",
-            property_names=("first_name", "last_name"),
             type=GraphConstraintType.KEY,
+            node_type="Person",
+            property_names=("first_name", "last_name"),
         ),
     ],
 )
@@ -504,7 +428,7 @@ When no `schema` is passed to `SimpleKGPipeline`, `SchemaFromTextExtractor` runs
 To run it explicitly:
 
 ```python
-from neo4j_graphrag.components.graph_schema_extraction import (
+from neo4j_graphrag.components.schema import (
     SchemaFromTextExtractor,
     SchemaFromExistingGraphExtractor,
 )
@@ -521,10 +445,16 @@ schema = asyncio.run(extractor.run())
 ### Parquet Export (experimental, v1.14.0+)
 
 ```python
-from neo4j_graphrag.components.parquet_output import ParquetWriter
+from neo4j_graphrag.components.kg_writer import ParquetWriter
+from neo4j_graphrag.components.filename_collision_handler import FilenameCollisionHandler
 
 # Use ParquetWriter instead of KGWriter inside a Pipeline to export to Parquet files
-writer = ParquetWriter(output_dir="/data/kg_export/")
+# nodes_dest / relationships_dest: your ParquetOutputDestination implementations (local, S3, GCS…)
+writer = ParquetWriter(
+    nodes_dest=nodes_dest,
+    relationships_dest=relationships_dest,
+    collision_handler=FilenameCollisionHandler(),
+)
 # Produces one Parquet file per node label and per relationship type
 # Metadata includes UNIQUENESS, EXISTENCE, KEY constraints (v1.15.0/1.16.0); pin >=1.23.0 — earlier fails on mixed-type LIST props, emits extra KEY(__id__) → Data Importer re-import error 22N41
 ```
@@ -533,43 +463,11 @@ writer = ParquetWriter(output_dir="/data/kg_export/")
 
 ## LexicalGraphConfig — Customize Labels
 
-Override default lexical layer labels (keep defaults unless integrating with existing graph):
-```python
-from neo4j_graphrag.components.types import LexicalGraphConfig
-# All fields have sensible defaults — only override what differs from your graph's conventions
-config = LexicalGraphConfig(
-    document_node_label="Article",             # default: "Document"
-    chunk_node_label="Passage",                # default: "Chunk"
-    node_to_chunk_relationship_type="HAS_ENTITY",  # default: "MENTIONS"
-    chunk_text_property="content",             # default: "text"
-)
-pipeline = SimpleKGPipeline(..., lexical_graph_config=config)
-```
-
----
+Read [references/other-ingestion.md](references/other-ingestion.md#lexicalgraphconfig--customize-labels) when you need this.
 
 ## Custom Document Loaders
 
-Default `file_loader` auto-dispatches by extension (`.pdf`→`PdfLoader`, `.md`→`MarkdownLoader`).
-Supports fsspec URIs (`s3://`, `gcs://`). Subclass `DataLoader` for HTML/web/custom formats:
-
-```python
-from neo4j_graphrag.components.data_loader import DataLoader
-from neo4j_graphrag.components.types import DocumentInfo, LoadedDocument
-
-class WebPageLoader(DataLoader):
-    async def run(self, filepath, metadata=None):
-        import httpx
-        text = httpx.get(filepath).text   # strip HTML in real impl
-        return LoadedDocument(text=text,
-            document_info=DocumentInfo(path=filepath, metadata=metadata))
-
-pipeline = SimpleKGPipeline(..., file_loader=WebPageLoader(), from_file=True)
-```
-
-Chunking strategy by use-case and full resolver config: [references/kg-construction.md](references/kg-construction.md).
-
----
+Read [references/other-ingestion.md](references/other-ingestion.md#custom-document-loaders) when you need this.
 
 ## References
 

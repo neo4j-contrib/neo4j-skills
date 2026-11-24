@@ -134,7 +134,7 @@ df = run_query("""
     WITH fof, count(DISTINCT f) AS mutual
     ORDER BY mutual DESC LIMIT 10
     RETURN fof.name AS recommendation, mutual
-""", {"id": "1"})
+""", {"id": "<sample_id from progress.md>"})   # never hard-code "1"
 assert len(df) > 0, "No recommendations — check import and traversal query"
 df.plot(kind='barh', x='recommendation', y='mutual', title='Recommendations')
 ```
@@ -403,50 +403,42 @@ neo4j-graphrag[openai]>=1.13.0
 
 ## Path E — MCP Integration
 
-Install `neo4j-mcp` binary (done in prerequisites). Write config files:
+Install `neo4j-mcp` binary (done in prerequisites). Full rules (neo4j-mcp 2.0 env names, APOC requirement, Claude Code locations): `${CLAUDE_SKILL_DIR}/references/capabilities/mcp-config.md`. neo4j-mcp 2.0+ accepts only `NEO4J_MCP_*` env vars; `NEO4J_MCP_DATABASE` is required.
+
+Write config files (both hold the password — add `mcp-*.json` and `.mcp.json` to `.gitignore`):
 
 **For Claude Desktop** (`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS,
-`%APPDATA%\Claude\claude_desktop_config.json` on Windows):
+`%APPDATA%\Claude\claude_desktop_config.json` on Windows) — write `mcp-claude-desktop.json`; user merges it:
 ```json
 {
   "mcpServers": {
     "neo4j": {
       "command": "/absolute/path/to/neo4j-mcp",
       "env": {
-        "NEO4J_URI": "<from .env>",
-        "NEO4J_USERNAME": "neo4j",
-        "NEO4J_PASSWORD": "<from .env>",
-        "NEO4J_DATABASE": "neo4j"
+        "NEO4J_MCP_URI": "<from .env>",
+        "NEO4J_MCP_USERNAME": "neo4j",
+        "NEO4J_MCP_PASSWORD": "<from .env>",
+        "NEO4J_MCP_DATABASE": "neo4j"
       }
     }
   }
 }
 ```
 
-**For Claude Code** (`.claude/settings.json` in project root):
-```json
-{
-  "mcpServers": {
-    "neo4j": {
-      "command": "./neo4j-mcp",
-      "env": {
-        "NEO4J_URI": "<from .env>",
-        "NEO4J_USERNAME": "neo4j",
-        "NEO4J_PASSWORD": "<from .env>",
-        "NEO4J_DATABASE": "neo4j"
-      }
-    }
-  }
-}
+**For Claude Code** — Claude Code reads MCP servers from `claude mcp add` or project `.mcp.json`, never from `.claude/settings.json`. Write `mcp-claude-code.json` (same shape as above, absolute binary path) and register it without overwriting anything:
+```bash
+claude mcp add-json neo4j "$(python3 -c 'import json;print(json.dumps(json.load(open("mcp-claude-code.json"))["mcpServers"]["neo4j"]))')"
+claude mcp get neo4j   # verify
 ```
+Or merge the `neo4j` entry into existing project `.mcp.json` (never overwrite the file).
 
-Available MCP tools after restart: `read-cypher`, `write-cypher`, `get-schema`, `list-gds-procedures`.
+Available MCP tools after restart: `read-cypher`, `write-cypher`, `get-schema`, `list-gds-procedures` (only when GDS is installed).
 
 Tell user: "Restart Claude Desktop or Claude Code — the `neo4j` server will appear as available tools."
 
-For read-only mode (recommended for production/shared DBs), add:
+For read-only mode (recommended for production/shared DBs; default is read-write), add:
 ```json
-"NEO4J_READ_ONLY": "true"
+"NEO4J_MCP_READ_ONLY": "true"
 ```
 
 ## On Completion — write to progress.md
@@ -472,4 +464,4 @@ files=<artifact filename>,requirements.txt
 
 - App returns empty results → verify `load` stage completed, check query parameter names match schema
 - Import error → check `requirements.txt`, run `.venv/bin/pip install -r requirements.txt`
-- MCP not appearing in Claude → verify absolute path to binary; for Claude Desktop restart the app; for Claude Code run `/reload` or restart Claude Code
+- MCP not appearing in Claude → verify absolute path to binary and `NEO4J_MCP_*` env names (2.0+); for Claude Desktop restart the app; for Claude Code check `claude mcp get neo4j` (config must be in `.mcp.json` or added via `claude mcp add`, not settings.json), then restart Claude Code

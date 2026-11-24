@@ -90,10 +90,10 @@ Neo4j does not store null properties — Option A means the property won't exist
 ## Large Dataset Batching
 
 ```cypher
-// Neo4j 5+ / 2025.x: CALL IN TRANSACTIONS
-:auto LOAD CSV WITH HEADERS FROM 'file:///large_file.csv' AS row
-CALL {
-  WITH row
+// Neo4j 5.23+ / 2025.x: CALL IN TRANSACTIONS (implicit transaction only)
+// Neo4j Browser: prefix with :auto (Browser command; fails in cypher-shell)
+LOAD CSV WITH HEADERS FROM 'file:///large_file.csv' AS row
+CALL (row) {
   MERGE (n:Node {id: row.id})
   SET n.name = row.name
 } IN TRANSACTIONS OF 10000 ROWS

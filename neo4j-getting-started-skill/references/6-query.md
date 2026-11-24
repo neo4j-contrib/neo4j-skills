@@ -19,8 +19,8 @@ cypher-shell -a "$NEO4J_URI" -u "$NEO4J_USERNAME" -p "$NEO4J_PASSWORD" \
 source .env
 # GDS — Aura Free does NOT have GDS
 cypher-shell -a "$NEO4J_URI" -u "$NEO4J_USERNAME" -p "$NEO4J_PASSWORD" \
-  "CALL gds.version() YIELD version RETURN version" 2>/dev/null \
-  && echo "GDS available" || echo "GDS NOT available — skip GDS queries"
+  "RETURN gds.version() AS gdsVersion" \
+  && echo "GDS available" || echo "GDS NOT available (see error above) — skip GDS queries"
 
 # Check for vector index
 cypher-shell -a "$NEO4J_URI" -u "$NEO4J_USERNAME" -p "$NEO4J_PASSWORD" \
@@ -179,7 +179,7 @@ MATCH (n) RETURN labels(n)[0] AS label, count(n) AS count ORDER BY count DESC;
   // $limit = 10            ← validator replaces $limit with 10
   ```
   Use `$id` or `$<label>Id` naming (e.g. `$accountId`, `$personId`) — the validator auto-substitutes these with the `sample_id` from progress.md without needing a comment.
-  **Never write** `// $param = description text` — the validator captures the first word as the default, which is wrong.
+  **Never write** `// $param = description text` — the validator substitutes everything after `=` (up to `←`) as the value. Any `$param` with no comment default and no built-in default becomes `'test'` (validator warns).
 - Every read query has `LIMIT`
 - Labels and property names are case-sensitive — match schema exactly
 - No GDS/APOC unless confirmed available

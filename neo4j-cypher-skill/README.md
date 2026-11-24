@@ -18,11 +18,11 @@ Generates, optimizes, and validates Cypher 25 queries for Neo4j 2025.x and 2026.
 
 **Performance** — Eager operator detection and fixes, parallel runtime, index hints, anti-patterns by severity
 
-**Language features** — dynamic labels/properties (2025.01), type predicates (`IS :: INTEGER NOT NULL`), `OrNull` casting, `coll.sort()`, `btrim()`, date/time arithmetic, null handling, 40+ syntax traps
+**Language features** — dynamic labels/properties (2025.01), type predicates (`IS :: INTEGER NOT NULL`), `OrNull` casting, `coll.sort()` (2025.11), `btrim()`, date/time arithmetic, null handling, 40+ syntax traps
 
 ## Version coverage
 
-Defaults to 2025.01-safe features. Items new in 2025.x are annotated `[2025.01]` in the reference files; 2026.x items `[2026.01]`.
+Defaults to 2025.06-safe features (Cypher 25 needs 2025.06+). Items new in 2025.x are annotated `[2025.01]` in the reference files; 2026.x items `[2026.01]`.
 
 ## Not covered
 

@@ -8,7 +8,7 @@ description: Author and validate Neo4j Ontology Graph Specification (ontology gr
   neo4j-cypher-skill. Does NOT cover generic graph data modeling advice — use
   neo4j-modeling-skill.
 compatibility: uv required to run scripts/validate.py (PEP 723 inline deps)
-version: 1.0.1
+version: 1.0.2
 ---
 
 ## When to Use
@@ -45,7 +45,7 @@ uv run neo4j-ontology-skill/scripts/validate.py <document.{yaml,yml,json}>
 
 Exit 0 = valid · exit 1 = schema violations (one line per field path) · exit 2 = parse/read/fetch error. PEP 723 script — `uv` resolves deps (jsonschema, pyyaml) itself.
 
-The validator fetches the schema live — nothing is vendored. Resolution order: `--schema <path-or-url>` (explicit, no fallback) → the document's own `schema` field when it is a URL → the published `current` alias → transitional repo raw fallback. The document's `schema` URL decides which version it validates against: set it to the published versioned URL of the version being authored (older versions validate against their published schema).
+The validator fetches the schema live — nothing is vendored. Resolution order: `--schema <path-or-url>` (explicit, no fallback) → the document's own `schema` field when it is a URL → the published `current` alias → repo raw fallback (only when the published host is unreachable). The document's `schema` URL decides which version it validates against: set it to the published versioned URL of the version being authored (older versions validate against their published schema).
 
 ### Step 4 — Fix and re-validate
 
@@ -56,7 +56,10 @@ Fix every reported error; re-run Step 3. Repeat until exit 0. Validation is MAND
 ## Core Facts
 
 - Required root fields: `schema`, `id` (unique ontology id string), `version` (STRING — user-defined revision label; quote it in YAML: `version: "1"`). Root rejects unknown fields (`additionalProperties: false`).
-- `schema` value: the published URL of the version being authored, e.g. `https://neo4j.com/docs/ontology-graph-spec/1.0.0/schema.json`. Root key is plain `schema`, NOT `$schema`.
+- `schema` value: a published versioned URL. Root key is plain `schema`, NOT `$schema`.
+  - New document: fetch `https://neo4j.com/docs/ontology-graph-spec/current/schema.json`, read its `$id`, write that versioned URL. Never write the `/current/` alias (it moves).
+  - Existing document: keep its `schema` URL; change only when the user asks to upgrade, then re-validate.
+  - Version tagged on GitHub but `/<version>/schema.json` not 200 → unpublished; don't use it.
 - `nodes` / `relationships` are maps keyed by LOCAL IDS, not labels/types. Label lives in `label` or `labels.identifier`; relationship type lives in `type`. Endpoints reference node ids (`from.node` / `to.node`) — label renames never break references.
 - `label: X` is shorthand for `labels: {identifier: X}`. Use the full `labels` object only when `implied` or `optional` labels exist.
 - Type tokens come from the Neo4jType enum exactly — case-sensitive. Tokens incl. `STRING`, `INTEGER`, `FLOAT`, `BOOLEAN`, `DATE`, `DURATION`, `POINT`, `UUID`; temporal tokens contain a space (`ZONED DATETIME`, `LOCAL TIME`); parameterized tokens use angle brackets (`LIST<STRING>`, `VECTOR<FLOAT32>`). `UUID` and `VECTOR<...>` have no LIST arm. No unions, no nested lists. `dimension` (integer|null) sits on the property, paired with VECTOR types.
@@ -64,7 +67,7 @@ Fix every reported error; re-run Step 3. Repeat until exit 0. Validation is MAND
   - Flags on a property: `key: true`, `unique: true`, `must_exist: true` (snake_case — NOT `mustExist`). Single-property shorthands; `key` = unique + exists per Neo4j key-constraint semantics.
   - Object form: `constraints` is a MAP id → constraint object `{type: EXISTS|KEY|PROPERTY_TYPE|UNIQUE, properties: [p1, ...], name: optional}` — required for composites (≥ 2 properties) and nameable constraints. `properties` must name properties declared on the SAME element.
 - Endpoint cardinality: `count` exact, or `min_count`/`max_count` ranged; absent = unconstrained (0..*).
-- Extensions: fixed `extensions` shape per element — node: `indexes`/`display`/`custom`; relationship: `indexes`/`custom`; root: `tables`/`mappings`/`custom`; labels/property/constraint/index: `custom` only. Unknown extension keys rejected. `custom` is free-form — arbitrary owner data, never validated by the spec schema.
+- Extensions: fixed `extensions` shape per element — node: `indexes`/`display`/`custom`; relationship: `indexes`/`custom`; root: `data_source_tables`/`data_source_mappings`/`custom`; labels/property/constraint/index: `custom` only. Unknown extension keys rejected. `custom` is free-form — arbitrary owner data, never validated by the spec schema.
 - Absent means none — never write empty maps/lists (`properties: {}`, `aliases: []`, `custom: {}`); omit them.
 
 ## Minimal Example
@@ -72,7 +75,7 @@ Fix every reported error; re-run Step 3. Repeat until exit 0. Validation is MAND
 `library.ontology.yaml` — 2 nodes, 1 relationship:
 
 ```yaml
-schema: "https://neo4j.com/docs/ontology-graph-spec/1.0.0/schema.json"
+schema: "https://neo4j.com/docs/ontology-graph-spec/1.1.0/schema.json"
 id: library
 version: "1"
 name: Library
@@ -93,7 +96,7 @@ relationships:
     to: { node: book }
 ```
 
-Validates exit 0 via `scripts/validate.py`. Full YAML+JSON worked examples in [references/format-reference.md](references/format-reference.md).
+Validates exit 0 via `scripts/validate.py`. `schema` URL = newest published on 2026-11-02; apply the `schema` rule above rather than copying it. Full YAML+JSON worked examples in [references/format-reference.md](references/format-reference.md).
 
 ---
 
@@ -112,7 +115,7 @@ Published: the ONT-31 URLs above are live and are the canonical schema source. I
 
 ## Checklist
 
-- [ ] Root fields `schema`, `id`, `version` present; `version` a quoted string; `schema` = the published versioned URL under plain `schema` key
+- [ ] Root fields `schema`, `id`, `version` present; `version` a quoted string; `schema` = published versioned URL (new document: `$id` of `/current/schema.json`; never `/current/`) under plain `schema` key
 - [ ] No unknown root fields; no `$schema`
 - [ ] `nodes`/`relationships` keyed by local ids; relationship `from`/`to` reference node ids
 - [ ] Every node has `label` or `labels.identifier`

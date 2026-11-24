@@ -1,7 +1,7 @@
 # Cypher Syntax Reference
 
 Full syntax reference for clauses, patterns, and functions.
-Version markers: `[2025.01]` = new/changed in Cypher 25 / Neo4j 2025.x — older models default to the pre-2025 form.
+Version markers: `[2025.01]` = available from Neo4j 2025.01; `[2025.06]`+ = Cypher 25 only (Cypher 25 and the `CYPHER 25` prefix arrived in 2025.06 — omit the prefix below that) — older models default to the pre-2025 form.
 `[2026.01]` = requires Neo4j 2026.x. Unmarked = stable pre-2025, well-known priors.
 
 ---
@@ -294,7 +294,7 @@ RETURN n.name, n.value
 | GQL alias | Cypher equivalent |
 |---|---|
 | `FOR x IN list` | `UNWIND list AS x` |
-| `PROPERTY_EXISTS(n, 'prop')` | `n.prop IS NOT NULL` |
+| `PROPERTY_EXISTS(n, prop)` (property name unquoted) | `n.prop IS NOT NULL` |
 | `n IS [NOT] LABELED Label` | `n:Label` / `NOT n:Label` |
 | `FILTER` | `WHERE` |
 | `LET x = expr` | `WITH expr AS x` |
@@ -319,7 +319,7 @@ cardinality(x)                              // MAP key count / LIST element coun
 head(list) / tail(list) / last(list)
 list[0..3]                                  // slice
 list + [newElement]
-coll.sort(list)                             // [2025.01] native — replaces apoc.coll.sort()
+coll.sort(list)                             // [2025.11] native — replaces apoc.coll.sort()
 ```
 
 `2 IN [1, null, 3]` returns `null` — guard with `IS NOT NULL` before membership tests.
@@ -371,6 +371,7 @@ replace(s, search, replacement[, limit])   // replace all occurrences; limit cap
 size(s)                                     // character count (same as char_length)
 reverse(s)                                  // reverse string
 toString(x) / toStringOrNull(x)            // convert any type to STRING; LIST, MAP, NODE, RELATIONSHIP, PATH accepted [2026.09]
+                                            // toString() on a typed list ([1,2], collect(x)) is a compile error — use toStringOrNull()
 toStringList(list)                          // element-wise STRING conversion; same extended types [2026.09]
 string.indexOf(input, value)                // index of first match, -1 if absent [2026.05, Cypher 25]
 string.join(list, delimiter)                // join LIST<STRING> with delimiter [2026.05, Cypher 25]
@@ -427,14 +428,14 @@ RETURN uuid.mostSignificantBits(id)  AS msb,                   // INTEGER, upper
        uuid.leastSignificantBits(id) AS lsb,                   // INTEGER, lower 64 bits
        toString(id) AS asString
 
-CREATE (n:Session {sessionId: uuid($uuidString)})              // store as property
+CREATE (n:Session {sessionId: uuid($uuidString)})              // store as property (block format: Enterprise/Aura)
 ```
 
 `UUID` is a distinct value type — not a `STRING`. `randomUUID()` still returns a `STRING`; keep it for keys that must stay STRING-typed or must work on < 2026.08.
 
 | Constraint | Detail |
 |---|---|
-| Storage | `UUID` is a property type in Neo4j 2026.08+; Community and Enterprise can store `UUID` properties |
+| Storage | `UUID` is a property type in Neo4j 2026.08+; storing needs block store format (Enterprise; default on Aura). Community cannot store `UUID` properties — use `randomUUID()` or `toString(uuid())` |
 | Null args | Any null argument yields `null`: `uuid(null)`, `uuid(null, 42)`, `uuid(42, null)`, `uuid.mostSignificantBits(null)` |
 | Drivers | Mapped to native client types from driver 6.2 (Python 6.3); older drivers return placeholder `MAP` + `03N95 Neo.ClientNotification.UnknownType` |
 | STRING ids | `randomUUID()` still returns a STRING — use it when the server version or driver cannot handle `UUID` |
@@ -661,7 +662,7 @@ Syntax rules:
 - Quantifier goes **outside** the group: `(pattern){N,M}`
 - Groups must start AND end with a node
 
-Match modes [2025.01] (immediately after `MATCH`):
+Match modes [2025.06, Cypher 25] (immediately after `MATCH`):
 
 | Mode | Semantics |
 |---|---|
@@ -681,7 +682,7 @@ Path selectors (immediately after `MATCH`, before the pattern):
 | `ANY` | Any single path (no length guarantee) |
 | `SHORTEST k GROUPS` | All paths grouped by length up to k distinct lengths |
 
-Path modes combine with shortest selectors [2026.05]: `MATCH ANY SHORTEST ACYCLIC (a)-[:R]-+(b)` — `ACYCLIC` valid with `ANY SHORTEST`, `SHORTEST k`, `ALL SHORTEST`, `SHORTEST k GROUPS`.
+Path modes combine with shortest selectors [2026.05]: `MATCH ANY SHORTEST ACYCLIC (a)-[:R]-+(b)` — `ACYCLIC` valid with `ANY SHORTEST`, `SHORTEST k`, `ALL SHORTEST` and `SHORTEST k ACYCLIC GROUPS` (mode goes between k and GROUPS; `SHORTEST k GROUPS ACYCLIC` is a syntax error).
 
 ```cypher
 CYPHER 25 MATCH SHORTEST 1 (a:Person {name:'Alice'})(()-[:KNOWS]->()){1,}(b:Person {name:'Bob'})
@@ -793,7 +794,7 @@ CALL (row) {
 
 `IN TRANSACTIONS` comes **after** the `{ }` block. Read-only use prohibited. Requires auto-commit — do not wrap in `beginTransaction()`.
 
-**ON ERROR options**: `FAIL` (default) | `CONTINUE` (skip failed batch) | `BREAK` (stop after first error) | `RETRY FOR N SECS` [2025.03+]
+**ON ERROR options**: `FAIL` (default) | `CONTINUE` (skip failed batch) | `BREAK` (stop after first error) | `RETRY FOR N SECONDS [THEN CONTINUE|BREAK|FAIL]` [2025.03+] (unit `SEC`/`SECOND`/`SECONDS`; `SECS` is a syntax error)
 
 ---
 
@@ -919,6 +920,7 @@ WHERE allReduce(
 RETURN count(path)
 
 // Example: stateful battery charge simulation during route traversal
+// runtime=parallel: Enterprise / non-Free Aura only; Community runs slotted
 CYPHER 25 runtime=parallel
 MATCH REPEATABLE ELEMENTS p=(a:Geo {name: $src})(()-[r:ROAD|CHARGE]-(x:Geo)){1,12}(b:Geo {name: $dst})
 WHERE allReduce(

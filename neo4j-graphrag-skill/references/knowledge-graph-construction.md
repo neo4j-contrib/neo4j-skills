@@ -22,9 +22,9 @@ splitter = FixedSizeSplitter(chunk_size=500, chunk_overlap=100)
 from neo4j_graphrag.components.text_splitters.base import TextSplitter, TextChunk, TextChunks
 
 class SectionSplitter(TextSplitter):
-    def run(self, text: str) -> TextChunks:
-        sections = re.split(r"^== ", text, flags=re.MULTILINE)
-        chunks = [TextChunk(uid=i, text=s.strip()) for i, s in enumerate(sections) if s.strip()]
+    async def run(self, text: str) -> TextChunks:   # must be async
+        sections = [s.strip() for s in re.split(r"^== ", text, flags=re.MULTILINE) if s.strip()]
+        chunks = [TextChunk(text=s, index=i) for i, s in enumerate(sections)]  # index required; uid auto
         return TextChunks(chunks=chunks)
 
 pipeline = SimpleKGPipeline(..., text_splitter=SectionSplitter())
@@ -47,7 +47,7 @@ Install: `pip install langchain-text-splitters`
 
 ## LexicalGraphConfig — Rename Graph Labels
 
-Default graph model: `Document -[:FROM_DOCUMENT]-> Chunk -[:FROM_CHUNK]-> __Entity__`
+Default graph model: `(Chunk)-[:FROM_DOCUMENT]->(Document)`, `(__Entity__)-[:FROM_CHUNK]->(Chunk)`
 
 Override any label or relationship name:
 
@@ -106,20 +106,20 @@ resolver = FuzzyMatchResolver(
 asyncio.run(resolver.run())
 ```
 
-Install: `pip install neo4j-graphrag[fuzzy]` (adds `rapidfuzz`)
+Install: `pip install "neo4j-graphrag[fuzzy-matching]"` (adds `rapidfuzz`)
 
-#### SpacySemanticMatchResolver
+#### SpaCySemanticMatchResolver
 
 Merges entities with same label + semantically similar textual properties via spaCy:
 
 ```python
-from neo4j_graphrag.components.resolver import SpacySemanticMatchResolver
+from neo4j_graphrag.components.resolver import SpaCySemanticMatchResolver
 
-resolver = SpacySemanticMatchResolver(driver=driver, neo4j_database="neo4j")
+resolver = SpaCySemanticMatchResolver(driver=driver, neo4j_database="neo4j")
 asyncio.run(resolver.run())
 ```
 
-Install: `pip install neo4j-graphrag[spacy]` + `python -m spacy download en_core_web_lg`
+Install: `pip install "neo4j-graphrag[nlp]"` + `python -m spacy download en_core_web_lg`
 
 Risk of over-merging ("Apple" company vs "Apple" fruit). Apply domain `filter_query` to restrict by label.
 
@@ -130,34 +130,34 @@ Risk of over-merging ("Apple" company vs "Apple" fruit). Apply domain `filter_qu
 ### Extend PdfLoader (pre-process text)
 
 ```python
-from neo4j_graphrag.components.pdf_loader import PdfLoader
+from neo4j_graphrag.components.data_loader import PdfLoader, LoadedDocument
 import re
 
 class CustomPDFLoader(PdfLoader):
-    async def run(self, filepath: str):
-        doc = await super().run(filepath)
+    async def run(self, filepath: str, metadata=None) -> LoadedDocument:   # return annotation required
+        doc = await super().run(filepath, metadata)
         # Strip AsciiDoc attribute lines
         doc.text = re.sub(r"^:[\w-]+:.*$", "", doc.text, flags=re.MULTILINE)
         return doc
 
-pipeline = SimpleKGPipeline(..., pdf_loader=CustomPDFLoader())
+pipeline = SimpleKGPipeline(..., file_loader=CustomPDFLoader())   # pdf_loader= deprecated
 ```
 
 ### Custom DataLoader (load from any source)
 
 ```python
-from neo4j_graphrag.components.pdf_loader import DataLoader, PdfDocument, DocumentInfo
+from neo4j_graphrag.components.data_loader import DataLoader, LoadedDocument, DocumentInfo
 
 class TextFileLoader(DataLoader):
-    async def run(self, filepath: str) -> PdfDocument:
+    async def run(self, filepath: str, metadata=None) -> LoadedDocument:
         with open(filepath) as f:
             text = f.read()
-        return PdfDocument(
+        return LoadedDocument(
             text=text,
             document_info=DocumentInfo(path=filepath, metadata={"source": "text_file"}),
         )
 
-pipeline = SimpleKGPipeline(..., pdf_loader=TextFileLoader(), from_file=True)
+pipeline = SimpleKGPipeline(..., file_loader=TextFileLoader(), from_file=True)
 asyncio.run(pipeline.run_async(file_path="data/document.txt"))
 ```
 
@@ -165,33 +165,29 @@ asyncio.run(pipeline.run_async(file_path="data/document.txt"))
 
 ## KG Builder Prompt Customization
 
-### Prepend domain instructions
+### Add domain instructions
+
+A string `prompt_template` REPLACES the whole extraction prompt (not prepended). Without `{text}` the LLM never sees the document — extraction silently runs on nothing. Always include `{text}`, `{schema}`, `{examples}`; escape literal JSON braces as `{{ }}`.
 
 ```python
-from neo4j_graphrag.components.entity_relation_extractor import (
-    LLMEntityRelationExtractor,
-)
+from neo4j_graphrag.generation.prompts import ERExtractionTemplate
 
-# Simple approach: pass domain prefix to pipeline's prompt_template
-domain_instructions = (
-    "Extract ONLY technology companies, products, and people. "
-    "Ignore financial data, dates, and locations."
-)
-pipeline = SimpleKGPipeline(
-    ...,
-    prompt_template=domain_instructions,  # prepended to default extraction prompt
-)
+domain_prompt = ERExtractionTemplate(template="""Extract ONLY technology companies, products, and people.
+Ignore financial data, dates, and locations.
+Schema: {schema}
+Examples: {examples}
+Text: {text}
+Return JSON only.""")
+pipeline = SimpleKGPipeline(..., prompt_template=domain_prompt)
 ```
 
 ### Full custom extraction prompt
 
 ```python
-from neo4j_graphrag.components.entity_relation_extractor import (
-    LLMEntityRelationExtractor,
-    EntityExtractionPromptTemplate,
-)
+from neo4j_graphrag.components.entity_relation_extractor import LLMEntityRelationExtractor
+from neo4j_graphrag.generation.prompts import ERExtractionTemplate
 
-custom_prompt = EntityExtractionPromptTemplate(
+custom_prompt = ERExtractionTemplate(
     template="""You are a KG extractor. Extract entities from:
 {text}
 Schema: {schema}

@@ -1,64 +1,66 @@
 {
   "mcpServers": {
     "neo4j-mcp": {
-      "command": "python",
-      "args": ["-m", "neo4j_mcp_server"],
+      "command": "uvx",
+      "args": [
+        "neo4j-mcp-server"
+      ],
       "env": {
-        "NEO4J_URI": "${NEO4J_URI}",
-        "NEO4J_USERNAME": "${NEO4J_USERNAME}",
-        "NEO4J_PASSWORD": "${NEO4J_PASSWORD}",
-        "NEO4J_DATABASE": "${NEO4J_DATABASE}",
-        "NEO4J_READ_ONLY": "${NEO4J_READ_ONLY}",
-        "NEO4J_TELEMETRY": "${NEO4J_TELEMETRY}",
-        "NEO4J_LOG_LEVEL": "${NEO4J_LOG_LEVEL}",
-        "NEO4J_LOG_FORMAT": "${NEO4J_LOG_FORMAT}",
-        "NEO4J_SCHEMA_SAMPLE_SIZE": "${NEO4J_SCHEMA_SAMPLE_SIZE}"
+        "NEO4J_MCP_URI": "${NEO4J_URI}",
+        "NEO4J_MCP_USERNAME": "${NEO4J_USERNAME}",
+        "NEO4J_MCP_PASSWORD": "${NEO4J_PASSWORD}",
+        "NEO4J_MCP_DATABASE": "${NEO4J_DATABASE}",
+        "NEO4J_MCP_READ_ONLY": "${NEO4J_READ_ONLY}",
+        "NEO4J_MCP_TELEMETRY": "${NEO4J_TELEMETRY}",
+        "NEO4J_MCP_LOG_LEVEL": "${NEO4J_LOG_LEVEL}",
+        "NEO4J_MCP_LOG_FORMAT": "${NEO4J_LOG_FORMAT}",
+        "NEO4J_MCP_SCHEMA_SAMPLE_SIZE": "${NEO4J_SCHEMA_SAMPLE_SIZE}"
       },
       "variables": [
         {
           "name": "NEO4J_URI",
           "title": "Neo4j URI",
-          "description": "Bolt URI for the Neo4j instance (e.g. neo4j+s://<dbid>.databases.neo4j.io or bolt://localhost:7687)."
+          "description": "Bolt URI for the Neo4j instance (e.g. neo4j+s://<dbid>.databases.neo4j.io or neo4j://localhost:7687). Passed to the server as NEO4J_MCP_URI."
         },
         {
           "name": "NEO4J_USERNAME",
           "title": "Neo4j Username",
-          "description": "Neo4j database username (default: neo4j)."
+          "description": "Neo4j database username (usually neo4j). Passed as NEO4J_MCP_USERNAME."
         },
         {
           "name": "NEO4J_PASSWORD",
           "title": "Neo4j Password",
-          "description": "Neo4j database password."
+          "description": "Neo4j database password. Passed as NEO4J_MCP_PASSWORD."
         },
         {
           "name": "NEO4J_DATABASE",
           "title": "Neo4j Database",
-          "description": "Target database name (default: neo4j)."
+          "description": "Target database name. Required in STDIO mode since MCP server 2.0 (no default); use neo4j unless you created another database. Passed as NEO4J_MCP_DATABASE."
         },
         {
           "name": "NEO4J_READ_ONLY",
           "title": "Read-Only Mode",
-          "description": "Set to true to disable write operations (default: true)."
+          "description": "Set to true to hide write tools (server default: false). Recommended: true for exploration."
         },
         {
           "name": "NEO4J_TELEMETRY",
           "title": "Telemetry",
-          "description": "Enable or disable telemetry (default: false)."
+          "description": "Set to false to disable telemetry (server default: true)."
         },
         {
           "name": "NEO4J_LOG_LEVEL",
           "title": "Log Level",
-          "description": "Logging level for the MCP server (e.g. info, debug, warn, error)."
+          "description": "Server log level, e.g. info, debug, warn, error (default: info)."
         },
         {
           "name": "NEO4J_LOG_FORMAT",
           "title": "Log Format",
-          "description": "Output format for server logs (e.g. text, json)."
+          "description": "Server log format: text or json (default: text)."
         },
         {
           "name": "NEO4J_SCHEMA_SAMPLE_SIZE",
           "title": "Schema Sample Size",
-          "description": "Number of nodes/relationships sampled during schema introspection (default: 100)."
+          "description": "Number of nodes sampled for schema inference (default: 100)."
         }
       ]
     }

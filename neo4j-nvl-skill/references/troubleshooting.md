@@ -31,8 +31,10 @@ const { nodes, relationships } = await driver.executeQuery(
   'MATCH (a)-[r]-(b) RETURN a,r,b LIMIT 25', {},
   { database: 'neo4j', resultTransformer: nvlResultTransformer }
 )
-new NVL(container, nodes, relationships)
+new NVL(container, nodes, relationships)   // renders, but ids only: no captions; duplicate node ids possible
 ```
+
+Transformer output has nodes `{ id }` and relationships `{ id, from, to }` only, not deduplicated. Add captions from `recordObjectMap` and dedupe by `id` — see SKILL.md "Wiring a Neo4j Driver Result".
 
 For driver setup → `neo4j-driver-javascript-skill`.
 
@@ -228,7 +230,8 @@ nvl.destroy()
 
 **Fix options:**
 - Pin anchor nodes: `nvl.pinNode(id)` for known fixed positions
-- Cap iterations: `nvlOptions: { layoutTimeLimit: 3000 }` (ms)
+- Tune frame rate: `nvlOptions: { minFps, maxFps }` (no `layoutTimeLimit` option exists)
+- Strict CSP / no workers: `disableWebWorkers: true` (synchronous fallback)
 - Switch layout: `nvl.setLayout('hierarchical')` for DAG-like data
 - Reduce nodes (paginate query, increase `LIMIT`)
 

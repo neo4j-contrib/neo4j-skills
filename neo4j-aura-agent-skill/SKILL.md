@@ -8,7 +8,7 @@ description: Manages Neo4j Aura Agents via the v2beta1 REST API — create, list
   organization/project scoping, tool parameter schemas, and InvokeAgentResponse format.
   Does NOT cover AuraDB instance provisioning — use neo4j-aura-provisioning-skill.
   Does NOT cover vector index creation — use neo4j-vector-index-skill.
-version: 1.1.0
+version: 1.1.1
 allowed-tools: Bash WebFetch  
 ---
 
@@ -96,7 +96,13 @@ If not set, list available instances and ask the user to choose:
 ```bash
 curl -s "https://api.neo4j.io/v1/instances?tenantId=${AURA_PROJECT_ID}" \
   -H "Authorization: Bearer $TOKEN" \
-  | jq '.data[] | {id, name, status, region, type}'
+  | jq '.data[] | {id, name, cloud_provider}'
+```
+
+List returns no status. Check status per candidate (must be `running`):
+```bash
+curl -s "https://api.neo4j.io/v1/instances/<instance-id>" \
+  -H "Authorization: Bearer $TOKEN" | jq '.data | {id, name, status, region, type}'
 ```
 
 Show output to user. Ask: **"Which instance should the agent connect to?"** Then write to `.env`:
@@ -171,15 +177,15 @@ Tool selection:
 
 **CypherTemplate parameters**: for each parameter, read `aura_data_type` from `schema.json → node_props` or `rel_props` and use it as `data_type`. If the property has `low_cardinality: true`, the parameter `description` should list the valid values — copy them from the `values` array in `schema.json`. Example: `"description": "Agreement type to filter by. Valid values: \"Distributor Agreement\", \"License Agreement\", \"NDA\""`. Properties with `has_fulltext_index: true` are especially likely to be filter targets and should include valid values when low cardinality.
 
-**SimilaritySearch configuration** — values from request; `dimension` from index; ask about gaps; then draft tool config:
+**SimilaritySearch configuration** — values from request; `dimensions` from index; ask about gaps; then draft tool config:
 
 | Field | What to ask | Source |
 |---|---|---|
 | `provider` | "openai" or "vertexai"? | Request, else user confirms |
 | `model` | Which model? | Request, else user picks from `references/REFERENCE.md → Embedding Provider Options` |
-| `dimension` | What output dimension? | Required if model is configurable (see table); fixed models use the table value |
+| `dimensions` | What output dimension? | Optional; set when provider or index needs an explicit size (configurable models, see table) |
 
-`index`: use `name` from `schema.json → metadata → vector_index` where `state = ONLINE`. `dimension` must match `vector.dimensions` in the same index entry.
+`index`: use `name` from `schema.json → metadata → vector_index` where `state = ONLINE`. `dimensions` must match `vector.dimensions` in the same index entry.
 
 **Signals inventory**: for each label or relationship that appears in a tool or the user's stated questions, write a signal block in the system prompt. See `references/authoring-guide.md → Signals inventory` for the template and rules.
 
@@ -195,7 +201,7 @@ Minimum required config:
   "name": "My Agent",
   "description": "Answers questions about the graph",
   "dbid": "<AURA_INSTANCE_ID>",
-  "is_private": false,
+  "is_private": true,
   "tools": [
     {
       "type": "text2cypher",
@@ -211,11 +217,15 @@ Minimum required config:
 uv run python3 scripts/manage_agent.py create --config agent-config.json
 ```
 
-Response includes `id` (save as `AURA_AGENT_ID`), `endpoint_link`. No MCP URL in response; if `is_mcp_enabled`: `https://mcp.neo4j.io/agent?project_id=<project_id>&agent_id=<agent_id>` — see `references/REFERENCE.md → External Access`.
+`is_private: true` = internal: free, project members use it in the console only; no REST invoke, no MCP. `is_private: false` = external: REST endpoint (optionally MCP), **billed**. Keep internal while testing; set `false` only when user needs API/MCP access and accepts charges.
+
+Response includes `id` (save as `AURA_AGENT_ID`). Endpoint link: list response (`endpoint_link`) or console **[…]** menu. No MCP URL in create/get response; if `is_mcp_enabled`: `https://mcp.neo4j.io/agent?project_id=<project_id>&agent_id=<agent_id>` — see `references/REFERENCE.md → External Access`.
 
 ---
 
 ## Step 7 — Invoke Agent (Test)
+
+API invoke requires external agent (`is_private: false`, billed). Internal agents answer only in the console; API returns `403` ("agent is disabled or private"). Internal agent → test in console, or ask user before switching to external.
 
 ```bash
 uv run python3 scripts/invoke_agent.py --agent-id "$AURA_AGENT_ID" "What can you help me with?"
@@ -235,10 +245,12 @@ curl -s -X POST \
 
 ## Step 8 — Update Agent (Partial PATCH)
 
-Create patch JSON with only the fields to change:
+Patch JSON with only the fields to change:
 ```json
 { "system_prompt": "Updated instructions.", "is_mcp_enabled": true }
 ```
+
+**`tools` in a PATCH replaces the whole tool list.** A patch with only the new tool deletes all others. To add/change/remove a tool: `manage_agent.py get` → edit the full `tools` array → PATCH the full array → `get` again to verify.
 
 **Show to user and confirm before running:**
 ```bash
@@ -280,7 +292,7 @@ Creates an importable evaluation dataset (max 50 questions) for Aura's Agent Eva
    ```bash
    uv run python3 scripts/validate_eval_dataset.py eval_dataset.json --agent agent.json
    ```
-5. Show the user category counts and samples. Warn: questions are **read-only after saving** in the console and datasets have no version history, so confirm before they import (Agent → Evaluation).
+5. Show the user category counts and samples, then tell them to import (Agent → Evaluation). Datasets stay editable; each save of changed questions creates a new version. Deleting a dataset deletes the evaluation history that used it.
 
 ---
 
@@ -324,7 +336,7 @@ Requires a VECTOR index (`state = ONLINE`). Get index name from `schema.json →
     "model": "text-embedding-3-small",
     "index": "<name from schema.json metadata.vector_index[state=ONLINE].name>",
     "top_k": 5,
-    "dimension": "<vector.dimensions from schema.json metadata.vector_index options.indexConfig>",
+    "dimensions": "<optional; vector.dimensions from schema.json metadata.vector_index options.indexConfig>",
     "post_processing_cypher": "<optional: Cypher to enrich similarity results with related nodes>"
   }
 }
@@ -352,6 +364,7 @@ Natural language → Cypher. Use as fallback for aggregation and discovery.
 |---|---|---|
 | `401 Unauthorized` | Token expired | Re-run Step 1 |
 | `403 Forbidden` on create | Not a project admin | Request admin access |
+| `403 Forbidden` on invoke | Agent disabled or internal (`is_private: true`) | Enable; make external only with user consent (billed) |
 | `400 Bad Request` | Invalid tool config or missing required field | Check `type` spelling: `cypherTemplate`, `similaritySearch`, `text2cypher` |
 | `404 Not Found` | Wrong org/project/agent ID | Re-run `list` to verify IDs |
 | `400` on create with SimilaritySearch | Vector index missing | Create index first — use `neo4j-vector-index-skill` |

@@ -2,6 +2,8 @@
 
 `neo4j-admin` is installed automatically with Neo4j in the `bin/` directory.
 
+**Edition:** `database backup`, `database restore`, `database copy`, `backup inspect/aggregate`, `server license`, `dbms unbind-system-db` and `server unbind` are Enterprise only. Community has `database check/dump/import/info/load/migrate/upload` and `dbms set-default-admin/set-initial-password`.
+
 ```bash
 neo4j-admin --version
 ```
@@ -30,6 +32,8 @@ neo4j-admin dbms set-default-admin <username>
 
 #### set-initial-password
 
+Takes effect only if run before the database is started for the first time.
+
 ```bash
 neo4j-admin dbms set-initial-password <password>
 ```
@@ -40,7 +44,7 @@ neo4j-admin dbms set-initial-password MySecureP@ssw0rd
 
 #### unbind-system-db
 
-Removes cluster state to enable rebinding to a different cluster.
+Enterprise only. Removes cluster state to enable rebinding to a different cluster.
 
 ```bash
 neo4j-admin dbms unbind-system-db
@@ -69,12 +73,18 @@ Generates a diagnostic archive for Neo4j support team.
 neo4j-admin server report
 ```
 
+```bash
+neo4j-admin server report --to-path=/tmp/reports logs config threads   # positional classifiers, or `all`
+```
+
 **Options**:
-- `--to=<path>` - Output directory for the report archive
+- `--to-path=<path>` - Output directory for the report archive
 - `--list` - List available classifiers
-- `--filter=<classifier>` - Filter specific data to include
+- `[<classifier>...]` - Positional classifiers (e.g. `logs tx threads`, or `all`); no `--filter` option
 
 #### license
+
+Enterprise only.
 
 ```bash
 neo4j-admin server license --accept-commercial
@@ -85,17 +95,19 @@ neo4j-admin server license --accept-evaluation
 
 #### backup
 
+Enterprise only.
+
 ```bash
-neo4j-admin database backup <database-name> --to-path=<backup-directory>
+neo4j-admin database backup --to-path=<backup-directory> <database-name>
 ```
 
 ```bash
-neo4j-admin database backup neo4j --to-path=/backups/$(date +%Y%m%d)
+neo4j-admin database backup --to-path=/backups/$(date +%Y%m%d) neo4j
 ```
 
 **Options**:
-- `--to-path=<path>` - Destination directory (required)
-- `--type=<type>` - Backup type: `full` or `differential`
+- `--to-path=<path>` - Destination directory (required); artifacts named `<db>-<timestamp>.backup`
+- `--type=<type>` - Backup type: `FULL`, `DIFF` or `AUTO` (default `AUTO`)
 - `--keep-failed` - Keep failed backup attempts
 - `--verbose` - Print detailed progress
 - `--split-archive-part-size=<size>` - Split the backup artifact into multiple parts of this size [2026.09]; config default `server.split_archive.part_size`
@@ -103,61 +115,70 @@ neo4j-admin database backup neo4j --to-path=/backups/$(date +%Y%m%d)
 
 #### restore
 
-**Important**: Database must be stopped before restore.
+Enterprise only. **Important**: Database must be stopped before restore with `--overwrite-destination=true`.
 
 ```bash
-neo4j-admin database restore <database-name> --from-path=<backup-directory>
+neo4j-admin database restore --from-path=<artifact-or-directory> [<database-name>]
 ```
 
 ```bash
-neo4j-admin database restore neo4j --from-path=/backups/20260216
+# <database-name> allowed only when --from-path is a single artifact
+neo4j-admin database restore --from-path=/backups/20260216/neo4j-2026-02-16T02-00-00.backup --overwrite-destination=true neo4j
 ```
+
+A differential artifact restores its whole chain. `--restore-until=<txId | "YYYY-MM-DD HH:MM:SS">` (UTC) stops replay early.
 
 #### dump
 
+Database must be stopped (a running database cannot be dumped).
+
 ```bash
-neo4j-admin database dump <database-name> --to-path=<dump-file>
+neo4j-admin database dump --to-path=<directory> <database-name>
 ```
 
 ```bash
-neo4j-admin database dump mydb --to-path=/exports/mydb.dump
+neo4j-admin database dump --to-path=/exports mydb    # writes /exports/mydb.dump
 
 # Split a large dump into 5 GB parts [2026.09]
 neo4j-admin database dump mydb --to-path=/exports --split-archive-part-size=5G
 ```
 
 **Options**:
-- `--to-path=<path>` - Destination file or directory (required)
+- `--to-path=<path>` - Destination directory; file is named `<database>.dump`
 - `--split-archive-part-size=<size>` - Split the dump into multiple parts of this size [2026.09]; config default `server.split_archive.part_size`
 
 #### load
 
 ```bash
-neo4j-admin database load <database-name> --from-path=<dump-file>
+neo4j-admin database load --from-path=<directory> <database-name>
 ```
 
+`load` looks for `<database-name>.dump` in `--from-path`. To load under a different name, rename the file or stream it:
+
 ```bash
-neo4j-admin database load newdb --from-path=/exports/mydb.dump --overwrite-destination=true
+neo4j-admin database load --from-path=/exports --overwrite-destination=true mydb
+cat /exports/mydb.dump | neo4j-admin database load --from-stdin newdb
 ```
 
 **Options**:
-- `--from-path=<path>` - Source dump file (required)
+- `--from-path=<path>` - Directory containing `<database>.dump` (not a file path)
+- `--from-stdin` - Read archive from standard input
 - `--overwrite-destination` - Allow overwriting existing database
 
 #### import
 
+Mode `full` (all editions) or `incremental` (Enterprise) is required. No `--database` option: database is positional. Put it right after `full` — placed last, it is swallowed by `--relationships`.
+
 ```bash
-neo4j-admin database import \
+neo4j-admin database import full <database-name> \
   --nodes=<node-files> \
-  --relationships=<relationship-files> \
-  --database=<database-name>
+  --relationships=<relationship-files>
 ```
 
 ```bash
-neo4j-admin database import \
-  --nodes=Person=persons.csv \
-  --relationships=KNOWS=knows.csv \
-  --database=socialnetwork \
+neo4j-admin database import full socialnetwork \
+  --nodes=Person=/abs/persons.csv \
+  --relationships=KNOWS=/abs/knows.csv \
   --delimiter=","
 ```
 
@@ -182,10 +203,12 @@ neo4j-admin database check neo4j --verbose
 ```
 
 **Options**:
-- `--report-dir=<path>` - Directory for consistency report
+- `--report-path=<path>` - Directory (or `.report` file) for consistency report
 - `--verbose` - Detailed output
 
 #### copy
+
+Enterprise only.
 
 ```bash
 neo4j-admin database copy <source-db> <target-db>
@@ -205,6 +228,8 @@ neo4j-admin database copy production /backups/prod-copy \
 
 #### backup inspect
 
+Enterprise only.
+
 ```bash
 neo4j-admin backup inspect /backups/full
 ```
@@ -221,12 +246,6 @@ neo4j-admin database migrate <database-name>
 neo4j-admin database migrate legacydb --force-btree-indexes-to-range
 ```
 
-### backup (legacy)
-
-```bash
-neo4j-admin backup --backup-dir=<path> --database=<name>
-```
-
 ## Configuration
 
 Commands resolve settings in this order (highest to lowest priority):
@@ -236,7 +255,7 @@ Commands resolve settings in this order (highest to lowest priority):
 4. `neo4j.conf`
 
 ```bash
-neo4j-admin database backup mydb --to-path=/backups @/path/to/options.conf
+neo4j-admin database backup --to-path=/backups @/path/to/options.conf mydb
 ```
 
 **Example options.conf**:
@@ -263,28 +282,28 @@ neo4j-admin server memory-recommendation
 
 ### Backup and Restore
 ```bash
-neo4j-admin database backup neo4j --to-path=/backups/full
-neo4j-admin database backup neo4j --to-path=/backups/diff --type=differential
+# Enterprise; keep full + diffs in one directory (one chain)
+neo4j-admin database backup --to-path=/backups/neo4j --type=FULL neo4j
+neo4j-admin database backup --to-path=/backups/neo4j --type=DIFF neo4j
 
-neo4j stop
-neo4j-admin database restore neo4j --from-path=/backups/full
-neo4j start
+# Stop the database (STOP DATABASE neo4j on system), then restore the latest artifact (replays the chain)
+neo4j-admin database restore --from-path=/backups/neo4j/<latest>.backup --overwrite-destination=true neo4j
 ```
 
 ### Data Migration
 ```bash
-neo4j-admin database dump production --to-path=/exports/prod.dump
-neo4j-admin database load production-copy --from-path=/exports/prod.dump
-neo4j-admin database check production-copy
+# production must be stopped; writes /exports/production.dump
+neo4j-admin database dump --to-path=/exports production
+cat /exports/production.dump | neo4j-admin database load --from-stdin productioncopy
+neo4j-admin database check productioncopy
 ```
 
 ### CSV Import
 ```bash
-neo4j-admin database import \
+neo4j-admin database import full ecommerce \
   --nodes=User=users.csv \
   --nodes=Product=products.csv \
   --relationships=PURCHASED=purchases.csv \
-  --database=ecommerce \
   --skip-bad-relationships
 ```
 
@@ -307,24 +326,24 @@ neo4j-admin database import \
 
 ### Permission Denied
 ```bash
-sudo -u neo4j neo4j-admin database backup mydb --to-path=/backups
+sudo -u neo4j neo4j-admin database backup --to-path=/backups mydb
 ```
 
 ### Database Must Be Stopped
 ```bash
 neo4j stop
-neo4j-admin database restore mydb --from-path=/backup
+neo4j-admin database restore --from-path=/backup/<artifact>.backup --overwrite-destination=true mydb
 neo4j start
 ```
 
 ### Insufficient Memory
 ```bash
-HEAP_SIZE=4g neo4j-admin database import --nodes=large.csv --database=bigdb
+HEAP_SIZE=4g neo4j-admin database import full bigdb --nodes=large.csv
 ```
 
 ### Configuration Not Found
 ```bash
-NEO4J_CONF=/path/to/conf neo4j-admin database backup mydb --to-path=/backup
+NEO4J_CONF=/path/to/conf neo4j-admin database backup --to-path=/backup mydb
 ```
 
 ## Additional Resources

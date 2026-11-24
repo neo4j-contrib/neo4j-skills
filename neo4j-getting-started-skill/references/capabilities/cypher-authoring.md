@@ -1,17 +1,17 @@
 # Capability — cypher-authoring
 # Guidelines for generating correct Cypher 25 queries.
-# For deep Cypher authoring, load neo4j-cypher-authoring-skill if available.
+# For deep Cypher authoring, load neo4j-cypher-skill if available.
 
-## When to use neo4j-cypher-authoring-skill
+## When to use neo4j-cypher-skill
 
-If `neo4j-cypher-authoring-skill` is available, defer all Cypher generation to it — it has comprehensive Cypher 25 rules, QPE handling, and a schema-first protocol that produces higher-quality queries.
+If `neo4j-cypher-skill` is available, defer all Cypher generation to it — it has comprehensive Cypher 25 rules, QPE handling, and a schema-first protocol that produces higher-quality queries.
 
 To check:
 ```bash
-ls ../neo4j-cypher-authoring-skill/SKILL.md 2>/dev/null && echo "Available" || echo "Not found"
+ls ../neo4j-cypher-skill/SKILL.md 2>/dev/null && echo "Available" || echo "Not found"
 ```
 
-If available: `--append-system-prompt ../neo4j-cypher-authoring-skill/SKILL.md`
+If available: `--append-system-prompt ../neo4j-cypher-skill/SKILL.md`
 
 ## Minimum rules for Cypher generated in this skill
 
@@ -61,7 +61,7 @@ Before writing any MATCH clause:
 
 Only generate GDS or APOC queries after confirming availability:
 ```bash
-cypher-shell ... "CALL gds.version() YIELD version" 2>/dev/null || echo "GDS not available"
+cypher-shell ... "RETURN gds.version() AS gdsVersion" || echo "GDS not available"
 ```
 
 Aura Free has no GDS. Local Docker default image has no GDS unless plugin flag is set.

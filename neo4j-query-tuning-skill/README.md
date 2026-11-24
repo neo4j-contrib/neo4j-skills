@@ -10,13 +10,13 @@ Diagnoses and fixes slow Neo4j Cypher queries by interpreting execution plans, i
 - **Common plan problems** — missing indexes, CartesianProduct, Eager, over-traversal
 - **Planner hints** — `USING INDEX`, `USING SCAN`, `USING JOIN ON`
 - **Runtime selection** — slotted, pipelined, parallel; when each is appropriate
-- **Query monitoring** — `SHOW QUERIES`, `SHOW TRANSACTIONS`, `TERMINATE TRANSACTION`, `db.stats.retrieve`
+- **Query monitoring** — `SHOW TRANSACTIONS`, `TERMINATE TRANSACTION`, `db.stats.retrieve`
 
 ## Availability
 
 Works with any Neo4j 2025.x / 2026.x instance (self-managed or Aura). Some features require Enterprise edition:
-- `SHOW QUERIES` for other users' queries — Enterprise
-- `runtime=parallel` — Enterprise or Aura Pro 2025+
+- `SHOW TRANSACTIONS` for other users' transactions — needs the `SHOW TRANSACTION` privilege
+- `runtime=parallel`, `runtime=pipelined` — Enterprise or Aura (parallel: non-Free Aura); Community always runs slotted
 
 ## Install
 
@@ -28,4 +28,4 @@ Works with any Neo4j 2025.x / 2026.x instance (self-managed or Aura). Some featu
 ## Reference Files
 
 - [`references/plan-operators.md`](references/plan-operators.md) — complete operator table with all variants
-- [`references/stats-and-monitoring.md`](references/stats-and-monitoring.md) — SHOW QUERIES, SHOW TRANSACTIONS, db.stats.*, index health, page cache
+- [`references/stats-and-monitoring.md`](references/stats-and-monitoring.md) — SHOW TRANSACTIONS, db.stats.*, index health, page cache

@@ -353,7 +353,7 @@ Maximum flow that minimises total cost. Same parameters as Max Flow plus cost.
 
 ### FastPath (`fastpath`)
 
-Temporal node embeddings over base nodes and their related events. Produces a `VECTOR` embedding per base node.
+Temporal node embeddings over base nodes and their related events. Produces a `VECTOR` embedding per base node. Runs on GPU compute pools only.
 
 **Compute:**
 
@@ -362,20 +362,21 @@ Temporal node embeddings over base nodes and their related events. Produces a `V
 | `baseNodeLabel` | String | *required* | Node label for which embeddings are produced |
 | `eventNodeLabel` | String | *required* | Node label of events related to base nodes |
 | `contextNodeLabel` | String | None | Node label of context nodes describing events |
-| `timeNodeProperty` | String | None | Node property representing time on event nodes (int or float) |
+| `eventNodeTimeProperty` | String | None | Node property representing time on event nodes (int or float) |
 | `nextRelationshipType` | String | None | Relationship type between event nodes indicating event order |
 | `firstRelationshipType` | String | None | Relationship type from base node to its first event |
-| `eventFeatures` | String | None | Node property on event nodes holding numerical features (vector form) |
-| `categoricalEventProperties` | List of String | None | Event node properties holding categorical value(s) |
-| `ignoredEventCategory` | Integer | -1 | Category value treated as missing and ignored |
-| `outputTime` | Float | None | Timestamp at which embeddings are produced; events at/after this are not processed |
-| `outputTimeProperty` | String | None | Base-node property giving a per-node output timestamp |
-| `numElapsedTimes` | Integer | *required* | Number of times in the elapsed-time grid; 1 means event timestamps have no effect |
-| `decayFactor` | Float | 1.0 | Speed of decay of influence of older events |
-| `maxElapsedTime` | Integer | *required* | Max age of events (relative to output time) considered |
+| `eventNodeFeatureVectorProperty` | String | None | Node property on event nodes holding numerical features (vector form) |
+| `eventNodeCategoricalProperties` | List of String | None | Event node properties holding categorical value(s) |
+| `eventNodeIgnoredCategory` | Integer | -1 | Category value treated as missing and ignored |
+| `observationTime` | Float | — | Timestamp at which embeddings are produced; events at/after this are not processed. Set exactly one of `observationTime` / `baseNodeObservationTimeProperty` |
+| `baseNodeObservationTimeProperty` | String | — | Base-node property giving a per-node output timestamp. Set exactly one of `observationTime` / `baseNodeObservationTimeProperty` |
+| `timeAnchorInterval` | Float | — | Time between anchor embeddings in the grid; set exactly one of `timeAnchorInterval` / `numTimeAnchors` (app 1.0.40+) |
+| `numTimeAnchors` | Integer | — | Number of anchor embeddings in the time grid; 1 means event timestamps have no effect |
+| `lookbackHorizon` | Float | — | Max age of events (relative to output time) considered |
+| `decayRate` | Float | 1.0 | Speed of decay of influence of older events |
 | `smoothingWindow` | Integer | 0 | Aggregate event embeddings over up to `2*smoothingWindow + 1` grid times |
 | `smoothingRate` | Float | 0.0 | How fast expected event similarity decays with time-distance |
-| `dimension` | Integer | *required* | Output embedding dimension |
+| `embeddingDimension` | Integer | *required* | Output embedding dimension |
 | `randomSeed` | Integer | random | Seed for all randomness |
 | `resultProperty` | String | `'embedding'` | Node property written back |
 
@@ -575,7 +576,7 @@ Shared parameters above, plus:
 | Parameter | Type | Default | Description |
 |---|---|---|---|
 | `targetLabel` | String | *required* | Node label to train predictions on |
-| `targetProperty` | String | *required* | Node property (column) to predict; NULL values mark unlabeled nodes (semi-supervised) |
+| `targetProperty` | String | *required* | Node property (column) to predict; NULL values mark unlabeled nodes (semi-supervised). Must be numeric (`BIGINT`/`DOUBLE`) — convert text labels in the view (`CASE … END::BIGINT AS risk_code`). Use the lowercase view column name (`'risk_code'`, not `'RISK_CODE'`) |
 | `splitRatios` | Map | `{'TRAIN':0.6,'TEST':0.2,'VALID':0.2}` | Train/test/validation split; keys `TRAIN`/`TEST`/`VALID`, values sum to 1.0 |
 | `epochsPerVal` | Integer | 0 | Epochs between validation-set evaluation; 0 = never |
 | `batchSize` | Integer | auto-inferred | Target nodes per batch; used for both training and evaluation |
@@ -592,7 +593,7 @@ Shared parameters above, plus:
 | `negativeSamplingRatio` | Float | 1.0 | Ratio of negative to positive samples |
 | `batchSize` | Integer | auto-inferred | Target nodes per training batch |
 
-Removed in 1.0.37: `numSamples`, `hiddenChannels`, `activation`, `negSamplingRatio`, `trainBatchSize`, `evalBatchSize`, `epochsPerCheckpoint`, `lossReduction`. Renamed params above are breaking; no checkpointing; loss always mean-reduced.
+Renamed in app 1.0.37 (breaking): `numSamples` → `numNeighbors`, `hiddenChannels` → `embeddingDimension`, `activation` → `activationFunction`, `negSamplingRatio` → `negativeSamplingRatio`, `trainBatchSize` + `evalBatchSize` → `batchSize`. Removed in 1.0.37: `epochsPerCheckpoint`, `lossReduction` (no checkpointing; loss always mean-reduced). On installs older than 1.0.37 use the old names (check the version with `SHOW APPLICATIONS;`).
 
 ### Predict (`gs_nc_predict`, `gs_unsup_predict`)
 
@@ -606,7 +607,7 @@ Apply a trained model to a projected graph. Most settings are inherited from tra
 
 **Write:** `nodeLabel`, `outputTable`
 
-A GPU pool is recommended for large graphs or deep models, but a CPU pool may suffice otherwise.
+Run `gs_nc_predict` / `gs_unsup_predict` on the same pool type as training — a GPU-trained model fails on a CPU pool (`Attempting to deserialize object on a CUDA device…`).
 
 ### Model catalog
 
@@ -615,3 +616,68 @@ A GPU pool is recommended for large graphs or deep models, but a CPU pool may su
 | `model_exists` | `CALL Neo4j_Graph_Analytics.graph.model_exists('<modelname>')` | Check whether a model exists |
 | `show_models` | `CALL Neo4j_Graph_Analytics.graph.show_models()` | List models |
 | `drop_model` | `CALL Neo4j_Graph_Analytics.graph.drop_model('<modelname>')` | Delete a model |
+
+## Available Algorithms
+
+Procedure = `Neo4j_Graph_Analytics.graph.<name>`. Names below are exact.
+
+For complete algorithm compute/write parameter reference, see [references/algorithms.md](algorithms.md).
+
+### Community Detection
+| Algorithm | Procedure | Use case |
+|---|---|---|
+| Weakly Connected Components | `wcc` | Find disconnected subgraphs |
+| Louvain | `louvain` | Community detection (modularity) |
+| Leiden | `leiden` | Community detection, more stable than Louvain |
+| Label Propagation | `label_propagation` | Fast community detection by label spreading |
+| K-Means | `kmeans` | Cluster nodes by node properties |
+| Triangle Count | `triangle_count` | Local clustering / dense subgraphs |
+| K-1 Coloring | `k1coloring` | Assign colors so neighbours differ (greedy, few colors) |
+
+### Centrality
+| Algorithm | Procedure | Use case |
+|---|---|---|
+| PageRank | `page_rank` | Rank nodes by influence |
+| Article Rank | `article_rank` | PageRank variant, discounts high-degree neighbours |
+| Betweenness | `betweenness` | Find bridge nodes |
+| Degree | `degree` | Count direct connections |
+
+### Pathfinding
+| Algorithm | Procedure | Use case |
+|---|---|---|
+| Dijkstra Source-Target | `dijkstra` | Shortest path(s) from source to target(s) or pairs |
+| Dijkstra Single-Source | `dijkstra_single_source` | Shortest paths from one node to all others |
+| Delta-Stepping SSSP | `delta_stepping` | Parallel single-source shortest paths |
+| Breadth First Search | `bfs` | BFS traversal from a source |
+| Yen's K-Shortest Paths | `yens` | Top-K shortest loopless paths |
+| Max Flow | `max_flow` | Maximum flow with capacities |
+| Min-Cost Max Flow | `max_flow_min_cost` | Max flow minimising total cost |
+
+### Similarity
+| Algorithm | Procedure | Use case |
+|---|---|---|
+| Node Similarity | `node_similarity` | Similar nodes by shared neighbours |
+| Filtered Node Similarity | `node_similarity_filtered` | Node similarity with source/target filters |
+| KNN | `knn` | K most similar nodes |
+| Filtered KNN | `knn_filtered` | KNN with source/target filters |
+
+### Node Embeddings
+| Algorithm | Procedure | Use case |
+|---|---|---|
+| FastRP | `fast_rp` | Fast node embeddings |
+| Node2Vec | `node2vec` | Random-walk node embeddings |
+| HashGNN | `hashgnn` | GNN-inspired embeddings without training |
+| FastPath | `fastpath` | Temporal path embeddings from event sequences (GPU pools only) |
+
+### GraphSAGE (Graph ML)
+| Algorithm | Procedure | Use case |
+|---|---|---|
+| Node Classification — train | `gs_nc_train` | Train supervised node-label model |
+| Node Classification — predict | `gs_nc_predict` | Predict labels with a trained model |
+| Unsupervised embeddings — train | `gs_unsup_train` | Train unsupervised embedding model |
+| Unsupervised embeddings — predict | `gs_unsup_predict` | Infer embeddings with a trained model |
+
+### Model catalog (GraphSAGE)
+`show_models`, `model_exists`, `drop_model`.
+
+---

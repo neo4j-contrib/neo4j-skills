@@ -8,7 +8,8 @@ Full option reference for `.write.format("org.neo4j.spark.DataSource")`.
 |------|--------|--------------|
 | `Append` | `UNWIND ... CREATE` | None |
 | `Overwrite` | `UNWIND ... MERGE` | `node.keys` or `*.node.keys` |
-| `ErrorIfExists` | `CREATE` + error on conflict | — |
+
+`ErrorIfExists` (Spark's default when `.mode()` is omitted) is rejected — always set `Append` or `Overwrite`. For relationships, `Append` builds `CREATE`: re-runs duplicate relationships. Upserts: `Overwrite` with `Overwrite` source/target save modes.
 
 ## Core Write Options (mutually exclusive — pick one)
 
@@ -111,7 +112,7 @@ write_query = """
 
 | Mode | Behavior | Use When |
 |------|----------|----------|
-| `Match` | MATCH existing node by keys | Nodes already exist |
+| `Match` | MATCH existing node by keys; rows without a match are skipped silently | Nodes already exist (verify counts after write) |
 | `Append` | CREATE new node | Always create (risk duplicates) |
 | `Overwrite` | MERGE node by keys | Upsert nodes during rel write |
 

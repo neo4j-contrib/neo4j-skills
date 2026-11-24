@@ -1,7 +1,7 @@
 {
   "name": "neo4j-skills",
   "version": "1.0.1",
-  "description": "Agent skills for Neo4j \u2014 Cypher queries, graph modeling, drivers, imports, GraphRAG, GDS, vector indexes, Aura provisioning, and more.",
+  "description": "Agent skills for Neo4j — Cypher queries, graph modeling, drivers, imports, GraphRAG, GDS, vector indexes, Aura provisioning, and more.",
   "author": {
     "name": "Neo4j",
     "email": "devrel@neo4j.com"
@@ -33,6 +33,7 @@
     "./neo4j-migration-skill",
     "./neo4j-modeling-skill",
     "./neo4j-nvl-skill",
+    "./neo4j-ontology-skill",
     "./neo4j-query-tuning-skill",
     "./neo4j-security-skill",
     "./neo4j-snowflake-graph-analytics-skill",

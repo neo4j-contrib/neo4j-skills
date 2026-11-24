@@ -8,7 +8,7 @@ description: Orchestrates zero-to-running-app in 8 stages — prerequisites → 
   Does NOT cover Cypher query authoring — use neo4j-cypher-skill.
   Does NOT cover driver upgrades or Cypher migration — use neo4j-migration-skill.
   Does NOT cover CLI/admin tasks on an existing DB — use neo4j-cli-tools-skill.
-version: 1.0.7
+version: 1.0.8
 allowed-tools: Bash, WebFetch, Read, Write, Edit,
   mcp__neo4j__read-cypher, mcp__neo4j__write-cypher, mcp__neo4j__get-schema,
   mcp__neo4j__list-gds-procedures,
@@ -169,7 +169,7 @@ Stages run in the numbered order shown. Each depends on the one before it comple
 
 Shared capabilities used across multiple stages:
 - Cypher execution: `${CLAUDE_SKILL_DIR}/references/capabilities/execute-cypher.md` (3 options; `EXEC_METHOD` chosen in `context`)
-- Cypher authoring rules: `${CLAUDE_SKILL_DIR}/references/capabilities/cypher-authoring.md` (or defer to `neo4j-cypher-authoring-skill`)
+- Cypher authoring rules: `${CLAUDE_SKILL_DIR}/references/capabilities/cypher-authoring.md` (or defer to `neo4j-cypher-skill`)
 - MCP configuration: `${CLAUDE_SKILL_DIR}/references/capabilities/mcp-config.md` (used in `prerequisites` and `build`)
 - Query validation: `${CLAUDE_SKILL_DIR}/scripts/validate_queries.py` — batch-validate all queries in one call (used in `query`)
 
@@ -347,11 +347,12 @@ Open http://localhost:8000/docs for the interactive API docs.
 
 To query your graph directly from Claude:
 
-**Claude Code** — copy `mcp-claude-code.json` into `.claude/settings.json`:
+**Claude Code** — register the server (Claude Code reads MCP servers from `claude mcp add` or `.mcp.json`, not `.claude/settings.json`):
 ```bash
-cp mcp-claude-code.json .claude/settings.json
+claude mcp add-json neo4j "$(python3 -c 'import json;print(json.dumps(json.load(open("mcp-claude-code.json"))["mcpServers"]["neo4j"]))')"
+claude mcp get neo4j
 ```
-Then reload Claude Code (`/reload` or restart). Ask: "What node labels are in my Neo4j database?"
+Then restart Claude Code. Ask: "What node labels are in my Neo4j database?" `mcp-claude-code.json` holds the password — keep it gitignored.
 
 **Claude Desktop** — merge `mcp-claude-desktop.json` into
 `~/Library/Application Support/Claude/claude_desktop_config.json`, then restart Claude Desktop.

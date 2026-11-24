@@ -15,7 +15,7 @@ APOC Core ships bundled with Neo4j. APOC Extended is a separate Labs plugin — 
 CALL apoc.meta.schema() YIELD value RETURN value
 
 // Fast label/rel-type/property counts (sampled)
-CALL apoc.meta.stats() YIELD labels, relTypesCount, properties RETURN *
+CALL apoc.meta.stats() YIELD labels, relTypesCount, propertyKeyCount RETURN *
 
 // Per-label property details (name, type, nullable, indexed)
 CALL apoc.meta.nodeTypeProperties()
@@ -45,7 +45,7 @@ CALL apoc.refactor.rename.type('OLD_TYPE', 'NEW_TYPE', [])
 CALL apoc.refactor.rename.nodeProperty('oldProp', 'newProp', [])
 
 // Rename relationship property
-CALL apoc.refactor.rename.relationshipProperty('oldProp', 'newProp', [])
+CALL apoc.refactor.rename.typeProperty('oldProp', 'newProp', [])
 ```
 
 Config optional: `{batchSize: 10000, parallel: true}`. Third argument `[]` means all; pass a list of nodes/rels to scope.
@@ -179,7 +179,7 @@ CALL apoc.path.spanningTree(root, {
 Fire Cypher on write events. Require `apoc.trigger.enabled=true` in `apoc.conf`.
 
 **For Neo4j 2025.x / Cypher 25:** use `apoc.trigger.install` (system db) + `apoc.trigger.list`.
-`apoc.trigger.add` / `apoc.trigger.remove` / `apoc.trigger.pause` were removed in Cypher 25.
+`apoc.trigger.add` / `apoc.trigger.remove` / `apoc.trigger.pause` / `apoc.trigger.resume` were removed in Cypher 25 → `install` / `drop` / `stop` / `start`.
 
 ```cypher
 // Install — run from system database
@@ -195,9 +195,10 @@ CALL apoc.trigger.install(
 CALL apoc.trigger.list()
 YIELD name, query, selector, installed, paused RETURN *
 
-// Pause / drop (system db)
+// Pause (stop) / resume (start) / drop (system db)
 USE system
-CALL apoc.trigger.pause('neo4j', 'stamp-created')
+CALL apoc.trigger.stop('neo4j', 'stamp-created')
+CALL apoc.trigger.start('neo4j', 'stamp-created')
 CALL apoc.trigger.drop('neo4j', 'stamp-created')
 ```
 
@@ -345,7 +346,7 @@ CALL apoc.export.json.query(
   'MATCH (n:Event)-[r:ATTENDED_BY]->(p:Person) RETURN n, r, p',
   '/var/lib/neo4j/import/events.json',
   {}
-) YIELD file, nodes, rels, properties RETURN *
+) YIELD file, nodes, relationships, properties RETURN *
 
 // Export as Cypher CREATE/MERGE statements
 CALL apoc.export.cypher.query(
@@ -361,7 +362,7 @@ CALL apoc.export.cypher.query(
 
 | Deprecated | Replacement |
 |---|---|
-| `apoc.trigger.add` / `.remove` / `.pause` | `apoc.trigger.install` / `.drop` / `.pause` (system db) |
+| `apoc.trigger.add` / `.remove` / `.pause` / `.resume` | `apoc.trigger.install` / `.drop` / `.stop` / `.start` (system db) |
 | `apoc.do.when` / `apoc.do.case` | Native `CASE` + conditional `CALL {}` |
 | `apoc.coll.flatten` (simple) | `coll.flatten(list[, depth])` — native Cypher 25; removes nesting. `[x IN list \| ...]` maps/filters, keeps nesting |
 | `apoc.coll.toSet` | `apoc.coll.toSet` still works; or `DISTINCT` in collect |

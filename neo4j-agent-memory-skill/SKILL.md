@@ -1,7 +1,7 @@
 ---
 name: neo4j-agent-memory-skill
 description: Authoritative reference for the neo4j-agent-memory Python package — a graph-native memory system for AI agents built on Neo4j — and for the hosted service (NAMS) at memory.neo4jlabs.com. Use this skill whenever the user mentions neo4j-agent-memory, agent memory with Neo4j, context graphs, the POLE+O model, MemoryClient/MemorySettings, the memory MCP server, or any of the framework integrations (LangChain, PydanticAI, CrewAI, AWS Strands, Google ADK, Microsoft Agent Framework, OpenAI Agents, LlamaIndex). Also use when the user mentions the hosted service at memory.neo4jlabs.com, NAMS, the Neo4j Agent Memory Service, the `nams_` API key prefix, or the hosted MCP endpoint. Also use when writing documentation, blog posts, tutorials, PRDs, or code samples for the project, when comparing agent memory approaches, or when positioning graph-native memory against vector-only approaches — even if the user doesn't explicitly name the package. Does NOT handle GraphRAG pipelines — use neo4j-graphrag-skill.
-version: 1.0.9
+version: 1.0.10
 ---
 
 # neo4j-agent-memory
@@ -34,13 +34,13 @@ Authoritative reference for the `neo4j-agent-memory` Python package — a Neo4j 
 | PyPI | https://pypi.org/project/neo4j-agent-memory/ |
 | GitHub | https://github.com/neo4j-labs/agent-memory |
 | Canonical docs | https://neo4j.com/labs/agent-memory/ |
-| Hosted service | https://memory.neo4jlabs.com (NAMS — early-access, not yet documented on official project pages) |
+| Hosted service | https://memory.neo4jlabs.com (NAMS — early-access; docs at https://memory.neo4jlabs.com/docs and Labs how-to [Use NAMS](https://neo4j.com/labs/agent-memory/how-to/use-nams/)) |
 | Hosted MCP endpoint | https://memory.neo4jlabs.com/mcp (Streamable HTTP, bearer auth) |
 | License | Apache-2.0 |
 | Python | 3.11+ (3.10 dropped in 0.8.0) |
-| Neo4j | 5.20+ (required for vector indexes) |
+| Neo4j | Bolt backend: AuraDB or self-managed 5.26+ (per package README). NAMS manages its own database |
 | Status | Experimental (Neo4j Labs, community-supported) |
-| Current version (at time of writing) | **0.8.0** (2026-10-22) — **always verify PyPI before citing** |
+| Current version | Not pinned here — releases ship every few weeks. **Check PyPI before citing** |
 
 ## What It Is (One Sentence)
 
@@ -55,7 +55,7 @@ A graph-native memory system for AI agents that stores conversations, builds kno
 | **Self-hosted library** | `pip install neo4j-agent-memory` + your own Neo4j (local / Docker / Aura). Full Python API, local MCP server, and framework integrations run in your process. | Dev, on-prem data, custom extraction pipelines, full control, bringing your own embeddings / LLMs. |
 | **Hosted (NAMS)** | Managed service at `https://memory.neo4jlabs.com`. Per-workspace isolated Neo4j Aura database, REST API, remote MCP endpoint, web console. | Zero-infra trials, sharing memory across agents / machines, demos, teams that don't want to run Neo4j. |
 
-> ⚠️ **NAMS is reachable but not yet referenced in the GitHub README or `neo4j.com/labs/agent-memory/`.** Treat it as early-access / soft-launched. Do not assert SLAs, pricing, or GA status in published content. See the **Hosted Service (NAMS)** section below for details.
+> ⚠️ **NAMS is early-access.** The package README leads with it and the Labs docs cover it ([Use NAMS](https://neo4j.com/labs/agent-memory/how-to/use-nams/), [Bolt vs NAMS](https://neo4j.com/labs/agent-memory/explanation/backends/)). Do not assert SLAs, pricing, or GA status in published content. See the **Hosted Service (NAMS)** section below for details.
 
 ## The Three Memory Types
 
@@ -87,17 +87,20 @@ Core install plus extras. The extras pattern is `pip install neo4j-agent-memory[
 
 ```bash
 pip install neo4j-agent-memory                  # Core
-pip install neo4j-agent-memory[openai]          # + OpenAI embeddings
+pip install neo4j-agent-memory[openai]          # + OpenAI embeddings (default embedder — needed unless another is configured)
+pip install neo4j-agent-memory[nams]            # + hosted NAMS backend (pulls httpx)
 pip install neo4j-agent-memory[mcp]             # + MCP server
 pip install neo4j-agent-memory[langchain]       # + LangChain
 pip install neo4j-agent-memory[all]             # Everything
 ```
 
-**Full extras list** (subject to change — verify PyPI): `all`, `anthropic`, `aws`, `bedrock`, `cli`, `crewai`, `extraction`, `full`, `fuzzy`, `gliner`, `google`, `google-adk`, `instructor`, `langchain`, `langchain-agents`, `litellm`, `llamaindex`, `mcp`, `microsoft-agent`, `nams`, `observability`, `openai`, `openai-agents`, `opentelemetry`, `opik`, `pydantic-ai`, `sentence-transformers`, `spacy`, `strands`, `vertex-ai`.
+**Full extras list** (subject to change — verify PyPI): `all`, `anthropic`, `aws`, `bedrock`, `cli`, `crewai`, `extraction`, `full`, `fuzzy`, `gliner`, `gliner2`, `google`, `google-adk`, `instructor`, `langchain`, `langchain-agents`, `litellm`, `llamaindex`, `mcp`, `microsoft-agent`, `nams`, `observability`, `openai`, `openai-agents`, `opentelemetry`, `opik`, `pydantic-ai`, `sentence-transformers`, `spacy`, `strands`, `vertex-ai`.
 
 ## Python API (Quickstart)
 
 Canonical import pattern and basic usage. This is the shape to reproduce in tutorials and examples.
+
+Default embedder is OpenAI (`text-embedding-3-small`). Install `neo4j-agent-memory[openai]` and set `OPENAI_API_KEY`, or the first `add_message` fails (`EmbeddingError` / missing credentials). Local alternative: `[sentence-transformers]` extra + `embedding="sentence-transformers/all-MiniLM-L6-v2"`. Version 0.6.0 also failed on Bolt with `ModuleNotFoundError: No module named 'httpx'` — fixed in 0.7.0; on 0.6.0 add the `[nams]` extra.
 
 ```python
 import asyncio
@@ -105,7 +108,8 @@ from neo4j_agent_memory import MemoryClient, MemorySettings
 
 async def main():
     settings = MemorySettings(
-        neo4j={"uri": "bolt://localhost:7687", "password": "your-password"}
+        neo4j={"uri": "bolt://localhost:7687", "password": "your-password"},
+        embedding="openai/text-embedding-3-small",  # needs [openai] + OPENAI_API_KEY
     )
 
     async with MemoryClient(settings) as memory:
@@ -144,8 +148,10 @@ Exposes memory as tools for MCP-compatible AI assistants (Claude Desktop, Claude
 The authoritative one-liner (no install needed):
 
 ```bash
-uvx "neo4j-agent-memory[mcp]" mcp serve --password <neo4j-password>
+uvx --from "neo4j-agent-memory[mcp,openai]" neo4j-agent-memory mcp serve --password <neo4j-password>
 ```
+
+`[openai]` (plus `OPENAI_API_KEY`) is needed for the default embedder; or pass `--embedding sentence-transformers/all-MiniLM-L6-v2` with the `[sentence-transformers]` extra.
 
 Install-local alternative:
 
@@ -185,7 +191,7 @@ As of v0.1.1, `memory_add_fact` accepts a `metadata` parameter, bringing it to p
 
 ```bash
 claude mcp add neo4j-agent-memory -- \
-  uvx "neo4j-agent-memory[mcp]" mcp serve --password <neo4j-password>
+  uvx --from "neo4j-agent-memory[mcp,openai]" neo4j-agent-memory mcp serve --password <neo4j-password>
 ```
 
 ### Claude Desktop Config
@@ -195,7 +201,7 @@ claude mcp add neo4j-agent-memory -- \
   "mcpServers": {
     "neo4j-agent-memory": {
       "command": "uvx",
-      "args": ["neo4j-agent-memory[mcp]", "mcp", "serve", "--password", "your-password"],
+      "args": ["--from", "neo4j-agent-memory[mcp,openai]", "neo4j-agent-memory", "mcp", "serve", "--password", "your-password"],
       "env": {
         "OPENAI_API_KEY": "sk-..."
       }
@@ -210,7 +216,7 @@ claude mcp add neo4j-agent-memory -- \
 
 **NAMS** — Neo4j Agent Memory Service — is the managed deployment of `neo4j-agent-memory` at `https://memory.neo4jlabs.com`. It bundles the REST API, the MCP server, a web console, and per-workspace Neo4j Aura databases.
 
-> ⚠️ **Verify against the live service before citing.** NAMS is not documented on the GitHub README or `neo4j.com/labs/agent-memory/`. Endpoint shapes, tool counts, auth flows, and limits can change without a release note. Before publishing anything NAMS-specific, re-check the live site and the OpenAPI spec at `/openapi.json`.
+> ⚠️ **Verify against the live service before citing.** Endpoint shapes, tool counts, auth flows, and limits can change without a release note. Before publishing anything NAMS-specific, re-check the [NAMS docs](https://memory.neo4jlabs.com/docs), the OpenAPI spec at `/openapi.json`, and the Labs pages [Use NAMS](https://neo4j.com/labs/agent-memory/how-to/use-nams/) and [Bolt vs NAMS](https://neo4j.com/labs/agent-memory/explanation/backends/).
 
 ### Surface
 
@@ -223,8 +229,23 @@ claude mcp add neo4j-agent-memory -- \
 
 - **API keys**, prefixed `nams_`, created and rotated from the web console — used as a bearer token for REST and MCP
 - **Auth0 OAuth2 (PKCE)** + scoped JWTs for interactive user flows
+- **Admin (unbound) key** → data-plane calls must name the workspace (`X-Workspace-Id` header / `workspace_id`), else `workspace_id required`. Workspace-bound keys need no header
 
 Don't mix these with the self-hosted library's `--password` Neo4j credential — they serve different sides of the stack.
+
+### Python SDK (NAMS backend)
+
+Same package talks to NAMS — no REST code needed:
+
+```bash
+pip install "neo4j-agent-memory[nams]"
+export MEMORY_API_KEY=nams_...
+export MEMORY_ENDPOINT=https://memory.neo4jlabs.com/v1
+```
+
+- `MemoryClient()` selects NAMS when `MEMORY_API_KEY` is set, else Bolt. Explicit: `NamsSettings` / `connect()`.
+- MCP server against NAMS: `neo4j-agent-memory mcp serve --backend nams`.
+- Some Bolt-only operations raise `NotSupportedError` on NAMS — check [Bolt vs NAMS](https://neo4j.com/labs/agent-memory/explanation/backends/). Neo4j version requirement applies to Bolt only.
 
 ### Storage Model
 
@@ -242,7 +263,7 @@ claude mcp add --transport http neo4j-agent-memory-hosted \
   --header "Authorization: Bearer <nams_api_key>"
 ```
 
-### Claude Desktop Config (Hosted MCP)
+### Claude Code `.mcp.json` (Hosted MCP)
 
 ```json
 {
@@ -253,6 +274,22 @@ claude mcp add --transport http neo4j-agent-memory-hosted \
       "headers": {
         "Authorization": "Bearer nams_..."
       }
+    }
+  }
+}
+```
+
+### Claude Desktop (Hosted MCP)
+
+`claude_desktop_config.json` takes local (stdio) servers only. Use Settings → Connectors → Add custom connector, or the `mcp-remote` stdio bridge:
+
+```json
+{
+  "mcpServers": {
+    "neo4j-agent-memory-hosted": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://memory.neo4jlabs.com/mcp", "--header", "Authorization:${AUTH_HEADER}"],
+      "env": { "AUTH_HEADER": "Bearer nams_..." }
     }
   }
 }
@@ -329,7 +366,7 @@ When editing or reviewing content about this project, check for:
 4. **Missing "Labs" framing** — experimental/community-supported should be clear.
 5. **Conflating with other Neo4j MCP servers** — there are several (`mcp-neo4j-cypher`, `mcp-neo4j-memory` — the old knowledge graph memory server, etc.). `neo4j-agent-memory`'s MCP server is distinct and ships as part of the package under the `[mcp]` extra.
 6. **Confusing NAMS with the self-hosted library** — same underlying project, different consumption models. Connection strings, auth, and tool sets differ: self-hosted uses a local `uvx` invocation and a Neo4j `--password`; NAMS uses a Streamable HTTP MCP URL and a `nams_`-prefixed bearer token. Don't mix them.
-7. **Over-promising NAMS availability** — the hosted service is not yet referenced in the GitHub README or `neo4j.com/labs/agent-memory/`. Avoid "officially supported," SLAs, pricing claims, or "production-ready" framing. Treat it as early-access.
+7. **Over-promising NAMS availability** — the hosted service is early-access. Avoid "officially supported," SLAs, pricing claims, or "production-ready" framing. Treat it as early-access.
 
 ## Related Projects in the Ecosystem
 
@@ -393,12 +430,12 @@ Before publishing any content about this project, verify:
 - [ ] Canonical docs link points to `neo4j.com/labs/agent-memory`
 - [ ] Three memory types named correctly (short-term, long-term, reasoning)
 - [ ] POLE+O model named consistently (not POLEO, not POLE-O)
-- [ ] Python ≥ 3.11 and Neo4j ≥ 5.20 requirements are stated if relevant
+- [ ] Python ≥ 3.11 and Neo4j (Bolt: AuraDB or self-managed ≥ 5.26) requirements are stated if relevant
 - [ ] Labs disclaimer present for README/landing content
 - [ ] No competitor names in published positioning
 - [ ] Reasoning memory is called out as the differentiator
 - [ ] Import paths use `neo4j_agent_memory.integrations.<framework>` (underscore, snake_case)
-- [ ] If NAMS is referenced, distinguish clearly from the self-hosted library and re-verify endpoints against the live service (not yet mirrored in the README)
+- [ ] If NAMS is referenced, distinguish clearly from the self-hosted library and re-verify endpoints against the live service and [NAMS docs](https://memory.neo4jlabs.com/docs)
 
 ## Resources
 

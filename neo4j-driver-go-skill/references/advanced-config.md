@@ -19,6 +19,7 @@ driver, _ := neo4j.NewDriver(uri, auth,
 ```go
 import (
     "github.com/neo4j/neo4j-go-driver/v6/neo4j/config"
+    "github.com/neo4j/neo4j-go-driver/v6/neo4j/log"
     "github.com/neo4j/neo4j-go-driver/v6/neo4j/notifications"
 )
 
@@ -37,8 +38,8 @@ driver, err := neo4j.NewDriver(uri, auth,
             notifications.Hint, notifications.Generic,
         )
 
-        // Bolt-level debug logging
-        conf.Log = neo4j.ConsoleLogger(neo4j.DEBUG)
+        // Driver debug logging (neo4j.ConsoleLogger / neo4j.DEBUG removed in v6)
+        conf.Log = log.ToConsole(log.DEBUG)
     },
 )
 ```

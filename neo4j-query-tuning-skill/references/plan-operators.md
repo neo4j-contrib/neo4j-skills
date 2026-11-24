@@ -16,7 +16,8 @@ Read plans bottom-up: leaf operators at bottom, `ProduceResults` at top.
 | `NodeIndexSeek` | ✓ | Equality/range predicate satisfied via RANGE or LOOKUP index. Optimal. |
 | `NodeUniqueIndexSeek` | ✓ | Unique constraint index hit. Optimal. |
 | `NodeIndexScan` | ~ | Full scan of an index (no predicate selectivity). Faster than label scan; still linear. |
-| `NodeIndexContainsScan` | ✓ | TEXT index CONTAINS/STARTS WITH. Requires TEXT index on property. |
+| `NodeIndexContainsScan` | ✓ | TEXT index `CONTAINS` only. Requires TEXT index on property. |
+| `NodeIndexSeekByRange` | ✓ | Range predicate via RANGE index, or `STARTS WITH` via RANGE or TEXT index (not `NodeIndexContainsScan`). |
 | `NodeIndexEndsWithScan` | ✓ | TEXT index ENDS WITH. Requires TEXT index on property. |
 | `RelationshipIndexSeek` | ✓ | Relationship property index hit. |
 | `RelationshipByIdSeek` | ✓ | Lookup by relationship ID. |
@@ -89,7 +90,7 @@ Read plans bottom-up: leaf operators at bottom, `ProduceResults` at top.
 | `Sort` | ✗ | Eager full sort — O(n log n). Materialises all rows. Add LIMIT to convert to Top. |
 | `Top` | ✓ | Sort+Limit combined — O(n log k). Preferred; only keeps top k in memory. |
 | `Top1` | ✓ | Single min/max — O(n). |
-| `Limit` | ✓ | Truncates rows non-eagerly. Push as early as possible in the plan. |
+| `Limit` | ✓ | Truncates rows non-eagerly. Push early only where it can't change which rows win (not before `ORDER BY` or aggregation). |
 | `Skip` | ~ | Offset pagination. Linear scan to skip position. Use keyset pagination for large offsets. |
 | `PartialSort` | ~ | Sort within already-grouped prefix. More efficient than full Sort. |
 | `PartialTop` | ✓ | Top within grouped prefix. |

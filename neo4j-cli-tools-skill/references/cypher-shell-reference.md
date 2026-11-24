@@ -160,10 +160,13 @@ cypher-shell --format plain -u neo4j -p password "MATCH (n:Person) RETURN n.name
 ```
 
 ```
+n.name
 "Alice"
 "Bob"
 "Charlie"
 ```
+
+`plain` prints a header row, `, `-separated columns and quoted strings. Not valid CSV.
 
 **Output Options**:
 - `--sample-rows SAMPLE-ROWS` - Rows sampled for table width calculation (default: 1000; `verbose` only)
@@ -259,8 +262,14 @@ cypher-shell -u neo4j -p password "CALL db.schema.visualization();"
 ### Data Export
 
 ```bash
+# Output is plain text (header row, ", " separators, quoted strings) — not valid CSV
 cypher-shell --format plain -u neo4j -p password \
-  "MATCH (p:Person) RETURN p.name, p.age;" > people.csv
+  "MATCH (p:Person) RETURN p.name, p.age;" > people.txt
+```
+
+```
+p.name, p.age
+"Alice", 30
 ```
 
 ### Batch Operations
@@ -355,8 +364,11 @@ Unable to connect to localhost:7687
 The client is unauthorized due to authentication failure.
 ```
 
+`neo4j-admin dbms set-initial-password` works only before the database's first start. For an initialised DB, use known credentials to change the password:
+
 ```bash
-neo4j-admin dbms set-initial-password newpassword
+cypher-shell -u neo4j --change-password
+# or, connected: ALTER CURRENT USER SET PASSWORD FROM 'old' TO 'new'
 ```
 
 ### SSL/TLS Errors

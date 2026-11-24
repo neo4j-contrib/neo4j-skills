@@ -9,7 +9,7 @@ Skill for writing Java (and Kotlin) code with the official Neo4j Java Driver v6.
 - Managed transactions (`executeRead` / `executeWrite`) with result lifecycle rules
 - Explicit transactions, rollback safety, commit uncertainty
 - Async API (`CompletableFuture` / `CompletionStage`)
-- Reactive API (Project Reactor `RxSession`)
+- Reactive API (Project Reactor `ReactiveSession`)
 - Error handling (`ServiceUnavailableException`, `TransientException`, `Neo4jException`)
 - Data type mapping and null-safety (`asString`, `isNull`, `containsKey`)
 - Batch writes with `UNWIND` and parameter type rules

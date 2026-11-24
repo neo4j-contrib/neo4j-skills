@@ -14,16 +14,21 @@ MCP tool names exposed by this server:
 which neo4j-mcp 2>/dev/null || ls $HOME/bin/neo4j-mcp 2>/dev/null && echo "FOUND" || echo "MISSING"
 ```
 
-If missing, download binary:
+If missing, install (any one):
 ```bash
-PLATFORM=$(uname -s | tr '[:upper:]' '[:lower:]')
-ARCH=$(uname -m)
-[ "$ARCH" = "x86_64" ] && ARCH="amd64"
+# A) Homebrew
+brew install neo4j-mcp
+
+# B) Release archive (macOS / Linux) — assets are neo4j-mcp_<Darwin|Linux>_<x86_64|arm64>.tar.gz
+OS=$(uname -s)       # Darwin | Linux
+ARCH=$(uname -m)     # x86_64 | arm64 | aarch64
 [ "$ARCH" = "aarch64" ] && ARCH="arm64"
-curl -fsSL "https://github.com/neo4j/mcp/releases/latest/download/neo4j-mcp-${PLATFORM}-${ARCH}" \
-  -o ./neo4j-mcp && chmod +x ./neo4j-mcp
-./neo4j-mcp --version
+curl -fsSL "https://github.com/neo4j/mcp/releases/latest/download/neo4j-mcp_${OS}_${ARCH}.tar.gz" \
+  | tar xz neo4j-mcp && chmod +x ./neo4j-mcp
+./neo4j-mcp -v
 ```
+
+Windows: download `neo4j-mcp_Windows_<x86_64|arm64>.zip` from https://github.com/neo4j/mcp/releases. PyPI alternative: `uvx neo4j-mcp-server` (then the config `command` is `uvx` with args `["neo4j-mcp-server"]`, not a binary path). Install docs: https://neo4j.com/docs/mcp/current/installation/
 
 The binary can live in `./neo4j-mcp` (project-local) or `$HOME/bin/neo4j-mcp` (user-wide). Either works.
 
@@ -68,7 +73,7 @@ All subsequent `pip install`, `python3 script.py`, `jupyter`, `streamlit`, and `
 ## .gitignore setup (always run)
 
 ```bash
-for entry in .env aura.env neo4j-mcp "mcp-*.json" .provision.lock neo4j-data/ .venv/; do
+for entry in .env aura.env neo4j-mcp "mcp-*.json" .mcp.json .provision.lock neo4j-data/ .venv/; do
   grep -qxF "$entry" .gitignore 2>/dev/null || echo "$entry" >> .gitignore
 done
 echo "✓ .gitignore updated"

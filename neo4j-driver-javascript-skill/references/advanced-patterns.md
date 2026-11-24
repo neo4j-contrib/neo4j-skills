@@ -65,8 +65,8 @@ try {
 ```javascript
 await session.executeRead(
   async tx => {
-    const result = await tx.run('MATCH (p:Person) RETURN p.name AS name')
-    return (await result.collect()).map(r => r.get('name'))
+    const { records } = await tx.run('MATCH (p:Person) RETURN p.name AS name')
+    return records.map(r => r.get('name'))
   },
   {
     timeout: 5000,
@@ -129,7 +129,7 @@ const people = await driver.executeQuery(
 const session = driver.session({ database: 'neo4j' })
 try {
   await session.executeRead(async tx => {
-    const result = await tx.run('MATCH (p:Person) RETURN p.name AS name')
+    const result = tx.run('MATCH (p:Person) RETURN p.name AS name')   // no await — stream
 
     // for-await: one record at a time, no full buffer
     for await (const record of result) {
@@ -142,7 +142,7 @@ try {
 
 // Callback-style .subscribe()
 await session.executeRead(async tx => {
-  const result = await tx.run('MATCH (p:Person) RETURN p.name AS name')
+  const result = tx.run('MATCH (p:Person) RETURN p.name AS name')   // no await — stream
   await new Promise((resolve, reject) => {
     result.subscribe({
       onNext(record)  { process(record.get('name')) },
@@ -151,7 +151,7 @@ await session.executeRead(async tx => {
     })
   })
 })
-// ❌ Never call .subscribe() without awaiting tx.run() first
+// ❌ Never await tx.run() before for-await/.subscribe() — awaited value is a buffered QueryResult (no iterator, no subscribe)
 ```
 
 ---
@@ -187,7 +187,7 @@ class PersonRepository {
       `UNWIND $people AS person
        MERGE (p:Person {name: person.name})
        SET p.age = person.age`,
-      { people },
+      { people: people.map(p => ({ ...p, age: neo4j.int(p.age) })) },   // plain numbers would store as FLOAT
       { database: this.db }
     )
   }

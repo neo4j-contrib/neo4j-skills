@@ -44,10 +44,12 @@ var driver = GraphDatabase.driver(uri, auth,
 Cheaper than a new `Driver` per tenant — reuses the connection pool:
 
 ```java
-var session = driver.session(SessionConfig.builder()
-    .withDatabase("tenant_db")
-    .withAuthToken(AuthTokens.basic("tenant-user", "pass"))
-    .build());
+// SessionConfig.Builder has no withAuthToken — pass token as third arg
+var session = driver.session(Session.class,
+    SessionConfig.builder().withDatabase("tenant_db").build(),
+    AuthTokens.basic("tenant-user", "pass"));
+
+// executableQuery: .withAuthToken(AuthTokens.basic("tenant-user", "pass"))
 ```
 
 ## User impersonation

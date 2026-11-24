@@ -13,7 +13,7 @@ Skill for reading and writing Neo4j data using the Neo4j Connector for Apache Sp
 - PySpark and Scala code examples
 
 **Version / Compatibility:**
-- Connector: `org.neo4j.connectors:spark:6.0.0-s_2.13` (Spark 4.0/4.1, Scala 2.13, Java 17+) or `5.5.0_for_spark_3` (Spark 3.4/3.5, Scala 2.12 or 2.13)
+- Connector: `org.neo4j.connectors:spark:6.1.2-s_2.13` (Spark 4.0/4.1, Scala 2.13, Java 17+) or `5.6.0_for_spark_3` (Spark 3.4/3.5, Scala 2.12 or 2.13)
 - Databricks Runtime: 17.3 LTS (6.0), 14.3–16.4 LTS (5.x)
 - Neo4j: 4.4 (5.x connector), 5.x, 2025.x, 2026.x
 

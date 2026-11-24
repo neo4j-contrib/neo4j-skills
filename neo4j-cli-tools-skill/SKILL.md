@@ -9,7 +9,7 @@ description: Use when working with Neo4j command-line tools — neo4j-cli (moder
   Does NOT cover driver upgrades — use neo4j-migration-skill.
   Does NOT cover full MCP editor configuration — use neo4j-mcp-skill.
 allowed-tools: WebFetch, Bash
-version: 1.0.15
+version: 1.0.16
 ---
 
 # Neo4j CLI Tools skill
@@ -98,7 +98,7 @@ neo4j-cli skill check                            # detect drift after upgrades
 
 **Async operations:** `instance create/resize/destroy` and `docker create` accept `--wait` to block until terminal state.
 
-**Credentials precedence:** flag > OS env (`NEO4J_URI`, `NEO4J_USERNAME`, `NEO4J_PASSWORD`, `NEO4J_DATABASE`) > `.env` walk-up > stored credential.
+**Credentials precedence:** flag > OS env (`NEO4J_URI`, `NEO4J_USERNAME`, `NEO4J_PASSWORD`, `NEO4J_DATABASE`) > `.env` walk-up > stored credential. OS env vars are **ignored by default** — read only when `accept-env-vars` is enabled (`neo4j-cli config set accept-env-vars true --rw` or `NEO4J_CLI_ACCEPT_ENV_VARS=1`); otherwise a stored credential is used silently. Prefer `--uri/--username/--password`, `--env <file>` or `--credential <name>`.
 
 **Supported agents:** Claude Code, Cursor, Windsurf, Copilot, Gemini CLI, Antigravity CLI, Cline, Codex, OpenCode, Junie, and more. Antigravity: skills land in `~/.gemini/antigravity/skills`.
 
@@ -129,8 +129,11 @@ Reference: [aura-cli-reference.md](references/aura-cli-reference.md)
 MCP server for AI agent integration. For full install + editor config → use `neo4j-mcp-skill` (covers Claude Code, Desktop, Cursor, Windsurf, VS Code, Kiro, stdio vs HTTP transport, troubleshooting).
 
 ```bash
-pip install neo4j-mcp-server && neo4j-mcp --version
+pip install neo4j-mcp-server && neo4j-mcp-server -v   # PyPI: command is neo4j-mcp-server
+brew install neo4j-mcp && neo4j-mcp -v                 # Homebrew: command is neo4j-mcp
 ```
+
+Server 2.0.0 (2026-10-28) accepts only `NEO4J_MCP_*` env vars and unprefixed flags (`--uri`, `--database`); STDIO requires `NEO4J_MCP_DATABASE`. See [CHANGELOG](https://github.com/neo4j/mcp/blob/main/CHANGELOG.md).
 
 Reference: [neo4j-mcp-reference.md](references/neo4j-mcp-reference.md)
 
@@ -143,41 +146,35 @@ Online backup requires **Enterprise Edition**. Community Edition users must use 
 ### Backup (Enterprise — database stays online)
 
 ```bash
+# Database name is positional (last); there is no --database option
 # Full online backup — database stays online during backup
-neo4j-admin database backup \
-  --to-path=/backups/ \
-  --database=neo4j \
-  --compress
+neo4j-admin database backup --to-path=/backups/ --type=FULL neo4j
 
-# Differential backup — only changes since last full backup (faster)
-neo4j-admin database backup \
-  --to-path=/backups/ \
-  --database=neo4j \
-  --type=DIFF \
-  --compress
+# Differential backup — only changes since last backup in the chain (faster)
+neo4j-admin database backup --to-path=/backups/ --type=DIFF neo4j
 
-# Backup to cloud storage (S3, GCS, or HTTPS)
-neo4j-admin database backup \
-  --to-path=s3://my-bucket/neo4j-backups/ \
-  --database=neo4j
+# Backup to cloud storage (S3, GCS, or Azure)
+neo4j-admin database backup --to-path=s3://my-bucket/neo4j-backups/ neo4j
 ```
+
+`--type` = `FULL` / `DIFF` / `AUTO` (default `AUTO`: full if no chain exists). `--compress` defaults to `true`. Each run writes a `<db>-<timestamp>.backup` artifact file into `--to-path`.
 
 ### Restore (Enterprise)
 
 **AGENT GATE — destructive operation**: Before running restore, show the user the exact command and target database name, and wait for explicit confirmation. A restore overwrites the existing database.
 
 ```bash
-# Restore from a full or differential backup
-# Requires DB to be stopped, or use --force-offline for a running instance
+# Database name is positional; allowed only when --from-path is a single artifact
+# Replace existing DB: stop it first (STOP DATABASE neo4j on system)
 neo4j-admin database restore \
-  --from-path=/backups/neo4j-2026-01-15T10-00-00/ \
-  --database=neo4j \
-  --overwrite-destination=true
+  --from-path=/backups/neo4j-2026-01-15T10-00-00.backup \
+  --overwrite-destination=true \
+  neo4j
 
-# Restore to a new database name (non-destructive path)
+# Restore to a new database name (non-destructive path), then CREATE DATABASE neo4jrestored on system
 neo4j-admin database restore \
-  --from-path=/backups/neo4j-2026-01-15T10-00-00/ \
-  --database=neo4j-restored
+  --from-path=/backups/neo4j-2026-01-15T10-00-00.backup \
+  neo4jrestored
 ```
 
 ### Dump / Load (all editions — database must be offline)
@@ -185,14 +182,14 @@ neo4j-admin database restore \
 Use for migrations, dev/test data transfers, and Community Edition backups.
 
 ```bash
-# Dump — stop the database first, or pass --force-offline
+# Dump — database must be stopped (dump of a running DB fails); writes /exports/neo4j.dump
 neo4j-admin database dump --to-path=/exports/ neo4j
 
-# Load — overwrites if target DB exists
+# Load — --from-path is a DIRECTORY; looks for <database>.dump; database name positional
 neo4j-admin database load \
-  --from-path=/exports/neo4j.dump \
-  --database=neo4j \
-  --overwrite-destination=true
+  --from-path=/exports/ \
+  --overwrite-destination=true \
+  neo4j
 ```
 
 **AGENT GATE — destructive operation**: Before running load with `--overwrite-destination=true`, confirm target database name and path with the user.
@@ -201,32 +198,30 @@ neo4j-admin database load \
 
 | Flag | Notes |
 |---|---|
-| `--compress` | Zstd compression on backup archives |
-| `--type=DIFF` | Differential: only changes since last full backup |
-| `--to-path` | Local path or `s3://`, `gs://`, `https://` |
-| `--overwrite-destination=true` | Required if target database already exists |
-| `--force-offline` | Allow backup/restore of a running database in some scenarios |
+| `--compress` | Compress backup artifact (default `true`) |
+| `--type=FULL\|DIFF\|AUTO` | Backup type; default `AUTO` |
+| `--to-path` | Directory: local path or `s3://`, `gs://`, `azb://` |
+| `--overwrite-destination=true` | Required if target database already exists; target must be stopped |
+| `--restore-until` | Restore chain up to a transaction ID or UTC timestamp |
 
 ### Point-in-time restore strategy
 
 - **Full backup**: weekly (e.g. every Sunday)
 - **Differential backup**: daily (captures only changes since last full)
-- **Naming convention**: include timestamp in path — e.g. `/backups/neo4j-2026-01-19T02-00-00/`
-- **Restore sequence**: apply full backup first, then each differential in chronological order
+- **Naming**: neo4j-admin names artifacts `<db>-<timestamp>.backup`; keep one chain per `--to-path` directory
+- **Restore sequence**: ONE restore. Pointing `--from-path` at a differential artifact replays the whole chain (full + differentials up to it). Never run separate overwrite restores per artifact — each replaces the DB.
 
 ```bash
-# Example: restore Sunday full + Monday + Tuesday differentials
+# Restore Sunday full + Monday + Tuesday differentials: point at Tuesday's artifact
 neo4j-admin database restore \
-  --from-path=/backups/neo4j-2026-01-19T02-00-00/ \
-  --database=neo4j --overwrite-destination=true
+  --from-path=/backups/neo4j-2026-01-21T02-00-00.backup \
+  --overwrite-destination=true neo4j
 
+# Point-in-time: stop replay at a UTC timestamp (or transaction ID: --restore-until=123)
 neo4j-admin database restore \
-  --from-path=/backups/neo4j-2026-01-20T02-00-00/ \
-  --database=neo4j --overwrite-destination=true
-
-neo4j-admin database restore \
-  --from-path=/backups/neo4j-2026-01-21T02-00-00/ \
-  --database=neo4j --overwrite-destination=true
+  --from-path=/backups/neo4j-2026-01-21T02-00-00.backup \
+  --restore-until="2026-01-21 01:30:00" \
+  --overwrite-destination=true neo4j
 ```
 
 ---

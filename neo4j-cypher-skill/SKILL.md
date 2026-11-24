@@ -6,8 +6,8 @@ description: Generates, optimizes, and validates Cypher 25 queries for Neo4j 202
   CALL, UNWIND, FOREACH, LOAD CSV, SEARCH, expressions, functions, indexes, and subqueries.
   Does NOT handle driver migration or API changes — use neo4j-migration-skill.
   Does NOT cover DB administration or server ops — use neo4j-cli-tools-skill.
-compatibility: Neo4j >= 2025.01 (safe baseline); Cypher 25
-version: 1.0.31
+compatibility: Neo4j >= 2025.06 for Cypher 25 (CYPHER 25 prefix, match modes); omit the prefix below 2025.06
+version: 1.0.32
 ---
 
 ## When to Use
@@ -30,7 +30,7 @@ GQL conformance note: `LET`, `FINISH`, `FILTER`, and `INSERT` are valid Cypher 2
 |---|---|---|
 | `<db-name>-schema.json` found in project | Use it directly — skip live inspection | — |
 | Schema (from context or live DB) | Use directly | Run Schema-First Protocol |
-| Neo4j version | Use version features | Default to 2025.01 safe set |
+| Neo4j version | Use version features | Default to 2025.06 safe set (Cypher 25) |
 | Executing (not generating)? | Use EXPLAIN + write gate | State query is unvalidated |
 
 Schema unknown + no tool → produce non-executable sketch outside a code block:
@@ -149,8 +149,9 @@ LOAD CSV WITH HEADERS FROM 'file:///data.csv' AS row
 CALL (row) {
   MERGE (p:Person {id: row.id}) SET p += row
 } IN TRANSACTIONS OF 1000 ROWS ON ERROR CONTINUE REPORT STATUS AS s
+RETURN s.committed, s.errorMessage
 ```
-Input stream must be outside subquery. Auto-commit only — never wrap in `beginTransaction()`. `PERIODIC COMMIT` deprecated.
+`REPORT STATUS` returns rows → query must end with `RETURN` or `FINISH`; not allowed with `ON ERROR FAIL` (use `CONTINUE`, `BREAK` or `RETRY … THEN CONTINUE|BREAK`). Input stream must be outside subquery. Auto-commit only — never wrap in `beginTransaction()`. `PERIODIC COMMIT` removed (5.0).
 
 `DISJOINT BY` [2026.06, Cypher 25] on `IN CONCURRENT TRANSACTIONS` prevents deadlocks by scheduling batches that share lock-prone resources sequentially — use when importing relationships:
 ```cypher
@@ -225,13 +226,14 @@ RETURN s"Hello, {p.name}, age {p.age}" AS greeting   // S"..." and s'...' equiva
 ### UUID type [2026.08, Cypher 25]
 ```cypher
 CYPHER 25
-CREATE (sess:Session {sessionId: uuid()});            // random UUID value
+CREATE (sess:Session {sessionId: uuid()});            // random UUID value; storing needs block format (Enterprise/Aura)
 
 CYPHER 25
 MATCH (sess:Session {sessionId: uuid($uuidString)})   // STRING 8-4-4-4-12 → UUID
-RETURN toString(sess.sessionId) AS sessionId, uuid.mostSignificantBits(sess.sessionId) AS msb
+RETURN toString(sess.sessionId) AS sessionId,
+       uuid.mostSignificantBits(uuid(toString(sess.sessionId))) AS msb  // accessor needs a typed UUID, not a raw property
 ```
-`UUID` properties require Neo4j 2026.08+. Older drivers may return a placeholder `MAP` plus warning `03N95 Neo.ClientNotification.UnknownType` — check the per-driver skill for exact support (`neo4j-driver-python-skill` needs >= 6.3); otherwise keep `randomUUID()` STRING ids.
+`UUID` properties require Neo4j 2026.08+ and block store format (Enterprise; default on Aura). Community (aligned/standard format) can compute and return `uuid()` but cannot store it → store `randomUUID()` or `toString(uuid())`. Drivers < 6.2 (Python < 6.3) return a placeholder `MAP` plus warning `03N95 Neo.ClientNotification.UnknownType`; otherwise keep `randomUUID()` STRING ids.
 
 ### Spatial / Point
 ```cypher
@@ -339,19 +341,23 @@ curl -X POST https://<instance>.databases.neo4j.io/db/<database>/query/v2 \
 
 ## Version Gates
 
-Default to 2025.01-safe features when version unknown.
+Default to 2025.06-safe features when version unknown. Cypher 25 and the `CYPHER 25` prefix need 2025.06+; on 2025.01–2025.05 only Cypher 5 exists → omit the prefix.
 
 | Feature | Min version | Fallback |
 |---|---|---|
-| `CYPHER 25`, QPEs, `CALL (x) {}` | 2025.01 | require 2025+ |
-| Match modes (`DIFFERENT RELATIONSHIPS`, `REPEATABLE ELEMENTS`) | 2025.01 | require 2025+ |
-| Dynamic labels `$($expr)`, `coll.sort()` | 2025.01 | APOC or app-side |
+| `CYPHER 25` prefix | 2025.06 | omit prefix (Cypher 5) |
+| QPEs | 5.9 | `[:R*m..n]` |
+| `CALL (x) {}` | 5.23 | `CALL { WITH x … }` |
+| Match modes (`DIFFERENT RELATIONSHIPS`, `REPEATABLE ELEMENTS`) | 2025.06 | require 2025.06+ |
+| Dynamic labels `$($expr)` | 2025.01 | APOC or app-side |
+| `coll.sort()`, `coll.distinct()`, `coll.flatten()`, `coll.indexOf()`, `coll.insert()`, `coll.max()`, `coll.min()`, `coll.remove()` | 2025.11 | APOC or app-side |
+| `allReduce()` | 2025.08 | require 2025.08+ |
 | `CONCURRENT TRANSACTIONS`, `REPORT STATUS` | 2025.01 | drop / omit |
 | `SEARCH` clause — `VECTOR INDEX` | 2026.01 | `CALL db.index.vector.queryNodes(...)` (deprecated 2026.04) |
 | `SEARCH` clause — `FULLTEXT INDEX` (`WITH ANALYZER`, `SKIP`/`OFFSET`) | 2026.09 | `CALL db.index.fulltext.queryNodes(...)` / `queryRelationships(...)` (deprecated 2026.10) |
 | `ACYCLIC` path mode (no repeated nodes in path) | 2026.03 | post-filter with `size(nodes(p)) = size(apoc.coll.toSet(nodes(p)))` |
 | `string.indexOf()`, `string.join()`, `string.regexReplace()` | 2026.05 | `apoc.text.*` or app-side |
-| GQL aliases: `FOR`=`UNWIND`, `PROPERTY_EXISTS`=`IS NOT NULL`, `IS [NOT] LABELED`=`n:Label`; function aliases (`local_time`, `zoned_datetime`, `duration_between`, `collect_list`, etc.) | 2026.02–04 | GQL compliance only — use Cypher equivalents; full list → [references/cypher-syntax.md](references/cypher-syntax.md) |
+| GQL aliases: `FOR`=`UNWIND`, `IS [NOT] LABELED`=`n:Label` (`PROPERTY_EXISTS(n, prop)`=`n.prop IS NOT NULL`; property name unquoted, a quoted string fails with "Unknown function"); function aliases (`local_time`, `zoned_datetime`, `duration_between`, `collect_list`, etc.) | 2026.02–04 | GQL compliance only — use Cypher equivalents; full list → [references/cypher-syntax.md](references/cypher-syntax.md) |
 | **GRAPH TYPE** schema DDL (`ALTER CURRENT GRAPH TYPE SET/ADD/ALTER/DROP`, `SHOW CURRENT GRAPH TYPE`) | 2026.02 (preview), **GA 2026.06** | Use individual `CREATE CONSTRAINT` / `CREATE INDEX` |
 | `GROUP BY` subclause on `WITH`/`RETURN` (explicit grouping keys, GQL alignment) | 2026.07 | Implicit grouping — list non-aggregating expressions in the projection |
 | `cardinality()` — keys in a MAP, elements in a LIST, nodes+rels in a PATH | 2026.07 | `size()` for LIST/MAP keys, `length()` for PATH |
@@ -361,7 +367,7 @@ Default to 2025.01-safe features when version unknown.
 | `UUID` type; `uuid()`, `uuid(name)`, `uuid(mostSigBits, leastSigBits)`, `uuid.mostSignificantBits()`, `uuid.leastSignificantBits()` | 2026.08 | `randomUUID()` STRING property |
 | `null / 0` returns `null` instead of raising division-by-zero | 2026.08 | `CASE WHEN d = 0 THEN null ELSE n / d END` |
 | Map comprehension `{k: v IN map \| keyExpr: valueExpr}` | 2026.09 | `apoc.map.fromPairs([k IN keys(m) \| [k, m[k]]])` |
-| `toString()`, `toStringList()`, `toStringOrNull()` on `LIST`, `MAP`, `NODE`, `RELATIONSHIP`, `PATH` | 2026.09 | convert scalar components individually, then `string.join()` |
+| `toString()`, `toStringList()`, `toStringOrNull()` on `LIST`, `MAP`, `NODE`, `RELATIONSHIP`, `PATH` (`toString()` rejects typed lists like `[1,2]` or `collect(x)` at compile time — use `toStringOrNull()` or a `LIST<ANY>`/parameter) | 2026.09 | convert scalar components individually, then `string.join()` |
 | Map addition `map1 + map2` (merge maps) | 2026.10 (Aura Oct 2026) | `apoc.map.merge(map1, map2)` |
 | `db.schema.visualization(estimate => false)` — scans data, drops count-store ghost relationships (slower) | 2026.10 | call without args; verify rel combos with `MATCH (a:A)-[:R]->(b:B) RETURN count(*) LIMIT 1` |
 
@@ -385,7 +391,7 @@ MATCH p=(admin)-[:MEMBER_OF]->()-[:ALLOWED_INHERIT]->(company)
 RETURN count(p)
 ```
 
-Index anchors: every MATCH/MERGE/WHERE on a property needs an index on the lookup property or Neo4j scans all nodes. **Index only activates when the node has a label** — `MATCH (n {prop: $v})` never uses an index; `MATCH (n:Label {prop: $v})` does. MERGE without a constraint has no atomicity guarantee (two concurrent MERGEs can create duplicates). `CONTAINS`/`ENDS WITH` → TEXT index (RANGE does not support them). Force a plan with `USING INDEX n:Label(prop)` when EXPLAIN shows a scan.
+Index anchors: every MATCH/MERGE/WHERE on a property needs an index on the lookup property or Neo4j scans all nodes. **Index only activates when the node has a label** — `MATCH (n {prop: $v})` never uses an index; `MATCH (n:Label {prop: $v})` does. MERGE without a constraint has no atomicity guarantee (two concurrent MERGEs can create duplicates). `CONTAINS`/`ENDS WITH` → TEXT index (RANGE can only scan for them — less efficient). Force a plan with `USING INDEX n:Label(prop)` when EXPLAIN shows a scan.
 Chained `OPTIONAL MATCH` for nested data → replace with `COLLECT { MATCH ... RETURN }`.
 Dynamic labels (`$($label)`) → `AllNodesScan`+Filter; use static labels when possible.
 

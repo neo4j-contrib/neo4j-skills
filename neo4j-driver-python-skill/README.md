@@ -17,7 +17,7 @@ Skill for writing Python applications that connect to Neo4j using the official N
 - Causal consistency and bookmarks
 
 **Version / compatibility:**
-- Driver v6.x (Jan 2026+) — package name is `neo4j`, not `neo4j-driver`
+- Driver v6.x (Sept 2025+) — package name is `neo4j`, not `neo4j-driver`
 - Python ≥ 3.10 required
 
 **Not covered:**
