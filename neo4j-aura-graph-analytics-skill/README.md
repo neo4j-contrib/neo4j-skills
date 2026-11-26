@@ -32,5 +32,5 @@ Guides agents through **Aura Graph Analytics (AGA)** — Neo4j's serverless, on-
 ## Install
 
 ```bash
-npx skills add https://github.com/neo4j-contrib/neo4j-skills --skill neo4j-aura-graph-analytics-skill
+npx skills add https://github.com/neo4j/agent-skills --skill neo4j-aura-graph-analytics-skill
 ```

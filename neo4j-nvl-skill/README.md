@@ -33,5 +33,5 @@ Starter templates: https://github.com/neo4j-devtools/nvl-boilerplates
 **Install skill:**
 
 ```bash
-npx skills add https://github.com/neo4j-contrib/neo4j-skills
+npx skills add https://github.com/neo4j/agent-skills
 ```

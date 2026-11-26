@@ -21,8 +21,8 @@ Skill for database administration and automation using Neo4j command-line tools.
 
 **Install:**
 ```bash
-npx skills add https://github.com/neo4j-contrib/neo4j-skills --skill neo4j-cli-tools-skill
+npx skills add https://github.com/neo4j/agent-skills --skill neo4j-cli-tools-skill
 ```
 
 Or paste this link into your coding assistant:
-https://github.com/neo4j-contrib/neo4j-skills/tree/main/neo4j-cli-tools-skill
+https://github.com/neo4j/agent-skills/tree/main/neo4j-cli-tools-skill

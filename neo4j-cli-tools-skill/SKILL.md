@@ -9,7 +9,7 @@ description: Use when working with Neo4j command-line tools — neo4j-cli (moder
   Does NOT cover driver upgrades — use neo4j-migration-skill.
   Does NOT cover full MCP editor configuration — use neo4j-mcp-skill.
 allowed-tools: WebFetch, Bash
-version: 1.0.16
+version: 1.0.17
 ---
 
 # Neo4j CLI Tools skill
@@ -84,7 +84,7 @@ neo4j-cli query --credential dev 'RETURN 1 AS n'
 neo4j-cli docker create --name tmp --ephemeral --env-out-file /tmp/n.env --wait --rw
 neo4j-cli query --env /tmp/n.env 'RETURN 1 AS n'
 
-# Install skills from catalog (neo4j-contrib/neo4j-skills)
+# Install skills from catalog (neo4j/agent-skills)
 neo4j-cli skill install                          # self-skill into all detected agents
 neo4j-cli skill install neo4j-cypher-skill       # one catalog skill, all agents
 neo4j-cli skill install --all                    # self-skill + every catalog skill

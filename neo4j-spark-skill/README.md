@@ -25,8 +25,8 @@ Skill for reading and writing Neo4j data using the Neo4j Connector for Apache Sp
 
 **Install:**
 ```bash
-npx skills add https://github.com/neo4j-contrib/neo4j-skills --skill neo4j-spark-skill
+npx skills add https://github.com/neo4j/agent-skills --skill neo4j-spark-skill
 ```
 
 Or paste this link into your coding assistant:
-https://github.com/neo4j-contrib/neo4j-skills/tree/main/neo4j-spark-skill
+https://github.com/neo4j/agent-skills/tree/main/neo4j-spark-skill

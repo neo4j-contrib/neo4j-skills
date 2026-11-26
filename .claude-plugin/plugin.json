@@ -8,7 +8,7 @@
   },
   "homepage": "https://neo4j.com",
   "license": "Apache-2.0",
-  "repository": "https://github.com/neo4j-contrib/neo4j-skills",
+  "repository": "https://github.com/neo4j/agent-skills",
   "skills": [
     "./neo4j-agent-memory-skill",
     "./neo4j-aura-agent-skill",
