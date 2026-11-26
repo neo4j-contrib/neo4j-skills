@@ -1,8 +1,6 @@
 ---
 name: neo4j-nvl-skill
-metadata:
-  package: '@neo4j-nvl/base'
-  version: '2.1.0'
+version: 2.1.0
 description: Neo4j Visualization Library (NVL) — framework-agnostic graph rendering for the browser.
   Covers @neo4j-nvl/base (NVL class, nodes/relationships, Canvas vs WebGL renderer),
   @neo4j-nvl/interaction-handlers (zoom, pan, drag, click, hover, box/lasso select, keyboard) and
