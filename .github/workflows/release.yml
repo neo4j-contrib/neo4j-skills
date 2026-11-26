@@ -77,13 +77,13 @@ jobs:
 
           **Claude Code**:
           \`\`\`
-          /plugin marketplace add https://github.com/neo4j-contrib/neo4j-skills.git
+          /plugin marketplace add https://github.com/neo4j/agent-skills.git
           /plugin install neo4j-skills@neo4j-skills-marketplace
           \`\`\`
 
-          **Gemini CLI**: \`gemini extensions install https://github.com/neo4j-contrib/neo4j-skills\`
+          **Gemini CLI**: \`gemini extensions install https://github.com/neo4j/agent-skills\`
 
-          **Cursor / Cline / Windsurf**: \`npx skills add neo4j-contrib/neo4j-skills\`
+          **Cursor / Cline / Windsurf**: \`npx skills add neo4j/agent-skills\`
           EOF
           )
 

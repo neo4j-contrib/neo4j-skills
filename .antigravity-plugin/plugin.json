@@ -10,7 +10,7 @@
     "url": "https://neo4j.com"
   },
   "homepage": "https://neo4j.com",
-  "repository": "https://github.com/neo4j-contrib/neo4j-skills",
+  "repository": "https://github.com/neo4j/agent-skills",
   "license": "MIT",
   "keywords": [
     "neo4j",

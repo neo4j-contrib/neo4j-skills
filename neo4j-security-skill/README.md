@@ -26,8 +26,8 @@ Skill for programmatic security management in Neo4j — users, roles, privileges
 
 **Install:**
 ```bash
-npx skills add https://github.com/neo4j-contrib/neo4j-skills --skill neo4j-security-skill
+npx skills add https://github.com/neo4j/agent-skills --skill neo4j-security-skill
 ```
 
 Or paste this link into your coding assistant:
-https://github.com/neo4j-contrib/neo4j-skills/tree/main/neo4j-security-skill
+https://github.com/neo4j/agent-skills/tree/main/neo4j-security-skill

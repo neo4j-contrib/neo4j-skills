@@ -8,7 +8,7 @@
       "name": "neo4j-skills",
       "source": {
         "source": "url",
-        "url": "https://github.com/neo4j-contrib/neo4j-skills.git",
+        "url": "https://github.com/neo4j/agent-skills.git",
         "ref": "main"
       },
       "policy": {

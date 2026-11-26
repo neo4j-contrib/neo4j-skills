@@ -2,10 +2,10 @@
 
 Agent skills for [Neo4j](https://neo4j.com) — Cypher queries, graph modeling, drivers, imports, GraphRAG, GDS, vector indexes, and Aura provisioning.
 
-Browse and install at **[skills.sh/neo4j-contrib/neo4j-skills](https://skills.sh/neo4j-contrib/neo4j-skills)**.
+Browse and install at **[skills.sh/neo4j/agent-skills](https://skills.sh/neo4j/agent-skills)**.
 
 ```bash
-npx skills add https://github.com/neo4j-contrib/neo4j-skills
+npx skills add https://github.com/neo4j/agent-skills
 ```
 
 ## Configuration
@@ -26,7 +26,7 @@ Set these before or during installation:
 Install the plugin using the **Antigravity CLI** (`agy`):
 
 ```bash
-agy plugin install https://github.com/neo4j-contrib/neo4j-skills
+agy plugin install https://github.com/neo4j/agent-skills
 ```
 
 Verify installation with `agy plugin list` (or `/plugin list` inside an interactive `agy` session).
@@ -42,7 +42,7 @@ agy plugin import gemini
 ### Claude Code
 
 ```
-/plugin marketplace add https://github.com/neo4j-contrib/neo4j-skills.git
+/plugin marketplace add https://github.com/neo4j/agent-skills.git
 /plugin install neo4j-skills@neo4j-skills-marketplace
 ```
 
@@ -51,7 +51,7 @@ Use `/plugin list` to verify, or `/reload-plugins` after installation.
 ### Codex
 
 ```bash
-codex plugin marketplace add neo4j-contrib/neo4j-skills
+codex plugin marketplace add neo4j/agent-skills
 codex plugin add neo4j-skills@neo4j-skills-marketplace
 ```
 
@@ -137,7 +137,7 @@ Agent Skills are a standardized format for domain-specific AI agent knowledge. E
 ## Gemini CLI
 
 ```bash
-gemini extensions install https://github.com/neo4j-contrib/neo4j-skills
+gemini extensions install https://github.com/neo4j/agent-skills
 ```
 
 Enter your env vars when prompted. Then run `gemini` and use `/extensions list` to verify.

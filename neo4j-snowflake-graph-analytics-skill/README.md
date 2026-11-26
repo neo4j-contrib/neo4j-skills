@@ -34,7 +34,7 @@ This skill is built for [Cortex Code](https://docs.snowflake.com/en/user-guide/c
 2. In the **GitHub Skills** section, click **`+`** (_Add from GitHub_).
 3. Enter the skill's path in this repo:
    ```
-   https://github.com/neo4j-contrib/neo4j-skills/tree/main/neo4j-snowflake-graph-analytics-skill
+   https://github.com/neo4j/agent-skills/tree/main/neo4j-snowflake-graph-analytics-skill
    ```
 4. Click **Add**.
 
@@ -52,14 +52,14 @@ Verify with `/skill list`. Invoke automatically by matching prompt, or explicitl
 
 ### Other agents
 
-This skill also ships in the [**neo4j-skills**](https://github.com/neo4j-contrib/neo4j-skills) bundle for other agents. Quickest, cross-agent:
+This skill also ships in the [**neo4j-skills**](https://github.com/neo4j/agent-skills) bundle for other agents. Quickest, cross-agent:
 
 ```bash
-npx skills add https://github.com/neo4j-contrib/neo4j-skills
+npx skills add https://github.com/neo4j/agent-skills
 ```
 
-- **Claude Code** — `/plugin marketplace add https://github.com/neo4j-contrib/neo4j-skills.git` then `/plugin install neo4j-skills@neo4j-skills-marketplace`
-- **Gemini CLI** — `gemini extensions install https://github.com/neo4j-contrib/neo4j-skills`
+- **Claude Code** — `/plugin marketplace add https://github.com/neo4j/agent-skills.git` then `/plugin install neo4j-skills@neo4j-skills-marketplace`
+- **Gemini CLI** — `gemini extensions install https://github.com/neo4j/agent-skills`
 
 See the [root README](../README.md#installation) for full per-agent instructions.
 

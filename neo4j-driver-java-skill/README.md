@@ -25,8 +25,8 @@ Skill for writing Java (and Kotlin) code with the official Neo4j Java Driver v6.
 
 **Install:**
 ```bash
-npx skills add https://github.com/neo4j-contrib/neo4j-skills --skill neo4j-driver-java-skill
+npx skills add https://github.com/neo4j/agent-skills --skill neo4j-driver-java-skill
 ```
 
 Or paste into your coding assistant:
-https://github.com/neo4j-contrib/neo4j-skills/tree/main/neo4j-driver-java-skill
+https://github.com/neo4j/agent-skills/tree/main/neo4j-driver-java-skill
