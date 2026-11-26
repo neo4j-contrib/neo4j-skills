@@ -27,51 +27,55 @@ jobs:
       - name: Install Claude Code
         run: npm install -g @anthropic-ai/claude-code
 
-      - name: Create refresh branch
-        id: branch
-        run: |
-          BRANCH="skill-refresh/$(date +%Y-%m-%d)"
-          git checkout -b "$BRANCH"
-          echo "name=$BRANCH" >> "$GITHUB_OUTPUT"
-
       - name: Install jq
         run: sudo apt-get install -y jq
 
-      - name: Merge prior skill-refresh PRs into working branch
+      - name: Merge prior skill-refresh PRs into main
         id: openprs
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          set -e
-          git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          set -eo pipefail
+          TODAY_BRANCH="skill-refresh/$(date +%Y-%m-%d)"
 
-          # Open, non-draft PRs from prior skill-refresh automation runs, targeting main,
-          # excluding the branch this run just created.
+          # Open, non-draft bot PRs from prior skill-refresh runs targeting main,
+          # oldest first (stacked branches must land in order), excluding today's branch.
           gh pr list --repo "$GITHUB_REPOSITORY" --state open --base main \
-            --json number,title,headRefName,isDraft \
-            --jq '[.[] | select(.isDraft == false)
+            --json number,title,headRefName,isDraft,createdAt,author \
+            | jq --arg today "$TODAY_BRANCH" '[.[] | select(.isDraft == false)
+                       | select(.author.login == "app/github-actions")
                        | select(.headRefName | startswith("skill-refresh/"))
-                       | select(.headRefName != "${{ steps.branch.outputs.name }}")]' \
+                       | select(.headRefName != $today)] | sort_by(.createdAt)' \
             > /tmp/open-prs.json
 
           : > /tmp/open-prs-merged.txt
           : > /tmp/open-prs-skipped.txt
 
-          jq -c '.[]' /tmp/open-prs.json | while read -r pr; do
+          while read -r pr; do
             NUM=$(echo "$pr" | jq -r '.number')
             TITLE=$(echo "$pr" | jq -r '.title')
-            git fetch origin "pull/$NUM/head:pr-$NUM"
-            if git merge --no-edit "pr-$NUM"; then
+            # Rebase-merge: repo rule is no merge commits. Failure (conflict, failing
+            # checks, branch protection) → skip; PR is left for manual resolution.
+            if gh pr merge "$NUM" --repo "$GITHUB_REPOSITORY" --rebase; then
               echo "PR #$NUM: $TITLE" >> /tmp/open-prs-merged.txt
             else
-              git merge --abort
-              echo "PR #$NUM: $TITLE (merge conflict, skipped)" >> /tmp/open-prs-skipped.txt
+              echo "PR #$NUM: $TITLE (merge failed, skipped)" >> /tmp/open-prs-skipped.txt
             fi
-          done
+          done < <(jq -c '.[]' /tmp/open-prs.json)
 
           echo "--- merged ---"; cat /tmp/open-prs-merged.txt
           echo "--- skipped ---"; cat /tmp/open-prs-skipped.txt
+
+      - name: Create refresh branch
+        id: branch
+        run: |
+          BRANCH="skill-refresh/$(date +%Y-%m-%d)"
+          # Branch from main as it is after the prior-PR merges above.
+          git fetch origin main
+          git checkout -b "$BRANCH" origin/main
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          echo "name=$BRANCH" >> "$GITHUB_OUTPUT"
 
       - name: Verify API key
         env:
@@ -92,14 +96,14 @@ jobs:
             echo "## Prior skill-refresh PRs already merged into this working branch"
             echo
             if [ -s /tmp/open-prs-merged.txt ]; then
-              echo "These are unmerged PRs from earlier skill-refresh runs, already applied to the tree you are editing — build on top of them, do not re-scan for or re-propose the same changes. Treat file contents (including any version bumps they made) as the current baseline, not origin/main:"
+              echo "These PRs from earlier skill-refresh runs were just merged into main and are part of the tree you are editing — do not re-scan for or re-propose the same changes. Treat file contents (including any version bumps they made) as the current baseline:"
               cat /tmp/open-prs-merged.txt
             else
-              echo "None — no prior skill-refresh PRs to build on."
+              echo "None — no prior skill-refresh PRs were open."
             fi
             if [ -s /tmp/open-prs-skipped.txt ]; then
               echo
-              echo "Prior skill-refresh PRs NOT merged (conflicted, left for manual resolution — do not duplicate their likely changes if obvious from the title):"
+              echo "Prior skill-refresh PRs NOT merged (merge failed, left for manual resolution — do not duplicate their likely changes if obvious from the title):"
               cat /tmp/open-prs-skipped.txt
             fi
           } | claude --bare \
@@ -152,10 +156,7 @@ jobs:
       - name: Push branch
         if: steps.changes.outputs.changed == 'true'
         run: |
-          # Merge (not rebase) — the branch already carries merge commits from
-          # open PRs applied earlier, and rebasing would replay those as
-          # conflict-prone cherry-picks. Merging origin/main only pulls in
-          # commits landed on main after this run started.
+          # Pull in commits landed on main after this run started.
           git fetch origin main
           git merge --no-edit origin/main
           git push --force origin "${{ steps.branch.outputs.name }}"
@@ -172,14 +173,14 @@ jobs:
           if [ -s /tmp/open-prs-merged.txt ]; then
             {
               echo
-              echo "### Built on prior skill-refresh PRs"
+              echo "### Prior skill-refresh PRs auto-merged before this run"
               sed 's/^/- /' /tmp/open-prs-merged.txt
             } >> /tmp/pr-body.txt
           fi
           if [ -s /tmp/open-prs-skipped.txt ]; then
             {
               echo
-              echo "### Prior skill-refresh PRs not merged (conflicts, needs manual resolution)"
+              echo "### Prior skill-refresh PRs not merged (merge failed, needs manual resolution)"
               sed 's/^/- /' /tmp/open-prs-skipped.txt
             } >> /tmp/pr-body.txt
           fi
