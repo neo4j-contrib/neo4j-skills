@@ -32,6 +32,8 @@ Starter templates: https://github.com/neo4j-devtools/nvl-boilerplates
 
 **Install skill:**
 
+This skill ships inside `@neo4j-nvl/base`. After installing the package, sync it into your agent's skills directory:
+
 ```bash
-npx skills add https://github.com/neo4j/agent-skills
+npx skills experimental_sync
 ```
