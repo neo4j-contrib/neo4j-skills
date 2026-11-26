@@ -7,7 +7,7 @@
     "email": "devrel@neo4j.com"
   },
   "homepage": "https://neo4j.com",
-  "license": "Apache-2.0",
+  "license": "MIT",
   "repository": "https://github.com/neo4j/agent-skills",
   "skills": [
     "./neo4j-agent-memory-skill",
