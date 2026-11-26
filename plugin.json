@@ -1,0 +1,15 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "neo4j-skills",
+  "version": "1.0.1",
+  "description": "Agent skills for Neo4j — Cypher queries, graph modeling, drivers, imports, GraphRAG, GDS, vector indexes, Aura provisioning, and more.",
+  "author": {
+    "name": "Neo4j",
+    "email": "devrel@neo4j.com",
+    "url": "https://neo4j.com"
+  },
+  "homepage": "https://neo4j.com",
+  "repository": "https://github.com/neo4j/agent-skills",
+  "license": "MIT",
+  "keywords": ["neo4j", "cypher", "graph", "graph database", "aura", "auradb", "gds", "graph data science", "graphrag", "vector search", "knowledge graph", "bolt", "neo4j driver", "graphql", "kafka", "spark"]
+}
