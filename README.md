@@ -68,6 +68,18 @@ Start a new Codex thread after installation so Codex loads the plugin. To refres
 codex plugin marketplace upgrade neo4j-skills-marketplace
 ```
 
+### Kiro
+
+Skills install as a Kiro power (Agent Plugins format; `plugin.json` at the repo root, skills under `skills/`).
+
+1. Open the **Powers** panel → **Add Custom Power**.
+2. Choose **Import power from a repository URL** (**Import power from GitHub** before Kiro IDE 1.4.236) and enter `https://github.com/neo4j/agent-skills`.
+3. Click **Install**.
+
+For a local clone, choose **Import power from a folder** and select the repo root.
+
+Alternatively, copy individual skills into `.kiro/skills/` (workspace) or `~/.kiro/skills/` (global).
+
 ## Available Skills
 
 ### Querying & Modeling
