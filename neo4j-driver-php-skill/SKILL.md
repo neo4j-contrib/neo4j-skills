@@ -10,7 +10,7 @@ description: Neo4j PHP Driver (laudis/neo4j-php-client ^3.x) — Client > Driver
   Does NOT handle Cypher query authoring — use neo4j-cypher-skill.
   Does NOT cover Laravel integration (DB/Eloquent/Boost MCP) — use neo4j-laravel-boost-skill.
   Does NOT cover driver version migration — use neo4j-migration-skill.
-version: 1.0.2
+version: 1.0.3
 allowed-tools: Bash
 ---
 
@@ -87,7 +87,6 @@ One client per app — create at startup, share across requests.
 ```php
 use Laudis\Neo4j\Authentication\Authenticate;
 use Laudis\Neo4j\ClientBuilder;
-
 use Laudis\Neo4j\Databags\SessionConfiguration;
 
 $builder = ClientBuilder::create()
