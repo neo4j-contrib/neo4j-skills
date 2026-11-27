@@ -68,7 +68,7 @@ if ($point instanceof \Laudis\Neo4j\Types\WGS84Point) {
 
 ## Temporal Types
 
-**No calendar-field getters** — `getYear()`, `getMonth()`, `getDay()`, `getHour()`, `getMinute()`, `getSecond()`, `getTimezone()` do not exist. Use `toDateTime()` or epoch accessors:
+**No calendar getters** — `getYear()`, `getMonth()`, `getDay()`, `getHour()`, `getMinute()`, `getSecond()`, `getTimezone()` absent. Use `toDateTime()` or epoch accessors:
 
 ```php
 $dt = $row->get('created');     // Laudis\Neo4j\Types\DateTime

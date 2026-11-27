@@ -29,6 +29,8 @@ php artisan config:clear
 
 ### STDIO transport
 
+Targets `neo4j-mcp` 1.x (`NEO4J_MCP_VERSION=v1.4.0`; passes `NEO4J_URI`, `NEO4J_USERNAME`, `NEO4J_PASSWORD`). 2.0+ requires `NEO4J_MCP_*` + `NEO4J_MCP_DATABASE`.
+
 | Variable | Default | Description |
 |---|---|---|
 | `NEO4J_MCP_STDIO_COMMAND` | `neo4j-mcp` | Path to binary |
@@ -38,6 +40,8 @@ php artisan config:clear
 | `NEO4J_MCP_AUTO_INSTALL` | `false` | Auto-install binary on first use |
 
 ### HTTP transport
+
+Targets `neo4j-mcp` 1.x (`/mcp`, Basic Auth). 2.0+ requires `/db/{database}/mcp` + `X-Neo4j-MCP-URI`.
 
 | Variable | Default | Description |
 |---|---|---|

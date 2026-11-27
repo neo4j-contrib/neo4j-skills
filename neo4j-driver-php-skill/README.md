@@ -20,7 +20,7 @@ Agent skill for the [Neo4j PHP Client](https://github.com/neo4j-php/neo4j-php-cl
 
 ## Availability
 
-Part of the [neo4j-skills](https://github.com/neo4j-contrib/neo4j-skills) collection.
+Part of the [agent-skills](https://github.com/neo4j/agent-skills) collection.
 
 ## Install the Package
 
@@ -28,4 +28,4 @@ Part of the [neo4j-skills](https://github.com/neo4j-contrib/neo4j-skills) collec
 composer require laudis/neo4j-php-client
 ```
 
-PHP >= 8.0, with `ext-bcmath`, `ext-json`, `ext-sockets`.
+PHP >= 8.1, with `ext-json` and `ext-mbstring`.

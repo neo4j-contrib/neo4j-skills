@@ -42,7 +42,7 @@ If fails → verify PHP ^8.1, `ext-json`, `ext-mbstring`. **Stop and report.**
 
 ## Environment Variables
 
-Load credentials from environment — never hardcode:
+Load credentials from env — never hardcode or print values:
 
 ```php
 $uri      = getenv('NEO4J_URI')      ?: 'bolt://localhost:7687';
@@ -59,7 +59,7 @@ NEO4J_PASSWORD=secret
 NEO4J_DATABASE=neo4j
 ```
 
-Add `.env` to `.gitignore`. Non-framework scripts: `composer require vlucas/phpdotenv`.
+Verify `.env` in `.gitignore`. Non-framework scripts: `composer require vlucas/phpdotenv`.
 
 ```php
 Dotenv\Dotenv::createImmutable(__DIR__)->load();
@@ -76,7 +76,7 @@ Dotenv\Dotenv::createImmutable(__DIR__)->load();
 | Session | `$driver->createSession(SessionConfiguration::default()->withDatabase('neo4j'))` | One per unit of work / request | Database + access mode, chains bookmarks for causal consistency, `executeQuery()`, `close()` |
 | Transaction | `$session->writeTransaction(fn)` / `readTransaction(fn)` / `beginTransaction()` | Atomic unit | Runs Cypher; managed (auto-retry) or unmanaged |
 
-Use single Session for read-your-own-writes on clusters. Separate `$client->...` calls open new sessions without sharing bookmarks.
+Use single Session for read-your-own-writes on clusters; separate `$client->...` calls do not share bookmarks.
 
 ---
 
@@ -152,7 +152,7 @@ $names = $client->readTransaction(static function (TransactionInterface $tsx) {
 });
 ```
 
-Callback **must be idempotent** — driver re-runs on retry. Side effects must stay outside.
+Callback **must be idempotent** — driver retries on failure. Keep side effects outside.
 
 ```php
 // ❌ counter incremented on every retry
@@ -287,7 +287,7 @@ Full mapping reference → [references/type-mapping.md](references/type-mapping.
 
 ## ParameterHelper — List vs Map Disambiguation
 
-PHP empty `[]` is ambiguous — disambiguate with `ParameterHelper`:
+Empty PHP `[]` is ambiguous — disambiguate via `ParameterHelper`:
 
 ```php
 use Laudis\Neo4j\ParameterHelper;

@@ -10,7 +10,7 @@ description: Use when installing, configuring, or troubleshooting the official N
   Does NOT cover Aura instance provisioning — use neo4j-aura-provisioning-skill.
   Does NOT cover Laravel integration — use neo4j-laravel-boost-skill.
 allowed-tools: Bash, WebFetch
-version: 1.0.3
+version: 1.0.4
 ---
 
 # Neo4j MCP Skill

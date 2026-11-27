@@ -128,7 +128,7 @@ Authenticate::disabled()                 // no auth (anonymous, if server allows
 
 ## Multiple Drivers (Failover)
 
-Drivers sharing the same alias form a failover group. Fourth argument is priority — higher goes first.
+Same alias = failover group. 4th arg = priority (higher first).
 
 ```php
 $client = ClientBuilder::create()

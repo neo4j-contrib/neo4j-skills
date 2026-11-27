@@ -1,6 +1,6 @@
 ---
 name: neo4j-laravel-boost-skill
-description: neo4j/laravel-boost — app knowledge graph and MCP server for Laravel: routes,
+description: neo4j/laravel-boost — app knowledge graph and MCP server for Laravel — routes,
   middleware, events, jobs, scheduled tasks, policies, notifications, mailables, and container
   wiring exported to Neo4j. Answers architecture queries (what depends on X, impact of changing Y,
   classes built on route invocation), uncovers hidden dependencies (facades, app()/resolve(),
@@ -50,7 +50,7 @@ allowed-tools: Bash
 composer require neo4j/laravel-boost
 ```
 
-Pulls `laravel/boost` and `laudis/neo4j-php-client`. Install `laravel/mcp` only if not present:
+Pulls `laravel/boost`, `laudis/neo4j-php-client`. Install `laravel/mcp` if missing:
 
 ```bash
 composer require laravel/mcp
@@ -103,7 +103,7 @@ NEO4J_USERNAME=neo4j
 NEO4J_PASSWORD=your-aura-password
 ```
 
-Ensure `.env` in `.gitignore`. Never commit credentials.
+Verify `.env` in `.gitignore`. Never commit or print credentials. Check `.env` before prompting; prompt only on missing-var failure.
 
 ---
 
@@ -113,7 +113,7 @@ Ensure `.env` in `.gitignore`. Never commit credentials.
 php artisan neo4j-boost:start-neo4j
 ```
 
-Runs Docker on `bolt://localhost:7687` and `http://localhost:7474`. APOC enabled.
+Runs Docker on `bolt://localhost:7687` and `http://localhost:7474` (APOC enabled). If fails → verify Docker daemon running and ports 7474/7687 free. **Stop and report.**
 
 Wipe and recreate:
 ```bash
@@ -144,7 +144,7 @@ Generates/merges `.cursor/mcp.json`:
 
 > `APP_ENV=local` required — Boost registers commands only when `APP_ENV=local` or `APP_DEBUG=true`.
 
-If command fails → create `.cursor/mcp.json` manually with above content. Restart Cursor after edits.
+If fails → create `.cursor/mcp.json` manually. Restart Cursor after edits.
 
 ---
 
@@ -175,13 +175,13 @@ php artisan container:graph --dry-run  # preview counts
 php artisan container:graph --print-cypher
 ```
 
-Capture hidden dependencies: set scan paths before running:
+Capture hidden dependencies — set scan paths:
 ```env
 NEO4J_CONTAINER_GRAPH_STATIC_SCAN_PATHS=/abs/path/to/app/Services
 NEO4J_CONTAINER_GRAPH_STATIC_SCAN_PROVIDER_PATHS=/abs/path/to/app/Providers
 ```
 
-Without scan paths → only constructor-injected dependencies exported. Idempotent (`MERGE`-based).
+Without scan paths → constructor-injected only. Idempotent (`MERGE`). If fails → verify DB running + `.env` credentials (`NEO4J_URI` or `NEO4J_DEFAULT_CONNECTION_DSN`). **Stop and report.**
 
 ### 2 — Graph model
 
@@ -217,15 +217,15 @@ MATCH (dep)-[:DEPENDS_ON]->(:Dependency)-[:IDENTIFIED_AS]->(:Abstract {fqcn: 'Ap
 RETURN dep LIMIT 50;
 ```
 
-Always inspect `graph_completeness` in `get-class-dependency-graph` output before concluding zero dependents exist.
+Before traversal via MCP: run `EXPLAIN` or `COUNT(*)`. No `LIMIT` → warn. Default `LIMIT 25`. Check `graph_completeness` before concluding zero dependents.
 
 ### 4 — Contribute missing edges
 
 Use `contribute-graph-knowledge` when static analysis misses runtime wiring:
 
-- `confidence: medium` or `low` → returns `confirmation_required` without writing. Prompt user for confirmation, then re-call with `confirmed: true`. Saved with `source: user`.
-- `confidence: high` → written immediately with `source: agent`.
-- Contributed `DEPENDS_ON` edges default to `type: service_location`.
+- `confidence: medium` or `low` → returns `confirmation_required`; prompt user, re-call with `confirmed: true` (`source: user`).
+- `confidence: high` → written immediately (`source: agent`).
+- Contributed `DEPENDS_ON` edges default `type: service_location`.
 
 Query templates and sample prompts → [`docs/PROMPTS.md`](https://github.com/neo4j-php/neo4j-boost/blob/main/docs/PROMPTS.md), [`docs/tutorials/container-graph.md`](https://github.com/neo4j-php/neo4j-boost/blob/main/docs/tutorials/container-graph.md).
 
@@ -247,6 +247,8 @@ NEO4J_MCP_TRANSPORT=stdio
 
 Download binary: `php artisan neo4j-boost:install-mcp`
 
+> Defaults `NEO4J_MCP_VERSION=v1.4.0`; passes v1.x `NEO4J_*` env vars (`NEO4J_URI`, `NEO4J_USERNAME`, `NEO4J_PASSWORD`). `neo4j-mcp` 2.0+ requires `NEO4J_MCP_*` + `NEO4J_MCP_DATABASE` — keep `v1.4.0` (1.x) or override `transport.stdio.env` in `config/neo4j-boost.php`.
+
 ### HTTP
 
 ```env
@@ -260,14 +262,16 @@ docker run --rm -p 8080:8080 \
   -e NEO4J_USERNAME=neo4j \
   -e NEO4J_PASSWORD=your-password \
   -e NEO4J_TRANSPORT_MODE=http \
-  neo4j/mcp:latest
+  neo4j/mcp:v1.6.1
 ```
+
+> Pin 1.x image (`neo4j/mcp:v1.6.1`). `neo4j/mcp:latest` (2.0+) requires `/db/{database}/mcp`, `NEO4J_MCP_TRANSPORT_MODE=http`, `NEO4J_MCP_HTTP_ALLOWED_URIS`, `X-Neo4j-MCP-URI` header (see `neo4j-mcp-skill`) — unsupported by `neo4j/laravel-boost` v1.x HTTP client.
 
 ---
 
 ## Available MCP Tools
 
-`php artisan boost:mcp` exposes Neo4j tools and standard Laravel Boost tools:
+`php artisan boost:mcp` exposes Neo4j + Laravel Boost tools:
 
 | Tool | Type | Description |
 |---|---|---|
@@ -277,6 +281,8 @@ docker run --rm -p 8080:8080 \
 | `list-gds-procedures` | read | GDS procedures (requires GDS plugin) |
 | `get-class-dependency-graph` | read | App knowledge graph for specified class |
 | `contribute-graph-knowledge` | write | Add missing DEPENDS_ON or BINDS_TO edges |
+
+Show query + estimated impact and get explicit user confirmation before executing `DELETE`, `DETACH DELETE`, `CALL IN TRANSACTIONS`, or bulk writes via `write-cypher`.
 
 ### get-class-dependency-graph parameters
 
@@ -294,13 +300,13 @@ docker run --rm -p 8080:8080 \
 - `direction`: `outbound`, `inbound`, or `both`
 - `depth`: 1–10
 
-Payload returns `declared_dependencies`, `hidden_dependencies` (with `type`, `source`, `confidence`, `visibility`), bindings, unresolved types, `graph_completeness`. Check `graph_completeness` before declaring no dependents exist.
+Returns `declared_dependencies`, `hidden_dependencies` (`type`, `source`, `confidence`, `visibility`), bindings, unresolved types, `graph_completeness`. Check `graph_completeness` before declaring zero dependents.
 
 ---
 
 ## GDS (Optional)
 
-`list-gds-procedures` requires GDS plugin; other tools function without it.
+`list-gds-procedures` requires GDS plugin; other tools work without it.
 
 Docker compose snippet with APOC and GDS:
 ```yaml
@@ -383,3 +389,5 @@ Full settings reference → [references/configuration.md](references/configurati
 - [ ] `container:graph` executed before querying dependency graph
 - [ ] `NEO4J_CONTAINER_GRAPH_STATIC_SCAN_PATHS` configured if hidden dependencies needed
 - [ ] `graph_completeness` checked before declaring class has no dependents
+- [ ] `EXPLAIN` or `COUNT(*)` run before unbounded MCP traversals (default `LIMIT 25`)
+- [ ] User confirmation obtained before destructive `write-cypher` (`DELETE`, `DETACH DELETE`, bulk writes)

@@ -5,9 +5,9 @@ Laravel integration for the official Neo4j MCP server.
 
 ## What This Skill Covers
 
-- Installing `neo4j/laravel-boost` with `laravel/boost` and `laravel/mcp`
-- Running `php artisan neo4j-boost:setup` (interactive STDIO-first setup)
-- Transport modes: STDIO (default), HTTP, driver (in-process Bolt)
+- Installing `neo4j/laravel-boost` (pulls `laravel/boost`; install `laravel/mcp` if missing)
+- Running `php artisan neo4j-boost:setup` (in-process driver default; optional `neo4j-mcp` binary for STDIO)
+- Transport modes: driver (in-process Bolt, default), STDIO, HTTP
 - Cursor MCP configuration via `php artisan neo4j-boost:cursor-config`
 - Starting local Neo4j with `neo4j-boost:start-neo4j` (Docker)
 - Container graph DI export (`php artisan container:graph`)
@@ -24,12 +24,14 @@ Laravel integration for the official Neo4j MCP server.
 
 ## Availability
 
-Part of the [neo4j-skills](https://github.com/neo4j-contrib/neo4j-skills) collection.
+Part of the [agent-skills](https://github.com/neo4j/agent-skills) collection.
 
 ## Install
 
 ```bash
-composer require laravel/boost laravel/mcp neo4j/laravel-boost
+composer require neo4j/laravel-boost
+# Install laravel/mcp if not already present:
+composer require laravel/mcp
 php artisan neo4j-boost:setup
 ```
 
