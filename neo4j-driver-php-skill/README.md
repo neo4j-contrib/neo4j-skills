@@ -6,7 +6,7 @@ Agent skill for the [Neo4j PHP Client](https://github.com/neo4j-php/neo4j-php-cl
 ## What This Skill Covers
 
 - Installing `laudis/neo4j-php-client` via Composer
-- Building a client with `ClientBuilder`
+- Building a client with `ClientBuilder` (including raw laudis inside Laravel without `neo4j-laravel`)
 - Transaction functions (`writeTransaction` / `readTransaction`) — default for production
 - Auto-committed queries (`run` / `runStatement`)
 - Unmanaged transactions (`beginTransaction` / `commit` / `rollback`)
@@ -18,6 +18,11 @@ Agent skill for the [Neo4j PHP Client](https://github.com/neo4j-php/neo4j-php-cl
 - UNWIND batch writes
 - Aura and cluster support
 
+## Not Covered
+
+- Laravel `DB::connection('neo4j')` / `Neo4jModel` / Boost MCP → `neo4j-laravel-boost-skill`
+- Cypher authoring → `neo4j-cypher-skill`
+
 ## Availability
 
 Part of the [agent-skills](https://github.com/neo4j/agent-skills) collection.
@@ -28,4 +33,4 @@ Part of the [agent-skills](https://github.com/neo4j/agent-skills) collection.
 composer require laudis/neo4j-php-client
 ```
 
-PHP >= 8.1, with `ext-json` and `ext-mbstring`.
+PHP >= 8.1, with `ext-json` and `ext-mbstring`. Bolt also needs `ext-bcmath` and `ext-sockets`.

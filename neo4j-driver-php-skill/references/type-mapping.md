@@ -23,9 +23,11 @@
 | `Relationship` | `\Laudis\Neo4j\Types\Relationship` |
 | `Path` | `\Laudis\Neo4j\Types\Path` |
 | `Vector` | `\Laudis\Neo4j\Types\Vector` |
-| `UUID` | `\Laudis\Neo4j\Types\Uuid` |
+| `UUID` | `\Laudis\Neo4j\Types\Uuid` — **`[main only]`** (not in Packagist `3.7.1`; needs tip after Bolt 5.6–6.1 / `stefanak-michal/bolt ^7.5`) |
 
 `Vector` — receive from server only; not supported as a query parameter.
+
+`Uuid` — confirm `composer show laudis/neo4j-php-client` ≥ tip with UUID support before using; on `3.7.1` the class does not exist.
 
 ## PHP-to-Cypher Parameter Conversion
 

@@ -1,6 +1,21 @@
 # Neo4j Laravel Reference (`neo4j-php/neo4j-laravel`)
 
-Install separately: `composer require neo4j-php/neo4j-laravel`. Not a dependency of `neo4j/laravel-boost`.
+## Install / Boost dependency
+
+| Boost installed | `neo4j-laravel` |
+|---|---|
+| Packagist `≤1.2.0` | **Not** a Boost dependency — `composer require neo4j-php/neo4j-laravel` (gets Packagist latest, currently `0.0.2`) |
+| GitHub `≥1.3.0` / `dev-main` | Required (`^0.0.1` → **only** `0.0.1`) |
+
+Run `composer show neo4j-php/neo4j-laravel` before using features below. `[dev-main]` sections need `composer require neo4j-php/neo4j-laravel:dev-main`.
+
+| Feature | `0.0.1` | `0.0.2` | `dev-main` |
+|---|---|---|---|
+| Query builder, `Neo4jModel`, `matchRelationship`, array vector search | ✅ | ✅ | ✅ |
+| Debugbar Cypher capture | ✅ | ✅ | ✅ |
+| TransientError retry / nested-tx `LogicException` / `afterCommit` overrides | ❌ | ✅ | ✅ |
+| String `whereVectorSimilarTo` / `useVectorSimilarityFunction` | ❌ | ❌ | ✅ |
+| `Schema::…->node()` / `relationship()` / `:_LaravelMigration` | ❌ | ❌ | ✅ |
 
 ## Connection Configuration (`config/database.php`)
 
@@ -44,10 +59,28 @@ Install separately: `composer require neo4j-php/neo4j-laravel`. Not a dependency
 
 ## Query Builder & Relationship Writes
 
+### Raw Cypher
+
+```php
+$db = DB::connection('neo4j');
+$rows = $db->select(
+    'MATCH (m:Movie {title: $title}) RETURN m.title AS title',
+    ['title' => 'The Matrix']
+);
+```
+
 ### Direction markers
 - `Type>` or `>Type` — outgoing (`-[:Type]->`)
 - `<Type` or `Type<` — incoming (`<-[:Type]-`)
 - `Type` — undirected (`-[:Type]-`)
+
+```php
+DB::connection('neo4j')->table('Person')
+    ->matchRelationship('ACTED_IN>', 'Movie', 'role', 'film')
+    ->where('film.title', 'The Matrix')
+    ->select(['n', 'role', 'film'])
+    ->get();
+```
 
 ### Single & bulk relationship writes
 
@@ -123,8 +156,14 @@ Person::with('movies')->get();
 
 ## Transactions & Dependency Injection
 
+### Transactions — `[0.0.2+]` only
+
+**Absent on `0.0.1`.** Boost `≥1.3.0` / `dev-main` pins `neo4j-php/neo4j-laravel ^0.0.1` → resolves **only** `0.0.1` → stock Laravel `transaction()` (no Neo4j TransientError retry / nested-tx overrides). Confirm with `composer show neo4j-php/neo4j-laravel` before using this section.
+
+On Packagist `0.0.2` / `dev-main`:
+
 ```php
-// Retries on Neo.TransientError.* (deadlocks)
+// Retries on Neo.TransientError.* (deadlocks) — 0.0.2+ only
 DB::connection('neo4j')->transaction(function () use ($movie) {
     $person = Person::create(['name' => 'Keanu Reeves']);
     $person->movies()->attach($movie->id, ['roles' => ['Neo']]);
@@ -133,11 +172,15 @@ DB::connection('neo4j')->transaction(function () use ($movie) {
 
 - Nested transactions share outer Neo4j tx (no savepoints — nested `rollBack()` rolls back everything; further outer queries throw `LogicException` until outer rolled back).
 - `transactionLevel()`, `DB::afterCommit()`, `ShouldDispatchAfterCommit` supported.
-- Container bindings (`ClientInterface`, `DriverInterface`, `SessionInterface`) wrap client calls for query logging + Debugbar capture; manually instantiated clients bypass capture.
 
+### Dependency Injection (all published versions)
+
+Container bindings (`ClientInterface`, `DriverInterface`, `SessionInterface`) wrap client calls for query logging + Debugbar capture; manually instantiated clients bypass capture.
 ---
 
 ## Vector Search
+
+Published (`0.0.1` / `0.0.2`) — embedding **array** only:
 
 ```php
 DB::connection('neo4j')->createVectorIndex('document_embedding', 'Document', 'embedding', 3);
@@ -148,15 +191,20 @@ Document::query()
     ->get();
 ```
 
-- Query vector accepts `float[]`, `Collection`, `Arrayable`, Neo4j list, or `string` (requires `laravel/ai` `Stringable::toEmbeddings` macro; throws `InvalidArgumentException` without it).
 - Cosine score = `(1 + cosine) / 2` (default `minSimilarity: 0.6`).
-- Filtered or unlimited queries score nodes via `vector.similarity.cosine()` (exact scan). For euclidean indexes, chain `->useVectorSimilarityFunction('euclidean')`.
+- On `0.0.x`, non-array vector → throws (`expects a non-empty embedding array`).
+
+`[dev-main]` extras:
+- Query vector may also be `Collection`, `Arrayable`, Neo4j list, or `string` (needs `laravel/ai` `Stringable::toEmbeddings` macro; else `InvalidArgumentException`).
+- Filtered / unlimited queries score via `vector.similarity.cosine()` (exact scan). For euclidean indexes: `->useVectorSimilarityFunction('euclidean')`.
 
 ---
 
-## Migrations (`Schema::connection('neo4j')`)
+## Migrations (`Schema::connection('neo4j')`) — `[dev-main]` only
 
-Reuses Laravel `Migrator` + Artisan commands (`--database=neo4j`); history stored on `:_LaravelMigration` nodes (`migration`, `batch`, `migrated_at`).
+**Not in Packagist `0.0.1` / `0.0.2`.** On `0.0.x`: use Cypher DDL (`CREATE INDEX` / `CREATE CONSTRAINT`). Do not call `->node()` / `->relationship()`.
+
+On `dev-main`: reuses Laravel `Migrator` + Artisan (`--database=neo4j`); history on `:_LaravelMigration` nodes (`migration`, `batch`, `migrated_at`).
 
 | Rule | Detail |
 |---|---|
@@ -170,6 +218,8 @@ Reuses Laravel `Migrator` + Artisan commands (`--database=neo4j`); history store
 
 ## Logging & Debugbar
 
+Present on published `0.0.x` and `dev-main`:
+
 - `NEO4J_QUERY_CHANNEL` (merged in `config/neo4j-laravel.php`): flushes in-memory query log as `debug` after HTTP request/console command to named channel (or default logger if empty/missing).
 - Install `barryvdh/laravel-debugbar` (`^3`) or `fruitcake/laravel-debugbar` (`^4`): Cypher from `DB::connection('neo4j')` and container-resolved `ClientInterface`/`SessionInterface` appears in Debugbar **Queries** tab.
 
@@ -182,5 +232,6 @@ Reuses Laravel `Migrator` + Artisan commands (`--database=neo4j`); history store
 | `Default Neo4j connection '…' is not configured or invalid` | Set `DB_CONNECTION=neo4j` and configure `'neo4j'` under `database.connections` |
 | `Missing required URL or host/port` | Set `url` (`NEO4J_URL`) or both `host` and `port` |
 | Session/auth errors with `DB_CONNECTION=neo4j` | Set `SESSION_DRIVER=file` (or `redis`); keep auth relational unless storing users in Neo4j |
-| `Schema::create() is not supported for Neo4j` | Use `Schema::connection('neo4j')->node()` / `relationship()` |
+| `Call to undefined method …->node()` / missing Schema builder | On Packagist `0.0.x` — not available. Use `dev-main` or Cypher DDL |
+| `Schema::create() is not supported for Neo4j` | Use `Schema::connection('neo4j')->node()` / `relationship()` (`dev-main` only) |
 | Cypher missing from Debugbar | Enable `queries` collector; resolve client/session from container |

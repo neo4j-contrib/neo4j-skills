@@ -8,22 +8,24 @@ description: Neo4j PHP Driver (laudis/neo4j-php-client ^3.x) — Client > Driver
   TransactionConfiguration, Aura and cluster support, causal consistency. Use when writing
   PHP code connecting to Neo4j via Bolt or routed protocol.
   Does NOT handle Cypher query authoring — use neo4j-cypher-skill.
-  Does NOT cover Laravel integration (DB/Eloquent/Boost MCP) — use neo4j-laravel-boost-skill.
+  Does NOT cover Laravel DB/Eloquent/Boost MCP (DB::connection('neo4j'), Neo4jModel,
+  container:graph) — use neo4j-laravel-boost-skill. Raw laudis ClientBuilder inside Laravel
+  (no neo4j-laravel) stays here.
   Does NOT cover driver version migration — use neo4j-migration-skill.
-version: 1.0.5
+version: 1.0.7
 allowed-tools: Bash
 ---
 
 ## When to Use
-- Writing PHP code that connects to Neo4j
+- Writing PHP code that connects to Neo4j via `laudis/neo4j-php-client`
 - Setting up ClientBuilder, sessions, transaction functions, unmanaged transactions
 - Preserving causal consistency (read-your-own-writes) across cluster queries
 - Debugging result handling, type mapping, Aura/cluster connectivity
-- Reviewing Neo4j driver usage in PHP code
+- Reviewing Neo4j driver usage in PHP code — including raw `ClientBuilder` / `ClientInterface` inside a Laravel app (container-bound client, no `DB::connection('neo4j')`)
 
 ## When NOT to Use
 - **Writing/optimizing Cypher** → `neo4j-cypher-skill`
-- **Laravel integration (`DB`, `Neo4jModel`, Boost MCP)** → `neo4j-laravel-boost-skill`
+- **Laravel DB / Eloquent / Boost MCP (`DB::connection('neo4j')`, `Neo4jModel`, `container:graph`)** → `neo4j-laravel-boost-skill`
 - **Driver version upgrades** → `neo4j-migration-skill`
 
 ---
@@ -34,7 +36,7 @@ allowed-tools: Bash
 composer require laudis/neo4j-php-client
 ```
 
-If fails → verify PHP ^8.1, `ext-json`, `ext-mbstring`. **Stop and report.**
+If fails → verify PHP ^8.1, `ext-json`, `ext-mbstring`. Bolt also needs `ext-bcmath` + `ext-sockets` (composer suggests `ext-bcmath`; client README lists both as required). **Stop and report.**
 
 > HTTP/HTTPS removed in v3.3.0. Use `bolt://`, `bolt+s://`, `bolt+ssc://`, `neo4j://`, `neo4j+s://`, or `neo4j+ssc://` only.
 
@@ -42,26 +44,34 @@ If fails → verify PHP ^8.1, `ext-json`, `ext-mbstring`. **Stop and report.**
 
 ## Environment Variables
 
-Load credentials from env — never hardcode or print values:
+Load credentials from env — never hardcode or print values. Read `$_ENV` / `$_SERVER` first — `getenv()` alone fails after phpdotenv `createImmutable()` (no `PutenvAdapter`).
 
 ```php
-$uri      = getenv('NEO4J_URI')      ?: 'bolt://localhost:7687';
-$user     = getenv('NEO4J_USERNAME') ?: 'neo4j';
-$password = getenv('NEO4J_PASSWORD') ?: '';
-$database = getenv('NEO4J_DATABASE') ?: null;  // null → server home/default; set only to deviate
+$env = static fn (string $key): ?string =>
+    $_ENV[$key] ?? $_SERVER[$key] ?? (getenv($key) !== false ? getenv($key) : null);
+
+$uri      = $env('NEO4J_URI') ?: 'bolt://localhost:7687';
+$user     = $env('NEO4J_USERNAME') ?: 'neo4j';
+$password = $env('NEO4J_PASSWORD');
+$database = $env('NEO4J_DATABASE');  // null/empty → server home/default; set only to deviate
+
+if ($password === null || $password === '') {
+    throw new RuntimeException('NEO4J_PASSWORD required');
+}
 ```
 
-`.env` format:
+`.env` format (set real password; never commit):
 ```
 NEO4J_URI=neo4j+s://xxxx.databases.neo4j.io
 NEO4J_USERNAME=neo4j
-NEO4J_PASSWORD=secret
+NEO4J_PASSWORD=
 # NEO4J_DATABASE=neo4j   # omit unless targeting a non-default database
 ```
 
 Verify `.env` in `.gitignore`. Non-framework scripts: `composer require vlucas/phpdotenv`.
 
 ```php
+// createImmutable → $_ENV / $_SERVER only. createUnsafeImmutable also enables getenv()/putenv.
 Dotenv\Dotenv::createImmutable(__DIR__)->load();
 ```
 
@@ -107,8 +117,13 @@ use Laudis\Neo4j\Basic\Driver;
 use Laudis\Neo4j\Authentication\Authenticate;
 
 $driver = Driver::create($uri, authenticate: Authenticate::basic($user, $password));
-if (! $driver->verifyConnectivity()) {  // returns bool — does not throw
-    throw new RuntimeException('Neo4j unreachable');
+try {
+    // returns false on ConnectException; auth / other Neo4j errors still throw
+    if (! $driver->verifyConnectivity()) {
+        throw new RuntimeException('Neo4j unreachable');
+    }
+} catch (\Laudis\Neo4j\Exception\Neo4jException $e) {
+    throw new RuntimeException('Neo4j connectivity/auth failed: '.$e->getMessage(), 0, $e);
 }
 $info = $driver->getServerInfo(); // getAddress(), getProtocol(), getAgent() — no version accessor
 ```
@@ -132,7 +147,7 @@ Default if omitted: `bolt://localhost:7687` (database = server home/default). Op
 | Approach | Method | Auto-retry | Use when |
 |---|---|---|---|
 | Transaction functions (Client) | `$client->writeTransaction()` / `readTransaction()` | ✅ TransientError, NotALeader, connection errors | **Default** — production, Aura, clusters, HA |
-| Session query | `$session->executeQuery($cypher, $params)` | ✅ same retry; full result loaded | Causal consistency within one session; bookmark handover across requests |
+| Session query | `$session->executeQuery($cypher, $params)` | ✅ same retry; full result loaded | Causal consistency within one session; bookmark handover. Access mode = session config — default **WRITE**; pass `->withAccessMode(\Laudis\Neo4j\Enum\AccessMode::READ())` for reads |
 | Auto-committed | `$client->run()` / `runStatement()` | ⚠️ connection/routing errors only (no TransientError) | Simple scripts, non-critical reads |
 | Multiple auto-committed | `$client->runStatements([...])` | ⚠️ each runs in own auto-commit tx — **not atomic** | Bulk independent statements |
 | Unmanaged | `$session->beginTransaction()` | ❌ | Explicit commit/rollback control |
@@ -163,16 +178,14 @@ $names = $client->readTransaction(static function (TransactionInterface $tsx) {
 Callback **must be idempotent** — driver retries on failure. Keep side effects outside.
 
 ```php
-use Symfony\Component\Uid\Uuid;   // symfony/uid; any app-side ID generator works
-
-// ❌ counter incremented on every retry
+// ❌ counter incremented on every retry; ID generated inside callback
 $client->writeTransaction(function (TransactionInterface $tsx) use ($counter) {
     $counter->increment();
-    $tsx->run('MERGE (x:Node {id: $id})', ['id' => Uuid::v4()->toRfc4122()]);
+    $tsx->run('MERGE (x:Node {id: $id})', ['id' => bin2hex(random_bytes(16))]);
 });
 
 // ✅ ID generated outside; counter incremented once on success
-$id = Uuid::v4()->toRfc4122();
+$id = bin2hex(random_bytes(16));
 $client->writeTransaction(static function (TransactionInterface $tsx) use ($id) {
     $tsx->run('MERGE (x:Node {id: $id})', ['id' => $id]);
 });
@@ -246,15 +259,18 @@ $tsx = $client->beginTransaction(
 );
 // Initial statement results discarded
 
-$result  = $tsx->run('MATCH (x) RETURN x LIMIT 100');
-$results = $tsx->runStatements([Statement::create('MATCH (x) RETURN x LIMIT 100')]);
-
-$tsx->commit();
-// or: $tsx->rollback();
+try {
+    $result  = $tsx->run('MATCH (x) RETURN x LIMIT 100');
+    $results = $tsx->runStatements([Statement::create('MATCH (x) RETURN x LIMIT 100')]);
+    $tsx->commit();
+} catch (\Throwable $e) {
+    $tsx->rollback();
+    throw $e;
+}
 ```
 
 ❌ Omit `commit()` or `rollback()` → transaction leak.
-✅ Wrap in try/catch; call `rollback()` in catch block before re-throw.
+✅ Wrap in try/catch; `rollback()` in catch before re-throw.
 
 ---
 
@@ -281,7 +297,7 @@ $results = $client->run('MATCH (p:Person)-[r:KNOWS]->(f) RETURN p, r, f');
 foreach ($results as $row) {
     $node      = $row->get('p');              // Laudis\Neo4j\Types\Node
     $intId     = $node->getId();              // legacy int ID
-    $elementId = $node->getElementId();       // string element ID (Neo4j 5+)
+    $elementId = $node->getElementId();       // ?string element ID (Neo4j 5+)
 
     $rel       = $row->get('r');              // Laudis\Neo4j\Types\Relationship
     $type      = $rel->getType();             // 'KNOWS'
@@ -363,9 +379,9 @@ Docs:
 
 ## Checklist
 - [ ] `laudis/neo4j-php-client` installed via Composer
-- [ ] PHP ^8.1, `ext-json`, `ext-mbstring` confirmed
+- [ ] PHP ^8.1, `ext-json`, `ext-mbstring` confirmed (`ext-bcmath`, `ext-sockets` for Bolt)
 - [ ] One client (or driver) created at startup; shared across requests
-- [ ] Credentials loaded from env; `.env` in `.gitignore`
+- [ ] Credentials loaded from `$_ENV`/`$_SERVER` (or `createUnsafeImmutable`); empty `NEO4J_PASSWORD` fails fast; `.env` in `.gitignore`
 - [ ] `writeTransaction` / `readTransaction` used for production writes/reads
 - [ ] Callback is idempotent — side effects moved outside
 - [ ] `$param` placeholders in all Cypher — no string interpolation
