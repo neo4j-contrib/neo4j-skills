@@ -1,5 +1,7 @@
 # Neo4j Laravel Reference (`neo4j-php/neo4j-laravel`)
 
+Install separately: `composer require neo4j-php/neo4j-laravel`. Not a dependency of `neo4j/laravel-boost`.
+
 ## Connection Configuration (`config/database.php`)
 
 ```php

@@ -10,7 +10,7 @@ description: Neo4j PHP Driver (laudis/neo4j-php-client ^3.x) — Client > Driver
   Does NOT handle Cypher query authoring — use neo4j-cypher-skill.
   Does NOT cover Laravel integration (DB/Eloquent/Boost MCP) — use neo4j-laravel-boost-skill.
   Does NOT cover driver version migration — use neo4j-migration-skill.
-version: 1.0.3
+version: 1.0.4
 allowed-tools: Bash
 ---
 
@@ -71,12 +71,12 @@ Dotenv\Dotenv::createImmutable(__DIR__)->load();
 
 | Layer | Acquire via | Lifetime | Role |
 |---|---|---|---|
-| Client | `ClientBuilder::create()->...->build()` | One per app | Maps aliases to drivers; failover by priority; convenience `run`/`*Transaction` (reuses one cached session per alias for the process lifetime) |
+| Client | `ClientBuilder::create()->...->build()` | One per app | Maps aliases to drivers; failover by priority; convenience `run`/`*Transaction` (new session per call via retry helper) |
 | Driver | `$client->getDriver('alias')` or `Basic\Driver::create($uri, ...)` | One per app | Connection pool, routing table, `verifyConnectivity()`, `getServerInfo()`, `closeConnections()` |
 | Session | `$driver->createSession(SessionConfiguration::default())` | One per unit of work / request | Access mode + bookmarks; `executeQuery()`, `close()`. Set database only when non-default — see configuration ref |
 | Transaction | `$session->writeTransaction(fn)` / `readTransaction(fn)` / `beginTransaction()` | Atomic unit | Runs Cypher; managed (auto-retry) or unmanaged |
 
-Client calls share one cached session per alias → bookmarks chain within a PHP process. Bookmarks do not cross requests/processes — hand over via `getLastBookmark()` + `withBookmarks([...])`. Use an explicit Session for per-unit-of-work isolation or bookmark control.
+Client convenience methods open a **new session per call** — bookmarks do not chain across `$client->run()` / `*Transaction()` calls. For causal consistency (read-your-own-writes): use one explicit Session, or hand over via `getLastBookmark()` + `withBookmarks([...])`. Bookmarks never cross PHP requests/processes without explicit handover.
 
 ---
 
@@ -107,7 +107,9 @@ use Laudis\Neo4j\Basic\Driver;
 use Laudis\Neo4j\Authentication\Authenticate;
 
 $driver = Driver::create($uri, authenticate: Authenticate::basic($user, $password));
-$driver->verifyConnectivity();   // throws on connection failure
+if (! $driver->verifyConnectivity()) {  // returns bool — does not throw
+    throw new RuntimeException('Neo4j unreachable');
+}
 $driver->getServerInfo();        // address, server version
 ```
 
@@ -118,7 +120,7 @@ URI schemes:
 | neo4j (routing) | `neo4j` | `neo4j+s` | `neo4j+ssc` |
 | bolt (single) | `bolt` | `bolt+s` | `bolt+ssc` |
 
-Default if omitted: `bolt://localhost:7687?database=neo4j`.
+Default if omitted: `bolt://localhost:7687` (database = server home/default). Optional URI query: `?database=my-db`.
 
 ❌ New client per query (`ClientBuilder::build()` in loop/request).
 ✅ Build once at startup; inject as singleton.
@@ -130,7 +132,7 @@ Default if omitted: `bolt://localhost:7687?database=neo4j`.
 | Approach | Method | Auto-retry | Use when |
 |---|---|---|---|
 | Transaction functions (Client) | `$client->writeTransaction()` / `readTransaction()` | ✅ TransientError, NotALeader, connection errors | **Default** — production, Aura, clusters, HA |
-| Session query | `$session->executeQuery($cypher, $params)` | ✅ same retry; full result loaded | Explicit bookmark control / cross-request handover |
+| Session query | `$session->executeQuery($cypher, $params)` | ✅ same retry; full result loaded | Causal consistency within one session; bookmark handover across requests |
 | Auto-committed | `$client->run()` / `runStatement()` | ⚠️ connection/routing errors only (no TransientError) | Simple scripts, non-critical reads |
 | Multiple auto-committed | `$client->runStatements([...])` | ⚠️ each runs in own auto-commit tx — **not atomic** | Bulk independent statements |
 | Unmanaged | `$session->beginTransaction()` | ❌ | Explicit commit/rollback control |
@@ -203,7 +205,7 @@ $session->close();
 
 $session2 = $driver->createSession(
     SessionConfiguration::default()
-        ->withBookmarks([$bookmark])   // list<Bookmark>; experimental in 3.6.x
+        ->withBookmarks([$bookmark])   // list<Bookmark>
 );
 ```
 
@@ -342,6 +344,7 @@ $client->writeTransaction(static function (TransactionInterface $tsx) use ($peop
 | `beginTransaction` without `commit`/`rollback` | Transaction leak — always close in try/finally or catch |
 | `first()` on empty result | Throws — check `count()` first |
 | Credentials in code | Load from environment / `.env` |
+| Expecting causal consistency across `$client->run()` / `*Transaction()` calls | Use one explicit Session, or hand over `getLastBookmark()` via `withBookmarks([...])` |
 | Expecting causal consistency across PHP requests/processes | Pass `getLastBookmark()` forward via `withBookmarks([...])` on a new session |
 | `runStatements([...])` expecting atomic execution | Not atomic — use `beginTransaction()` |
 | `$node->getId()` expecting element ID | Use `$node->getElementId()` (string, Neo4j 5+) |

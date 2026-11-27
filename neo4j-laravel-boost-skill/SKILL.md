@@ -8,7 +8,7 @@ description: Use when integrating Neo4j into Laravel 12/13 apps — neo4j/larave
   Does NOT handle raw PHP driver code outside Laravel — use neo4j-driver-php-skill.
   Does NOT handle Cypher query authoring — use neo4j-cypher-skill.
   Does NOT handle standalone MCP server setup — use neo4j-mcp-skill.
-version: 1.0.1
+version: 1.0.2
 allowed-tools: Bash
 ---
 
@@ -26,13 +26,13 @@ allowed-tools: Bash
 
 ## Package Selection
 
-Two independent packages. Pick row by task; read only the matching sections.
+Two independent packages — Boost does **not** install `neo4j-php/neo4j-laravel`. Pick row by task; read only the matching sections.
 
 | Task | Package | Entry | Read |
 |---|---|---|---|
-| Neo4j MCP tools in Laravel Boost; app wiring graph (`container:graph`); change-impact analysis | `neo4j/laravel-boost` | `php artisan neo4j-boost:setup` | Steps 1–6, App Knowledge Graph, Transport Modes, MCP Tools, Troubleshooting |
-| App data access: `DB::connection('neo4j')`, query builder, `Neo4jModel`, migrations, vector search | `neo4j-php/neo4j-laravel` | Pulled by Boost, or `composer require neo4j-php/neo4j-laravel` | App Data Access + [references/neo4j-laravel.md](references/neo4j-laravel.md) |
-| Both | both | Boost first (pulls `neo4j-php/neo4j-laravel`) | All |
+| Neo4j MCP tools in Laravel Boost; app wiring graph (`container:graph`); change-impact analysis | `neo4j/laravel-boost` | `composer require --dev neo4j/laravel-boost` → `php artisan neo4j-boost:setup` | Steps 1–6, App Knowledge Graph, Transport Modes, MCP Tools, Troubleshooting |
+| App data access: `DB::connection('neo4j')`, query builder, `Neo4jModel`, migrations, vector search | `neo4j-php/neo4j-laravel` | `composer require neo4j-php/neo4j-laravel` | App Data Access + [references/neo4j-laravel.md](references/neo4j-laravel.md) |
+| Both | both | Install Boost (`--dev`) and `neo4j-php/neo4j-laravel` separately | All |
 
 Env var names differ: Boost reads `NEO4J_URI`; `neo4j-php/neo4j-laravel` reads `NEO4J_URL`. Set both when using both packages.
 
@@ -41,28 +41,27 @@ Env var names differ: Boost reads `NEO4J_URI`; `neo4j-php/neo4j-laravel` reads `
 | Requirement | Version |
 |---|---|
 | PHP | ^8.2 |
-| Laravel | ^12.0 or ^13.0 |
-| `neo4j-php/neo4j-laravel` | ^0.0.1 (pre-release; caret pins exactly 0.0.1; pulled by `neo4j/laravel-boost`) |
-| Laravel Boost / MCP | ^2.0 / ^0.5.1 (dev, for MCP tools) |
-
-`laudis/neo4j-php-client ^3.4` pulled automatically.
+| Laravel | ^12.0 or ^13.0 (Boost); `neo4j-php/neo4j-laravel` also supports Illuminate ^11 |
+| `neo4j/laravel-boost` | ^1.0 (dev dependency; pulls `laravel/boost` + `laudis/neo4j-php-client ^3.4`) |
+| `neo4j-php/neo4j-laravel` | ^0.0.1 (pre-release; caret pins exactly 0.0.1 — install separately) |
+| `laravel/mcp` | ^0.5.1 (dev; not pulled by Boost — install if missing) |
 
 ---
 
 ## Step 1 — Install
 
 ```bash
-composer require neo4j/laravel-boost
+composer require --dev neo4j/laravel-boost
 ```
 
-Pulls `laravel/boost`, `laudis/neo4j-php-client`. Install `laravel/mcp` if missing:
+Pulls `laravel/boost`, `laudis/neo4j-php-client`. Does **not** install `neo4j-php/neo4j-laravel` or `laravel/mcp`.
 
 ```bash
-composer require laravel/mcp
+composer require --dev laravel/mcp   # if missing
+composer require neo4j-php/neo4j-laravel   # only when app data access / Neo4jModel needed
 ```
 
 If fails → verify PHP 8.2+ and Laravel 12/13. **Stop and report.**
-
 ---
 
 ## Step 2 — Run setup
@@ -302,12 +301,12 @@ Show query + estimated impact and get explicit user confirmation before executin
   "direction": "inbound",
   "include_bindings": true,
   "page": 1,
-  "per_page": 50
+  "per_page": 100
 }
 ```
 
 - `direction`: `outbound`, `inbound`, or `both`
-- `depth`: 1–10
+- `depth`: 1–10; `per_page` default 100 (max 500)
 
 Returns `declared_dependencies`, `hidden_dependencies` (`type`, `source`, `confidence`, `visibility`), bindings, unresolved types, `graph_completeness`. Check `graph_completeness` before declaring zero dependents.
 
@@ -366,7 +365,7 @@ Full settings reference → [references/boost-configuration.md](references/boost
 | "Could not open input file: artisan" | Working directory is not Laravel root | Set workspace to Laravel application root |
 | "no commands in 'boost' namespace" | `APP_ENV` is not `local` | Add `"env": {"APP_ENV": "local"}` to `.cursor/mcp.json` |
 | "Neo4j password is required for STDIO mode" | `NEO4J_PASSWORD` unset | Define in `.env`; run `php artisan config:clear` |
-| STDIO test fails on schema introspection | Missing APOC plugin | Install APOC on target DB. Local Docker: `neo4j-boost:start-neo4j --recreate` (**destructive** — confirm first) |
+| STDIO test fails on schema introspection | STDIO `neo4j-mcp` expects APOC; driver transport falls back to `db.labels`/`db.relationshipTypes` | Install APOC on target DB. Local Docker: `neo4j-boost:start-neo4j --recreate` (**destructive** — confirm first) |
 | HTTP 404 on `/mcp` | Editor sends GET instead of POST | Use `php artisan boost:mcp` (Boost STDIO) |
 | `container:graph` fails inside container | `NEO4J_URI` points to container localhost | Use host network alias or `NEO4J_DEFAULT_CONNECTION_DSN` |
 | "Unknown function 'gds.version'" | GDS plugin absent | Install GDS; core tools unaffected |
@@ -376,9 +375,11 @@ Full settings reference → [references/boost-configuration.md](references/boost
 
 ## App Data Access (`neo4j-php/neo4j-laravel`)
 
+Requires separate install: `composer require neo4j-php/neo4j-laravel` (not pulled by Boost).
+
 ### Connection (`config/database.php`)
 
-Register `'neo4j'` connection (no `vendor:publish`). **Set `DB_CONNECTION=neo4j` as default** — secondary-only Neo4j connection not supported by provider bootstrap yet. Set `SESSION_DRIVER=file` to keep Laravel sessions/auth off Neo4j.
+Register `'neo4j'` connection (no `vendor:publish`). **Set `DB_CONNECTION=neo4j` as default** — resolving `Client` / `DB::connection('neo4j')` requires default connection to be Neo4j (secondary-only not supported by provider bootstrap yet). Set `SESSION_DRIVER=file` to keep Laravel sessions/auth off Neo4j.
 
 ```env
 DB_CONNECTION=neo4j
@@ -400,7 +401,7 @@ NEO4J_DATABASE=neo4j
 ],
 ```
 
-Verify: `app(\Laudis\Neo4j\Contracts\ClientInterface::class)->verifyConnectivity()`.
+Verify: `app(\Laudis\Neo4j\Contracts\ClientInterface::class)->verifyConnectivity()` → `bool` (`true`/`false`; does not throw).
 
 ### Raw Cypher, Query Builder, Graph Edges
 
@@ -472,9 +473,10 @@ Full `neo4j-laravel` reference (bulk edge ops, transactions, DI container wrappe
 ---
 
 ## Checklist
-- [ ] `composer require neo4j/laravel-boost` installed
+- [ ] `composer require --dev neo4j/laravel-boost` installed; `laravel/mcp` present
+- [ ] `neo4j-php/neo4j-laravel` installed separately when app data access needed
 - [ ] `php artisan neo4j-boost:setup` completed
-- [ ] `.env` defines `NEO4J_URI` (Boost) and `NEO4J_URL` (`neo4j-laravel`), `NEO4J_USERNAME`, `NEO4J_PASSWORD`; `.env` in `.gitignore`
+- [ ] `.env` defines `NEO4J_URI` (Boost) and `NEO4J_URL` (`neo4j-laravel` if used), `NEO4J_USERNAME`, `NEO4J_PASSWORD`; `.env` in `.gitignore`
 - [ ] Transport selected: `driver` (default), `stdio` (requires `install-mcp`), or `http`
 - [ ] Neo4j running locally via `start-neo4j` or accessible remotely
 - [ ] `.cursor/mcp.json` configured with `"env": {"APP_ENV": "local"}`

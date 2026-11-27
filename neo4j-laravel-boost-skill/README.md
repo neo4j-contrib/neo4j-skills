@@ -22,10 +22,10 @@ Part of the [agent-skills](https://github.com/neo4j/agent-skills) collection.
 ## Install
 
 ```bash
-composer require neo4j/laravel-boost
-# Install laravel/mcp if not already present:
-composer require laravel/mcp
+composer require --dev neo4j/laravel-boost
+composer require --dev laravel/mcp   # if missing (not pulled by Boost)
+composer require neo4j-php/neo4j-laravel   # only for DB/Eloquent/migrations
 php artisan neo4j-boost:setup
 ```
 
-Requirements: PHP 8.2+, Laravel 12 or 13.
+Requirements: PHP 8.2+, Laravel 12 or 13. Boost does not install `neo4j-php/neo4j-laravel`.
