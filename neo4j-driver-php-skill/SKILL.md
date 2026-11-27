@@ -10,7 +10,7 @@ description: Neo4j PHP Driver (laudis/neo4j-php-client ^3.x) — Client > Driver
   Does NOT handle Cypher query authoring — use neo4j-cypher-skill.
   Does NOT cover Laravel integration (DB/Eloquent/Boost MCP) — use neo4j-laravel-boost-skill.
   Does NOT cover driver version migration — use neo4j-migration-skill.
-version: 1.0.1
+version: 1.0.2
 allowed-tools: Bash
 ---
 
@@ -48,7 +48,7 @@ Load credentials from env — never hardcode or print values:
 $uri      = getenv('NEO4J_URI')      ?: 'bolt://localhost:7687';
 $user     = getenv('NEO4J_USERNAME') ?: 'neo4j';
 $password = getenv('NEO4J_PASSWORD') ?: '';
-$database = getenv('NEO4J_DATABASE') ?: 'neo4j';
+$database = getenv('NEO4J_DATABASE') ?: null;  // null → server home/default; set only to deviate
 ```
 
 `.env` format:
@@ -56,7 +56,7 @@ $database = getenv('NEO4J_DATABASE') ?: 'neo4j';
 NEO4J_URI=neo4j+s://xxxx.databases.neo4j.io
 NEO4J_USERNAME=neo4j
 NEO4J_PASSWORD=secret
-NEO4J_DATABASE=neo4j
+# NEO4J_DATABASE=neo4j   # omit unless targeting a non-default database
 ```
 
 Verify `.env` in `.gitignore`. Non-framework scripts: `composer require vlucas/phpdotenv`.
@@ -73,7 +73,7 @@ Dotenv\Dotenv::createImmutable(__DIR__)->load();
 |---|---|---|---|
 | Client | `ClientBuilder::create()->...->build()` | One per app | Maps aliases to drivers; failover by priority; convenience `run`/`*Transaction` (reuses one cached session per alias for the process lifetime) |
 | Driver | `$client->getDriver('alias')` or `Basic\Driver::create($uri, ...)` | One per app | Connection pool, routing table, `verifyConnectivity()`, `getServerInfo()`, `closeConnections()` |
-| Session | `$driver->createSession(SessionConfiguration::default()->withDatabase('neo4j'))` | One per unit of work / request | Database + access mode, chains bookmarks for causal consistency, `executeQuery()`, `close()` |
+| Session | `$driver->createSession(SessionConfiguration::default())` | One per unit of work / request | Access mode + bookmarks; `executeQuery()`, `close()`. Set database only when non-default — see configuration ref |
 | Transaction | `$session->writeTransaction(fn)` / `readTransaction(fn)` / `beginTransaction()` | Atomic unit | Runs Cypher; managed (auto-retry) or unmanaged |
 
 Client calls share one cached session per alias → bookmarks chain within a PHP process. Bookmarks do not cross requests/processes — hand over via `getLastBookmark()` + `withBookmarks([...])`. Use an explicit Session for per-unit-of-work isolation or bookmark control.
@@ -88,10 +88,17 @@ One client per app — create at startup, share across requests.
 use Laudis\Neo4j\Authentication\Authenticate;
 use Laudis\Neo4j\ClientBuilder;
 
-$client = ClientBuilder::create()
+use Laudis\Neo4j\Databags\SessionConfiguration;
+
+$builder = ClientBuilder::create()
     ->withDriver('default', $uri, Authenticate::basic($user, $password))
-    ->withDefaultDriver('default')
-    ->build();
+    ->withDefaultDriver('default');
+if ($database) {
+    $builder = $builder->withDefaultSessionConfiguration(
+        SessionConfiguration::default()->withDatabase($database)
+    );
+}
+$client = $builder->build();
 ```
 
 Direct Driver instantiation (bypasses ClientBuilder alias map):
@@ -181,7 +188,7 @@ $counter->increment();
 use Laudis\Neo4j\Databags\SessionConfiguration;
 
 $driver  = $client->getDriver('default');
-$session = $driver->createSession(SessionConfiguration::default()->withDatabase('neo4j'));
+$session = $driver->createSession(SessionConfiguration::default());  // add ->withDatabase(...) only if non-default
 
 $session->executeQuery(
     'MERGE (p:Person {email: $email}) RETURN p',
@@ -197,7 +204,6 @@ $session->close();
 
 $session2 = $driver->createSession(
     SessionConfiguration::default()
-        ->withDatabase('neo4j')
         ->withBookmarks([$bookmark])   // list<Bookmark>; experimental in 3.6.x
 );
 ```

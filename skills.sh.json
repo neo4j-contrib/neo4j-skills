@@ -73,10 +73,11 @@
     },
     {
       "title": "Integrations",
-      "description": "Build Neo4j-backed APIs and apps with GraphQL and Spring Data.",
+      "description": "Build Neo4j-backed APIs and apps with GraphQL, Spring Data, and Laravel.",
       "skills": [
         "neo4j-graphql-skill",
-        "neo4j-spring-data-skill"
+        "neo4j-spring-data-skill",
+        "neo4j-laravel-boost-skill"
       ]
     },
     {
