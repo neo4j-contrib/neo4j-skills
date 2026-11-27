@@ -8,7 +8,7 @@ Skill for the official Neo4j JavaScript/TypeScript Driver (v6) — covering:
 - Record access (`.get()`) and common serialization pitfalls
 - Async/await patterns and session close safety (`finally` block)
 - TypeScript types (`Driver`, `Session`, `ManagedTransaction`, `Node<Integer>`)
-- Error handling (`Neo4jError`, `SERVICE_UNAVAILABLE`, retriable errors)
+- Error handling (`Neo4jError`, `neo4j.error.SERVICE_UNAVAILABLE`, retriable errors)
 - Batch writes with `UNWIND`
 
 **Not covered** (see sibling skills):

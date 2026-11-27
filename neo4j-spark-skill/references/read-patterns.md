@@ -10,12 +10,6 @@ Full option reference for `.read.format("org.neo4j.spark.DataSource")`.
 | `query` | Cypher string | Custom MATCH ... RETURN query. Aliases become column names. |
 | `relationship` | `REL_TYPE` | Read relationships of given type. Requires source/target label options. |
 
-## Label Read Sub-Options
-
-| Option | Default | Description |
-|--------|---------|-------------|
-| `node.keys` | — | Comma-separated property names to include as match keys |
-
 ## Relationship Read Sub-Options
 
 | Option | Required | Description |
@@ -27,29 +21,28 @@ Full option reference for `.read.format("org.neo4j.spark.DataSource")`.
 
 | Option | Description |
 |--------|-------------|
-| `query.count` | Cypher count query for partition planning (e.g. `MATCH (n:Person) RETURN count(n)`). Avoids full count scan. |
+| `query.count` | `query` reads only (ignored with a warning on `labels`/`relationship`). Count query returning a field named `count` (e.g. `MATCH (n:Person) RETURN count(n) AS count`) or a plain number. Used for partition planning. |
 
 ## Partition and Performance Options
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `partitions` | `1` | Number of Spark partitions. Connector uses SKIP/LIMIT internally. |
-| `batch.size` | `5000` | Rows per partition batch. |
+| `partitions` | `1` | Number of Spark partitions. Each partition reads a `SKIP`/`LIMIT` window in its own transaction — no shared snapshot. Partitioned `query` reads need a deterministic `ORDER BY`, else rows silently go missing. |
 | `schema.flatten.limit` | `10` | Rows sampled for schema inference (no APOC). Increase for heterogeneous nodes. |
 
 ## Output Columns
 
 **Label scan result columns:**
-- `<id>` — internal Neo4j element ID
+- `<elementId>` — STRING element ID (5.x: `<id>`, numeric internal id)
 - `<labels>` — array of node labels
 - One column per node property
 
 **Relationship scan result columns:**
-- `<rel.id>` — internal relationship ID
+- `<rel.elementId>` — STRING relationship element ID (5.x: `<rel.id>`)
 - `<rel.type>` — relationship type string
-- `<source.id>`, `<source.labels>`, `source.<prop>` — source node fields
-- `<target.id>`, `<target.labels>`, `target.<prop>` — target node fields
-- Relationship property columns at top level
+- `<source.elementId>` (5.x: `<source.id>`), `<source.labels>`, `source.<prop>` — source node fields
+- `<target.elementId>` (5.x: `<target.id>`), `<target.labels>`, `target.<prop>` — target node fields
+- Relationship properties as `rel.<prop>` columns
 
 ## Schema Inference Notes
 
@@ -88,8 +81,16 @@ df = (spark.read.format("org.neo4j.spark.DataSource")
 df = (spark.read.format("org.neo4j.spark.DataSource")
     .option("labels", ":Transaction")
     .option("partitions", "20")
-    .option("batch.size", "10000")
-    .option("query.count", "MATCH (n:Transaction) RETURN count(n)")
+    .load())
+```
+
+### Partitioned query read
+
+```python
+df = (spark.read.format("org.neo4j.spark.DataSource")
+    .option("query", "MATCH (n:Transaction) RETURN n.id AS id, n.amount AS amount ORDER BY n.id")
+    .option("partitions", "20")
+    .option("query.count", "MATCH (n:Transaction) RETURN count(n) AS count")
     .load())
 ```
 
@@ -101,5 +102,5 @@ df = (spark.read.format("org.neo4j.spark.DataSource")
     .option("relationship.source.labels", ":Person")
     .option("relationship.target.labels", ":Movie")
     .load())
-# Columns: <rel.id>, <rel.type>, <source.id>, source.name, <target.id>, target.title, roles
+# Columns (6.x): <rel.elementId>, <rel.type>, <source.elementId>, <source.labels>, source.name, <target.elementId>, <target.labels>, target.title, rel.roles
 ```

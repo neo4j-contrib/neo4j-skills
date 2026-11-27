@@ -212,3 +212,6 @@ __marimo__/
 
 # Intellij
 .idea
+
+# gbuild harness store (local-only state)
+.gbuild/

@@ -9,7 +9,7 @@ description: Design, review, and refactor Neo4j graph data models. Use when choo
   Does NOT handle Spring Data Neo4j entity mapping — use neo4j-spring-data-skill.
   Does NOT handle GraphQL type definitions — use neo4j-graphql-skill.
   Does NOT handle data import — use neo4j-import-skill.
-version: 1.0.1
+version: 1.0.8
 allowed-tools: WebFetch Bash
 ---
 
@@ -63,13 +63,13 @@ MCP tool map:
 2. Nodes = entities (nouns) with identity; rels = connections (verbs) with direction
 3. Labels PascalCase; rel types SCREAMING_SNAKE_CASE; properties camelCase
 4. Every node type used in MERGE has a uniqueness constraint on its key property
-5. Add property type constraints (`REQUIRE n.prop IS :: STRING`) where the type is known — helps the query planner and catches bad writes early
+5. Add property type constraints (`REQUIRE n.prop IS :: STRING`) where type known — catches bad writes early. **Enterprise only**; Community: use uniqueness constraints, validate types in app
 6. No generic labels (`:Entity`, `:Node`, `:Thing`); no generic rel types (`:RELATED_TO`, `:HAS`)
 7. Security labels (used for row-level access control) should start with a common prefix (e.g. `Sec`) so application code can reliably filter them out of the domain schema
 8. Rel direction encodes semantic meaning — not arbitrary
 9. Inspect schema before proposing any change on an existing database
 10. All constraint/index DDL uses `IF NOT EXISTS` — safe to rerun
-11. **On Neo4j 2026.02+ (Enterprise/Aura):** consider `ALTER CURRENT GRAPH TYPE SET { … }` or `EXTEND GRAPH TYPE WITH { … }` to declare the full model in one block instead of individual `CREATE CONSTRAINT` statements — see `neo4j-cypher-skill/references/graph-type.md`. **PREVIEW** — syntax may change before GA.
+11. **On Neo4j 2026.06+ (Enterprise/Aura, GA):** declare the full model in one block with `ALTER CURRENT GRAPH TYPE SET { … }`, extend it with `ALTER CURRENT GRAPH TYPE ADD { … }`, instead of individual `CREATE CONSTRAINT` statements — details in `neo4j-cypher-skill` (GRAPH TYPE reference). Not on Community (`ALTER CURRENT GRAPH TYPE SET` → "not supported in community edition"): use individual constraints. On 2026.02–2026.05 syntax is preview.
 
 ---
 
@@ -98,6 +98,8 @@ MCP tool map:
 
 Rule: adding a label is cheap; scanning all `:Label` nodes is fast. Never model high-cardinality values as labels.
 
+Low-cardinality state such as `status`: label (`:Active`) if stable category used for traversal/filter; property if changes often or only returned with node. Never a `(:Status)` node.
+
 ---
 
 ### Intermediate Node Pattern
@@ -120,9 +122,10 @@ Use when a relationship needs its own properties, connects >2 entities, or is in
 ```cypher
 // Find colleagues who overlapped at same company
 MATCH (p1:Person)-[:WORKED_AT]->(e1:Employment)-[:AT]->(c:Company)<-[:AT]-(e2:Employment)<-[:WORKED_AT]-(p2:Person)
-WHERE p1 <> p2
-  AND e1.startDate <= e2.endDate AND e2.startDate <= e1.endDate
-RETURN p1.name, p2.name, c.name
+WHERE elementId(p1) < elementId(p2)
+  AND e1.startDate <= coalesce(e2.endDate, date())
+  AND e2.startDate <= coalesce(e1.endDate, date())
+RETURN DISTINCT p1.name, p2.name, c.name
 ```
 
 Promote relationship to intermediate node when:
@@ -139,7 +142,7 @@ Promote relationship to intermediate node when:
 |---|---|---|
 | Table row | Node | One label per table (add more as needed) |
 | Column (scalar) | Node property | |
-| Primary key | Uniqueness constraint property | Use `tmdbId`, not `id` (too generic) |
+| Primary key | Uniqueness constraint property | Prefer `tmdbId`/`personId` over bare `id` |
 | Foreign key | Relationship | Direction: from dependent → referenced |
 | Many-to-many junction table | Intermediate node | Especially if junction has own columns |
 | Junction table (no own columns) | Direct relationship | Simpler; upgrade to intermediate node later |
@@ -223,13 +226,21 @@ CREATE CONSTRAINT person_born_integer IF NOT EXISTS
 CREATE CONSTRAINT movie_tmdbid_key IF NOT EXISTS
   FOR (m:Movie) REQUIRE m.tmdbId IS NODE KEY;
 
+// 4b. Community alternative to NODE KEY — composite uniqueness (existence not enforced)
+CREATE CONSTRAINT movie_title_released_unique IF NOT EXISTS
+  FOR (m:Movie) REQUIRE (m.title, m.released) IS UNIQUE;
+
 // 5. Range index — equality and range filters on properties
 CREATE INDEX person_name_idx IF NOT EXISTS
   FOR (p:Person) ON (p.name);
 
-// 6. Fulltext index — CONTAINS, STARTS WITH, free text search
+// 6. Fulltext index — ranked free-text search via `SEARCH ... FULLTEXT INDEX` [2026.09] (`db.index.fulltext.queryNodes` deprecated 2026.10) (Lucene syntax, wildcards like `An*`); not used for CONTAINS / STARTS WITH predicates
 CREATE FULLTEXT INDEX person_fulltext IF NOT EXISTS
   FOR (n:Person) ON EACH [n.name, n.bio];
+
+// 6b. Text index — serves CONTAINS / STARTS WITH / ENDS WITH (range index preferred for STARTS WITH when present)
+CREATE TEXT INDEX person_bio_text IF NOT EXISTS
+  FOR (n:Person) ON (n.bio);
 
 // 7. Vector index — embedding similarity search
 CREATE VECTOR INDEX chunk_embedding_idx IF NOT EXISTS
@@ -251,7 +262,7 @@ Do NOT use an index until state = `ONLINE`.
 
 ### Vector / Embedding Property Modeling
 
-Store embeddings on dedicated `:Chunk` nodes, never on business nodes:
+Prefer dedicated `:Chunk` nodes for long text; short-text embeddings can live on the entity:
 
 ```
 (:Document)-[:HAS_CHUNK]->(c:Chunk {text: "...", embedding: [...]})
@@ -262,7 +273,7 @@ Rules:
 - Parent document: metadata only (title, url, createdAt)
 - Vector index on `c.embedding` only
 - Chunk size 200–500 tokens with 20% overlap is production default [field]
-- Do NOT put embedding on `:Document` — makes the node too large and pollutes traversal
+- Chunked docs: do NOT put embedding on `:Document` — makes node too large, pollutes traversal
 
 ---
 
@@ -354,7 +365,6 @@ Severity semantics:
 ## References
 
 Load on demand:
-- [references/modeling-patterns.md](references/modeling-patterns.md) — time-series, versioning, multi-tenancy, linked list, access control patterns
 - [Neo4j Data Modeling Guide](https://neo4j.com/docs/getting-started/data-modeling/guide-data-modeling/)
 - [Neo4j Modeling Tips](https://neo4j.com/docs/getting-started/data-modeling/modeling-tips/)
 - [GraphAcademy: Graph Data Modeling Fundamentals](https://graphacademy.neo4j.com/courses/modeling-fundamentals/)

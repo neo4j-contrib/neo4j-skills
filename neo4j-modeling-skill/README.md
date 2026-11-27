@@ -6,8 +6,8 @@ Guides agents through designing and reviewing Neo4j graph data models: node labe
 
 **Install:**
 ```bash
-npx skills add https://github.com/neo4j-contrib/neo4j-skills --skill neo4j-modeling-skill
+npx skills add https://github.com/neo4j/agent-skills --skill neo4j-modeling-skill
 ```
 
 Or paste this link into your coding assistant:
-https://github.com/neo4j-contrib/neo4j-skills/tree/main/neo4j-modeling-skill
+https://github.com/neo4j/agent-skills/tree/main/neo4j-modeling-skill

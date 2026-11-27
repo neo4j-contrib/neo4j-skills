@@ -16,13 +16,18 @@ Read plans bottom-up: leaf operators at bottom, `ProduceResults` at top.
 | `NodeIndexSeek` | ✓ | Equality/range predicate satisfied via RANGE or LOOKUP index. Optimal. |
 | `NodeUniqueIndexSeek` | ✓ | Unique constraint index hit. Optimal. |
 | `NodeIndexScan` | ~ | Full scan of an index (no predicate selectivity). Faster than label scan; still linear. |
-| `NodeIndexContainsScan` | ✓ | TEXT index CONTAINS/STARTS WITH. Requires TEXT index on property. |
+| `NodeIndexContainsScan` | ✓ | TEXT index `CONTAINS` only. Requires TEXT index on property. |
+| `NodeIndexSeekByRange` | ✓ | Range predicate via RANGE index, or `STARTS WITH` via RANGE or TEXT index (not `NodeIndexContainsScan`). |
 | `NodeIndexEndsWithScan` | ✓ | TEXT index ENDS WITH. Requires TEXT index on property. |
 | `RelationshipIndexSeek` | ✓ | Relationship property index hit. |
 | `RelationshipByIdSeek` | ✓ | Lookup by relationship ID. |
 | `DirectedRelationshipByIdSeek` | ✓ | Directed rel by ID. |
 | `UndirectedRelationshipByIdSeek` | ~ | Undirected rel scan — matches twice (both directions). |
 | `NodeByElementIdSeek` | ✓ | Lookup by `elementId()` string. Preferred over `id()`. |
+| `RemoteNodeIndexSeek` | ✓ | [2026.07, Infinigraph] Batches index seeks inside a loop (`Apply`) across property shards. |
+| `RemoteUniqueNodeIndexSeek` | ✓ | [2026.07, Infinigraph] Same batching for unique index seeks. |
+| `RemoteBatchProperties` | ✓ | [2026.01, Infinigraph] Fetches and caches shard properties per batch of rows; shows as `cache[n.prop]`. |
+| `RemoteBatchPropertiesWithFilter` | ✓ | [2026.01, Infinigraph] Same, with the predicate evaluated on the shard — fewer rows returned to the graph shard. |
 | `Argument` | — | Passes outer scope variables into subquery. |
 
 ---
@@ -85,7 +90,7 @@ Read plans bottom-up: leaf operators at bottom, `ProduceResults` at top.
 | `Sort` | ✗ | Eager full sort — O(n log n). Materialises all rows. Add LIMIT to convert to Top. |
 | `Top` | ✓ | Sort+Limit combined — O(n log k). Preferred; only keeps top k in memory. |
 | `Top1` | ✓ | Single min/max — O(n). |
-| `Limit` | ✓ | Truncates rows non-eagerly. Push as early as possible in the plan. |
+| `Limit` | ✓ | Truncates rows non-eagerly. Push early only where it can't change which rows win (not before `ORDER BY` or aggregation). |
 | `Skip` | ~ | Offset pagination. Linear scan to skip position. Use keyset pagination for large offsets. |
 | `PartialSort` | ~ | Sort within already-grouped prefix. More efficient than full Sort. |
 | `PartialTop` | ✓ | Top within grouped prefix. |
@@ -118,6 +123,16 @@ Read plans bottom-up: leaf operators at bottom, `ProduceResults` at top.
 | `AssertSameNode` | Verifies MERGE did not create duplicate (unique constraint enforcement). |
 | `TransactionForeach` | CALL IN TRANSACTIONS outer loop. |
 | `TransactionApply` | CALL IN TRANSACTIONS inner execution. |
+
+`IN CONCURRENT TRANSACTIONS` [2026.10]: PROFILE `Concurrency` column on `TransactionApply` / `TransactionForeach` = peak + average batches running at once. Profiled plan returned to drivers also carries concurrency limit, queued batches, retries.
+
+| Symptom | Bottleneck |
+|---|---|
+| Peak/avg concurrency ≪ configured limit, few queued batches | Input too small or batches too large — lower `OF n ROWS` |
+| Many queued batches, low avg concurrency | Batch scheduling conflicts — check `DISJOINT BY` key partitions writes |
+| High retries | Transient errors (lock contention / deadlocks) between batches |
+
+Query log (`internal.dbms.logs.query.log_query_statistics=true`, JSON log) records per query: `concurrentTransactionsConcurrencyLimit`, `concurrentTransactionsPeakConcurrency`, `concurrentTransactionsAvgConcurrency`, `concurrentTransactionsPeakQueuedBatches`, `concurrentTransactionsAvgQueuedBatches`, `concurrentTransactionsRetries`.
 | `Union` | Combines UNION branches. |
 | `LoadCSV` | LOAD CSV row reader. |
 | `Foreach` | FOREACH loop (write only, no RETURN). |

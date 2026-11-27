@@ -121,7 +121,7 @@ Extended model (add as needed):
 (Transaction)-[:VIA]->(Device {deviceId, ip})
 ```
 
-**Why PERFORMS/BENEFITS_TO (not FROM/TO on Transaction):** `(a)-[:PERFORMS]->()-[:BENEFITS_TO]->(b)` creates a direct Account→Account traversal path chainable as variable-length paths for cycle detection. Transaction-centric models `(tx)-[:FROM]->(a)` require more complex patterns and are harder to chain.
+**Why PERFORMS/BENEFITS_TO (not FROM/TO on Transaction):** `(a)-[:PERFORMS]->()-[:BENEFITS_TO]->(b)` creates an Account→Transaction→Account step; repeat the whole step with a quantified path pattern `((:Account)-[:PERFORMS]->(:Transaction)-[:BENEFITS_TO]->(:Account)){1,5}` for cycle detection. A variable-length relationship (`-[:BENEFITS_TO*1..5]->`) does not chain, because the step mixes two relationship types. Transaction-centric models `(tx)-[:FROM]->(a)` require more complex patterns and are harder to chain.
 
 ### DDL
 ```cypher
@@ -135,12 +135,15 @@ CREATE INDEX transaction_amount IF NOT EXISTS FOR (t:Transaction) ON (t.amount);
 
 ### Key queries
 ```cypher
-// Transaction rings — accounts cycling funds (3–6 hops back to origin)
+// Transaction rings — funds cycling back to the origin account (1–5 transfers)
 // This is the canonical fraud ring query; SQL cannot do this efficiently
+// Quantified path pattern repeats the whole Account→Transaction→Account step;
+// BENEFITS_TO*1..5 alone cannot chain (it ends on an Account, which has no outgoing BENEFITS_TO)
 CYPHER 25
-MATCH path = (start:Account)-[:PERFORMS]->(:Transaction)-[:BENEFITS_TO*1..5]->(start)
-WHERE ALL(n IN nodes(path) WHERE n:Account OR n:Transaction)
-WITH start, length(path) AS ringLength, path
+MATCH path = (start:Account)
+             ((:Account)-[:PERFORMS]->(:Transaction)-[:BENEFITS_TO]->(:Account)){1,5}
+             (start)
+WITH start, length(path) / 2 AS ringLength, path
 ORDER BY ringLength
 RETURN start.accountId AS originAccount, ringLength, 
        [n IN nodes(path) WHERE n:Account | n.accountId] AS ring

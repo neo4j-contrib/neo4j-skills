@@ -9,7 +9,7 @@ description: Neo4j Python Driver v6 — driver lifecycle, execute_query, managed
   Does NOT handle Cypher query authoring — use neo4j-cypher-skill.
   Does NOT cover driver upgrades or breaking changes — use neo4j-migration-skill.
   Does NOT cover GraphRAG pipelines (neo4j-graphrag package) — use neo4j-graphrag-skill.
-version: 1.0.1
+version: 1.0.12
 allowed-tools: Bash WebFetch
 ---
 
@@ -33,7 +33,9 @@ pip install neo4j                  # package name is `neo4j`, NOT `neo4j-driver`
 pip install neo4j-rust-ext         # optional: 3–10× faster serialization, same API
 ```
 
-**Python >=3.10 required** for v6.x.
+**Python >=3.10 required** for v6.x. Python 3.14 supported [6.1+]. Pandas 3 and PyArrow 23/24 supported [6.2+]. PyArrow 25 and Bolt 6.1 `uuid.UUID` values supported [6.3+]; driver-created SSL contexts honour `SSLKEYLOGFILE` [6.3+]. Python 3.15 supported [6.4+]. Pin `neo4j>=6.4.1` — 6.4.0 can spin forever on pool acquisition and double-encodes bearer tokens over HTTP Query API.
+
+Neo4j 2026.08+ `UUID` properties require `neo4j>=6.3` to round-trip as `uuid.UUID`. Storing UUID needs block store format (Enterprise); Community (aligned format) fails: `storing properties of type UUID is not supported in aligned store format` — store `str(uuid)`.
 
 ---
 
@@ -95,8 +97,11 @@ URI schemes:
 | `neo4j://` | Unencrypted + cluster routing |
 | `bolt+s://` | TLS, single instance |
 | `bolt://` | Unencrypted, single instance |
+| `https://` / `http://` (e.g. `https://host:7474/`) | HTTP Query API instead of Bolt [6.4+, preview] — `pip install "neo4j[http]"` |
 
 Auth options: `("user", "pass")` tuple, `basic_auth()`, `bearer_auth("jwt")`, `kerberos_auth("b64")`.
+
+HTTP Query API [6.4+, preview — no semver guarantee]: pass `database_=` / `database=` on every call (no home-database resolution); auth `basic` (no realm) or `bearer` only. Ignored/unsupported: tx metadata + timeouts, `fetch_size` (no backpressure), notification filters; `VECTOR`, `UUID`, `UnsupportedType` cannot be exchanged. Needs Bolt for any of these → use `neo4j+s://` / `bolt+s://`.
 
 ---
 
@@ -148,10 +153,10 @@ import neo4j
 df      = driver.execute_query("MATCH (p:Person) RETURN p.name, p.age", database_="neo4j",
                                 result_transformer_=neo4j.Result.to_df)
 record  = driver.execute_query("MATCH (p:Person {name:$n}) RETURN p", n="Alice", database_="neo4j",
-                                result_transformer_=neo4j.Result.single)   # raises if 0 or 2+ results
+                                result_transformer_=neo4j.Result.single)   # None if 0 rows; first record + warning if 2+
 ```
 
-`Result.single()` raises `ResultNotSingleError` on **zero** results (not just 2+). Use `single(strict=False)` for None-on-empty.
+`Result.single()` defaults to `strict=False`: **0** rows → `None`; **2+** rows → first record + warning (no exception). Only `single(strict=True)` raises `ResultNotSingleError` (0 or 2+). Use `strict=True` when exactly one row required, e.g. `result_transformer_=lambda r: r.single(strict=True)`; else check for `None`.
 
 ---
 
@@ -300,19 +305,19 @@ record["name"]               # by key — KeyError if absent
 record[0]                    # by index
 record.get("name")           # None for absent key OR graph null
 record.get("name", "Unknown")
-d = record.data()            # dict — values still driver objects for Node/Rel/temporal types
+d = record.data()            # dict — Node → dict of properties, Relationship → tuple, Path → list; temporal values stay driver objects
 ```
 
-`record.data()` is **not JSON-safe** if result contains `Node`, `Relationship`, `Path`, or `neo4j.time.*` values. Project scalar fields in Cypher instead of returning whole nodes.
+`record.data()`: `Node` → `dict` of properties, `Relationship` → `(start_props, type, end_props)` tuple (own properties dropped), `Path` → list. `json.dumps` accepts these but loses labels, element IDs, relationship properties. `neo4j.time.Date`/`Time`/`DateTime` stay driver objects → `json.dumps` raises `TypeError`. Project needed scalars in Cypher (`toString()` temporals); don't return whole entities.
 
 ```python
-# ❌ raises TypeError on json.dumps
-records, _, _ = driver.execute_query("MATCH (p:Person) RETURN p", database_="neo4j")
+# ❌ raises TypeError on json.dumps (temporal value)
+records, _, _ = driver.execute_query("MATCH (p:Person) RETURN p.name AS name, p.created_at AS created_at", database_="neo4j")
 json.dumps(records[0].data())
 
 # ✅ project scalars
 records, _, _ = driver.execute_query(
-    "MATCH (p:Person) RETURN p.name AS name, p.age AS age", database_="neo4j")
+    "MATCH (p:Person) RETURN p.name AS name, p.age AS age, toString(p.created_at) AS created_at", database_="neo4j")
 json.dumps(records[0].data())   # safe
 ```
 
@@ -391,9 +396,9 @@ Full performance patterns → [references/performance.md](references/performance
 | Sync driver inside asyncio | Use `AsyncGraphDatabase` — sync blocks event loop |
 | Async driver created per request | Singleton — create once at startup |
 | Leaked sessions | `with driver.session(...) as session` always |
-| `json.dumps(record.data())` with node/temporal | Project scalars in Cypher or convert explicitly |
+| `json.dumps(record.data())` with temporal values | `TypeError` — `toString()` in Cypher or convert. Whole nodes/relationships serialize but lose labels, IDs, relationship properties — project scalars |
 | `result["name"]` on `EagerResult` | Index `result.records[0]["name"]` or unpack `records, _, _ = ...` |
-| `Result.single()` returns None for 0 results | It raises — use `single(strict=False)` |
+| Assuming `Result.single()` raises on 0 or 2+ rows | Default `strict=False`: `None` (0 rows) or first record + warning (2+). `single(strict=True)` raises |
 | `@unit_of_work` on lambda | Use named function |
 | `Neo4jError` caught before `ConstraintError` | Catch `ConstraintError` first — it's a subclass |
 | `neo4j-driver` package name | Package is `neo4j` since v6; `neo4j-driver` deprecated |

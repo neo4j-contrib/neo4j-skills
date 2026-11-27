@@ -12,7 +12,7 @@ driver = GraphDatabase.driver(URI, auth=AUTH,
 )
 ```
 
-Each open session holds a connection. Leaked sessions exhaust the pool — new sessions block until `connection_acquisition_timeout` then raise `ClientError`. Always use `with driver.session(...) as session`.
+Each open session holds a connection. Leaked sessions exhaust the pool — new sessions block until `connection_acquisition_timeout` then raise `ConnectionAcquisitionTimeoutError` (a `DriverError`, not `ClientError`/`Neo4jError` — `except Neo4jError` misses it). Always use `with driver.session(...) as session`.
 
 ## Batch Writes — Three Patterns
 
@@ -110,8 +110,8 @@ with driver.session(database="neo4j") as session_b:
     bookmarks_b = session_b.last_bookmarks()
 
 combined = Bookmarks.from_raw_values(
-    *bookmarks_a.raw_values, *bookmarks_b.raw_values
-)
+    [*bookmarks_a.raw_values, *bookmarks_b.raw_values]
+)  # one iterable; or: bookmarks_a + bookmarks_b
 
 with driver.session(database="neo4j", bookmarks=combined) as session_c:
     session_c.execute_write(

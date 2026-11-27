@@ -29,8 +29,8 @@ Skill for creating and querying vector indexes in Neo4j for semantic or structur
 
 **Install:**
 ```bash
-npx skills add https://github.com/neo4j-contrib/neo4j-skills --skill neo4j-vector-index-skill
+npx skills add https://github.com/neo4j/agent-skills --skill neo4j-vector-index-skill
 ```
 
 Or paste this link into your coding assistant:
-https://github.com/neo4j-contrib/neo4j-skills/tree/main/neo4j-vector-index-skill
+https://github.com/neo4j/agent-skills/tree/main/neo4j-vector-index-skill

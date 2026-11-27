@@ -11,7 +11,7 @@ Severity: **[ALWAYS]** fix unconditionally. **[USUALLY]** fix unless confirmed r
 | `MATCH (n)` label-free | [ALWAYS] | AllNodesScan | Add label: `MATCH (n:Person)` — indexes require a label |
 | `MATCH ()-[r]->()` label-free rel | [ALWAYS] | Full rel scan | `MATCH (n:User)-[r:POSTS]->()` |
 | Assumed stored GDS props (`n.pageRank`) | [ALWAYS] | Property doesn't exist unless `.write` ran | Stream via `.stream` procedure |
-| `CONTAINS`/`ENDS WITH` without a text index | [ALWAYS] | Range index does not support these; causes full label scan | `CREATE TEXT INDEX idx FOR (n:Label) ON (n.prop)` |
+| `CONTAINS`/`ENDS WITH` without a text index | [ALWAYS] | Range index can only scan all values for these (less efficient); no index → full label scan | `CREATE TEXT INDEX idx FOR (n:Label) ON (n.prop)` |
 | `MATCH (u)-[:R]->(t1), (u)-[:R]->(t2) WHERE t1 <> t2` | [USUALLY] | O(n²) pairs | `collect(t) AS items WHERE size(items) >= 2` |
 | `UNWIND list AS a UNWIND list AS b WHERE a <> b` | [USUALLY] | O(n²) pairs | `LIMIT` before pairing, or sample `list[0..10]` |
 | Chained `OPTIONAL MATCH` for nested optional data | [USUALLY] | Fan-out multiplies row count | `COLLECT { MATCH (a)-[:R]->(b) RETURN b }` |
@@ -25,17 +25,33 @@ Severity: **[ALWAYS]** fix unconditionally. **[USUALLY]** fix unless confirmed r
 | Index type | Supports | Created with | Queried with |
 |---|---|---|---|
 | Text index | `CONTAINS`, `ENDS WITH` | `CREATE TEXT INDEX idx FOR (n:Label) ON (n.prop)` | Standard `WHERE` + optional hint |
-| Fulltext index | Lucene tokenized search with scoring | `CREATE FULLTEXT INDEX idx FOR (n:Label1\|Label2) ON EACH [n.prop1, n.prop2]` | `CALL db.index.fulltext.queryNodes('idx', $query)` |
+| Fulltext index | Lucene tokenized search with scoring | `CREATE FULLTEXT INDEX idx FOR (n:Label1\|Label2) ON EACH [n.prop1, n.prop2]` | `MATCH (n) SEARCH n IN (FULLTEXT INDEX idx FOR $query LIMIT 20) SCORE AS score` |
 
+Text index creation:
 ```cypher
-// Text index
-CREATE TEXT INDEX person_bio FOR (n:Person) ON (n.bio)
-MATCH (n:Person) USING TEXT INDEX n:Person(bio) WHERE n.bio CONTAINS $s RETURN n
+CYPHER 25
+CREATE TEXT INDEX person_bio FOR (n:Person) ON (n.bio);
+```
+Text index query:
+```cypher
+CYPHER 25
+MATCH (n:Person)
+USING TEXT INDEX n:Person(bio)
+WHERE n.bio CONTAINS $s
+RETURN n;
+```
 
-// Fulltext index
-CREATE FULLTEXT INDEX entity FOR (n:Person|Company) ON EACH [n.name, n.description]
-CALL db.index.fulltext.queryNodes('entity', $query) YIELD node, score
-RETURN node.name, score ORDER BY score DESC LIMIT 20
+Fulltext index creation:
+```cypher
+CYPHER 25
+CREATE FULLTEXT INDEX entity FOR (n:Person|Company) ON EACH [n.name, n.description];
+```
+Fulltext index query:
+```cypher
+CYPHER 25
+MATCH (node)
+SEARCH node IN (FULLTEXT INDEX entity FOR $query LIMIT 20) SCORE AS score
+RETURN node.name, score ORDER BY score DESC;
 ```
 
 EXPLAIN / PROFILE red flags: `AllNodesScan`, `CartesianProduct`, `NodeByLabelScan`, `Eager`.
@@ -47,7 +63,7 @@ MATCH (n:Article)
 RETURN count(n), avg(n.sentiment)
 ```
 
-Confirm with EXPLAIN — header must show `Runtime PARALLEL`. Only for large analytical scans; adds overhead for OLTP short-hop lookups.
+Parallel runtime is Enterprise Edition and non-Free Aura only. Community falls back to slotted (notification `01N40`), so no gain there; AuraDB Free rejects it. Confirm with EXPLAIN — header must show `Runtime PARALLEL`. Only for large analytical scans; adds overhead for OLTP short-hop lookups.
 
 ## Eager Operator
 
@@ -151,9 +167,9 @@ LOAD CSV WITH HEADERS FROM 'file:///data.csv' AS row
 CALL (row) {
   MERGE (:Movie {id: row.id})
 } IN 4 CONCURRENT TRANSACTIONS OF 500 ROWS
-  ON ERROR RETRY FOR 30 SECS
+  ON ERROR RETRY FOR 30 SECONDS THEN CONTINUE
 ```
 
-`ON ERROR` options: `FAIL` (default) | `CONTINUE` | `BREAK` | `RETRY FOR N SECS` [2025.03+]
+`ON ERROR` options: `FAIL` (default) | `CONTINUE` | `BREAK` | `RETRY FOR N SECONDS [THEN CONTINUE|BREAK|FAIL]` [2025.03+] (unit `SEC`, `SECOND` or `SECONDS`; `SECS` is a syntax error)
 
 Advantages over `apoc.periodic.iterate`: memory tracking prevents OOM, planner shows execution plan, accurate query statistics, no double entity ID fetch.

@@ -3,11 +3,11 @@ name: neo4j-driver-go-skill
 description: Covers the Neo4j Go Driver v6 — driver lifecycle, ExecuteQuery, managed and
   explicit transactions, session config, error handling, data type mapping, and connection
   tuning. Use when writing Go code that connects to Neo4j, setting up NewDriver or ExecuteQuery,
-  debugging sessions/transactions/result handling, or working with neo4j-go-driver v5→v6 migration.
+  or debugging sessions/transactions/result handling.
   Triggers on NewDriver, ExecuteQuery, SessionConfig, ManagedTransaction, neo4j-go-driver.
   Does NOT handle Cypher query authoring — use neo4j-cypher-skill.
   Does NOT cover driver version migration steps — use neo4j-migration-skill.
-version: 1.0.1
+version: 1.0.9
 allowed-tools: Bash WebFetch
 ---
 
@@ -137,6 +137,21 @@ neo4j.ExecuteQueryWithoutBookmarkManager()       // opt out of causal consistenc
 
 ❌ Never concatenate user input into query strings. Always use `map[string]any` parameters.
 
+Struct parameters [v6.2.0+, Object Mapping preview] — a struct (or pointer) in `params` is sent as a Cypher map; same rules in `Session.Run`, `ManagedTransaction.Run`, `ExplicitTransaction.Run`:
+```go
+type Person struct {
+    Name     string `neo4j:"name"`
+    Age      int    `neo4j:"age,omitempty"`  // zero value dropped
+    Internal string `neo4j:"-"`              // never sent
+}
+_, err := neo4j.ExecuteQuery(ctx, driver,
+    "MERGE (p:Person {name: $person.name}) SET p += $person",
+    map[string]any{"person": Person{Name: "Alice", Age: 30}},
+    neo4j.EagerResultTransformer,
+    neo4j.ExecuteQueryWithDatabase("neo4j"),
+)
+```
+
 ---
 
 ## Managed Transactions (Session-Based)
@@ -243,9 +258,16 @@ In managed tx callback: return error → driver retries if transient.
 | `Relationship` | `neo4j.Relationship` |
 | `Path` | `neo4j.Path` |
 | `Date` | `neo4j.Date` |
-| `DateTime` | `neo4j.Time` |
+| `DateTime` | `time.Time` |
+| `LocalDateTime` | `neo4j.LocalDateTime` |
+| `Time` | `neo4j.Time` (= `dbtype.Time`, alias `OffsetTime`) |
+| `LocalTime` | `neo4j.LocalTime` |
+| `Point` | `neo4j.Point2D` / `neo4j.Point3D` |
 | `Duration` | `neo4j.Duration` |
+| `UUID` | `neo4j.UUID` (= `dbtype.UUID`, `[16]byte` RFC 9562) — v6.2.0+, Bolt 6.1; parse with `dbtype.ParseUUID(s)`, render with `.String()` |
 | `null` | `nil` |
+
+Pin v6.4.0+ for temporal writes: earlier sends pre-1970 `Date` as next day, `dbtype.Time` an hour off on DST change days, `time.Time` with wrong offset when zone name resolves differently at that instant.
 
 ```go
 // Typed extraction (v6+, preferred):
@@ -326,6 +348,26 @@ node, _, _ := neo4j.GetRecordValue[neo4j.Node](record, "p")
 nameVal, err := neo4j.GetProperty[string](node, "name")
 ```
 
+Result mapping [v6.3.0+, Object Mapping preview] — map records onto `neo4j`-tagged structs (same tags as struct parameters):
+```go
+type Person struct {
+    Name string `neo4j:"name"`
+    Age  int    `neo4j:"age"`   // INTEGER converted; lossy conversion → error, not truncation
+}
+
+// EagerResult from ExecuteQuery
+res, err := neo4j.ExecuteQuery(ctx, driver,
+    "MATCH (p:Person) RETURN p.name AS name, p.age AS age LIMIT 25",
+    nil, neo4j.EagerResultTransformer, neo4j.ExecuteQueryWithDatabase("neo4j"))
+people, err := neo4j.CollectRecordsAs[Person](res.Records)
+
+// Streaming Result inside a transaction
+all, err := neo4j.CollectAs[Person](ctx, result)      // all records
+person, err := neo4j.SingleAs[Person](ctx, result)    // exactly one record
+p, err := neo4j.As[Person](record)                    // single record
+```
+Mapping rules: one column holding a node, relationship, or map → its properties map to fields; otherwise columns map by name. Missing/null → zero value; extra columns ignored.
+
 ### Spatial Types
 
 ```go
@@ -395,9 +437,9 @@ Cross-session (parallel workers): combine bookmarks explicitly — see [referenc
 ## References
 
 Load on demand:
-Load on demand:
-- [references/advanced-config.md](references/advanced-config.md) — connection pool tuning, custom address resolver, notification config, Bolt logging, auth options, URI scheme table
+- [references/advanced-config.md](references/advanced-config.md) — connection pool tuning, custom address resolver, notification config, Bolt logging, auth options, URI scheme table, deprecated result-summary accessors (`Profile()` → `QueryProfile()`)
 - [references/repository-pattern.md](references/repository-pattern.md) — repository wrapper pattern, cross-session causal consistency with bookmarks
+- [references/property-encryption.md](references/property-encryption.md) — Property Encryption preview [v6.4.0+]: `EnvelopeProfile`, local key encapsulation, user key repository, `EncryptWithAAD` / `DecryptWithAAD`
 
 ## WebFetch
 

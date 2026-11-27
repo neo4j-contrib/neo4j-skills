@@ -1,6 +1,6 @@
 # NVL — API Surface Reference
 
-Source: `@neo4j-nvl/base@1.1`, `@neo4j-nvl/interaction-handlers@1.1`, `@neo4j-nvl/react@1.1`.
+Source: `@neo4j-nvl/base@2.0`, `@neo4j-nvl/interaction-handlers@2.0`, `@neo4j-nvl/react@2.0`.
 
 ## Packages
 
@@ -41,7 +41,7 @@ new NVL(
 
 | Method | Signature |
 |---|---|
-| `getNodes` | `() => Node[]` |
+| `getNodes` | `() => NodeWithClientPosition[]` |
 | `getRelationships` | `() => Relationship[]` |
 | `getNodeById` | `(id: string) => Node` |
 | `getRelationshipById` | `(id: string) => Relationship` |
@@ -93,7 +93,7 @@ new NVL(
 ```typescript
 getHits(
   evt: MouseEvent,
-  targets?: ('node' | 'relationship')[],     // default ['node','relationship']
+  targets?: ('node' | 'relationship' | 'cluster')[], // default: all three
   hitOptions?: { hitNodeMarginWidth: number } // default 0
 ): NvlMouseEvent
 ```
@@ -132,6 +132,16 @@ getHits(
 | `html` | `HTMLElement` | DOM overlay |
 | `overlayIcon` | `{ url: string; position?: number[]; size?: number }` | |
 
+`getNodes()` and `onLayoutStep` use:
+
+```typescript
+type NodeWithClientPosition = Node & Point & {
+  clientPosition: Point
+}
+```
+
+`x` and `y` are canvas/layout coordinates. `clientPosition` is relative to the canvas element.
+
 ### `Relationship`
 
 | Field | Type | Notes |
@@ -162,13 +172,14 @@ type PartialRelationship = Partial<Relationship> & { id: string }
 | `instanceId` | `string` | — | |
 | `layout` | `Layout` | `'forceDirected'` | See Layout enum below |
 | `layoutOptions` | `LayoutOptions` | — | Layout-specific |
-| `layoutTimeLimit` | `number` | — | ms cap for layout iteration |
+| `minFps` | `number` | `3` | Minimum presentation target while layout is active; capped to `1..120` |
+| `maxFps` | `number` | `30` | Maximum presentation target while layout is active; capped to `1..120` |
 | `minZoom` | `number` | `0.075` | |
 | `maxZoom` | `number` | `10` | |
 | `allowDynamicMinZoom` | `boolean` | `true` | Permits going below `minZoom` to fit |
 | `initialZoom` | `number` | — | |
 | `panX` / `panY` | `number` | — | |
-| `renderer` | `'canvas' \| 'webgl'` | `'canvas'` | |
+| `renderer` | `'canvas' \| 'webgl'` | `'canvas'` | WebGL is WebGL2-only and does not render captions |
 | `disableWebGL` | `boolean` | `false` | Force-off WebGL even if requested |
 | `disableWebWorkers` | `boolean` | `false` | Use synchronous layout fallback |
 | `disableTelemetry` | `boolean` | `false` | |
@@ -190,7 +201,8 @@ type PartialRelationship = Partial<Relationship> & { id: string }
 | `dropShadowColor` | `string` |
 | `disabledItemColor` | `string` |
 | `disabledItemFontColor` | `string` |
-| `minimapViewportBoxColor` | `string` |
+| `overlayLineColor` | `string` |
+| `minimapViewportBoxColor` | `string` (deprecated; use `overlayLineColor`) |
 
 ### Layout enum + constants
 
@@ -212,13 +224,24 @@ CircularLayoutType        // 'circular'
 type LayoutOptions = ForceDirectedOptions | HierarchicalOptions | CircularOptions
 
 interface ForceDirectedOptions {
-  intelWorkaround?: boolean   // workaround for Intel GPU shader issues; requires restart
-  enableCytoscape?: boolean   // deprecated; auto-cose for small graphs
+  seedingMethod?: 'box' | 'circle'
+  clustering?: ClusteringOptions
+}
+
+type ClusterId = string | number
+type ClusterByFn = (nodeId: string) => ClusterId | undefined
+
+interface ClusteringOptions {
+  clusterBy?: ClusterByFn
+  drawOutline?: boolean
+  drawHalo?: boolean
+  crossClusterRelationshipMultiplier?: number // experimental, capped to 0..1
 }
 
 interface HierarchicalOptions {
   direction?: 'up' | 'down' | 'left' | 'right'
   packing?:   'bin' | 'stack'
+  clusterBy?: ClusterByFn // experimental
 }
 
 interface CircularOptions {
@@ -269,7 +292,7 @@ type Point = { x: number; y: number }
 |---|---|
 | `onInitialization` | `() => void` |
 | `onLayoutDone` | `() => void` |
-| `onLayoutStep` | `(nodes: Node[]) => void` |
+| `onLayoutStep` | `(nodes: NodeWithClientPosition[]) => void` |
 | `onLayoutComputing` | `(isComputing: boolean) => void` |
 | `onError` | `(error: Error) => void` |
 | `onWebGLContextLost` | `(event: WebGLContextEvent) => void` |
@@ -288,6 +311,7 @@ interface NvlMouseEvent extends MouseEvent {
 type HitTargets = {
   nodes:         HitTargetNode[]
   relationships: HitTargetRelationship[]
+  clusters:      HitTargetCluster[]
 }
 
 interface HitTargetNode {
@@ -306,6 +330,17 @@ interface HitTargetRelationship {
   pointerCoordinates:     Point
   distance:               number
 }
+
+type Cluster = {
+  id: string | number
+  nodeIds: string[]
+}
+
+interface HitTargetCluster {
+  data:               Cluster
+  pointerCoordinates: Point
+  hull:                Point[]
+}
 ```
 
 ---
@@ -313,15 +348,14 @@ interface HitTargetRelationship {
 ## `nvlResultTransformer`
 
 ```typescript
-import type { ResultTransformer, EagerResult } from 'neo4j-driver'
-
-const nvlResultTransformer: ResultTransformer<
-  EagerResult,
-  { nodes: Node[]; relationships: Relationship[] }
->
+const nvlResultTransformer: ResultTransformer<{
+  nodes: Node[]            // { id } only (element id)
+  relationships: Relationship[]  // { id, from, to } only
+  recordObjectMap: Map<string, DriverNode | DriverRelationship | Path>  // element id -> driver element
+}>
 ```
 
-Usage: `driver.executeQuery(cypher, params, { database: 'neo4j', resultTransformer: nvlResultTransformer })`. Returns deduplicated `{ nodes, relationships }`.
+Usage: `driver.executeQuery(cypher, params, { database: 'neo4j', resultTransformer: nvlResultTransformer })`. Collects nodes/relationships from top-level values, lists and paths; nodes nested in maps are skipped. Not deduplicated — `nodes` may repeat ids. No captions, labels, properties or relationship `type`: map them from `recordObjectMap` and deduplicate by `id` before rendering.
 
 ---
 
@@ -346,9 +380,12 @@ export {
 
 // types
 export type {
-  NvlOptions, Renderer, Node, Relationship, PartialNode, PartialRelationship,
-  Layout, LayoutOptions, ForceDirectedOptions, HierarchicalOptions, CircularOptions,
+  NvlOptions, Renderer, Node, NodeWithClientPosition, Relationship,
+  PartialNode, PartialRelationship,
+  Layout, LayoutOptions, ForceDirectedOptions, ClusteringOptions,
+  Cluster, ClusterByFn, ClusterId, HierarchicalOptions, CircularOptions,
   ExternalCallbacks, HitTargets, HitTargetNode, HitTargetRelationship,
+  HitTargetCluster, HitTestTarget,
   Point, NvlMouseEvent, ZoomOptions, StyledCaption,
   WebGLRendererType, CanvasRendererType
 }
@@ -380,7 +417,6 @@ new ZoomInteraction(nvl, options?: { controlledZoom?: boolean })
 
 | Event | Signature |
 |---|---|
-| `onZoom` | `(zoomLevel: number, event: WheelEvent) => void` |
 | `onZoomAndPan` | `(zoomLevel: number, panX: number, panY: number, event: WheelEvent) => void` |
 
 ### `PanInteraction`
@@ -404,12 +440,15 @@ new ClickInteraction(nvl, options?: { selectOnClick?: boolean })
 |---|---|
 | `onNodeClick` | `(node: Node, hits: HitTargets, event: MouseEvent) => void` |
 | `onRelationshipClick` | `(rel: Relationship, hits: HitTargets, event: MouseEvent) => void` |
+| `onClusterClick` | `(cluster: Cluster, hits: HitTargets, event: MouseEvent) => void` |
 | `onCanvasClick` | `(event: MouseEvent) => void` |
 | `onNodeDoubleClick` | `(node, hits, event) => void` |
 | `onRelationshipDoubleClick` | `(rel, hits, event) => void` |
+| `onClusterDoubleClick` | `(cluster, hits, event) => void` |
 | `onCanvasDoubleClick` | `(event) => void` |
 | `onNodeRightClick` | `(node, hits, event) => void` |
 | `onRelationshipRightClick` | `(rel, hits, event) => void` |
+| `onClusterRightClick` | `(cluster, hits, event) => void` |
 | `onCanvasRightClick` | `(event) => void` |
 
 ### `HoverInteraction`
@@ -465,6 +504,15 @@ new KeyboardInteraction(nvl, options?: {
   navigateBackwardKey?:string[]
   exitGraphKey?:       string[]
   contextMenuKey?:     string[]
+  // 2.1+: arrow-key node moves (selected nodes, else focused node)
+  moveUpKey?:          string[]   // default ['ArrowUp']
+  moveDownKey?:        string[]   // default ['ArrowDown']
+  moveLeftKey?:        string[]   // default ['ArrowLeft']
+  moveRightKey?:       string[]   // default ['ArrowRight']
+  moveStep?:           number     // screen px per press, default 5
+  largeMoveStep?:      number     // default 50
+  largeMoveStepModifier?: 'Shift' | 'Ctrl' | 'Alt' | 'Meta'  // default 'Shift'
+  canvasOutlineColor?: string     // focus outline, default '#30839D'
 })
 keyboard.getFocused(): Node | Relationship | undefined
 ```
@@ -477,6 +525,7 @@ keyboard.getFocused(): Node | Relationship | undefined
 | `onRelationshipFocus` / `onRelationshipBlur` | `(rel: Relationship, event: KeyboardEvent) => void` |
 | `onCanvasFocus` / `onCanvasBlur` | `(event: FocusEvent) => void` |
 | `onContextMenu` | `(element: Node \| Relationship \| undefined, event: KeyboardEvent) => void` |
+| `onNodeMove` [2.1] | `(nodes: (Node & Point)[], event: KeyboardEvent) => void` — moved nodes with updated positions |
 
 ---
 
@@ -488,8 +537,6 @@ keyboard.getFocused(): Node | Relationship | undefined
 |---|---|---|
 | `nodes` | `Node[]` | |
 | `rels` | `Relationship[]` | |
-| `layout` | `Layout` | |
-| `layoutOptions` | `LayoutOptions` | |
 | `nvlOptions` | `NvlOptions` | |
 | `nvlCallbacks` | `ExternalCallbacks` | |
 | `positions` | `Node[]` | |
@@ -525,10 +572,11 @@ Union of all handler callbacks. Each value can be a function (with the signature
 
 ```
 onNodeClick, onRelationshipClick, onCanvasClick,
-onNodeDoubleClick, onRelationshipDoubleClick, onCanvasDoubleClick,
-onNodeRightClick, onRelationshipRightClick, onCanvasRightClick,
+onClusterClick,
+onNodeDoubleClick, onRelationshipDoubleClick, onClusterDoubleClick, onCanvasDoubleClick,
+onNodeRightClick, onRelationshipRightClick, onClusterRightClick, onCanvasRightClick,
 onHover,
-onPan, onZoom, onZoomAndPan,
+onPan, onZoomAndPan,
 onDragStart, onDrag, onDragEnd,
 onBoxStarted, onBoxSelect,
 onLassoStarted, onLassoSelect,
@@ -542,7 +590,7 @@ onKeyDown, onKeyUp,
 onNodeFocus, onNodeBlur,
 onRelationshipFocus, onRelationshipBlur,
 onCanvasFocus, onCanvasBlur,
-onContextMenu
+onContextMenu, onNodeMove   // onNodeMove 2.1+
 ```
 
 ### `InteractionOptions`
@@ -552,5 +600,8 @@ Merged union of every handler's options:
 ```
 { selectOnClick?, drawShadowOnHover?, selectOnRelease?, excludeNodeMargin?, controlledZoom?,
   controlledPan?, enterGraphKey?, navigateForwardKey?, navigateBackwardKey?, exitGraphKey?,
-  contextMenuKey?, ghostGraphStyling? }
+  contextMenuKey?, ghostGraphStyling?,
+  // 2.1+: moveUpKey?, moveDownKey?, moveLeftKey?, moveRightKey?, moveStep?, largeMoveStep?,
+  //       largeMoveStepModifier?, canvasOutlineColor?
+}
 ```

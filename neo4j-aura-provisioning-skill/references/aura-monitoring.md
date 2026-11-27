@@ -24,20 +24,20 @@ Full dashboard: instance card → "View all metrics" button, or Operations → M
 
 ## External Monitoring (Prometheus)
 
-Aura exposes a Prometheus-compatible endpoint per project:
+Available only for Business Critical, VDC and AuraDS Enterprise.
 
-```
-https://customer-metrics-api.neo4j.io/api/v1/<project-id>/<metrics-id>/metrics
-```
+Two endpoint types — copy exact URL (or Prometheus job template) from project Metrics Integration table `[…]`:
+- Project endpoint: one URL for selected instances in the project
+- Instance endpoint: `https://customer-metrics-api.neo4j.io/api/v1/<project-id>/<instance-id>/metrics`
 
-Authentication: OAuth2 with Client ID + Client Secret from Metrics Integration settings.
+Authentication: OAuth2 with Aura API credentials (Client ID + Secret) created under `Account > API Keys` by a user with the **Metrics Reader** project role (set role in `Project > Users`; needs project admin).
 Token URL: `https://api.neo4j.io/oauth/token`
 
 Prometheus config:
 ```yaml
 - job_name: 'aura-metrics'
   scrape_timeout: 30s
-  metrics_path: '/api/v1/<project-id>/<metrics-id>/metrics'
+  metrics_path: '/api/v1/<project-id>/<instance-id>/metrics'
   scheme: 'https'
   static_configs:
     - targets: ['customer-metrics-api.neo4j.io']
@@ -49,13 +49,14 @@ Prometheus config:
 
 Access: project Settings → Metrics Integration.
 
-Keep Client Secret secure — grants access to the entire organization.
+Keep Client Secret secure. Use a dedicated Metrics Reader user: that role can only fetch metrics and view the project read-only.
 
 ## Backup and Restore
 
 Snapshots: automatic per tier schedule (see aura-tiers.md) + on-demand manual snapshots.
-Restore: creates a new instance from snapshot (does not overwrite existing instance).
-Local backup: download `.dump` file from console for offline storage.
+Restore: **overwrites the data in the existing instance** with the snapshot. Confirm with user first.
+Create instance from snapshot: separate action (snapshot `[…]` menu) — leaves the original untouched.
+Export: download `.backup` file (latest version; `.dump` only for 4.x; AuraDS `.tar`) for offline storage.
 
 ## Query Logs
 

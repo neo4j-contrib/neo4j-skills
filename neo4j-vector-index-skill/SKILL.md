@@ -10,8 +10,8 @@ description: Create and manage Neo4j vector indexes, run vector similarity searc
   Does NOT handle GraphRAG retrieval_query graph traversal — use neo4j-graphrag-skill.
   Does NOT handle fulltext-only/keyword-only search — use neo4j-cypher-skill.
   Does NOT compute GDS graph embeddings (FastRP, Node2Vec) — use neo4j-gds-skill.
-version: 1.0.1
-compatibility: Neo4j >= 2025.01; SEARCH clause requires 2026.01+
+version: 1.0.19
+compatibility: Neo4j >= 2025.01; vector SEARCH requires 2026.01+; fulltext SEARCH requires 2026.09+
 allowed-tools: Bash WebFetch
 ---
 
@@ -36,7 +36,6 @@ allowed-tools: Bash WebFetch
 
 ## Pre-flight — Determine Version
 
-Drives syntax choice:
 ```cypher
 CALL dbms.components() YIELD versions RETURN versions[0] AS neo4j_version
 ```
@@ -45,6 +44,7 @@ CALL dbms.components() YIELD versions RETURN versions[0] AS neo4j_version
 |---|---|
 | `2026.01` or higher | `SEARCH` clause (in-index filtering, preferred) |
 | `2025.x` | `db.index.vector.queryNodes()` procedure (**deprecated 2026.04** — use `SEARCH` when on 2026.x) |
+| `5.27` on Aura | Aura reports `5.27` regardless of engine until after 2026.12 LTS (then calendar version) — Aura runs latest 2026.x → use `SEARCH` |
 
 ---
 
@@ -59,7 +59,7 @@ OPTIONS {
   indexConfig: {
     `vector.dimensions`: 1536,
     `vector.similarity_function`: 'cosine',
-    `vector.quantization.enabled`: true,
+    `vector.quantization.type`: 'SCALAR',
     `vector.hnsw.m`: 16,
     `vector.hnsw.ef_construction`: 100
   }
@@ -69,11 +69,13 @@ OPTIONS {
 Node index **with filterable properties** [2026.01+] — `WITH` declares which properties can be used in `SEARCH ... WHERE`:
 ```cypher
 CYPHER 25
-CREATE VECTOR INDEX chunk_embedding IF NOT EXISTS
+CREATE VECTOR INDEX chunk_embedding_filtered IF NOT EXISTS
 FOR (c:Chunk) ON (c.embedding)
 WITH [c.source, c.lang, c.published_year]  // stored as metadata; filterable in SEARCH WHERE
 OPTIONS { indexConfig: { `vector.dimensions`: 1536, `vector.similarity_function`: 'cosine' } }
 ```
+
+`IF NOT EXISTS` never adds `WITH` properties to an existing index: if an index with the same name exists, or one on `:Chunk(embedding)` with the same `WITH` list, this is a silent no-op (`00NA0`). An index on the same property with a different `WITH` list counts as a different index, so you can end up with two indexes. Adding filter properties = drop + re-create.
 
 Multi-label index with filterable properties [2026.01+]:
 ```cypher
@@ -100,9 +102,13 @@ OPTIONS { indexConfig: { `vector.dimensions`: 768, `vector.similarity_function`:
 |---|---|---|---|
 | `vector.dimensions` | INTEGER 1–4096 | none | Required; must match embedding model exactly |
 | `vector.similarity_function` | STRING | `'cosine'` | `'cosine'` or `'euclidean'` |
-| `vector.quantization.enabled` | BOOLEAN | `true` | Reduces storage; slight accuracy tradeoff; needs vector-2.0+ (5.18+) |
+| `vector.quantization.type` | STRING | `'binary'` (`'scalar'` before 2026.08) | `'none'`, `'scalar'`, `'binary'` [2026.06+, GA 2026.07]; reduces storage; binary smallest (1 bit per dimension), most aggressive; needs vector-2.0+ (5.18+); set explicitly for version-independent behavior |
+| `vector.quantization.enabled` | BOOLEAN | `true` | **Deprecated 2026.06** — use `vector.quantization.type`; `false` without `vector.quantization.type: 'none'` fails index creation before 2026.07 |
+| `vector.default_search_expansion_factor` | FLOAT 1.0–10000.0 | `1.0` none / `1.5` scalar / `3.0` binary (was `2.0` before 2026.07) | [2026.06+, GA 2026.07]; value >1.0 on quantized vectors enables automatic rescoring with full-precision vectors (High-Fidelity Quantized search, HFQ); not settable at query time; existing indexes keep their stored value until rebuilt |
 | `vector.hnsw.m` | INTEGER 1–512 | `16` | HNSW graph connections; higher = better recall, more memory |
 | `vector.hnsw.ef_construction` | INTEGER 1–3200 | `100` | Build-time candidates; higher = better recall, slower build |
+
+Unquantized vectors: set `vector.quantization.type: 'none'` alone — on 2026.06, `vector.quantization.enabled: false` without it errors (fixed 2026.07).
 
 **Similarity function choice:**
 
@@ -110,6 +116,19 @@ OPTIONS { indexConfig: { `vector.dimensions`: 768, `vector.similarity_function`:
 |---|---|
 | Normalized embeddings (OpenAI, Cohere, Voyage, Google) | `'cosine'` |
 | Unnormalized / raw distance matters | `'euclidean'` |
+
+**Index providers** — latest selected automatically; not specifiable in Cypher 25. Check with `SHOW VECTOR INDEXES YIELD name, indexProvider`:
+
+| Provider | Quantization support |
+|---|---|
+| `vector-2026.08` | High-Fidelity Quantized search for binary; `'binary'` default |
+| `vector-2026.07` | High-Fidelity Quantized search for scalar and binary |
+| `vector-2026.06` | scalar and binary; required for binary + rescoring |
+| `vector-3.0` (2025.09+) / `vector-2.0` (5.18+) | scalar |
+
+Changing quantization type, expansion factor, or provider requires drop + re-create + re-population. Indexes built before 2026.08 and rarely updated: re-create for 2026.09 rescored-binary/scalar speedup (~5× latency and throughput).
+
+**Memory** — vector index files live in OS filesystem cache, not page cache. Leave RAM for: HNSW graph ≈ 8 B × vectors × `vector.hnsw.m` plus vector values (full precision ≈ 4 B × dims × vectors; scalar ÷4; binary ÷32). Size page cache for vector properties only if queries return or re-rank them. Details → [Vector index memory configuration](https://neo4j.com/docs/operations-manual/current/performance/vector-index-memory-configuration/).
 
 ---
 
@@ -191,7 +210,7 @@ With in-index filter [2026.01+] — properties must be declared in `WITH` at ind
 CYPHER 25
 MATCH (c:Chunk)
   SEARCH c IN (
-    VECTOR INDEX chunk_embedding
+    VECTOR INDEX chunk_embedding_filtered
     FOR $queryEmbedding
     WHERE c.source = $source AND c.lang = 'en' AND c.published_year >= 2024
     LIMIT 10
@@ -205,12 +224,14 @@ ORDER BY score DESC
 | Strategy | When to use | Tradeoff |
 |---|---|---|
 | In-index `WHERE` [2026.01+] | Filters on pre-declared `WITH` properties; known at index design time | Fast, consistent latency; properties must be declared upfront |
-| Post-filter (MATCH + procedure) | Arbitrary Cypher predicates, graph traversal, OR/NOT | Full flexibility; may over-fetch then discard |
-| Pre-filter (MATCH first, then SEARCH) | Small known candidate set; exact nearest-neighbor within subset | Deterministic; slow on large candidate sets |
+| Post-filter (`WHERE` on enclosing MATCH, or after procedure) | Arbitrary Cypher predicates, graph traversal, OR/NOT | Index returns top k first, then filters → fewer than k rows; over-fetch (larger LIMIT), then trim |
+| Exact search over small subset | Small known candidate set | MATCH subset, compute `vector.similarity.cosine(...)`, ORDER BY; no index |
+
+`MATCH ... WHERE` placed before or around `SEARCH` is a **post-filter**, not a pre-filter — it does not restrict the index candidates.
 
 **In-index `WHERE` hard limits [2026.01+]:**
-- Property must be listed in `WITH [...]` at index creation — undeclared properties silently fall back to post-filtering
-- AND predicates only — no OR, NOT, list ops, string ops
+- Property must be listed in `WITH [...]` at index creation — undeclared property raises `22ND3` ("not an additional property for vector search with filters"); no fallback. Fix: add to `WITH` (drop + re-create) or post-filter after SEARCH
+- AND predicates only — no OR, NOT, string ops. `IN` list membership allowed [2026.06+]
 - Scalar types only: `INTEGER`, `FLOAT`, `STRING`, `BOOLEAN`, temporal types — not VECTOR/LIST/POINT
 
 ### Post-filter pattern (2025.x or arbitrary predicates)
@@ -295,40 +316,16 @@ Rules:
 
 ## Vector Functions
 
-Ad-hoc similarity (not for kNN search — use index for that):
-```cypher
-MATCH (a:Chunk {id: $id1}), (b:Chunk {id: $id2})
-RETURN vector.similarity.cosine(a.embedding, b.embedding) AS sim
-// vector.similarity.euclidean(a, b) — same signature, 0–1 range
-
-// vector_distance (2025.10+) — metrics: EUCLIDEAN, EUCLIDEAN_SQUARED, MANHATTAN, COSINE, DOT, HAMMING
-// Returns distance (lower = more similar, inverse of similarity)
-RETURN vector_distance(a.embedding, b.embedding, 'COSINE') AS dist
-
-// vector_dimension_count (2025.10+)
-RETURN vector_dimension_count(n.embedding) AS dims
-
-// vector_norm (2025.20+) — metrics: EUCLIDEAN, MANHATTAN
-RETURN vector_norm(n.embedding, 'EUCLIDEAN') AS norm
-```
-
-Convert LIST to typed VECTOR:
-```cypher
-// vector(value, dimension, coordinateType)
-// coordinateType: FLOAT64, FLOAT32, INTEGER8/16/32/64
-WITH vector([1.0, 2.0, 3.0], 3, 'FLOAT32') AS v
-RETURN vector_dimension_count(v)
-```
-
----
+Read [references/vector-functions.md](references/vector-functions.md#vector-functions) when you need this.
 
 ## Index Management
 
 ```cypher
 // Show all vector indexes with config
+// No indexConfig column — config is in options.indexConfig (and createStatement)
 SHOW VECTOR INDEXES YIELD name, state, populationPercent,
-  labelsOrTypes, properties, indexConfig
-RETURN name, state, populationPercent, labelsOrTypes, properties, indexConfig;
+  labelsOrTypes, properties, options
+RETURN name, state, populationPercent, labelsOrTypes, properties, options.indexConfig AS indexConfig;
 
 // Drop (node data unchanged — only index structure removed)
 DROP INDEX chunk_embedding IF EXISTS;
@@ -346,14 +343,16 @@ DROP INDEX chunk_embedding IF EXISTS;
 
 | Error | Cause | Fix |
 |---|---|---|
-| `IllegalArgumentException: Index dimension mismatch` | Stored embedding dim ≠ `vector.dimensions` | Fix embed generation; drop + recreate index with correct dim |
+| Some nodes never returned, no error | Stored vector wrong length (≠ `vector.dimensions`), non-numeric, or all zeros under cosine → silently not indexed | Assert dims before write; find offenders with `size(c.embedding) <> $dims` |
+| `51N65` vector index dimensionality mismatch | Query vector length ≠ `vector.dimensions` | Use same model and dimensions setting as ingest |
 | Search returns incomplete results | Index still `POPULATING` | Poll until `state = 'ONLINE'` |
 | `Unknown procedure db.index.vector.queryNodes` | Neo4j < 5.11 | No vector index support below 5.11; upgrade |
 | `SEARCH clause not available` | Neo4j < 2026.01 | Use `queryNodes()` procedure |
 | `OR/NOT not allowed in SEARCH WHERE` | SEARCH in-index filter restriction | Move complex predicates to outer WHERE after SEARCH |
 | Zero results from correct query | Wrong similarity function or all-zeros embedding | Verify with `vector.similarity.cosine()`; check embed call succeeded |
 | Score always 1.0 | All-zeros or identical vectors | Embedding generation failed; add dimension assertion before ingest |
-| `vector.quantization.enabled` option rejected | provider vector-1.0 (Neo4j < 5.18) | Omit quantization option or upgrade to 5.18+ |
+| `vector.quantization.enabled` / `.type` option rejected | provider vector-1.0 (Neo4j < 5.18) | Omit quantization option or upgrade to 5.18+ |
+| `BINARY` quantization rejected | provider older than vector-2026.06 | Upgrade to 2026.06+; `SHOW VECTOR INDEXES YIELD name, indexProvider` to check (`vector-2026.07` adds High-Fidelity Quantized search) |
 
 ---
 
@@ -372,8 +371,6 @@ DROP INDEX chunk_embedding IF EXISTS;
 
 ## In-Cypher Embedding Generation — ai.text.embed() [2025.12]
 
-Generate embeddings at query time without external Python code. Use `ai.text.embed()` — the current API since [2025.12]:
-
 ```cypher
 // Syntax (requires CYPHER 25)
 CYPHER 25
@@ -381,6 +378,8 @@ CYPHER 25
 ```
 
 Provider strings are lowercase (`'openai'`, `'vertexai'`, `'bedrock-titan'`, `'azure-openai'`). Full provider config → `neo4j-genai-plugin-skill`.
+
+**Storing the result:** `ai.text.embed()` returns `VECTOR`. Storing `VECTOR` properties needs block format (Enterprise; Aura default). Community / aligned format → `SET c.embedding = toFloatList(ai.text.embed(...))` (stores `LIST<FLOAT>`); raw `VECTOR` fails with `51N77`.
 
 Full query pattern — embed at query time, search immediately (procedure fallback for 2025.x):
 ```cypher
@@ -405,8 +404,7 @@ RETURN c.text, score
 ORDER BY score DESC
 ```
 
-❌ Never pass API key as literal string in production — use `$param` or `apoc.static.get()`.
-✅ Use `$openaiKey` parameter; inject via driver params dict.
+Never pass API key as string literal — use `$openaiKey` parameter (inject via driver params) or `apoc.static.get()`.
 
 **Rule**: Use same model at ingest time and query time — embeddings from different models are not comparable.
 
@@ -429,14 +427,11 @@ WITH q, row
 CALL db.create.setNodeVectorProperty(q, 'embedding', apoc.convert.fromJsonList(row.question_embedding))
 ```
 
-Use when embedding is already in CSV/JSON form as a string — `apoc.convert.fromJsonList()` converts `"[0.1,0.2,...]"` to `LIST<FLOAT>`.
-For Python-generated embeddings, use the Python UNWIND batch pattern (Step 3) instead.
+`apoc.convert.fromJsonList()` converts `"[0.1,0.2,...]"` STRING to `LIST<FLOAT>`. Python-generated embeddings → UNWIND batch pattern (Step 3).
 
 ---
 
 ## Similarity Function — Extended Guidance
-
-Existing table (Step 1) gives the basic rule. Additional guidance from course patterns:
 
 **Choose based on training loss function:**
 - Check embedding model docs — models trained with cosine loss → use `'cosine'`
@@ -468,9 +463,9 @@ If both return `null` → embeddings not set. If cosine returns `1.0` → identi
 | Gotcha | Detail | Fix |
 |---|---|---|
 | Index not ONLINE at ingest time | Inserting nodes before index exists is valid — index auto-populates. But querying during `POPULATING` returns partial results | Always poll `state = 'ONLINE'` before first query |
-| Wrong dimensions — silent failure | Stored vector dim ≠ `vector.dimensions` → `IllegalArgumentException` at query time, not at ingest time | Assert `len(emb) == expected_dim` before every `SET c.embedding` |
+| Wrong dimensions — silent failure | Stored vector dim ≠ `vector.dimensions` → no error at write or query; node silently not indexed, results just missing. Wrong-length *query* vector raises `51N65` | Assert `len(emb) == expected_dim` before every `SET c.embedding` — the only guard |
 | Different models at ingest vs query | No error; cosine scores ~0.3–0.5 for clearly similar text | Use same model string/version for both; store model name as node metadata |
-| Missing model at query | `ai.text.embed` returns `null` silently if provider config wrong | Test encode call standalone; check `CYPHER 25 RETURN ai.text.embed(...)` before embedding into pipeline |
+| Missing model at query | `ai.text.embed` raises an error (with cause) on wrong/missing key, provider or unreachable endpoint; returns `null` only for `null` input | Test encode call standalone; check `CYPHER 25 RETURN ai.text.embed(...)` before embedding into pipeline |
 | Large single-transaction ingest | One transaction for 10k nodes → OOM or timeout | Use `UNWIND $rows ... CALL IN TRANSACTIONS OF 500 ROWS` or Python batch loop |
 | Chunk overlap not set | Adjacent chunks with no overlap → context at boundaries lost → poor recall for cross-paragraph queries | Set `chunk_overlap` ≥ 10% of `chunk_size` |
 

@@ -59,14 +59,15 @@ RETURN ai.text.embed('Hello', 'azure-openai', {
 
 ### Override Azure base URL [2026.04]
 
-Server-side env var `GENAI_AZURE_OPENAI_BASE_URL` overrides the default `https://<resource>.openai.azure.com` for all `azure-openai` `ai.text.*` calls. Set on the Neo4j server (not the driver/client). Use for private endpoints, custom hostnames, or proxy gateways.
+Self-managed only — set `genai.azureopenai.baseurl` in `<NEO4J_HOME>/conf/genai.conf` (create file manually; not auto-created). Default: `https://%s.openai.azure.com/openai/v1` where `%s` is replaced by `resource`. Use for private endpoints, custom hostnames, or proxy gateways. The docs page spells it `genai.azure.openai.baseurl`, but the server (GenAI plugin 2026.09) reads `genai.azureopenai.baseurl`.
 
-```bash
-# neo4j.conf or systemd Environment=
-GENAI_AZURE_OPENAI_BASE_URL=https://my-private-endpoint.example.com
+```ini
+# genai.conf — single %s placeholder substituted with provider `resource`
+genai.azureopenai.baseurl=https://my-azure-openai-proxy.example.com
+genai.openai.baseurl=https://my-openai-proxy.example.com
 ```
 
-When set, `resource` in the provider config is appended to this URL.
+Sibling setting `genai.openai.baseurl` overrides the OpenAI provider base URL (default `https://api.openai.com/v1`). Both settings support command expansion (`$(...)`) when Neo4j is started with `--expand-commands`.
 
 ---
 
@@ -134,6 +135,26 @@ RETURN ai.text.embed('Hello', 'bedrock-titan', {
 | `chatHistory` | LIST<ANY> | No | — | Conversation history |
 
 **Note**: `ai.text.chat()` NOT supported on Bedrock — use openai/azure-openai for chat.
+
+---
+
+## Amazon Bedrock — Generic Converse (`'bedrock'`)
+
+Most Bedrock models via the Converse API. Same keys as `'bedrock-nova'` (`model`, `region`, `accessKeyId`, `secretAccessKey`; optional `vendorOptions`, `chatHistory`). Use for completion, structuredCompletion and tokenCount. Not accepted by `ai.text.embed` — use `'bedrock-titan'`.
+
+---
+
+## Providers per function
+
+| Function | Providers |
+|---|---|
+| `ai.text.embed`, `ai.text.embedBatch` | `openai`, `azure-openai`, `vertexai`, `bedrock-titan` |
+| `ai.text.completion`, `aggregateCompletion`, `aggregateStructuredCompletion` | `openai`, `azure-openai`, `vertexai`, `bedrock`, `bedrock-nova`, `bedrock-titan` |
+| `ai.text.structuredCompletion` | `openai`, `azure-openai`, `vertexai`, `bedrock` |
+| `ai.text.chat` | `openai`, `azure-openai` |
+| `ai.text.tokenCount` | `openai` (default), `vertexai`, `bedrock` |
+
+Confirm at runtime with each function's `.providers()` procedure (below; also `ai.text.structuredCompletion.providers()`).
 
 ---
 

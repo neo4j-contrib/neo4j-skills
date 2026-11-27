@@ -213,13 +213,13 @@ Parameter descriptions are shown to the LLM when it needs to fill in a parameter
 
 **Low-cardinality properties — always list valid values:**
 
-When `schema.json → node_props[Label][prop].low_cardinality` is `true`, copy the `values` array verbatim into the description. The LLM will normalize user input to a valid value.
+When `schema.json → node_props[Label][prop].low_cardinality` is `true`, copy `values` array verbatim into description. Makes match exact; most valuable for opaque codes and near-duplicates.
 
 ```
 ✅ "description": "Clause type to filter by. Valid values: \"Anti-Assignment\", \"Exclusivity\", \"Governing Law\", \"IP Ownership Assignment\", \"License Grant\", \"Non-Compete\", \"Termination For Convenience\""
 
 ❌ "description": "The type of clause"
-   (LLM guesses — may pass a value that matches no nodes)
+   (LLM infers values — unreliable for codes, near-duplicates)
 ```
 
 **Date parameters — include format:**
@@ -241,7 +241,7 @@ When `schema.json → node_props[Label][prop].low_cardinality` is `true`, copy t
 | Anti-pattern | Problem |
 |---|---|
 | Description is the param name only (`"id"`, `"type"`) | LLM cannot extract correctly from varied user phrasing |
-| No valid values on low-cardinality property | LLM invents values; Cypher returns nothing |
+| No valid values on low-cardinality property | LLM may pass value matching no nodes, esp. codes or near-duplicates |
 | Missing format on date/time param | LLM passes wrong format; Cypher fails silently |
 | Description longer than 2000 chars | API truncates; valid values may be cut |
 

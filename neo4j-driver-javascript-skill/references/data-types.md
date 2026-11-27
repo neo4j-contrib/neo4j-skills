@@ -19,7 +19,23 @@
 | `LocalTime` | `neo4j.types.LocalTime` | same |
 | `Duration` | `neo4j.types.Duration` | same |
 | `Point` | `neo4j.types.Point` | same |
+| `UUID` [driver 6.2+] | `neo4j.UUID` | same |
 | `null` | `null` | `null` |
+
+```javascript
+// UUID — driver 6.2+, Bolt 6.1, Neo4j 2026.08+
+const id = neo4j.uuid('550e8400-e29b-41d4-a716-446655440000')   // also accepts Uint8Array
+const { records } = await driver.executeQuery(
+  'CREATE (s:Session {sessionId: $id}) RETURN s.sessionId AS sessionId',
+  { id }, { database: 'neo4j' }
+)
+const sessionId = records[0].get('sessionId')   // neo4j.UUID
+neo4j.isUUID(sessionId)                         // true
+sessionId.toString()                            // '550e8400-e29b-41d4-a716-446655440000'
+sessionId.getTypedArray()                       // Uint8Array(16)
+```
+
+Server older than 2026.08 or driver older than 6.2 → store `randomUUID()` STRING ids instead.
 
 ---
 
@@ -57,8 +73,9 @@ dt.toStandardDate()                  // JS Date (lossy — drops nanoseconds)
 // Create from JS Date
 const neo4jDt = neo4j.types.DateTime.fromStandardDate(new Date())
 
-// Pass native JS Date as parameter — driver converts automatically
-await driver.executeQuery('CREATE (e:Event {at: $ts})', { ts: new Date() })
+// ❌ native JS Date is NOT converted — sent as empty map; CREATE fails ("Property values can only be of primitive types")
+// ✅ convert first
+await driver.executeQuery('CREATE (e:Event {at: $ts})', { ts: neo4j.types.DateTime.fromStandardDate(new Date()) })
 
 // ❌ temporals don't JSON.stringify correctly
 JSON.stringify(dt)   // '{}' — silent failure

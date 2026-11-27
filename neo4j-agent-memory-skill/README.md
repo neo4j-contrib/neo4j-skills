@@ -28,8 +28,8 @@ pip install neo4j-agent-memory
 ```
 
 ```bash
-npx skills add https://github.com/neo4j-contrib/neo4j-skills --skill neo4j-agent-memory-skill
+npx skills add https://github.com/neo4j/agent-skills --skill neo4j-agent-memory-skill
 ```
 
 Or paste this link into your coding assistant:
-https://github.com/neo4j-contrib/neo4j-skills/tree/main/neo4j-agent-memory-skill
+https://github.com/neo4j/agent-skills/tree/main/neo4j-agent-memory-skill

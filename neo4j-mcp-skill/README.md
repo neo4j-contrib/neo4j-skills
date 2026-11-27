@@ -4,8 +4,8 @@ Installs and configures the official Neo4j MCP server so AI agents can connect t
 
 **Install:**
 ```bash
-npx skills add https://github.com/neo4j-contrib/neo4j-skills --skill neo4j-mcp-skill
+npx skills add https://github.com/neo4j/agent-skills --skill neo4j-mcp-skill
 ```
 
 Or paste this link into your coding assistant:
-https://github.com/neo4j-contrib/neo4j-skills/tree/main/neo4j-mcp-skill
+https://github.com/neo4j/agent-skills/tree/main/neo4j-mcp-skill

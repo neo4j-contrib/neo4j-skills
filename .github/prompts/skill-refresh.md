@@ -3,6 +3,11 @@
 You are running inside a headless Claude Code session in the `neo4j-skills` repository.
 Goal: scan Neo4j release notes and deprecation pages, then update any SKILL.md and references/ files that are stale, outdated, or missing new features. Open no PRs or commits — output only file edits. The workflow will handle git and PR creation.
 
+**Working tree already includes any open, unmerged PRs from prior skill-refresh runs** that the workflow could merge cleanly (listed below, after the `---`, with any it could not merge due to conflicts). Unrelated open PRs are never merged in — only prior skill-refresh automation PRs. Treat that merged state as your baseline, not `origin/main`:
+- Don't re-propose changes those PRs already made — read the current file content, not what you might remember main looking like.
+- Compute every `version:` bump from the version currently in the file (which already reflects any merged PR's bump), so you never re-use or skip a version number a merged PR already claimed.
+- If a listed PR was skipped for conflicts, don't try to guess and duplicate its likely changes — just proceed with your own scan and note it exists in the summary.
+
 ---
 
 ## Step 1 — Fetch release signals
@@ -15,6 +20,8 @@ Fetch and read each source. Extract: new syntax, deprecated APIs, removed featur
 - https://github.com/neo4j/neo4j/wiki/Changelog — scan entries from the last 30 days
 - https://github.com/neo4j/graph-data-science/releases - scan entries from the last 30 days
 - https://github.com/neo4j/graph-data-science-client/releases - scan entries from the last 30 days
+- https://github.com/neo4j/neo4j-graphrag-python/releases - scan entries from the last 30 days (CHANGELOG: https://github.com/neo4j/neo4j-graphrag-python/blob/main/CHANGELOG.md)
+- https://registry.npmjs.org/@neo4j-nvl/base - Neo4j Visualization Library (@neo4j-nvl/*): `dist-tags` + newest `versions` entries (no GitHub releases feed; source repo not public)
 
 **Deprecation and removal pages:**
 - https://neo4j.com/docs/cypher-manual/current/deprecations-additions-removals-compatibility/
@@ -55,6 +62,8 @@ Doc roots:
 - GDS: https://neo4j.com/docs/graph-data-science/current/
 - GDS Python client: https://neo4j.com/docs/graph-data-science-client/current/
 - GraphQL: https://neo4j.com/docs/graphql/current/
+- neo4j-graphrag: https://neo4j.com/docs/neo4j-graphrag-python/current/ (CHANGELOG: https://github.com/neo4j/neo4j-graphrag-python/blob/main/CHANGELOG.md)
+- NVL: https://neo4j.com/docs/nvl/current/ (npm: https://www.npmjs.com/package/@neo4j-nvl/base)
 - Aura: https://neo4j.com/docs/aura/current/
 - Kafka connector: https://neo4j.com/docs/kafka/current/
 - Spark connector: https://neo4j.com/docs/spark/current/
@@ -81,6 +90,7 @@ Apply changes. Read each file fully before editing.
 - Removed APIs — remove examples and add migration pointer
 - New features worth knowing — add to relevant section or references/ file
 - Broken `Does NOT handle X — use Y-skill` pointers (if a skill was renamed or added)
+- **Version bump**: any actual content change to a skill's `SKILL.md` or `references/` files must bump that skill's `version:` frontmatter field (patch +1, e.g. `1.0.5` → `1.0.6`), starting from the version **currently in the working tree** (which already reflects any merged open PR's bump — not from what you'd expect on `origin/main`). If `version:` is missing, add it as `1.0.0`. Skills with no content changes keep their current version.
 
 **What NOT to change:**
 - Content you are not confident is outdated — leave it and note it in the summary
@@ -137,11 +147,14 @@ Print a summary in this exact format (used by the workflow to populate the PR bo
 <!-- SUMMARY_START -->
 ## Skills Refresh Summary
 
+### Built on prior skill-refresh PRs
+- <PR # and title, or "none">
+
 ### Sources scanned
 - <URL> — <date or version range covered>
 
 ### Changes made
-- `<skill-dir>/<file>`: <one-line reason> [<Neo4j version>]
+- `<skill-dir>/<file>`: <one-line reason> [<Neo4j version>] (version → <new skill version>)
 
 ### Findings not acted on (uncertain or low confidence)
 - <finding>: <reason not acted on>

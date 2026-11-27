@@ -2,10 +2,10 @@
 
 Agent skills for [Neo4j](https://neo4j.com) — Cypher queries, graph modeling, drivers, imports, GraphRAG, GDS, vector indexes, and Aura provisioning.
 
-Browse and install at **[skills.sh/neo4j-contrib/neo4j-skills](https://skills.sh/neo4j-contrib/neo4j-skills)**.
+Browse and install at **[skills.sh/neo4j/agent-skills](https://skills.sh/neo4j/agent-skills)**.
 
 ```bash
-npx skills add https://github.com/neo4j-contrib/neo4j-skills
+npx skills add https://github.com/neo4j/agent-skills
 ```
 
 ## Configuration
@@ -21,15 +21,17 @@ Set these before or during installation:
 
 ## Installation
 
-### Gemini CLI
+### Antigravity
+
+Install the plugin using the **Antigravity CLI** (`agy`):
 
 ```bash
-gemini extensions install https://github.com/neo4j-contrib/neo4j-skills
+agy plugin install https://github.com/neo4j/agent-skills
 ```
 
-Enter your env vars when prompted. Then run `gemini` and use `/extensions list` to verify.
+Verify installation with `agy plugin list` (or `/plugin list` inside an interactive `agy` session).
 
-### Antigravity CLI
+In the **Antigravity app** or **IDE**, open the **Customizations** tab in the sidebar and install **Neo4j** from the **Marketplace**, or clone this repository into `~/.gemini/config/plugins/neo4j-skills` (global) or `.agents/plugins/neo4j-skills` (workspace).
 
 If you are migrating from Gemini CLI, import existing Gemini extensions automatically:
 
@@ -37,12 +39,10 @@ If you are migrating from Gemini CLI, import existing Gemini extensions automati
 agy plugin import gemini
 ```
 
-This auto-converts the `gemini-extension.json` manifest and copies skills into `.agents/skills/`. Then run `agy` and use `/plugins list` to verify.
-
 ### Claude Code
 
 ```
-/plugin marketplace add https://github.com/neo4j-contrib/neo4j-skills.git
+/plugin marketplace add https://github.com/neo4j/agent-skills.git
 /plugin install neo4j-skills@neo4j-skills-marketplace
 ```
 
@@ -51,27 +51,34 @@ Use `/plugin list` to verify, or `/reload-plugins` after installation.
 ### Codex
 
 ```bash
-git clone https://github.com/neo4j-contrib/neo4j-skills.git
-mkdir -p ~/.codex/plugins
-cp -R neo4j-skills ~/.codex/plugins/neo4j-skills
+codex plugin marketplace add neo4j/agent-skills
+codex plugin add neo4j-skills@neo4j-skills-marketplace
 ```
 
-Add to `~/.agents/plugins/marketplace.json`:
+Verify marketplace and plugin availability:
 
-```json
-{
-  "name": "neo4j-marketplace",
-  "interface": { "displayName": "Neo4j Skills" },
-  "plugins": [
-    {
-      "name": "neo4j-skills",
-      "source": { "source": "local", "path": "./plugins/neo4j-skills" },
-      "policy": { "installation": "AVAILABLE" },
-      "category": "Database"
-    }
-  ]
-}
+```bash
+codex plugin marketplace list
+codex plugin list
 ```
+
+Start a new Codex thread after installation so Codex loads the plugin. To refresh later:
+
+```bash
+codex plugin marketplace upgrade neo4j-skills-marketplace
+```
+
+### Kiro
+
+Skills install as a Kiro power (Agent Plugins format; `plugin.json` at the repo root, skills under `skills/`).
+
+1. Open the **Powers** panel → **Add Custom Power**.
+2. Choose **Import power from a repository URL** (**Import power from GitHub** before Kiro IDE 1.4.236) and enter `https://github.com/neo4j/agent-skills`.
+3. Click **Install**.
+
+For a local clone, choose **Import power from a folder** and select the repo root.
+
+Alternatively, copy individual skills into `.kiro/skills/` (workspace) or `~/.kiro/skills/` (global).
 
 ## Available Skills
 
@@ -81,6 +88,8 @@ Add to `~/.agents/plugins/marketplace.json`:
 |---|---|
 | [`neo4j-cypher-skill`](./neo4j-cypher-skill) | Write, optimize, and debug Cypher queries. Covers CYPHER 25 syntax, query planning, indexes, and common patterns. |
 | [`neo4j-modeling-skill`](./neo4j-modeling-skill) | Design and review graph data models. Covers node/relationship patterns, property choices, and relational-to-graph migration. |
+| [`neo4j-query-tuning-skill`](./neo4j-query-tuning-skill) | Diagnose and fix slow Cypher: read EXPLAIN/PROFILE plans, spot bad operators, choose indexes, hints and runtimes. |
+| [`neo4j-ontology-skill`](./neo4j-ontology-skill) | Author and validate Neo4j Ontology Graph Specification v1 documents in YAML or JSON. Covers nodes, relationships, properties, data types, constraints, labels, and endpoint cardinality. |
 | [`neo4j-getting-started-skill`](./neo4j-getting-started-skill) | Zero-to-app walkthrough: provision → model → load → query. Use for first-time setup on Aura or Docker. |
 
 ### Importing Data
@@ -90,6 +99,8 @@ Add to `~/.agents/plugins/marketplace.json`:
 | [`neo4j-import-skill`](./neo4j-import-skill) | Load structured data (CSV, JSON) via `LOAD CSV`, `neo4j-admin import`, and the Data Importer GUI. |
 | [`neo4j-document-import-skill`](./neo4j-document-import-skill) | Extract knowledge graphs from unstructured documents and PDFs using `SimpleKGPipeline`. |
 | [`neo4j-migration-skill`](./neo4j-migration-skill) | Upgrade drivers and Cypher from 4.x/5.x to 2025.x. Covers API changes, deprecated functions, and Cypher 25 syntax. |
+| [`neo4j-kafka-skill`](./neo4j-kafka-skill) | Stream between Kafka and Neo4j with the Neo4j Connector for Kafka (sink and CDC source) and the native CDC API. |
+| [`neo4j-spark-skill`](./neo4j-spark-skill) | Read and write Neo4j from Apache Spark and Databricks with the Neo4j Connector for Apache Spark. |
 
 ### AI & Search
 
@@ -128,10 +139,20 @@ Add to `~/.agents/plugins/marketplace.json`:
 | [`neo4j-cli-tools-skill`](./neo4j-cli-tools-skill) | DB admin via `neo4j-admin`, `cypher-shell`, `aura-cli`, and `neo4j-cli` (preview unified CLI). Covers backups, imports, user management, Aura provisioning, and agent skill install. |
 | [`neo4j-aura-provisioning-skill`](./neo4j-aura-provisioning-skill) | Create and manage Neo4j Aura instances via the Aura CLI and REST API. Covers async polling, credential handling, and tier selection. |
 | [`neo4j-aura-agent-skill`](./neo4j-aura-agent-skill) | Create, configure, and invoke Aura Agents via the v2beta1 REST API. Covers CypherTemplate, SimilaritySearch, and Text2Cypher tools, system prompts, REST/MCP deployment, and OAuth2 auth. |
+| [`neo4j-security-skill`](./neo4j-security-skill) | Users, roles and privileges: RBAC, fine-grained and attribute-based access control, with edition gating. |
+| [`neo4j-nvl-skill`](./neo4j-nvl-skill) | Render Neo4j graphs in the browser with the Neo4j Visualization Library (NVL): renderers, interaction handlers, React wrappers. |
 
 ## What are Agent Skills?
 
 Agent Skills are a standardized format for domain-specific AI agent knowledge. Each skill bundles step-by-step instructions, on-demand reference docs, and executable scripts — loaded progressively to keep context lean. See [agentskills.io/specification](https://agentskills.io/specification).
+
+## Gemini CLI
+
+```bash
+gemini extensions install https://github.com/neo4j/agent-skills
+```
+
+Enter your env vars when prompted. Then run `gemini` and use `/extensions list` to verify.
 
 ## Contributing
 

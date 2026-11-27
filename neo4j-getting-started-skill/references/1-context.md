@@ -35,7 +35,7 @@ Hi! To get you up and running with Neo4j, I need a few things:
    beginner / intermediate / advanced
 
 4. Where to run the database?
-   A) Aura Free — easiest, 14-day trial, no credit card needed  ← default for beginners
+   A) Aura Free — easiest, free tier, no credit card needed  ← default for beginners
    B) Aura Pro / Enterprise — I have or will create an account
    C) Local Docker — I have Docker installed
    D) Neo4j Desktop — GUI, already installed

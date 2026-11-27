@@ -4,12 +4,12 @@ description: Neo4j JavaScript/TypeScript Driver v6 — driver lifecycle, execute
   managed transactions (executeRead/executeWrite), session.run, Integer handling, JSON
   serialization, record access, async/await patterns, TypeScript types, error handling,
   and connection setup for Node.js and browser. Use when writing JS/TS code that connects
-  to Neo4j: neo4j.driver(), executeQuery, executeRead, executeWrite, session.run,
+  to Neo4j — neo4j.driver(), executeQuery, executeRead, executeWrite, session.run,
   neo4j.int, record.get, Integer, BookmarkManager, bolt://, neo4j+s://.
   Does NOT handle Cypher query authoring — use neo4j-cypher-skill.
   Does NOT cover driver version migration — use neo4j-migration-skill.
 compatibility: neo4j-driver v6; Node.js >=18; TypeScript supported via bundled types
-version: 1.0.1
+version: 1.0.8
 allowed-tools: Bash WebFetch
 ---
 
@@ -72,7 +72,7 @@ import neo4j from 'neo4j-driver'
 
 const driver = neo4j.driver(
   process.env.NEO4J_URI,                              // 'neo4j+s://xxx.databases.neo4j.io'
-  neo4j.auth.basic(process.env.NEO4J_USER, process.env.NEO4J_PASSWORD)
+  neo4j.auth.basic(process.env.NEO4J_USERNAME, process.env.NEO4J_PASSWORD)
 )
 await driver.verifyConnectivity()   // fail fast on startup if unreachable
 // On shutdown:
@@ -95,13 +95,15 @@ neo4j.auth.kerberos(base64Ticket)  // Kerberos
 neo4j.auth.none()                  // unauthenticated (dev only)
 ```
 
+6.3.0+: custom token object without `scheme` throws `Auth token is missing 'scheme'` (earlier silently sent `none`) — use `neo4j.auth.*` helpers or set `scheme`.
+
 **Singleton for web frameworks** — create once, import everywhere:
 ```javascript
 // db.js
 let _driver = null
 export function getDriver() {
   if (!_driver) _driver = neo4j.driver(process.env.NEO4J_URI,
-    neo4j.auth.basic(process.env.NEO4J_USER, process.env.NEO4J_PASSWORD))
+    neo4j.auth.basic(process.env.NEO4J_USERNAME, process.env.NEO4J_PASSWORD))
   return _driver
 }
 export async function closeDriver() {
@@ -118,8 +120,8 @@ export async function closeDriver() {
 | API | Use when | Auto-retry | Result |
 |---|---|---|---|
 | `driver.executeQuery()` | Default for most queries | ✅ | eager (all records) |
-| `session.executeRead/Write()` | Large results, streaming, multi-query tx | ✅ | lazy stream |
-| `session.run()` | `LOAD CSV`, `CALL IN TRANSACTIONS`, scripts | ❌ | lazy stream |
+| `session.executeRead/Write()` | Large results, streaming, multi-query tx | ✅ | `await tx.run()` → buffered `{ records, summary }`; un-awaited `tx.run()` → stream |
+| `session.run()` | `LOAD CSV`, `CALL IN TRANSACTIONS`, scripts | ❌ | same as `tx.run()`: awaited = buffered; un-awaited = stream |
 
 ---
 
@@ -164,12 +166,12 @@ Auto-retried on transient failures. **Consume records inside the callback — th
 const session = driver.session({ database: 'neo4j' })
 try {
   const names = await session.executeRead(async tx => {
-    const result = await tx.run(
+    const { records } = await tx.run(
       'MATCH (p:Person) WHERE p.name STARTS WITH $prefix RETURN p.name AS name',
       { prefix: 'Al' }
     )
-    // ✅ collect() while tx is open; return plain data
-    return (await result.collect()).map(r => r.get('name'))
+    // ✅ map while tx is open; return plain data
+    return records.map(r => r.get('name'))
   })
 
   await session.executeWrite(async tx => {
@@ -180,17 +182,19 @@ try {
 }
 ```
 
-**Critical: `await tx.run()` returns a stream handle, not records.**
+**Critical: `await tx.run()` resolves to a fully buffered `QueryResult { records, summary }`. There is no `result.collect()` (`TypeError: result.collect is not a function`).**
 ```javascript
-// ❌ returns stream; tx closes; records = []
-return await tx.run('MATCH (p:Person) RETURN p.name AS name')
+// ✅ buffered: destructure records, return plain data
+const { records } = await tx.run('MATCH (p:Person) RETURN p.name AS name')
+return records.map(r => r.get('name'))
 
-// ✅ collect fully inside callback
-const result = await tx.run('MATCH (p:Person) RETURN p.name AS name')
-return (await result.collect()).map(r => r.get('name'))
-
-// ✅ or stream with for-await
+// ✅ stream: do NOT await tx.run(); iterate the Result
+const result = tx.run('MATCH (p:Person) RETURN p.name AS name')
 for await (const record of result) { names.push(record.get('name')) }
+
+// ❌ awaited value is not async iterable: TypeError: result is not async iterable
+const awaited = await tx.run('MATCH (p:Person) RETURN p.name AS name')
+for await (const record of awaited) { /* throws */ }
 ```
 
 **Callback may execute more than once** (retry on transient failure) — no side effects inside:
@@ -317,15 +321,16 @@ record['name']        // ❌ undefined
 ## Error Handling
 
 ```javascript
-import { Neo4jError, SERVICE_UNAVAILABLE, SESSION_EXPIRED } from 'neo4j-driver'
+import neo4j, { Neo4jError } from 'neo4j-driver'
+// SERVICE_UNAVAILABLE / SESSION_EXPIRED are NOT top-level exports — use neo4j.error.*
 
 try {
   await driver.executeQuery('...', {}, { database: 'neo4j' })
 } catch (err) {
   if (err instanceof Neo4jError) {
     if (err.code === 'Neo.ClientError.Schema.ConstraintValidationFailed') { /* unique constraint */ }
-    if (err.code === SERVICE_UNAVAILABLE) { /* unreachable */ }
-    if (err.code === SESSION_EXPIRED)     { /* open a new session */ }
+    if (err.code === neo4j.error.SERVICE_UNAVAILABLE) { /* unreachable */ }
+    if (err.code === neo4j.error.SESSION_EXPIRED)     { /* open a new session */ }
     if (err.retriable) { /* transient — executeQuery already retried to exhaustion */ }
   }
 }
@@ -345,8 +350,8 @@ const session: Session = driver.session({ database: 'neo4j' })
 
 const names: string[] = await session.executeRead(
   async (tx: ManagedTransaction): Promise<string[]> => {
-    const result = await tx.run('MATCH (p:Person) RETURN p.name AS name')
-    return (await result.collect()).map((r: Record) => r.get('name') as string)
+    const { records } = await tx.run('MATCH (p:Person) RETURN p.name AS name')
+    return records.map((r: Record) => r.get('name') as string)
   }
 )
 
@@ -369,7 +374,7 @@ await driver.executeQuery(
   `UNWIND $people AS person
    MERGE (p:Person {name: person.name})
    SET p.age = person.age`,
-  { people },   // array of plain objects; numeric fields must be JS numbers, not neo4j.int()
+  { people },   // array of plain objects; integer fields as neo4j.int() — plain JS numbers store as FLOAT
   { database: 'neo4j' }
 )
 ```
@@ -386,12 +391,12 @@ await driver.executeQuery(
 | `JSON.stringify` on temporal | `.toString()` first |
 | `summary.counters.nodesCreated` | `summary.counters.updates().nodesCreated` |
 | Omit `database` | Always `{ database: 'neo4j' }` |
-| Return `result` from tx callback | Return `await result.collect()` or mapped data |
+| `result.collect()` / returning driver objects from tx callback | `const { records } = await tx.run(...)`; return `records.map(...)` plain data |
 | `.then(() => session.close())` | `try/finally { await session.close() }` |
 | Side effects inside tx callback | Move outside — callback may retry |
 | New driver per request | Create once at startup |
-| `bolt://` or `neo4j://` in browser | Use `neo4j+s://` (WSS) |
-| Integer in UNWIND array | Convert to plain JS `Number` first |
+| Unencrypted scheme to remote server in browser | Browser uses WebSockets for all schemes (`bolt://`/`neo4j://` → `ws://`, `+s` → `wss://`); use `+s` for anything non-local |
+| Plain JS number for integer field in UNWIND array | Use `neo4j.int()` — plain numbers store as FLOAT |
 | `maxConnectionPoolSize: 100` in serverless | Use 5–10 per function instance |
 
 ---
@@ -399,10 +404,11 @@ await driver.executeQuery(
 ## References
 
 Load on demand:
-- [references/data-types.md](references/data-types.md) — full type mapping table, temporal types, graph types (Node/Relationship/Path), spatial types (Point/WGS-84/Cartesian), `toNative()` conversion helper
+- [references/data-types.md](references/data-types.md) — full type mapping table, temporal types, graph types (Node/Relationship/Path), spatial types (Point/WGS-84/Cartesian), `neo4j.UUID` [6.2+], `toNative()` conversion helper
 - [references/advanced-patterns.md](references/advanced-patterns.md) — explicit transactions, causal consistency/bookmarks, connection pool tuning, result transformers, lazy streaming, repository pattern
 - [references/browser-usage.md](references/browser-usage.md) — WebSocket URIs, CORS, bundler config, security guidance
 - [references/rxjs-session.md](references/rxjs-session.md) — RxJS session API (`rxSession.run()`, observable patterns)
+- [references/property-encryption.md](references/property-encryption.md) — Property Encryption preview [6.3.0+]: `EnvelopeEncryptionProfile`, local key encapsulation, user key repository, `driver.encryption.encrypt/decrypt` with AAD
 
 ---
 
@@ -419,4 +425,4 @@ Load on demand:
 - [ ] Tx callback returns plain data (not stream); side effects outside callback
 - [ ] Write uses `neo4j.int()` for integer parameters
 - [ ] `executeRead` for reads; `executeWrite` for writes
-- [ ] Browser: `neo4j+s://` URI (WebSocket)
+- [ ] Browser: encrypted scheme (`neo4j+s://` / `bolt+s://` → `wss://`) for non-local servers

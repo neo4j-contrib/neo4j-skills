@@ -12,9 +12,12 @@
 | `dict` | Map |
 | `None` | null |
 | `datetime.date` | Date |
-| `datetime.datetime` | DateTime |
-| `datetime.time` | Time |
+| `datetime.datetime` (naive, no `tzinfo`) | LocalDateTime |
+| `datetime.datetime` (timezone-aware) | DateTime (zoned) |
+| `datetime.time` (naive, no `tzinfo`) | LocalTime |
+| `datetime.time` (timezone-aware) | not supported — raises `TypeError: utcoffset(dt) argument must be a datetime instance or None, not datetime.time`; pass a tz-aware `datetime` or build in Cypher: `time($iso_string)` |
 | `datetime.timedelta` | Duration |
+| `uuid.UUID` | `UUID` [driver 6.3+, Neo4j 2026.08+; earlier: pass `str(uuid)`] |
 | `neo4j.time.*` types | Corresponding Cypher temporal |
 
 Custom classes, dataclasses, Pydantic models, and enums are **not** auto-serialized — convert to `dict` or primitives first.
@@ -67,7 +70,11 @@ str(dt)                     # ISO 8601 string — JSON-safe
 # Pass Python datetime as a parameter — driver converts automatically
 from datetime import datetime, timezone
 driver.execute_query("CREATE (e:Event {at: $ts})", ts=datetime.now(timezone.utc), database_="neo4j")
+```
 
+Naive `datetime` → `LOCAL DATETIME`; never matches or compares with stored zoned values (`WHERE e.at >= $naive` → 0 rows). Pass timezone-aware datetimes (`datetime.now(timezone.utc)`) for zoned `DateTime` properties.
+
+```python
 # Duration — access .days / .months (not .inDays / .inMonths)
 dur = record["tenure"]      # neo4j.time.Duration
 dur.days
@@ -76,10 +83,10 @@ dur.months
 
 ## JSON Serialization
 
-`record.data()` returns a `dict` but `Node`, `Relationship`, `Path`, and `neo4j.time.*` values are still driver objects — not JSON-safe.
+`record.data()` returns `dict`: `Node` → `dict` of properties, `Relationship` → `(start_props, type, end_props)` tuple (own properties dropped), `Path` → list. Serializes but loses labels, IDs, relationship properties. `neo4j.time.Date`, `Time`, `DateTime` stay driver objects → `json.dumps` raises `TypeError`.
 
 ```python
-# ❌ Raises TypeError if result contains node/rel/temporal
+# ❌ Raises TypeError if the result contains temporal values
 json.dumps(records[0].data())
 
 # ✅ Project scalars in Cypher
@@ -125,6 +132,21 @@ distance = records[0]["distance"]   # float64
 ```
 
 Pass points as parameters — serialized automatically. Read back via destructuring or `.x`/`.y`/`.z`.
+
+## UUID Type [driver 6.3+, Neo4j 2026.08+]
+
+```python
+import uuid
+
+records, _, _ = driver.execute_query(
+    "CREATE (s:Session {sessionId: $sid}) RETURN s.sessionId AS sessionId",
+    sid=uuid.uuid4(), database_="neo4j",
+)
+session_id = records[0]["sessionId"]   # uuid.UUID
+str(session_id)                        # '550e8400-e29b-41d4-a716-446655440000'
+```
+
+`ValueError: Values of type <class 'uuid.UUID'> are not supported (requires Bolt protocol version 6.1 or newer)` — server older than 2026.08 or driver older than 6.3. Use native UUID round-tripping only with Neo4j 2026.08+ and Python driver 6.3+. Otherwise keep STRING ids end-to-end, for example `sid=str(uuid.uuid4())` or Cypher `randomUUID()`.
 
 ## Null Safety
 

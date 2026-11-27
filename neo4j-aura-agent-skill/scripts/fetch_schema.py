@@ -160,46 +160,31 @@ def _validate_data(schema: dict, node_count: int) -> None:
 # ── Cardinality enrichment ────────────────────────────────────────────────────
 
 def _enrich_with_cardinality(driver, database: str, schema: dict) -> None:
-    # APOC is assumed available — it is bundled with all AuraDB instances.
-    # apoc.meta.schema() returns property types and indexed flags in one call.
-    # Only STRING+indexed properties are filter targets that need cardinality queries.
-    records, _, _ = driver.execute_query(
-        "CALL apoc.meta.schema() YIELD value RETURN value",
-        database_=database,
-    )
-    apoc_schema = records[0]["value"] if records else {}
-
+    # Check every STRING property (indexed or not): unindexed properties are
+    # filter targets too, and need valid values listed when low cardinality.
     for label, props in schema.get("node_props", {}).items():
-        apoc_props = (apoc_schema.get(label) or {}).get("properties", {})
         for prop in props:
             if prop.get("aura_data_type") != "string":
                 continue
             pname = prop["property"]
-            if apoc_props.get(pname, {}).get("indexed", False):
-                _check_cardinality(
-                    driver, database, prop,
-                    f"MATCH (n:`{label}`) WHERE n[$prop] IS NOT NULL "
-                    "WITH DISTINCT n[$prop] AS v LIMIT $limit ",
-                    pname,
-                )
-            else:
-                prop["low_cardinality"] = False
+            _check_cardinality(
+                driver, database, prop,
+                f"MATCH (n:`{label}`) WHERE n[$prop] IS NOT NULL "
+                "WITH DISTINCT n[$prop] AS v LIMIT $limit ",
+                pname,
+            )
 
     for rel_type, props in schema.get("rel_props", {}).items():
-        apoc_props = (apoc_schema.get(rel_type) or {}).get("properties", {})
         for prop in props:
             if prop.get("aura_data_type") != "string":
                 continue
             pname = prop["property"]
-            if apoc_props.get(pname, {}).get("indexed", False):
-                _check_cardinality(
-                    driver, database, prop,
-                    f"MATCH ()-[r:`{rel_type}`]->() WHERE r[$prop] IS NOT NULL "
-                    "WITH DISTINCT r[$prop] AS v LIMIT $limit ",
-                    pname,
-                )
-            else:
-                prop["low_cardinality"] = False
+            _check_cardinality(
+                driver, database, prop,
+                f"MATCH ()-[r:`{rel_type}`]->() WHERE r[$prop] IS NOT NULL "
+                "WITH DISTINCT r[$prop] AS v LIMIT $limit ",
+                pname,
+            )
 
 
 def _check_cardinality(driver, database: str, prop: dict, base_query: str, pname: str) -> None:

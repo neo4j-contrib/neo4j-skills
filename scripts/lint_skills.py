@@ -12,6 +12,7 @@ NAME_MAX = 64
 DESC_MAX = 1024
 DESC_MIN = 80   # below this is almost certainly too terse to be useful
 COMPAT_MAX = 500
+VERSION_RE = re.compile(r'^\d+\.\d+\.\d+$')
 KNOWN_EXTRA_FIELDS = {'status', 'version'}  # non-spec but tolerated in this repo
 
 # Cypher uses // for comments; -- is SQL syntax and a parse error in Cypher
@@ -41,12 +42,24 @@ def parse_frontmatter(text: str) -> dict:
             m = re.match(r'^([\w-]+):\s*(.*)', line)
             if m:
                 current_key = m.group(1)
-                current_lines = [m.group(2)]
+                value = m.group(2)
+                stripped_value = value.strip()
+                quoted = (
+                    len(stripped_value) >= 2
+                    and stripped_value[0] in {'"', "'"}
+                    and stripped_value[-1] == stripped_value[0]
+                )
+                if not quoted and re.search(r':(?:[ \t]|$)', value):
+                    return None
+                current_lines = [value]
             else:
                 current_key = None
                 current_lines = []
         elif current_key is not None:
-            current_lines.append(line.strip())
+            value = line.strip()
+            if re.search(r':(?:[ \t]|$)', value):
+                return None
+            current_lines.append(value)
 
     if current_key is not None:
         result[current_key] = '\n'.join(current_lines).strip()
@@ -107,6 +120,15 @@ def lint_skill(path: Path) -> list[str]:
     if compat and len(compat) > COMPAT_MAX:
         errors.append(
             f"{path}: 'compatibility' exceeds {COMPAT_MAX} chars ({len(compat)})"
+        )
+
+    # --- version (required) ---
+    version = fm.get('version', '').strip()
+    if not version:
+        errors.append(f"{path}: 'version' is required (semver, e.g. 1.0.0)")
+    elif not VERSION_RE.match(version):
+        errors.append(
+            f"{path}: 'version' must be semver X.Y.Z, got {version!r}"
         )
 
     # --- unknown non-spec fields ---

@@ -13,15 +13,15 @@ load_dotenv()
 uri = os.environ.get("NEO4J_URI", "")
 user = os.environ.get("NEO4J_USERNAME", "neo4j")
 
-# Strip scheme prefix to get host
-host = uri
-for prefix in ["neo4j+s://", "neo4j://", "bolt+s://", "bolt://"]:
-    host = host.replace(prefix, "")
-
-# Encode the connectURL parameter
-connect_url = f"neo4j+s://{user}@{host}"
+# Keep the original scheme — never force neo4j+s:// on a local (non-TLS) server
+scheme, _, host = uri.partition("://")
+connect_url = f"{scheme}://{user}@{host}"
 encoded = urllib.parse.quote(connect_url, safe="")
-browser_url = f"https://browser.neo4j.io/?connectURL={encoded}"
+if "localhost" in host or "127.0.0.1" in host:
+    # local server: use its bundled Browser
+    browser_url = f"http://localhost:7474/browser?connectURL={encoded}"
+else:
+    browser_url = f"https://browser.neo4j.io/?connectURL={encoded}"
 
 print(f"\n🔍 See your graph:")
 print(f"   {browser_url}")

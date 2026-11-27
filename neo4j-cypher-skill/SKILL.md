@@ -6,8 +6,8 @@ description: Generates, optimizes, and validates Cypher 25 queries for Neo4j 202
   CALL, UNWIND, FOREACH, LOAD CSV, SEARCH, expressions, functions, indexes, and subqueries.
   Does NOT handle driver migration or API changes — use neo4j-migration-skill.
   Does NOT cover DB administration or server ops — use neo4j-cli-tools-skill.
-compatibility: Neo4j >= 2025.01 (safe baseline); Cypher 25
-version: 1.0.1
+compatibility: Neo4j >= 2025.06 for Cypher 25 (CYPHER 25 prefix, match modes); omit the prefix below 2025.06
+version: 1.0.32
 ---
 
 ## When to Use
@@ -30,7 +30,7 @@ GQL conformance note: `LET`, `FINISH`, `FILTER`, and `INSERT` are valid Cypher 2
 |---|---|---|
 | `<db-name>-schema.json` found in project | Use it directly — skip live inspection | — |
 | Schema (from context or live DB) | Use directly | Run Schema-First Protocol |
-| Neo4j version | Use version features | Default to 2025.01 safe set |
+| Neo4j version | Use version features | Default to 2025.06 safe set (Cypher 25) |
 | Executing (not generating)? | Use EXPLAIN + write gate | State query is unvalidated |
 
 Schema unknown + no tool → produce non-executable sketch outside a code block:
@@ -50,7 +50,7 @@ Never fill guessed names — realistic guesses get copied blindly.
 5. `LIMIT 25` default on all exploratory reads; push `WITH n LIMIT` before high-cardinality operations (variable-length traversals, fan-out MATCH, Cartesian products)
 6. Comments: `//` only — `--` is SQL, invalid
 7. `REPEATABLE ELEMENTS` / `DIFFERENT RELATIONSHIPS` go after `MATCH`, not end of pattern
-8. `SHOW` commands: `YIELD` before `WHERE`; no `UNION`
+8. `SHOW` commands: `YIELD` before `WHERE`; combinable with general Cypher clauses incl. `UNION`/`RETURN` [2026.05] — `SHOW DATABASES` still requires system db (use `USE system`). `CALL` on `system` db: `YIELD` then `WHERE` [2026.07]
 9. Inline node predicates `(:Label WHERE p=x)` — valid in `MATCH` only
 10. `WHERE` cannot follow bare `UNWIND` — use `WITH x WHERE`
 11. `(a)-[:R]-(b)` — undirected matches both directions, double-counts; use directed unless unknown
@@ -149,8 +149,20 @@ LOAD CSV WITH HEADERS FROM 'file:///data.csv' AS row
 CALL (row) {
   MERGE (p:Person {id: row.id}) SET p += row
 } IN TRANSACTIONS OF 1000 ROWS ON ERROR CONTINUE REPORT STATUS AS s
+RETURN s.committed, s.errorMessage
 ```
-Input stream must be outside subquery. Auto-commit only — never wrap in `beginTransaction()`. `PERIODIC COMMIT` deprecated.
+`REPORT STATUS` returns rows → query must end with `RETURN` or `FINISH`; not allowed with `ON ERROR FAIL` (use `CONTINUE`, `BREAK` or `RETRY … THEN CONTINUE|BREAK`). Input stream must be outside subquery. Auto-commit only — never wrap in `beginTransaction()`. `PERIODIC COMMIT` removed (5.0).
+
+`DISJOINT BY` [2026.06, Cypher 25] on `IN CONCURRENT TRANSACTIONS` prevents deadlocks by scheduling batches that share lock-prone resources sequentially — use when importing relationships:
+```cypher
+CYPHER 25
+LOAD CSV WITH HEADERS FROM 'file:///rels.csv' AS line
+CALL (line) {
+  MATCH (a:Movie {id: line.movieId}), (b:Person {id: line.personId})
+  MERGE (b)-[:ACTED_IN]->(a)
+} IN CONCURRENT TRANSACTIONS OF 1000 ROWS DISJOINT BY (line.movieId, line.personId)
+```
+`DISJOINT BY (expr,...)` declares lock keys (outer-query variables only); `DISJOINT BY AUTO` infers them via static analysis; `DISJOINT BY NONE` disables. Overrides `dbms.cypher.transactions.default_subquery_batch_strategy`. `EXPLAIN`/`PROFILE` shows keys in `DISJOINT BY (...)` on `TransactionForeach`.
 
 ### QPE basics
 ```cypher
@@ -199,6 +211,30 @@ CYPHER 25 CREATE (a:Node)-[:$($relType)]->(b:Node)
 CYPHER 25 MATCH  (a:Node)-[:$($relType)]->(b:Node) RETURN a.name, b.name
 ```
 
+### String interpolation [2026.08, Cypher 25]
+```cypher
+CYPHER 25
+MATCH (p:Person {id: $id})
+RETURN s"Hello, {p.name}, age {p.age}" AS greeting   // S"..." and s'...' equivalent
+```
+- Each `{expr}` converts with `toString()`
+- `MAP`, `LIST`, `NODE`, `PATH`, `RELATIONSHIP` rejected
+- Escape literal braces with `\{` and `\}`
+- Interpolated strings can nest
+- Never interpolate untrusted values into Cypher text passed to `apoc.cypher.run*()`; pass `$parameters` instead
+
+### UUID type [2026.08, Cypher 25]
+```cypher
+CYPHER 25
+CREATE (sess:Session {sessionId: uuid()});            // random UUID value; storing needs block format (Enterprise/Aura)
+
+CYPHER 25
+MATCH (sess:Session {sessionId: uuid($uuidString)})   // STRING 8-4-4-4-12 → UUID
+RETURN toString(sess.sessionId) AS sessionId,
+       uuid.mostSignificantBits(uuid(toString(sess.sessionId))) AS msb  // accessor needs a typed UUID, not a raw property
+```
+`UUID` properties require Neo4j 2026.08+ and block store format (Enterprise; default on Aura). Community (aligned/standard format) can compute and return `uuid()` but cannot store it → store `randomUUID()` or `toString(uuid())`. Drivers < 6.2 (Python < 6.3) return a placeholder `MAP` plus warning `03N95 Neo.ClientNotification.UnknownType`; otherwise keep `randomUUID()` STRING ids.
+
 ### Spatial / Point
 ```cypher
 // WGS84 geographic point
@@ -219,15 +255,25 @@ RETURN b.name, point.distance(b.coords, $origin) AS distM
 Create POINT index: `CREATE POINT INDEX name IF NOT EXISTS FOR (n:Place) ON (n.coords)`
 
 ### Aggregation grouping keys
-Non-aggregating expressions in `RETURN`/`WITH` are implicit grouping keys — no `GROUP BY` needed:
+Non-aggregating expressions in `RETURN`/`WITH` are implicit grouping keys — `GROUP BY` optional:
 ```cypher
 // actor + director are grouping keys; count(*) is the aggregate
 MATCH (a:Person)-[:ACTED_IN]->(m:Movie)<-[:DIRECTED]-(d:Person)
 RETURN a.name, d.name, count(*) AS collaborations
 ORDER BY collaborations DESC
 ```
+Explicit `GROUP BY` subclause on `WITH`/`RETURN` [2026.07, Cypher 25] states grouping keys explicitly — GQL-aligned alternative to implicit grouping; implicit grouping stays valid:
+```cypher
+MATCH (a:Person)-[:ACTED_IN]->(m:Movie)<-[:DIRECTED]-(d:Person)
+RETURN a.name, d.name, count(*) AS collaborations GROUP BY a.name, d.name
+ORDER BY collaborations DESC
+```
+`GROUP BY ()` = no grouping keys (one row); `GROUP BY ALL` = every non-aggregating return item is a key. Grouping keys absent from the projection are not returned. Rules → [references/cypher-syntax.md](references/cypher-syntax.md).
+
 `count(n)` counts non-null; `count(*)` counts rows including nulls. `collect(DISTINCT expr)` deduplicates.
 `count()` is faster than `size(collect())` — count() reads the internal store; collect() builds a list first.
+
+`ORDER BY`/`WHERE` subclause expressions referencing a projection item more complex than a variable or `var.prop` are deprecated [2026.07] — alias the expression in the projection and order by the alias. Same for names that shadow an incoming variable. `ORDER BY`/`WHERE` may now call aggregation functions absent from the projection list when the projection clause already aggregates.
 
 ---
 
@@ -241,9 +287,9 @@ ORDER BY collaborations DESC
 | `UNWIND list AS x WHERE x>5` | `UNWIND list AS x WITH x WHERE x>5` |
 | `least(a,b)` / `greatest(a,b)` | `CASE WHEN a<b THEN a ELSE b END` |
 | `-- comment` | `// comment` |
-| `shortestPath((a)-[*]->(b))` | `SHORTEST 1 (a)(()-[]->()){1,}(b)` |
+| `shortestPath((a)-[*]->(b))` (still valid) | Prefer `SHORTEST 1 (a)(()-[]->()){1,}(b)` |
 | `id(n)` | `elementId(n)` |
-| `[:REL*1..5]` | `(()-[:REL]->()){1,5}` |
+| `[:REL*1..5]` (still valid) | Prefer `(()-[:REL]->()){1,5}` |
 | `CALL { WITH x ... }` | `CALL (x) { ... }` |
 | `COLLECT { (a)-[:R]->(b) }` | `COLLECT { MATCH ... RETURN b }` |
 | `SET n = {k:v}` partial update | `SET n += {k:v}` |
@@ -295,19 +341,35 @@ curl -X POST https://<instance>.databases.neo4j.io/db/<database>/query/v2 \
 
 ## Version Gates
 
-Default to 2025.01-safe features when version unknown.
+Default to 2025.06-safe features when version unknown. Cypher 25 and the `CYPHER 25` prefix need 2025.06+; on 2025.01–2025.05 only Cypher 5 exists → omit the prefix.
 
 | Feature | Min version | Fallback |
 |---|---|---|
-| `CYPHER 25`, QPEs, `CALL (x) {}` | 2025.01 | require 2025+ |
-| Match modes (`DIFFERENT RELATIONSHIPS`, `REPEATABLE ELEMENTS`) | 2025.01 | require 2025+ |
-| Dynamic labels `$($expr)`, `coll.sort()` | 2025.01 | APOC or app-side |
+| `CYPHER 25` prefix | 2025.06 | omit prefix (Cypher 5) |
+| QPEs | 5.9 | `[:R*m..n]` |
+| `CALL (x) {}` | 5.23 | `CALL { WITH x … }` |
+| Match modes (`DIFFERENT RELATIONSHIPS`, `REPEATABLE ELEMENTS`) | 2025.06 | require 2025.06+ |
+| Dynamic labels `$($expr)` | 2025.01 | APOC or app-side |
+| `coll.sort()`, `coll.distinct()`, `coll.flatten()`, `coll.indexOf()`, `coll.insert()`, `coll.max()`, `coll.min()`, `coll.remove()` | 2025.11 | APOC or app-side |
+| `allReduce()` | 2025.08 | require 2025.08+ |
 | `CONCURRENT TRANSACTIONS`, `REPORT STATUS` | 2025.01 | drop / omit |
-| `SEARCH` clause (vector/fulltext) | 2026.01 | `CALL db.index.vector.queryNodes(...)` (deprecated 2026.04) |
+| `SEARCH` clause — `VECTOR INDEX` | 2026.01 | `CALL db.index.vector.queryNodes(...)` (deprecated 2026.04) |
+| `SEARCH` clause — `FULLTEXT INDEX` (`WITH ANALYZER`, `SKIP`/`OFFSET`) | 2026.09 | `CALL db.index.fulltext.queryNodes(...)` / `queryRelationships(...)` (deprecated 2026.10) |
 | `ACYCLIC` path mode (no repeated nodes in path) | 2026.03 | post-filter with `size(nodes(p)) = size(apoc.coll.toSet(nodes(p)))` |
 | `string.indexOf()`, `string.join()`, `string.regexReplace()` | 2026.05 | `apoc.text.*` or app-side |
-| GQL aliases: `FOR`=`UNWIND`, `PROPERTY_EXISTS`=`IS NOT NULL`, `IS [NOT] LABELED`=`n:Label`; function aliases (`local_time`, `zoned_datetime`, `duration_between`, `collect_list`, etc.) | 2026.02–04 | GQL compliance only — use Cypher equivalents; full list → [references/cypher-syntax.md](references/cypher-syntax.md) |
-| **GRAPH TYPE** schema DDL (`ALTER CURRENT GRAPH TYPE SET`, `EXTEND GRAPH TYPE WITH`, `DROP GRAPH TYPE ELEMENTS`, `SHOW CURRENT GRAPH TYPE`) | **2026.02 — PREVIEW** | Use individual `CREATE CONSTRAINT` / `CREATE INDEX` |
+| GQL aliases: `FOR`=`UNWIND`, `IS [NOT] LABELED`=`n:Label` (`PROPERTY_EXISTS(n, prop)`=`n.prop IS NOT NULL`; property name unquoted, a quoted string fails with "Unknown function"); function aliases (`local_time`, `zoned_datetime`, `duration_between`, `collect_list`, etc.) | 2026.02–04 | GQL compliance only — use Cypher equivalents; full list → [references/cypher-syntax.md](references/cypher-syntax.md) |
+| **GRAPH TYPE** schema DDL (`ALTER CURRENT GRAPH TYPE SET/ADD/ALTER/DROP`, `SHOW CURRENT GRAPH TYPE`) | 2026.02 (preview), **GA 2026.06** | Use individual `CREATE CONSTRAINT` / `CREATE INDEX` |
+| `GROUP BY` subclause on `WITH`/`RETURN` (explicit grouping keys, GQL alignment) | 2026.07 | Implicit grouping — list non-aggregating expressions in the projection |
+| `cardinality()` — keys in a MAP, elements in a LIST, nodes+rels in a PATH | 2026.07 | `size()` for LIST/MAP keys, `length()` for PATH |
+| Aggregation functions in `ORDER BY`/`WHERE` that are not projection items (aggregating projection only) | 2026.07 | Project the aggregate as an alias, then order/filter on the alias |
+| `WHERE` after `YIELD` in procedure calls on the `system` database | 2026.07 | `YIELD` + `RETURN`, filter client-side |
+| String interpolation `s"...{expr}..."` / `S"…"` | 2026.08 | `+` concatenation with `toString()` or `string.join()` |
+| `UUID` type; `uuid()`, `uuid(name)`, `uuid(mostSigBits, leastSigBits)`, `uuid.mostSignificantBits()`, `uuid.leastSignificantBits()` | 2026.08 | `randomUUID()` STRING property |
+| `null / 0` returns `null` instead of raising division-by-zero | 2026.08 | `CASE WHEN d = 0 THEN null ELSE n / d END` |
+| Map comprehension `{k: v IN map \| keyExpr: valueExpr}` | 2026.09 | `apoc.map.fromPairs([k IN keys(m) \| [k, m[k]]])` |
+| `toString()`, `toStringList()`, `toStringOrNull()` on `LIST`, `MAP`, `NODE`, `RELATIONSHIP`, `PATH` (`toString()` rejects typed lists like `[1,2]` or `collect(x)` at compile time — use `toStringOrNull()` or a `LIST<ANY>`/parameter) | 2026.09 | convert scalar components individually, then `string.join()` |
+| Map addition `map1 + map2` (merge maps) | 2026.10 (Aura Oct 2026) | `apoc.map.merge(map1, map2)` |
+| `db.schema.visualization(estimate => false)` — scans data, drops count-store ghost relationships (slower) | 2026.10 | call without args; verify rel combos with `MATCH (a:A)-[:R]->(b:B) RETURN count(*) LIMIT 1` |
 
 ---
 
@@ -329,7 +391,7 @@ MATCH p=(admin)-[:MEMBER_OF]->()-[:ALLOWED_INHERIT]->(company)
 RETURN count(p)
 ```
 
-Index anchors: every MATCH/MERGE/WHERE on a property needs an index on the lookup property or Neo4j scans all nodes. **Index only activates when the node has a label** — `MATCH (n {prop: $v})` never uses an index; `MATCH (n:Label {prop: $v})` does. MERGE without a constraint has no atomicity guarantee (two concurrent MERGEs can create duplicates). `CONTAINS`/`ENDS WITH` → TEXT index (RANGE does not support them). Force a plan with `USING INDEX n:Label(prop)` when EXPLAIN shows a scan.
+Index anchors: every MATCH/MERGE/WHERE on a property needs an index on the lookup property or Neo4j scans all nodes. **Index only activates when the node has a label** — `MATCH (n {prop: $v})` never uses an index; `MATCH (n:Label {prop: $v})` does. MERGE without a constraint has no atomicity guarantee (two concurrent MERGEs can create duplicates). `CONTAINS`/`ENDS WITH` → TEXT index (RANGE can only scan for them — less efficient). Force a plan with `USING INDEX n:Label(prop)` when EXPLAIN shows a scan.
 Chained `OPTIONAL MATCH` for nested data → replace with `COLLECT { MATCH ... RETURN }`.
 Dynamic labels (`$($label)`) → `AllNodesScan`+Filter; use static labels when possible.
 
@@ -346,7 +408,7 @@ Full anti-patterns → [references/performance.md](references/performance.md)
 - Long-running query progress [2026.03]: `SHOW TRANSACTIONS YIELD currentQuery, status, currentQueryProgress`
 - DateTime mismatch: `ZONED DATETIME >= date(...)` → 0 rows; use `datetime()` or `.year`
 - `Z` suffix ≠ UTC timezone: ISO strings with `Z` are stored as a UTC-offset, not the UTC zone — range queries across `Z` and `UTC` stored values return 0 rows. Coerce on write: `datetime({datetime: datetime($isoStr), timezone: 'UTC'})`
-- Duration: `.inDays`/`.inMonths` don't exist; use `.days`/`.months`
+- Duration: `duration.between(d1,d2).days` = days *component* (Jan 1 → Mar 15: 14), not total. Total days: `duration.inDays(d1,d2).days` (73); same for `inMonths`, `inSeconds`. `.inDays` is not an accessor on duration values
 - `Cannot merge node using null property value`: MERGE key resolved to null — validate params first
 - `IndexNotFoundError`: `SHOW INDEXES YIELD name, state WHERE state <> 'ONLINE'`
 
@@ -356,12 +418,12 @@ Full anti-patterns → [references/performance.md](references/performance.md)
 
 Load on demand:
 - [references/indexes.md](references/indexes.md) — index types (RANGE/TEXT/FULLTEXT/POINT/COMPOSITE/LOOKUP), constraints, MERGE lock semantics, fulltext Lucene syntax, import pre-flight
-- [references/cypher-syntax.md](references/cypher-syntax.md) — full syntax reference: WITH, DELETE, ORDER BY, CASE, null, lists, strings, dates, spatial/point, LOAD CSV, subqueries, QPEs, dynamic labels, SEARCH; conditional CALL (WHEN/THEN/ELSE); label pattern expressions; allReduce; NEXT clause; compact CASE WHEN; normalize(); index/constraint types table; functions annotated with version introduced
+- [references/cypher-syntax.md](references/cypher-syntax.md) — full syntax reference: WITH, DELETE, ORDER BY, CASE, null, lists, strings, dates, spatial/point, LOAD CSV, subqueries, QPEs, dynamic labels, SEARCH (vector [2026.01], fulltext [2026.09]); conditional CALL (WHEN/THEN/ELSE); label pattern expressions; allReduce; NEXT clause; compact CASE WHEN; normalize(); string interpolation; UUID type + `uuid()` functions [2026.08]; map comprehension [2026.09]; index/constraint types table; functions annotated with version introduced
 - [references/syntax-traps.md](references/syntax-traps.md) — 40+ syntax trap table
 - [references/performance.md](references/performance.md) — anti-patterns, text vs fulltext indexes, Eager (3 fix strategies), label inference, batching best practices, parallel runtime
 - [references/advanced-patterns.md](references/advanced-patterns.md) — REPEATABLE ELEMENTS patterns, allReduce stateful traversal, multi-stop QPE, route planning simulation, DAG critical path, temporal fraud detection component graph, cycle detection, OPTIONAL CALL
 - [references/apoc.md](references/apoc.md) — APOC Core: refactoring, virtual graph, merge helpers, path expanders, triggers, collections, conditional execution
-- [references/graph-type.md](references/graph-type.md) — **PREVIEW (2026.02+)** GRAPH TYPE DDL: `ALTER CURRENT GRAPH TYPE SET`, `EXTEND GRAPH TYPE WITH`, `DROP GRAPH TYPE ELEMENTS`, property types, constraints, label implications, relationship type enforcement
+- [references/graph-type.md](references/graph-type.md) — GRAPH TYPE DDL (GA 2026.06): `ALTER CURRENT GRAPH TYPE SET/ADD/ALTER/DROP`, `SHOW CURRENT GRAPH TYPE [AS GRAPH]`, element type syntax, property types, constraints, label implications, relationship type enforcement, required privileges
 
 ## WebFetch
 
