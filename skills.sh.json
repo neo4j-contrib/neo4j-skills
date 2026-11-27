@@ -39,7 +39,6 @@
       "description": "Connect AI agents to Neo4j via MCP, CLI, and agent skill management.",
       "skills": [
         "neo4j-mcp-skill",
-        "neo4j-laravel-boost-skill",
         "neo4j-cli-tools-skill"
       ]
     },
@@ -73,11 +72,10 @@
     },
     {
       "title": "Integrations",
-      "description": "Build Neo4j-backed APIs and apps with GraphQL, Spring Data, and Laravel.",
+      "description": "Build Neo4j-backed APIs and apps with GraphQL and Spring Data.",
       "skills": [
         "neo4j-graphql-skill",
-        "neo4j-spring-data-skill",
-        "neo4j-laravel-boost-skill"
+        "neo4j-spring-data-skill"
       ]
     },
     {

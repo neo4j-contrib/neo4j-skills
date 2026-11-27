@@ -20,7 +20,6 @@ Agent skill for the [Neo4j PHP Client](https://github.com/neo4j-php/neo4j-php-cl
 
 ## Not Covered
 
-- Laravel `DB::connection('neo4j')` / `Neo4jModel` / Boost MCP → `neo4j-laravel-boost-skill`
 - Cypher authoring → `neo4j-cypher-skill`
 
 ## Availability

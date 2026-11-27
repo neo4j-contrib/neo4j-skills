@@ -30,7 +30,6 @@ Configure via environment variables or agent plugin settings:
 | `neo4j-migration-skill` | Upgrading drivers or Cypher from 4.x/5.x to 2025.x |
 | `neo4j-graphql-skill` | Building GraphQL APIs backed by Neo4j |
 | `neo4j-spring-data-skill` | Spring Boot + Neo4j (SDN, @Node, @Relationship) |
-| `neo4j-laravel-boost-skill` | Laravel + Neo4j (`neo4j-laravel` DB/Eloquent, Laravel Boost MCP, `container:graph`) |
 | `neo4j-driver-python-skill` | Python driver (`neo4j` package) |
 | `neo4j-driver-javascript-skill` | JavaScript/TypeScript driver |
 | `neo4j-driver-java-skill` | Java driver |

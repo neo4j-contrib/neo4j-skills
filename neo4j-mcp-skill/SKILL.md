@@ -8,9 +8,8 @@ description: Use when installing, configuring, or troubleshooting the official N
   Does NOT cover writing Cypher queries via those tools — use neo4j-cypher-skill.
   Does NOT cover agent memory — use neo4j-agent-memory-skill.
   Does NOT cover Aura instance provisioning — use neo4j-aura-provisioning-skill.
-  Does NOT cover Laravel integration — use neo4j-laravel-boost-skill.
 allowed-tools: Bash, WebFetch
-version: 1.0.4
+version: 1.0.5
 ---
 
 # Neo4j MCP Skill
@@ -31,7 +30,6 @@ Installs and configures the [official Neo4j MCP server](https://github.com/neo4j
 - **Provisioning a new Neo4j Aura instance** → use `neo4j-aura-provisioning-skill`
 - **Agent long-term memory** → use `neo4j-agent-memory-skill`
 - **neo4j-admin / cypher-shell / aura-cli** → use `neo4j-cli-tools-skill`
-- **Laravel / Laravel Boost integration** → use `neo4j-laravel-boost-skill`
 
 ---
 

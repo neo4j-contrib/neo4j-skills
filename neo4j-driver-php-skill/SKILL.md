@@ -8,11 +8,8 @@ description: Neo4j PHP Driver (laudis/neo4j-php-client ^3.x) — Client > Driver
   TransactionConfiguration, Aura and cluster support, causal consistency. Use when writing
   PHP code connecting to Neo4j via Bolt or routed protocol.
   Does NOT handle Cypher query authoring — use neo4j-cypher-skill.
-  Does NOT cover Laravel DB/Eloquent/Boost MCP (DB::connection('neo4j'), Neo4jModel,
-  container:graph) — use neo4j-laravel-boost-skill. Raw laudis ClientBuilder inside Laravel
-  (no neo4j-laravel) stays here.
   Does NOT cover driver version migration — use neo4j-migration-skill.
-version: 1.0.8
+version: 1.0.9
 allowed-tools: Bash
 ---
 
@@ -25,7 +22,6 @@ allowed-tools: Bash
 
 ## When NOT to Use
 - **Writing/optimizing Cypher** → `neo4j-cypher-skill`
-- **Laravel DB / Eloquent / Boost MCP (`DB::connection('neo4j')`, `Neo4jModel`, `container:graph`)** → `neo4j-laravel-boost-skill`
 - **Driver version upgrades** → `neo4j-migration-skill`
 
 ---
