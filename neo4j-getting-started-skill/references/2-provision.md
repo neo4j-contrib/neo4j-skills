@@ -1,6 +1,10 @@
 # Stage 2 — provision
 # Provision a running Neo4j database and save credentials to .env.
 
+## Engine check — before provisioning
+
+User needs embedded, single-process, offline-fixture, or single-agent-memory graph → read `choose-engine.md` first. Stop here if relate chosen.
+
 ## Local DB path — handle DB_TARGET first
 
 Check `progress.md` for `DB_TARGET` **before** doing anything Aura-related:

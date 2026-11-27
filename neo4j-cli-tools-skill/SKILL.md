@@ -8,8 +8,9 @@ description: Use when working with Neo4j command-line tools — neo4j-cli (moder
   Does NOT cover Cypher query authoring — use neo4j-cypher-skill.
   Does NOT cover driver upgrades — use neo4j-migration-skill.
   Does NOT cover full MCP editor configuration — use neo4j-mcp-skill.
+  Does NOT cover the relate embedded engine (relatedb.ai) — use the relate skill; choice guide in neo4j-getting-started-skill.
 allowed-tools: WebFetch, Bash
-version: 1.0.17
+version: 1.0.18
 ---
 
 # Neo4j CLI Tools skill
@@ -20,6 +21,7 @@ version: 1.0.17
 - Admin tasks: backup, restore, import, memory sizing → `neo4j-admin`
 - Ad-hoc queries, scripting, CI/CD (Java required) → `cypher-shell`
 - MCP server install → `neo4j-mcp`
+- Offline fixtures / local embedded graph, Neo4j↔local copy → `relate pull` / `relate push` (see [relate](#6-relate-embedded-engine-third-party))
 
 ## When NOT to Use
 
@@ -137,6 +139,28 @@ Server 2.0.0 (2026-10-28) accepts only `NEO4J_MCP_*` env vars and unprefixed fla
 
 Reference: [neo4j-mcp-reference.md](references/neo4j-mcp-reference.md)
 
+### 6. relate (embedded engine, third-party)
+
+Embedded in-memory Cypher graph database, single binary. Not a Neo4j product; not a replacement for a Neo4j server. Single process, one writer, graph must fit in RAM, no RBAC/clustering.
+
+| Situation | Use |
+|---|---|
+| Production, concurrent writers, larger-than-RAM, HA, RBAC, GDS, Aura | Neo4j (this skill's other tools) |
+| Offline test fixtures, sandbox analytics, single-agent local memory, edge/WASM | relate |
+
+Full matrix: `neo4j-getting-started-skill` → `references/choose-engine.md`.
+
+```bash
+curl -sSfL https://relatedb.ai/install.sh | bash   # CLI
+npx skills add https://relatedb.ai --skill relate  # relate skill; --skill required (else installs all six)
+# Neo4j/Aura slice → local file (needs neo4j.env: NEO4J_URI, NEO4J_USERNAME, NEO4J_PASSWORD)
+relate pull --from neo4j.env --query 'MATCH (p:Person)-[r]-() RETURN p, r LIMIT 500' --database ./slice.rl
+# local file → Neo4j/Aura: dry-run first, confirm with user before the real push
+relate push --to neo4j.env --database ./slice.rl --dry-run
+```
+
+`pull` skips VECTOR/FULLTEXT indexes; destination must be empty. relate CLI, Cypher-on-relate, vector, geospatial → delegate to the relate skill. Docs for agents: https://relatedb.ai/llms.txt · https://relatedb.ai/skill.md
+
 ## Backup and Recovery
 
 ### Edition gate
@@ -247,7 +271,7 @@ Precedence: flags > env vars > config files. neo4j-cli uses its own credential s
 
 ## Checklist
 
-- [ ] Correct tool selected: neo4j-cli (preferred) / neo4j-admin / cypher-shell / neo4j-mcp
+- [ ] Correct tool selected: neo4j-cli (preferred) / neo4j-admin / cypher-shell / neo4j-mcp / relate (embedded only)
 - [ ] If using neo4j-cli: `neo4j-cli skill install` run after install or upgrade (keeps skill in sync)
 - [ ] Credentials via env or `credential dbms`; not hardcoded
 - [ ] Using `--format toon` for agent-facing neo4j-cli output

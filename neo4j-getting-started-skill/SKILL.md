@@ -8,7 +8,7 @@ description: Orchestrates zero-to-running-app in 8 stages — prerequisites → 
   Does NOT cover Cypher query authoring — use neo4j-cypher-skill.
   Does NOT cover driver upgrades or Cypher migration — use neo4j-migration-skill.
   Does NOT cover CLI/admin tasks on an existing DB — use neo4j-cli-tools-skill.
-version: 1.0.8
+version: 1.0.9
 allowed-tools: Bash, WebFetch, Read, Write, Edit,
   mcp__neo4j__read-cypher, mcp__neo4j__write-cypher, mcp__neo4j__get-schema,
   mcp__neo4j__list-gds-procedures,
@@ -38,6 +38,7 @@ Guide a **user or agent** from zero to a working Neo4j application by executing 
 - **Cypher authoring on existing project** → `neo4j-cypher-skill`
 - **Driver upgrades / Cypher migration** → `neo4j-migration-skill`
 - **Admin on existing DB** (backup, restore, import) → `neo4j-cli-tools-skill`
+- **Single-process embedded/local-only graph, no Neo4j server** → relate; see [references/choose-engine.md](references/choose-engine.md)
 
 ---
 
@@ -256,6 +257,7 @@ Shared capabilities used across multiple stages:
 
 | Situation | Action |
 |-----------|--------|
+| Need might fit embedded/local-only, test fixtures, or single-agent memory | Read [references/choose-engine.md](references/choose-engine.md) before `provision`; relate chosen → stop, delegate to relate skill |
 | `DB_TARGET=existing` | Skip `provision`; write `.env` from user creds; go to `model` |
 | `DATA_SOURCE=demo` | Skip custom modeling; use demo schema; jump to `load` |
 | `DB_TARGET=existing` + data present | Skip `provision`, `model`, `load`; introspect schema; go to `explore` |

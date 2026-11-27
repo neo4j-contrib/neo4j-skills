@@ -80,6 +80,18 @@ For a local clone, choose **Import power from a folder** and select the repo roo
 
 Alternatively, copy individual skills into `.kiro/skills/` (workspace) or `~/.kiro/skills/` (global).
 
+## Neo4j or relate?
+
+[relate](https://relatedb.ai) is a separate, third-party embedded Cypher graph engine (single binary, in-process). It complements Neo4j; it does not replace a Neo4j server. It ships its own skill and agent docs.
+
+| Need | Use |
+|---|---|
+| Production, concurrent writers, graphs larger than RAM, HA, RBAC, GDS, Aura, Kafka/Spark | **Neo4j** |
+| Offline test fixtures, sandbox analytics, single-agent local memory, edge/WASM, no infrastructure | **relate** |
+| Prototype locally, ship on Neo4j | **relate → Neo4j** (`relate push`) |
+
+Details and limits: [choose-engine.md](neo4j-getting-started-skill/references/choose-engine.md). relate skill: `npx skills add https://relatedb.ai --skill relate` (`--skill` required) · [llms.txt](https://relatedb.ai/llms.txt) · [skill.md](https://relatedb.ai/skill.md). CLI usage and `pull`/`push`: [`neo4j-cli-tools-skill`](./neo4j-cli-tools-skill).
+
 ## Available Skills
 
 ### Querying & Modeling

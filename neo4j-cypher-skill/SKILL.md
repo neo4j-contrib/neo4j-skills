@@ -6,8 +6,9 @@ description: Generates, optimizes, and validates Cypher 25 queries for Neo4j 202
   CALL, UNWIND, FOREACH, LOAD CSV, SEARCH, expressions, functions, indexes, and subqueries.
   Does NOT handle driver migration or API changes — use neo4j-migration-skill.
   Does NOT cover DB administration or server ops — use neo4j-cli-tools-skill.
+  Does NOT cover Cypher on the relate embedded engine — use the relate skill.
 compatibility: Neo4j >= 2025.06 for Cypher 25 (CYPHER 25 prefix, match modes); omit the prefix below 2025.06
-version: 1.0.32
+version: 1.0.33
 ---
 
 ## When to Use
@@ -19,6 +20,7 @@ version: 1.0.32
 - **Driver migration/API changes** → `neo4j-migration-skill`
 - **DB admin** (users, config, backups) → `neo4j-cli-tools-skill`
 - **Hybrid search that combines vector with fulltext or other ranked sources** → `neo4j-vector-index-skill`
+- **Queries targeting the relate embedded engine (relatedb.ai) rather than a Neo4j server** → relate skill; engine differs (fixed namespaces, 500-hop default path cap, own dialect coverage). Engine choice: `neo4j-getting-started-skill/references/choose-engine.md`
 
 GQL conformance note: `LET`, `FINISH`, `FILTER`, and `INSERT` are valid Cypher 25 clauses (introduced via GQL conformance, mostly in Neo4j 2025.06). On older versions, fall back to `WITH` / (omit RETURN) / `WHERE` / `CREATE`. `INSERT` requires `&`-separated multi-labels and does not support dynamic labels/types.
 
