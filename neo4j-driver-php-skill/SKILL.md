@@ -10,7 +10,7 @@ description: Neo4j PHP Driver (laudis/neo4j-php-client ^3.x) — Client > Driver
   Does NOT handle Cypher query authoring — use neo4j-cypher-skill.
   Does NOT cover Laravel integration (DB/Eloquent/Boost MCP) — use neo4j-laravel-boost-skill.
   Does NOT cover driver version migration — use neo4j-migration-skill.
-version: 1.0.4
+version: 1.0.5
 allowed-tools: Bash
 ---
 
@@ -110,7 +110,7 @@ $driver = Driver::create($uri, authenticate: Authenticate::basic($user, $passwor
 if (! $driver->verifyConnectivity()) {  // returns bool — does not throw
     throw new RuntimeException('Neo4j unreachable');
 }
-$driver->getServerInfo();        // address, server version
+$info = $driver->getServerInfo(); // getAddress(), getProtocol(), getAgent() — no version accessor
 ```
 
 URI schemes:

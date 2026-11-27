@@ -112,12 +112,19 @@ return [
     ],
 
     'container_graph' => [
-        'uri'                        => env('NEO4J_URI', ''),
-        'default_connection_dsn'     => env('NEO4J_DEFAULT_CONNECTION_DSN', ''),
-        'username'                   => env('NEO4J_USER', env('NEO4J_USERNAME', 'neo4j')),
-        'password'                   => env('NEO4J_PASSWORD', ''),
-        'static_scan_paths'          => env('NEO4J_CONTAINER_GRAPH_STATIC_SCAN_PATHS', ''),
-        'static_scan_provider_paths' => env('NEO4J_CONTAINER_GRAPH_STATIC_SCAN_PROVIDER_PATHS', ''),
+        'uri'                    => env('NEO4J_URI', ''),
+        'default_connection_dsn' => env('NEO4J_DEFAULT_CONNECTION_DSN', ''),
+        'username'               => env('NEO4J_USER', env('NEO4J_USERNAME', 'neo4j')),
+        'password'               => env('NEO4J_PASSWORD', ''),
+        // Comma-separated env → filtered string arrays (not raw env strings)
+        'static_scan_paths' => array_values(array_filter(array_map(
+            static fn (string $path): string => trim($path),
+            explode(',', (string) env('NEO4J_CONTAINER_GRAPH_STATIC_SCAN_PATHS', '')),
+        ))),
+        'static_scan_provider_paths' => array_values(array_filter(array_map(
+            static fn (string $path): string => trim($path),
+            explode(',', (string) env('NEO4J_CONTAINER_GRAPH_STATIC_SCAN_PROVIDER_PATHS', '')),
+        ))),
     ],
 ];
 ```

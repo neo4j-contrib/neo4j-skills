@@ -81,7 +81,7 @@ $dt->getNanoseconds();
 $dt->getTimeZoneOffsetSeconds();
 ```
 
-`DateTimeZoneId`, `LocalDateTime`, `Date`, `Time`, `LocalTime` — all have `toDateTime()` or raw accessors; none have year/month/day/hour/minute/second getters.
+`DateTime`, `DateTimeZoneId`, `LocalDateTime`, `Date` — `toDateTime()` → `\DateTimeImmutable`. `Time` / `LocalTime` — raw accessors only (`getNanoSeconds()` / `getNanoseconds()`, `Time::getTzOffsetSeconds()`); no `toDateTime()`. None have year/month/day/hour/minute/second getters.
 
 Pass `\DateTimeInterface` as a parameter — mapped to `DateTimeZoneId`:
 

@@ -17,6 +17,19 @@ $client = ClientBuilder::create()
 | Option | Method | Description |
 |---|---|---|
 | User agent | `withUserAgent(string)` | Identifies client to the Neo4j server |
+| SSL | `withSslConfiguration(SslConfiguration)` | TLS settings |
+| Max pool size | `withMaxPoolSize(?int)` | Connection pool cap |
+| Acquire timeout | `withAcquireConnectionTimeout(?float)` | Seconds to wait for a pooled connection |
+| Socket timeout | `withSocketTimeoutSeconds(?float)` | Socket read/write timeout |
+| Socket type | `withSocketType(?SocketType)` | Socket implementation |
+| Liveness check | `withConnectionLivenessCheckTimeout(?float)` | Seconds before pooled-connection liveness probe |
+| Logger | `withLogger(?string $logLevel, ?LoggerInterface)` | PSR-3 logging |
+| Telemetry | `withTelemetryEnabled(bool)` | Driver telemetry on/off |
+| Cache | `withCache($cache)` | PSR-16 cache for routing/etc. |
+| Semaphore | `withSemaphoreFactory($factory)` | Pool concurrency control |
+| Clock | `withClock(MonotonicClock)` | Clock override (tests) |
+
+Full surface: `Laudis\Neo4j\Databags\DriverConfiguration` in `laudis/neo4j-php-client`.
 
 ## SessionConfiguration
 
@@ -111,8 +124,11 @@ $counters->propertiesSet();
 // Query type — Laudis\Neo4j\Enum\QueryTypeEnum: READ_ONLY, READ_WRITE, WRITE_ONLY, SCHEMA_WRITE
 $summary->getQueryType();
 
-// Server info
-$summary->getServerInfo()->getAddress();
+// Server info — getAddress(), getProtocol(), getAgent() (no version accessor)
+$info = $summary->getServerInfo();
+$info->getAddress();
+$info->getProtocol();
+$info->getAgent();
 ```
 
 ## Authentication Options

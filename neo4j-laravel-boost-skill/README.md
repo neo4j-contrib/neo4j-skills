@@ -24,8 +24,9 @@ Part of the [agent-skills](https://github.com/neo4j/agent-skills) collection.
 ```bash
 composer require --dev neo4j/laravel-boost
 composer require --dev laravel/mcp   # if missing (not pulled by Boost)
-composer require neo4j-php/neo4j-laravel   # only for DB/Eloquent/migrations
+# Packagist Boost ≤1.2.0 only — tip already pulls neo4j-php/neo4j-laravel:
+composer require neo4j-php/neo4j-laravel
 php artisan neo4j-boost:setup
 ```
 
-Requirements: PHP 8.2+, Laravel 12 or 13. Boost does not install `neo4j-php/neo4j-laravel`.
+Requirements: PHP 8.2+, Laravel 12 or 13. Packagist Boost ≤1.2.0 does not pull `neo4j-php/neo4j-laravel`; tip/main after 1.2.0 requires and pulls it (`^0.0.1`).

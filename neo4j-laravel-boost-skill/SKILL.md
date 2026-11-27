@@ -8,7 +8,7 @@ description: Use when integrating Neo4j into Laravel 12/13 apps — neo4j/larave
   Does NOT handle raw PHP driver code outside Laravel — use neo4j-driver-php-skill.
   Does NOT handle Cypher query authoring — use neo4j-cypher-skill.
   Does NOT handle standalone MCP server setup — use neo4j-mcp-skill.
-version: 1.0.2
+version: 1.0.3
 allowed-tools: Bash
 ---
 
@@ -26,13 +26,18 @@ allowed-tools: Bash
 
 ## Package Selection
 
-Two independent packages — Boost does **not** install `neo4j-php/neo4j-laravel`. Pick row by task; read only the matching sections.
+Two packages. Boost→`neo4j-laravel` depends on Boost version — check `composer.lock` / Packagist before assuming. Pick row by task; read only matching sections.
+
+| Boost version | `neo4j-php/neo4j-laravel` |
+|---|---|
+| Packagist published `≤1.2.0` | **Not** required — install separately for DB/Eloquent |
+| Tip / main after 1.2.0 (local source) | **Required** (`^0.0.1`) — pulled by Boost; `container:graph` hard-depends on `Neo4jConnection` / `Neo4jModel` |
 
 | Task | Package | Entry | Read |
 |---|---|---|---|
-| Neo4j MCP tools in Laravel Boost; app wiring graph (`container:graph`); change-impact analysis | `neo4j/laravel-boost` | `composer require --dev neo4j/laravel-boost` → `php artisan neo4j-boost:setup` | Steps 1–6, App Knowledge Graph, Transport Modes, MCP Tools, Troubleshooting |
-| App data access: `DB::connection('neo4j')`, query builder, `Neo4jModel`, migrations, vector search | `neo4j-php/neo4j-laravel` | `composer require neo4j-php/neo4j-laravel` | App Data Access + [references/neo4j-laravel.md](references/neo4j-laravel.md) |
-| Both | both | Install Boost (`--dev`) and `neo4j-php/neo4j-laravel` separately | All |
+| Neo4j MCP tools; app wiring graph (`container:graph`); change-impact | `neo4j/laravel-boost` | `composer require --dev neo4j/laravel-boost` → `php artisan neo4j-boost:setup` | Steps 1–6, App Knowledge Graph, Transport Modes, MCP Tools, Troubleshooting |
+| App data access: `DB::connection('neo4j')`, query builder, `Neo4jModel`, migrations, vector search | `neo4j-php/neo4j-laravel` | Tip: already via Boost. Packagist ≤1.2.0: `composer require neo4j-php/neo4j-laravel` | App Data Access + [references/neo4j-laravel.md](references/neo4j-laravel.md) |
+| Both | both | Tip: Boost alone. Packagist ≤1.2.0: install both | All |
 
 Env var names differ: Boost reads `NEO4J_URI`; `neo4j-php/neo4j-laravel` reads `NEO4J_URL`. Set both when using both packages.
 
@@ -41,9 +46,9 @@ Env var names differ: Boost reads `NEO4J_URI`; `neo4j-php/neo4j-laravel` reads `
 | Requirement | Version |
 |---|---|
 | PHP | ^8.2 |
-| Laravel | ^12.0 or ^13.0 (Boost); `neo4j-php/neo4j-laravel` also supports Illuminate ^11 |
-| `neo4j/laravel-boost` | ^1.0 (dev dependency; pulls `laravel/boost` + `laudis/neo4j-php-client ^3.4`) |
-| `neo4j-php/neo4j-laravel` | ^0.0.1 (pre-release; caret pins exactly 0.0.1 — install separately) |
+| Laravel | ^12.0 or ^13.0 (Boost + `neo4j-laravel` tip). Packagist `neo4j-php/neo4j-laravel` `0.0.2` also allows Illuminate ^11 |
+| `neo4j/laravel-boost` | ^1.0 (dev). Tip pulls `laravel/boost`, `laudis/neo4j-php-client ^3.4`, `neo4j-php/neo4j-laravel ^0.0.1`. Packagist ≤1.2.0 omits `neo4j-laravel` |
+| `neo4j-php/neo4j-laravel` | Packagist latest `0.0.2`. Boost tip pins `^0.0.1` (≥0.0.1 <0.0.2). Separate install only on Packagist Boost ≤1.2.0 |
 | `laravel/mcp` | ^0.5.1 (dev; not pulled by Boost — install if missing) |
 
 ---
@@ -54,11 +59,12 @@ Env var names differ: Boost reads `NEO4J_URI`; `neo4j-php/neo4j-laravel` reads `
 composer require --dev neo4j/laravel-boost
 ```
 
-Pulls `laravel/boost`, `laudis/neo4j-php-client`. Does **not** install `neo4j-php/neo4j-laravel` or `laravel/mcp`.
+Pulls `laravel/boost`, `laudis/neo4j-php-client`. Tip also pulls `neo4j-php/neo4j-laravel`. Never pulls `laravel/mcp`. Packagist ≤1.2.0 does **not** pull `neo4j-php/neo4j-laravel`.
 
 ```bash
 composer require --dev laravel/mcp   # if missing
-composer require neo4j-php/neo4j-laravel   # only when app data access / Neo4jModel needed
+# Packagist Boost ≤1.2.0 only (tip already has it):
+composer require neo4j-php/neo4j-laravel
 ```
 
 If fails → verify PHP 8.2+ and Laravel 12/13. **Stop and report.**
@@ -375,7 +381,7 @@ Full settings reference → [references/boost-configuration.md](references/boost
 
 ## App Data Access (`neo4j-php/neo4j-laravel`)
 
-Requires separate install: `composer require neo4j-php/neo4j-laravel` (not pulled by Boost).
+Packagist Boost ≤1.2.0: `composer require neo4j-php/neo4j-laravel`. Tip: already pulled by Boost — still configure connection below for app data.
 
 ### Connection (`config/database.php`)
 
@@ -461,20 +467,14 @@ Full `neo4j-laravel` reference (bulk edge ops, transactions, DI container wrappe
 ---
 
 ## References
-
 - [references/neo4j-laravel.md](references/neo4j-laravel.md) — `neo4j-php/neo4j-laravel` config, bulk relationships, Eloquent joins, transactions, DI, vector search, migrations, Debugbar
 - [references/boost-configuration.md](references/boost-configuration.md) — Boost env vars, transport settings, `config/neo4j-boost.php` schema
-- [App graph prompts](https://github.com/neo4j-php/neo4j-boost/blob/main/docs/PROMPTS.md)
-- [Container graph tutorial](https://github.com/neo4j-php/neo4j-boost/blob/main/docs/tutorials/container-graph.md)
-- [Neo4j Boost GitHub](https://github.com/neo4j-php/neo4j-boost)
-- [Official Neo4j MCP Server](https://github.com/neo4j/mcp)
-- [Laravel Boost](https://github.com/laravel/boost)
-
----
+- [App graph prompts](https://github.com/neo4j-php/neo4j-boost/blob/main/docs/PROMPTS.md) · [Container graph tutorial](https://github.com/neo4j-php/neo4j-boost/blob/main/docs/tutorials/container-graph.md)
+- [Neo4j Boost GitHub](https://github.com/neo4j-php/neo4j-boost) · [Official Neo4j MCP Server](https://github.com/neo4j/mcp) · [Laravel Boost](https://github.com/laravel/boost)
 
 ## Checklist
 - [ ] `composer require --dev neo4j/laravel-boost` installed; `laravel/mcp` present
-- [ ] `neo4j-php/neo4j-laravel` installed separately when app data access needed
+- [ ] `neo4j-php/neo4j-laravel` present (tip: pulled by Boost; Packagist ≤1.2.0: install when app data / Eloquent needed)
 - [ ] `php artisan neo4j-boost:setup` completed
 - [ ] `.env` defines `NEO4J_URI` (Boost) and `NEO4J_URL` (`neo4j-laravel` if used), `NEO4J_USERNAME`, `NEO4J_PASSWORD`; `.env` in `.gitignore`
 - [ ] Transport selected: `driver` (default), `stdio` (requires `install-mcp`), or `http`
