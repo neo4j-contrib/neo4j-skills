@@ -30,6 +30,7 @@
     "./neo4j-graphrag-skill",
     "./neo4j-import-skill",
     "./neo4j-kafka-skill",
+    "./neo4j-laravel-boost-skill",
     "./neo4j-mcp-skill",
     "./neo4j-migration-skill",
     "./neo4j-modeling-skill",

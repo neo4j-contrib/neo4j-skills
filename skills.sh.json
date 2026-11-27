@@ -39,6 +39,7 @@
       "description": "Connect AI agents to Neo4j via MCP, CLI, and agent skill management.",
       "skills": [
         "neo4j-mcp-skill",
+        "neo4j-laravel-boost-skill",
         "neo4j-cli-tools-skill"
       ]
     },
