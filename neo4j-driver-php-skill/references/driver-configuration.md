@@ -22,14 +22,14 @@ $client = ClientBuilder::create()
 | Acquire timeout | `withAcquireConnectionTimeout(?float)` | Seconds to wait for a pooled connection |
 | Socket timeout | `withSocketTimeoutSeconds(?float)` | Socket read/write timeout |
 | Socket type | `withSocketType(?SocketType)` | Socket implementation |
-| Liveness check | `withConnectionLivenessCheckTimeout(?float)` | Seconds before pooled-connection liveness probe — **`≥3.7.1`** (absent on `3.6.x`) |
+| Liveness check | `withConnectionLivenessCheckTimeout(?float)` | Seconds before pooled-connection liveness probe — **`≥3.7.0`** (absent on `3.6.x`) |
 | Logger | `withLogger(?string $logLevel, ?LoggerInterface)` | PSR-3 logging |
 | Telemetry | `withTelemetryEnabled(bool)` | Driver telemetry on/off |
 | Cache | `withCache($cache)` | PSR-16 cache for routing/etc. |
 | Semaphore | `withSemaphoreFactory($factory)` | Pool concurrency control |
-| Clock | `withClock(MonotonicClock)` | Clock override (tests) — **`≥3.7.1`** (absent on `3.6.x`) |
+| Clock | `withClock(MonotonicClock)` | Clock override (tests) — **`≥3.7.0`** (absent on `3.6.x`) |
 
-Full surface: `Laudis\Neo4j\Databags\DriverConfiguration` in `laudis/neo4j-php-client`. Run `composer show laudis/neo4j-php-client` before using `≥3.7.1`-only methods.
+Full surface: `Laudis\Neo4j\Databags\DriverConfiguration` in `laudis/neo4j-php-client`. Run `composer show laudis/neo4j-php-client` before using `≥3.7.0`-only methods.
 
 ## SessionConfiguration
 
@@ -51,11 +51,13 @@ $client = ClientBuilder::create()
 | Option | Method | Description |
 |---|---|---|
 | Database | `withDatabase(string)` | Target database name |
-| Access mode | `withAccessMode(AccessMode)` | `READ()` or `WRITE()` |
-| Fetch size | `withFetchSize(int)` | Rows fetched per batch |
+| Access mode | `withAccessMode(AccessMode)` | `READ()` or `WRITE()`; default `null` → routed as WRITE |
+| Fetch size | `withFetchSize(int)` | Rows fetched per batch (default 1000) |
 | Bookmarks | `withBookmarks(array)` | `list<Bookmark>` from `$session->getLastBookmark()`; wrap single bookmark: `[$bookmark]` |
 
 Do NOT set `database` unless deviating from server default.
+
+`ClientBuilder::withDefaultSessionConfiguration` applies only to client convenience methods (`run` / `*Transaction`). `$client->getDriver()->createSession(SessionConfiguration::default())` does **not** inherit that default — pass database/bookmarks explicitly on the SessionConfiguration.
 
 ## TransactionConfiguration
 

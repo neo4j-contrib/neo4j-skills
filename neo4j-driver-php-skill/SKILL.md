@@ -12,7 +12,7 @@ description: Neo4j PHP Driver (laudis/neo4j-php-client ^3.x) — Client > Driver
   container:graph) — use neo4j-laravel-boost-skill. Raw laudis ClientBuilder inside Laravel
   (no neo4j-laravel) stays here.
   Does NOT cover driver version migration — use neo4j-migration-skill.
-version: 1.0.7
+version: 1.0.8
 allowed-tools: Bash
 ---
 
@@ -36,7 +36,7 @@ allowed-tools: Bash
 composer require laudis/neo4j-php-client
 ```
 
-If fails → verify PHP ^8.1, `ext-json`, `ext-mbstring`. Bolt also needs `ext-bcmath` + `ext-sockets` (composer suggests `ext-bcmath`; client README lists both as required). **Stop and report.**
+If fails → verify PHP ^8.1, `ext-json`, `ext-mbstring`. Bolt: `ext-bcmath` suggested (composer `suggest`); `ext-sockets` optional — without it driver falls back to stream sockets. **Stop and report.**
 
 > HTTP/HTTPS removed in v3.3.0. Use `bolt://`, `bolt+s://`, `bolt+ssc://`, `neo4j://`, `neo4j+s://`, or `neo4j+ssc://` only.
 
@@ -118,7 +118,8 @@ use Laudis\Neo4j\Authentication\Authenticate;
 
 $driver = Driver::create($uri, authenticate: Authenticate::basic($user, $password));
 try {
-    // returns false on ConnectException; auth / other Neo4j errors still throw
+    // false on ConnectException (bolt://) or ConnectException|ConnectionPoolException (neo4j://);
+    // auth / other Neo4j errors still throw
     if (! $driver->verifyConnectivity()) {
         throw new RuntimeException('Neo4j unreachable');
     }
@@ -127,6 +128,8 @@ try {
 }
 $info = $driver->getServerInfo(); // getAddress(), getProtocol(), getAgent() — no version accessor
 ```
+
+`$client->getDriver('alias')` eagerly calls `verifyConnectivity` and throws `RuntimeException("Cannot connect to any server on alias…")` on failure — wrap in try/catch.
 
 URI schemes:
 
@@ -147,7 +150,7 @@ Default if omitted: `bolt://localhost:7687` (database = server home/default). Op
 | Approach | Method | Auto-retry | Use when |
 |---|---|---|---|
 | Transaction functions (Client) | `$client->writeTransaction()` / `readTransaction()` | ✅ TransientError, NotALeader, connection errors | **Default** — production, Aura, clusters, HA |
-| Session query | `$session->executeQuery($cypher, $params)` | ✅ same retry; full result loaded | Causal consistency within one session; bookmark handover. Access mode = session config — default **WRITE**; pass `->withAccessMode(\Laudis\Neo4j\Enum\AccessMode::READ())` for reads |
+| Session query | `$session->executeQuery($cypher, $params)` | ✅ same retry; full result loaded | Causal consistency within one session; bookmark handover. Access mode = session config — default `null` (routed as WRITE); pass `->withAccessMode(\Laudis\Neo4j\Enum\AccessMode::READ())` for reads |
 | Auto-committed | `$client->run()` / `runStatement()` | ⚠️ connection/routing errors only (no TransientError) | Simple scripts, non-critical reads |
 | Multiple auto-committed | `$client->runStatements([...])` | ⚠️ each runs in own auto-commit tx — **not atomic** | Bulk independent statements |
 | Unmanaged | `$session->beginTransaction()` | ❌ | Explicit commit/rollback control |
@@ -157,6 +160,8 @@ Default if omitted: `bolt://localhost:7687` (database = server home/default). Op
 ## Transaction Functions (Default)
 
 Retries callback on TransientError (max 3 attempts, 100ms pause), NotALeader (clears routing table), connection errors. Routes writes to leader, reads to followers.
+
+After 3 failed attempts: throws plain `\Exception('Failed to execute transaction')` — **not** `Neo4jException`. Real cause in `$e->getPrevious()`. Auto-commit exhaustion throws `Neo4jException` ("Statement execution failed after maximum retries").
 
 ```php
 use Laudis\Neo4j\Contracts\TransactionInterface;
@@ -297,7 +302,7 @@ $results = $client->run('MATCH (p:Person)-[r:KNOWS]->(f) RETURN p, r, f');
 foreach ($results as $row) {
     $node      = $row->get('p');              // Laudis\Neo4j\Types\Node
     $intId     = $node->getId();              // legacy int ID
-    $elementId = $node->getElementId();       // ?string element ID (Neo4j 5+)
+    $elementId = $node->getElementId();       // ?string element ID (Neo4j 5+; null on pre-5)
 
     $rel       = $row->get('r');              // Laudis\Neo4j\Types\Relationship
     $type      = $rel->getType();             // 'KNOWS'
@@ -363,7 +368,9 @@ $client->writeTransaction(static function (TransactionInterface $tsx) use ($peop
 | Expecting causal consistency across `$client->run()` / `*Transaction()` calls | Use one explicit Session, or hand over `getLastBookmark()` via `withBookmarks([...])` |
 | Expecting causal consistency across PHP requests/processes | Pass `getLastBookmark()` forward via `withBookmarks([...])` on a new session |
 | `runStatements([...])` expecting atomic execution | Not atomic — use `beginTransaction()` |
-| `$node->getId()` expecting element ID | Use `$node->getElementId()` (string, Neo4j 5+) |
+| `$node->getId()` expecting element ID | Use `$node->getElementId()` (`?string`, Neo4j 5+; null on pre-5) |
+| Catching only `Neo4jException` around `writeTransaction` | Final retry throws plain `\Exception` — check `getPrevious()` |
+| `$client->getDriver()` assuming lazy connect | Eager `verifyConnectivity` — can throw `RuntimeException` |
 
 ---
 
@@ -379,7 +386,7 @@ Docs:
 
 ## Checklist
 - [ ] `laudis/neo4j-php-client` installed via Composer
-- [ ] PHP ^8.1, `ext-json`, `ext-mbstring` confirmed (`ext-bcmath`, `ext-sockets` for Bolt)
+- [ ] PHP ^8.1, `ext-json`, `ext-mbstring` confirmed (`ext-bcmath` suggested for Bolt; `ext-sockets` optional with stream fallback)
 - [ ] One client (or driver) created at startup; shared across requests
 - [ ] Credentials loaded from `$_ENV`/`$_SERVER` (or `createUnsafeImmutable`); empty `NEO4J_PASSWORD` fails fast; `.env` in `.gitignore`
 - [ ] `writeTransaction` / `readTransaction` used for production writes/reads

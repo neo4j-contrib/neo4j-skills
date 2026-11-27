@@ -41,6 +41,10 @@
 | Indexed/empty `array` | `List` |
 | Associative `array` | `Map` |
 | `\DateTimeInterface` | `DateTimeZoneId` |
+| `\DateInterval` | `Duration` |
+| `\Laudis\Neo4j\Types\CypherList` / `CypherMap` | `List` / `Map` (pass-through) |
+| `\Laudis\Neo4j\Types\Uuid` | `UUID` — **`[main only]`** (absent on Packagist `3.7.1`) |
+| Point / temporal Cypher types | Pass-through when already Laudis types |
 
 Empty `[]` is ambiguous — use `ParameterHelper`:
 
@@ -97,7 +101,7 @@ $client->run('CREATE (e:Event {at: $ts})', ['ts' => new \DateTime('2024-06-01 12
 // Node
 $node      = $row->get('p');                     // Laudis\Neo4j\Types\Node
 $intId     = $node->getId();                     // integer (legacy)
-$elementId = $node->getElementId();              // string element ID (Neo4j 5+)
+$elementId = $node->getElementId();              // ?string element ID (Neo4j 5+; null on pre-5)
 $labels    = $node->getLabels();                 // CypherList<string>
 $name      = $node->getProperty('name');
 $all       = $node->getProperties()->toArray();  // PHP array
@@ -107,8 +111,8 @@ $rel        = $row->get('r');                    // Laudis\Neo4j\Types\Relations
 $type       = $rel->getType();                   // e.g. 'KNOWS'
 $startIntId = $rel->getStartNodeId();            // integer (legacy)
 $endIntId   = $rel->getEndNodeId();              // integer (legacy)
-$startEId   = $rel->getStartNodeElementId();     // string element ID
-$endEId     = $rel->getEndNodeElementId();       // string element ID
+$startEId   = $rel->getStartNodeElementId();     // ?string element ID
+$endEId     = $rel->getEndNodeElementId();       // ?string element ID
 $since      = $rel->getProperty('since');
 
 // Path

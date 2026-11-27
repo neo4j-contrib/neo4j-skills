@@ -37,17 +37,19 @@ Targets `neo4j-mcp` 1.x (`NEO4J_MCP_VERSION=v1.4.0`; passes `NEO4J_URI`, `NEO4J_
 | `NEO4J_MCP_VERSION` | `v1.4.0` | Binary version to download |
 | `NEO4J_MCP_BINARY_PATH` | (auto) | Custom binary path override |
 | `NEO4J_MCP_PLATFORM_ASSET` | (auto) | Override auto-detected platform asset |
-| `NEO4J_MCP_AUTO_INSTALL` | `false` | Auto-install binary on first use |
+| `NEO4J_MCP_AUTO_INSTALL` | `false` | Dead key — nothing reads it; install via `neo4j-boost:install-mcp` |
 
 ### HTTP transport
 
 Targets `neo4j-mcp` 1.x (`/mcp`, Basic Auth). 2.0+ requires `/db/{database}/mcp` + `X-Neo4j-MCP-URI`.
 
+`[verify]` **Basic Auth broken:** `Neo4jHttpClient` reads top-level `neo4j-boost.http.*`; shipped config nests under `transport.http.*` → auth skipped. Prefer driver transport. Workaround: publish config and duplicate `url`/`username`/`password` under top-level `http` key.
+
 | Variable | Default | Description |
 |---|---|---|
 | `NEO4J_MCP_URL` | `http://localhost:8080/mcp` | MCP HTTP endpoint |
-| `NEO4J_MCP_USERNAME` | → `NEO4J_USERNAME` | Basic Auth username |
-| `NEO4J_MCP_PASSWORD` | → `NEO4J_PASSWORD` | Basic Auth password |
+| `NEO4J_MCP_USERNAME` | → `NEO4J_USERNAME` | Intended Basic Auth username (unread by HTTP client until bug fixed) |
+| `NEO4J_MCP_PASSWORD` | → `NEO4J_PASSWORD` | Intended Basic Auth password (unread by HTTP client until bug fixed) |
 
 ### Driver transport
 
@@ -63,7 +65,7 @@ Uses `NEO4J_URI`, `NEO4J_USERNAME`, `NEO4J_PASSWORD`, `NEO4J_DATABASE` from core
 |---|---|---|
 | `NEO4J_URI` | (empty) | Bolt URI for graph export |
 | `NEO4J_DEFAULT_CONNECTION_DSN` | (empty) | Fallback DSN when `NEO4J_URI` empty |
-| `NEO4J_USER` | → `NEO4J_USERNAME` | Username for graph export |
+| `NEO4J_USER` | → `NEO4J_USERNAME` | Fallback username only when `NEO4J_URI` empty (explicit DSN path); with `NEO4J_URI` set, `bolt.username` / `NEO4J_USERNAME` wins |
 | `NEO4J_PASSWORD` | (empty) | Password for graph export |
 | `NEO4J_CONTAINER_GRAPH_STATIC_SCAN_PATHS` | (empty) | Absolute paths for hidden dep scan (`app()`/facades/helpers/`new`); comma-separated |
 | `NEO4J_CONTAINER_GRAPH_STATIC_SCAN_PROVIDER_PATHS` | (empty) | Absolute paths for provider scanning; comma-separated |

@@ -33,4 +33,4 @@ Part of the [agent-skills](https://github.com/neo4j/agent-skills) collection.
 composer require laudis/neo4j-php-client
 ```
 
-PHP >= 8.1, with `ext-json` and `ext-mbstring`. Bolt also needs `ext-bcmath` and `ext-sockets`.
+PHP >= 8.1, with `ext-json` and `ext-mbstring`. Bolt: `ext-bcmath` suggested; `ext-sockets` optional (stream fallback).

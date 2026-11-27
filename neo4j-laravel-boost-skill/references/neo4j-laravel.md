@@ -5,9 +5,9 @@
 | Boost installed | `neo4j-laravel` |
 |---|---|
 | Packagist `≤1.2.0` | **Not** a Boost dependency — `composer require neo4j-php/neo4j-laravel` (gets Packagist latest, currently `0.0.2`) |
-| GitHub `≥1.3.0` / `dev-main` | Required (`^0.0.1` → **only** `0.0.1`) |
+| `dev-main` (tip; no installable Packagist `1.3.0`) | Required (`^0.0.1` → **only** `0.0.1`) |
 
-Run `composer show neo4j-php/neo4j-laravel` before using features below. `[dev-main]` sections need `composer require neo4j-php/neo4j-laravel:dev-main`.
+Run `composer show neo4j-php/neo4j-laravel` before using features below. `[dev-main]` Schema/vector-string APIs with Boost tip need alias: `composer require neo4j-php/neo4j-laravel:"dev-main as 0.0.1"` — bare `dev-main` conflicts with Boost's `^0.0.1`.
 
 | Feature | `0.0.1` | `0.0.2` | `dev-main` |
 |---|---|---|---|
@@ -158,7 +158,7 @@ Person::with('movies')->get();
 
 ### Transactions — `[0.0.2+]` only
 
-**Absent on `0.0.1`.** Boost `≥1.3.0` / `dev-main` pins `neo4j-php/neo4j-laravel ^0.0.1` → resolves **only** `0.0.1` → stock Laravel `transaction()` (no Neo4j TransientError retry / nested-tx overrides). Confirm with `composer show neo4j-php/neo4j-laravel` before using this section.
+**Absent on `0.0.1`.** Boost `dev-main` pins `neo4j-php/neo4j-laravel ^0.0.1` → resolves **only** `0.0.1` → stock Laravel `transaction()` (no Neo4j TransientError retry / nested-tx overrides). Confirm with `composer show neo4j-php/neo4j-laravel` before using this section.
 
 On Packagist `0.0.2` / `dev-main`:
 

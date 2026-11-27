@@ -24,12 +24,12 @@ Part of the [agent-skills](https://github.com/neo4j/agent-skills) collection.
 ```bash
 composer require --dev neo4j/laravel-boost
 composer show neo4j/laravel-boost laravel/mcp   # Packagist ≤1.2.0; mcp usually transitive
-# Packagist Boost ≤1.2.0 only — GitHub ≥1.3.0 / tip already pulls neo4j-laravel ^0.0.1:
+# Packagist Boost ≤1.2.0 only — tip (dev-main) already pulls neo4j-laravel ^0.0.1:
 composer require neo4j-php/neo4j-laravel
 # Prefer individual commands — setup --no-interaction only prints instructions:
 php artisan neo4j-boost:cursor-config   # then add env.APP_ENV=local manually
 ```
 
-Tip graph (`≥1.3.0` labels): `composer config repositories.neo4j-boost vcs https://github.com/neo4j-php/neo4j-boost.git` then `composer require --dev neo4j/laravel-boost:dev-main`.
+Tip graph labels: `composer require --dev neo4j/laravel-boost:dev-main` (no VCS repo; `composer show` prints `dev-main`, not `1.3.0`). Tip + Schema migrations: `composer require neo4j-php/neo4j-laravel:"dev-main as 0.0.1"` (bare `dev-main` conflicts with Boost's `^0.0.1`).
 
-Requirements: PHP 8.2+, Laravel 12 or 13. Packagist Boost `≤1.2.0` does not pull `neo4j-php/neo4j-laravel`; GitHub `≥1.3.0` / `dev-main` requires it (`^0.0.1` → only `0.0.1`). Schema migrations need `neo4j-laravel:dev-main`. Check `composer show` before tip-only APIs.
+Requirements: PHP 8.2+, Laravel 12 or 13. Packagist Boost `≤1.2.0` does not pull `neo4j-php/neo4j-laravel`; `dev-main` requires it (`^0.0.1` → only `0.0.1`). Check `composer show` before tip-only APIs. Prefer driver transport — HTTP Basic Auth is broken in current Boost (`[verify]`).
