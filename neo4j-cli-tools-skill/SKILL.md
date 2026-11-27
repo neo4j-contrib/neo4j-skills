@@ -139,7 +139,7 @@ Server 2.0.0 (2026-10-28) accepts only `NEO4J_MCP_*` env vars and unprefixed fla
 
 Reference: [neo4j-mcp-reference.md](references/neo4j-mcp-reference.md)
 
-### 6. relate (embedded engine, third-party)
+### 6. Relate by Neo4j (embedded engine)
 
 Embedded in-memory Cypher graph database, single binary. A Neo4j product; but not a replacement for a Neo4j server. Single process, one writer, graph must fit in RAM, no RBAC/clustering.
 
