@@ -1,7 +1,7 @@
 ---
 name: neo4j-agent-memory-skill
 description: Authoritative reference for the neo4j-agent-memory Python package — a graph-native memory system for AI agents built on Neo4j — and for the hosted service (NAMS) at memory.neo4jlabs.com. Use this skill whenever the user mentions neo4j-agent-memory, agent memory with Neo4j, context graphs, the POLE+O model, MemoryClient/MemorySettings, the memory MCP server, or any of the framework integrations (LangChain, PydanticAI, CrewAI, AWS Strands, Google ADK, Microsoft Agent Framework, OpenAI Agents, LlamaIndex). Also use when the user mentions the hosted service at memory.neo4jlabs.com, NAMS, the Neo4j Agent Memory Service, the `nams_` API key prefix, or the hosted MCP endpoint. Also use when writing documentation, blog posts, tutorials, PRDs, or code samples for the project, when comparing agent memory approaches, or when positioning graph-native memory against vector-only approaches — even if the user doesn't explicitly name the package. Does NOT handle GraphRAG pipelines — use neo4j-graphrag-skill.
-version: 1.0.10
+version: 1.0.11
 ---
 
 # neo4j-agent-memory
@@ -23,6 +23,7 @@ Authoritative reference for the `neo4j-agent-memory` Python package — a Neo4j 
 - **Plain Neo4j driver connections** (no memory layer needed) → use `neo4j-driver-python-skill`
 - **Writing or optimizing Cypher queries** → use `neo4j-cypher-skill`
 - **GraphRAG retrieval pipelines** → use `neo4j-graphrag-skill`
+- **Single-agent, single-process memory in a local file, no Neo4j server** → relate's `relate-agent-memory` skill; see `neo4j-getting-started-skill` → `references/choose-engine.md`. Shared, multi-agent, or hosted memory stays here.
 
 ---
 
