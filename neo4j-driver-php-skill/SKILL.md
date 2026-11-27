@@ -10,7 +10,7 @@ description: Neo4j PHP Driver (laudis/neo4j-php-client ^3.x) — Client > Driver
   Does NOT handle Cypher query authoring — use neo4j-cypher-skill.
   Does NOT cover Laravel integration (DB/Eloquent/Boost MCP) — use neo4j-laravel-boost-skill.
   Does NOT cover driver version migration — use neo4j-migration-skill.
-version: 1.0.0
+version: 1.0.1
 allowed-tools: Bash
 ---
 
@@ -71,12 +71,12 @@ Dotenv\Dotenv::createImmutable(__DIR__)->load();
 
 | Layer | Acquire via | Lifetime | Role |
 |---|---|---|---|
-| Client | `ClientBuilder::create()->...->build()` | One per app | Maps aliases to drivers; failover by priority; convenience `run`/`*Transaction` (opens **new session per call**) |
+| Client | `ClientBuilder::create()->...->build()` | One per app | Maps aliases to drivers; failover by priority; convenience `run`/`*Transaction` (reuses one cached session per alias for the process lifetime) |
 | Driver | `$client->getDriver('alias')` or `Basic\Driver::create($uri, ...)` | One per app | Connection pool, routing table, `verifyConnectivity()`, `getServerInfo()`, `closeConnections()` |
 | Session | `$driver->createSession(SessionConfiguration::default()->withDatabase('neo4j'))` | One per unit of work / request | Database + access mode, chains bookmarks for causal consistency, `executeQuery()`, `close()` |
 | Transaction | `$session->writeTransaction(fn)` / `readTransaction(fn)` / `beginTransaction()` | Atomic unit | Runs Cypher; managed (auto-retry) or unmanaged |
 
-Use single Session for read-your-own-writes on clusters; separate `$client->...` calls do not share bookmarks.
+Client calls share one cached session per alias → bookmarks chain within a PHP process. Bookmarks do not cross requests/processes — hand over via `getLastBookmark()` + `withBookmarks([...])`. Use an explicit Session for per-unit-of-work isolation or bookmark control.
 
 ---
 
@@ -124,7 +124,7 @@ Default if omitted: `bolt://localhost:7687?database=neo4j`.
 | Approach | Method | Auto-retry | Use when |
 |---|---|---|---|
 | Transaction functions (Client) | `$client->writeTransaction()` / `readTransaction()` | ✅ TransientError, NotALeader, connection errors | **Default** — production, Aura, clusters, HA |
-| Session query | `$session->executeQuery($cypher, $params)` | ✅ same retry; full result loaded | Causal consistency / bookmarks across calls |
+| Session query | `$session->executeQuery($cypher, $params)` | ✅ same retry; full result loaded | Explicit bookmark control / cross-request handover |
 | Auto-committed | `$client->run()` / `runStatement()` | ⚠️ connection/routing errors only (no TransientError) | Simple scripts, non-critical reads |
 | Multiple auto-committed | `$client->runStatements([...])` | ⚠️ each runs in own auto-commit tx — **not atomic** | Bulk independent statements |
 | Unmanaged | `$session->beginTransaction()` | ❌ | Explicit commit/rollback control |
@@ -155,14 +155,16 @@ $names = $client->readTransaction(static function (TransactionInterface $tsx) {
 Callback **must be idempotent** — driver retries on failure. Keep side effects outside.
 
 ```php
+use Symfony\Component\Uid\Uuid;   // symfony/uid; any app-side ID generator works
+
 // ❌ counter incremented on every retry
 $client->writeTransaction(function (TransactionInterface $tsx) use ($counter) {
     $counter->increment();
-    $tsx->run('MERGE (x:Node {id: $id})', ['id' => Uuid::v4()]);
+    $tsx->run('MERGE (x:Node {id: $id})', ['id' => Uuid::v4()->toRfc4122()]);
 });
 
 // ✅ ID generated outside; counter incremented once on success
-$id = Uuid::v4();
+$id = Uuid::v4()->toRfc4122();
 $client->writeTransaction(static function (TransactionInterface $tsx) use ($id) {
     $tsx->run('MERGE (x:Node {id: $id})', ['id' => $id]);
 });
@@ -196,7 +198,7 @@ $session->close();
 $session2 = $driver->createSession(
     SessionConfiguration::default()
         ->withDatabase('neo4j')
-        ->withBookmarks($bookmark)   // experimental in 3.6.x
+        ->withBookmarks([$bookmark])   // list<Bookmark>; experimental in 3.6.x
 );
 ```
 
@@ -335,7 +337,7 @@ $client->writeTransaction(static function (TransactionInterface $tsx) use ($peop
 | `beginTransaction` without `commit`/`rollback` | Transaction leak — always close in try/finally or catch |
 | `first()` on empty result | Throws — check `count()` first |
 | Credentials in code | Load from environment / `.env` |
-| Multiple `$client->run()` expecting causal consistency | Use single session + `executeQuery()` |
+| Expecting causal consistency across PHP requests/processes | Pass `getLastBookmark()` forward via `withBookmarks([...])` on a new session |
 | `runStatements([...])` expecting atomic execution | Not atomic — use `beginTransaction()` |
 | `$node->getId()` expecting element ID | Use `$node->getElementId()` (string, Neo4j 5+) |
 
@@ -343,7 +345,7 @@ $client->writeTransaction(static function (TransactionInterface $tsx) use ($peop
 
 ## References
 - [references/type-mapping.md](references/type-mapping.md) — Cypher-to-PHP type table, temporal types, Point subtypes, Vector
-- [references/configuration.md](references/configuration.md) — DriverConfiguration, SessionConfiguration, TransactionConfiguration, summary counters
+- [references/driver-configuration.md](references/driver-configuration.md) — DriverConfiguration, SessionConfiguration, TransactionConfiguration, summary counters
 
 Docs:
 - https://github.com/neo4j-php/neo4j-php-client

@@ -23,6 +23,7 @@
 | `Relationship` | `\Laudis\Neo4j\Types\Relationship` |
 | `Path` | `\Laudis\Neo4j\Types\Path` |
 | `Vector` | `\Laudis\Neo4j\Types\Vector` |
+| `UUID` | `\Laudis\Neo4j\Types\Uuid` |
 
 `Vector` — receive from server only; not supported as a query parameter.
 

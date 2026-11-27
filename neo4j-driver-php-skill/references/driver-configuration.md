@@ -40,7 +40,7 @@ $client = ClientBuilder::create()
 | Database | `withDatabase(string)` | Target database name |
 | Access mode | `withAccessMode(AccessMode)` | `READ()` or `WRITE()` |
 | Fetch size | `withFetchSize(int)` | Rows fetched per batch |
-| Bookmarks | `withBookmarks(...)` | Causal consistency bookmarks (experimental in 3.6.x) |
+| Bookmarks | `withBookmarks(array)` | `list<Bookmark>` from `$session->getLastBookmark()`; wrap single bookmark: `[$bookmark]` (experimental in 3.6.x) |
 
 Do NOT set `database` unless deviating from server default.
 
