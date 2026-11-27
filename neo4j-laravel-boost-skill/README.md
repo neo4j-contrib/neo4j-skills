@@ -1,24 +1,17 @@
 # neo4j-laravel-boost-skill
 
-Agent skill for [neo4j/laravel-boost](https://github.com/neo4j-php/neo4j-boost) —
-Laravel integration for the official Neo4j MCP server.
+Agent skill for [neo4j/laravel-boost](https://github.com/neo4j-php/neo4j-boost) and [neo4j-php/neo4j-laravel](https://github.com/neo4j-php/neo4j-laravel) — Neo4j MCP server, app knowledge graph, and Laravel DB/Eloquent integration.
 
 ## What This Skill Covers
 
-- Installing `neo4j/laravel-boost` (pulls `laravel/boost`; install `laravel/mcp` if missing)
-- Running `php artisan neo4j-boost:setup` (in-process driver default; optional `neo4j-mcp` binary for STDIO)
-- Transport modes: driver (in-process Bolt, default), STDIO, HTTP
-- Cursor MCP configuration via `php artisan neo4j-boost:cursor-config`
-- Starting local Neo4j with `neo4j-boost:start-neo4j` (Docker)
-- Container graph DI export (`php artisan container:graph`)
-- Available MCP tools: get-schema, read-cypher, write-cypher, list-gds-procedures, get-class-dependency-graph
-- Diagnostics with `neo4j-boost:doctor` and `neo4j-boost:test-stdio`
-- Single-server Boost MCP pattern (one server for Boost + Neo4j tools)
-- Troubleshooting common Cursor and transport issues
+- **Laravel DB & Eloquent (`neo4j-php/neo4j-laravel`)**: `DB::connection('neo4j')`, Cypher query builder, `Neo4jModel` / `HasNeo4jConnection`, `matchRelationship()`, bulk edge ops, `Schema::connection('neo4j')->node()` / `relationship()` migrations, transactions, vector search, DI bindings
+- **Boost MCP (`neo4j/laravel-boost`)**: `php artisan neo4j-boost:setup`, transport modes (driver default, STDIO, HTTP), Cursor MCP config, `neo4j-boost:doctor`, `neo4j-boost:start-neo4j`
+- **App knowledge graph**: `php artisan container:graph`, `get-class-dependency-graph`, `contribute-graph-knowledge`
+- **MCP tools**: `get-schema`, `read-cypher`, `write-cypher`, `list-gds-procedures`, `get-class-dependency-graph`, `contribute-graph-knowledge`
 
 ## Not Covered
 
-- Raw PHP driver code (ClientBuilder, transactions) → use `neo4j-driver-php-skill`
+- Raw PHP driver code outside Laravel (`ClientBuilder`, standalone sessions) → use `neo4j-driver-php-skill`
 - Cypher query authoring → use `neo4j-cypher-skill`
 - Standalone MCP server without Laravel → use `neo4j-mcp-skill`
 

@@ -1,13 +1,11 @@
 ---
 name: neo4j-laravel-boost-skill
-description: neo4j/laravel-boost — app knowledge graph and MCP server for Laravel — routes,
-  middleware, events, jobs, scheduled tasks, policies, notifications, mailables, and container
-  wiring exported to Neo4j. Answers architecture queries (what depends on X, impact of changing Y,
-  classes built on route invocation), uncovers hidden dependencies (facades, app()/resolve(),
-  helpers, new instantiation), and adds missing edges via contribute-graph-knowledge. Covers
-  artisan neo4j-boost:setup, doctor, Cursor MCP config, and transport modes (in-process driver default,
-  STDIO optional, HTTP optional).
-  Does NOT handle raw PHP driver code — use neo4j-driver-php-skill.
+description: Neo4j in Laravel 12/13 — neo4j/laravel-boost (app knowledge graph, container:graph,
+  MCP server via driver/STDIO/HTTP, neo4j-boost:setup, doctor, Cursor MCP config) and
+  neo4j-php/neo4j-laravel (DB::connection('neo4j'), Cypher query builder, Neo4jModel,
+  HasNeo4jConnection, matchRelationship, Schema::node()/relationship() migrations, vector
+  search, DI bindings).
+  Does NOT handle raw PHP driver code outside Laravel — use neo4j-driver-php-skill.
   Does NOT handle Cypher query authoring — use neo4j-cypher-skill.
   Does NOT handle standalone MCP server setup — use neo4j-mcp-skill.
 version: 1.0.0
@@ -15,21 +13,23 @@ allowed-tools: Bash
 ---
 
 ## When to Use
-- Querying Laravel app wiring: classes instantiated by routes, jobs, events, tasks, policies, mailables
-- Change impact analysis: dependents or dependencies of a class/interface
-- Uncovering hidden dependencies: facades, `app()`/`resolve()`, global helpers, `new` instantiation
-- Contributing missing graph edges detected during analysis
-- Adding Neo4j MCP tools to Laravel 12 or 13 via Laravel Boost
-- Configuring Cursor MCP with `php artisan boost:mcp`
-- Diagnosing MCP configuration with `neo4j-boost:doctor`
+- Integrating Neo4j into Laravel 12/13 via `DB::connection('neo4j')`, query builder, `Neo4jModel`, or migrations (`neo4j-php/neo4j-laravel`)
+- Querying Laravel app wiring: routes, jobs, events, tasks, policies, mailables (`neo4j/laravel-boost`)
+- Change impact analysis, uncovering hidden dependencies (facades, `app()`/`resolve()`, helpers, `new`), contributing graph edges
+- Adding Neo4j MCP tools to Laravel Boost (`php artisan boost:mcp`), Cursor MCP config, `neo4j-boost:doctor`
 
 ## When NOT to Use
-- **Raw PHP driver code (ClientBuilder, sessions)** → `neo4j-driver-php-skill`
+- **Raw PHP driver code outside Laravel (`ClientBuilder`, standalone sessions)** → `neo4j-driver-php-skill`
 - **Writing/optimizing Cypher** → `neo4j-cypher-skill`
 - **Standalone MCP server without Laravel** → `neo4j-mcp-skill`
 - **Provisioning Aura instances** → `neo4j-aura-provisioning-skill`
 
----
+## Package Selection
+
+| Goal | Package | Entry |
+|---|---|---|
+| Boost MCP tools + `container:graph` app wiring | `neo4j/laravel-boost` | `php artisan neo4j-boost:setup` |
+| App data access (`DB`, query builder, `Neo4jModel`, migrations) | `neo4j-php/neo4j-laravel` | Pulled by Boost, or `composer require neo4j-php/neo4j-laravel` |
 
 ## Requirements
 
@@ -37,8 +37,8 @@ allowed-tools: Bash
 |---|---|
 | PHP | ^8.2 |
 | Laravel | ^12.0 or ^13.0 |
-| Laravel Boost | ^2.0 |
-| Laravel MCP | ^0.5.1 (dev dependency) |
+| `neo4j-php/neo4j-laravel` | ^0.0.1 (pulled by `neo4j/laravel-boost`) |
+| Laravel Boost / MCP | ^2.0 / ^0.5.1 (dev, for MCP tools) |
 
 `laudis/neo4j-php-client ^3.4` pulled automatically.
 
@@ -365,9 +365,95 @@ Full settings reference → [references/configuration.md](references/configurati
 
 ---
 
+## App Data Access (`neo4j-php/neo4j-laravel`)
+
+### Connection (`config/database.php`)
+
+Register `'neo4j'` connection (no `vendor:publish`). **Set `DB_CONNECTION=neo4j` as default** — secondary-only Neo4j connection not supported by provider bootstrap yet. Set `SESSION_DRIVER=file` to keep Laravel sessions/auth off Neo4j.
+
+```env
+DB_CONNECTION=neo4j
+SESSION_DRIVER=file
+NEO4J_URL=bolt://localhost:7687   # neo4j-laravel reads NEO4J_URL (Boost reads NEO4J_URI)
+NEO4J_USERNAME=neo4j
+NEO4J_PASSWORD=your-password
+NEO4J_DATABASE=neo4j
+```
+
+```php
+// config/database.php -> 'connections'
+'neo4j' => [
+    'driver'   => 'neo4j',
+    'url'      => env('NEO4J_URL', 'bolt://localhost:7687'),
+    'username' => env('NEO4J_USERNAME', 'neo4j'),
+    'password' => env('NEO4J_PASSWORD', ''),
+    'database' => env('NEO4J_DATABASE', 'neo4j'),
+],
+```
+
+Verify: `app(\Laudis\Neo4j\Contracts\ClientInterface::class)->verifyConnectivity()`.
+
+### Raw Cypher, Query Builder, Graph Edges
+
+```php
+$db = DB::connection('neo4j');
+$rows = $db->select('MATCH (m:Movie {title: $title}) RETURN m.title AS title', ['title' => 'The Matrix']);
+
+// Query builder + Cypher relationship pattern (Type> outgoing, <Type incoming, Type undirected)
+$db->table('Person')
+    ->matchRelationship('ACTED_IN>', 'Movie', 'role', 'film')
+    ->where('film.title', 'The Matrix')
+    ->select(['n', 'role', 'film'])
+    ->get();
+```
+
+### Eloquent (`Neo4jModel` / `HasNeo4jConnection`)
+
+Class name = label (`Movie` → `:Movie`), auto UUID `id`, `$model->elementId()`.
+
+```php
+use Neo4j\Neo4jLaravel\Neo4jModel;
+use Neo4j\Neo4jLaravel\Relations\MatchRelationship;
+
+class Person extends Neo4jModel
+{
+    protected $fillable = ['name'];
+
+    public function movies(): MatchRelationship
+    {
+        return $this->matchRelationship(Movie::class, 'ACTED_IN>');
+    }
+}
+
+$person->movies()->attach($movie->id, ['roles' => ['Neo']]);
+Person::with('movies')->get();
+```
+
+`whereHas` / `withCount` on `MatchRelationship` unsupported. Stock Eloquent FK/polymorphic relations work against node properties.
+
+### Migrations (`Schema::connection('neo4j')`)
+
+❌ `Schema::create()` (throws — SQL-only).
+✅ `Schema::connection('neo4j')->node()` / `relationship()`:
+
+```php
+Schema::connection('neo4j')->node('Person', function ($node) {
+    $node->unique('email'); // person_email_unique
+    $node->index('name');   // person_name_index
+});
+Schema::connection('neo4j')->relationship('ACTED_IN', fn ($r) => $r->index('role'));
+```
+
+Run stock Artisan commands with `--database=neo4j` (`migrate`, `migrate:status`, `migrate:rollback`; history in `:_LaravelMigration`).
+
+Full `neo4j-laravel` reference (bulk edge ops, transactions, DI container wrappers, vector search, query logging/Debugbar, troubleshooting) → [references/neo4j-laravel.md](references/neo4j-laravel.md)
+
+---
+
 ## References
 
-- [references/configuration.md](references/configuration.md) — env vars, transport settings, configuration file schema
+- [references/neo4j-laravel.md](references/neo4j-laravel.md) — `neo4j-php/neo4j-laravel` config, bulk relationships, Eloquent joins, transactions, DI, vector search, migrations, Debugbar
+- [references/configuration.md](references/configuration.md) — Boost env vars, transport settings, `config/neo4j-boost.php` schema
 - [App graph prompts](https://github.com/neo4j-php/neo4j-boost/blob/main/docs/PROMPTS.md)
 - [Container graph tutorial](https://github.com/neo4j-php/neo4j-boost/blob/main/docs/tutorials/container-graph.md)
 - [Neo4j Boost GitHub](https://github.com/neo4j-php/neo4j-boost)
@@ -391,3 +477,4 @@ Full settings reference → [references/configuration.md](references/configurati
 - [ ] `graph_completeness` checked before declaring class has no dependents
 - [ ] `EXPLAIN` or `COUNT(*)` run before unbounded MCP traversals (default `LIMIT 25`)
 - [ ] User confirmation obtained before destructive `write-cypher` (`DELETE`, `DETACH DELETE`, bulk writes)
+- [ ] If using `neo4j-laravel`: `DB_CONNECTION=neo4j`, `SESSION_DRIVER=file`, `'neo4j'` in `config/database.php` (`NEO4J_URL`), migrations use `Schema::connection('neo4j')->node()`/`relationship()`
