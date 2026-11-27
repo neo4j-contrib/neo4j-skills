@@ -141,7 +141,7 @@ Reference: [neo4j-mcp-reference.md](references/neo4j-mcp-reference.md)
 
 ### 6. relate (embedded engine, third-party)
 
-Embedded in-memory Cypher graph database, single binary. Not a Neo4j product; not a replacement for a Neo4j server. Single process, one writer, graph must fit in RAM, no RBAC/clustering.
+Embedded in-memory Cypher graph database, single binary. A Neo4j product; but not a replacement for a Neo4j server. Single process, one writer, graph must fit in RAM, no RBAC/clustering.
 
 | Situation | Use |
 |---|---|
