@@ -3,11 +3,13 @@
 Skill for database administration and automation using Neo4j command-line tools.
 
 **Covers:**
+- `neo4j-cli` — unified CLI (preferred): Cypher via Bolt, schema inspection, Aura, local Docker, credential store, agent skill install
 - `neo4j-admin` — database management: backup/restore, imports (`neo4j-admin database import`), consistency checks, dump/load, user management, config tuning
 - `cypher-shell` — interactive and scripted Cypher execution, `--format`, `--param`, piping queries from files, non-interactive mode for automation
 - `aura-cli` — Aura instance management: create, pause, resume, delete, credential export, async status polling
 - Neo4j MCP server setup — `mcp-neo4j-cypher` and `mcp-neo4j-memory` configuration for Claude Code, Cursor, and other MCP clients
 - Common admin workflows: schema dump, user/role management, database copy, log inspection
+- `relate` (third-party embedded Cypher engine, [relatedb.ai](https://relatedb.ai)) — when to use it instead of a Neo4j server, plus `relate pull` / `relate push` to copy a subgraph between Neo4j/Aura and a local `.rl` file for offline fixtures. Engine choice matrix: [`neo4j-getting-started-skill/references/choose-engine.md`](../neo4j-getting-started-skill/references/choose-engine.md)
 
 **Version / compatibility:**
 - `neo4j-admin` bundled with Neo4j 5.x / 2025.x
@@ -18,6 +20,7 @@ Skill for database administration and automation using Neo4j command-line tools.
 - Cypher query authoring → `neo4j-cypher-skill`
 - Aura provisioning via REST API → `neo4j-aura-provisioning-skill`
 - Importing CSV/JSON data via Cypher → `neo4j-import-skill`
+- relate CLI, Cypher on relate, vector/geospatial on relate → relate's own skill: `npx skills add https://relatedb.ai --skill relate` ([llms.txt](https://relatedb.ai/llms.txt), [skill.md](https://relatedb.ai/skill.md))
 
 **Install:**
 ```bash
