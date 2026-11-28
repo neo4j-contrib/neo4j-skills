@@ -1,0 +1,37 @@
+# neo4j-driver-php-skill
+
+Agent skill for the [Neo4j PHP Client](https://github.com/neo4j-php/neo4j-php-client)
+(`laudis/neo4j-php-client`).
+
+## What This Skill Covers
+
+- Installing `laudis/neo4j-php-client` via Composer
+- Building a client with `ClientBuilder` (including raw laudis inside Laravel without `neo4j-laravel`)
+- Transaction functions (`writeTransaction` / `readTransaction`) — default for production
+- Auto-committed queries (`run` / `runStatement`)
+- Unmanaged transactions (`beginTransaction` / `commit` / `rollback`)
+- Result access via `CypherList` and `CypherMap`
+- Cypher-to-PHP type mapping
+- `ParameterHelper` for list/map disambiguation
+- URL schemes (bolt, neo4j, TLS variants)
+- `SessionConfiguration`, `TransactionConfiguration`, auth options
+- UNWIND batch writes
+- Aura and cluster support
+
+## Not Covered
+
+- Laravel Boost MCP / `container:graph` → `neo4j-laravel-boost-skill`
+
+- Cypher authoring → `neo4j-cypher-skill`
+
+## Availability
+
+Part of the [agent-skills](https://github.com/neo4j/agent-skills) collection.
+
+## Install the Package
+
+```bash
+composer require laudis/neo4j-php-client
+```
+
+PHP >= 8.1, with `ext-json` and `ext-mbstring`. Bolt: `ext-bcmath` suggested; `ext-sockets` optional (stream fallback).

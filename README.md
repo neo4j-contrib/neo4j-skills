@@ -141,6 +141,7 @@ Details and limits: [choose-engine.md](neo4j-getting-started-skill/references/ch
 | [`neo4j-driver-java-skill`](./neo4j-driver-java-skill) | Java driver: `ExecutableQuery`, managed/explicit transactions, object mapping, reactive. |
 | [`neo4j-driver-dotnet-skill`](./neo4j-driver-dotnet-skill) | .NET/C# driver: `ExecuteReadAsync`/`ExecuteWriteAsync`, DI registration, `IResultCursor`. |
 | [`neo4j-driver-go-skill`](./neo4j-driver-go-skill) | Go driver v6: `ExecuteQuery`, generic helpers, spatial types, connection configuration. |
+| [`neo4j-driver-php-skill`](./neo4j-driver-php-skill) | PHP client (`laudis/neo4j-php-client`): `ClientBuilder`, transactions, `ParameterHelper`, type mapping. |
 
 ### Frameworks & Platforms
 
@@ -148,6 +149,7 @@ Details and limits: [choose-engine.md](neo4j-getting-started-skill/references/ch
 |---|---|
 | [`neo4j-graphql-skill`](./neo4j-graphql-skill) | Build GraphQL APIs backed by Neo4j using `@neo4j/graphql`. Covers type definitions, `@relationship`, `@cypher`, and filtering. |
 | [`neo4j-spring-data-skill`](./neo4j-spring-data-skill) | Spring Boot + Neo4j with Spring Data Neo4j: `@Node`, `@Relationship`, repositories, projections. |
+| [`neo4j-laravel-boost-skill`](./neo4j-laravel-boost-skill) | Laravel Boost MCP + app knowledge graph (`container:graph`, neo4j-boost setup/doctor). Does not cover neo4j-laravel DB/Eloquent. |
 | [`neo4j-cli-tools-skill`](./neo4j-cli-tools-skill) | DB admin via `neo4j-admin`, `cypher-shell`, `aura-cli`, and `neo4j-cli` (preview unified CLI). Covers backups, imports, user management, Aura provisioning, and agent skill install. |
 | [`neo4j-aura-provisioning-skill`](./neo4j-aura-provisioning-skill) | Create and manage Neo4j Aura instances via the Aura CLI and REST API. Covers async polling, credential handling, and tier selection. |
 | [`neo4j-aura-agent-skill`](./neo4j-aura-agent-skill) | Create, configure, and invoke Aura Agents via the v2beta1 REST API. Covers CypherTemplate, SimilaritySearch, and Text2Cypher tools, system prompts, REST/MCP deployment, and OAuth2 auth. |
